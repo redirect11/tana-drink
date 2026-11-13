@@ -1,5 +1,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { conteggioPesi, ordinaMacro, perNome, pesiAltrove, pesoAmmesso, pesoDi } from '../lib/macros.js'
+import Icona, { ConIcona } from './Icona.jsx'
+import { conEmoji } from '../lib/icone.js'
 import {
   createMacroCategory,
   updateMacroCategory,
@@ -100,7 +102,7 @@ export default function MacroCategoryManager({ macros, prodotti, voci }) {
                 aria-expanded={isAperta}
                 onClick={() => setAperta(isAperta ? null : m.id)}
               >
-                <strong>🗂️ {m.name}</strong>
+                <strong><Icona nome="raggruppa" gruppo="tasti" /> {m.name}</strong>
                 <span className="muted small">
                   {conta.prodotti} prodotti · {conta.voci} voci
                 </span>
@@ -108,14 +110,14 @@ export default function MacroCategoryManager({ macros, prodotti, voci }) {
               <span className="row" style={{ gap: 4 }}>
                 <button className="btn ghost small" onClick={() => moveMacro(idx, -1)} disabled={idx === 0}>↑</button>
                 <button className="btn ghost small" onClick={() => moveMacro(idx, 1)} disabled={idx === elenco.length - 1}>↓</button>
-                <button className="btn ghost small" onClick={() => renameMacro(m)}>✏️</button>
-                <button className="btn ghost small" onClick={() => removeMacro(m)}>🗑</button>
+                <button className="btn ghost small" onClick={() => renameMacro(m)} aria-label="Rinomina" title="Rinomina"><Icona nome="modifica" gruppo="tasti" /></button>
+                <button className="btn ghost small" onClick={() => removeMacro(m)} aria-label="Elimina" title="Elimina"><Icona nome="elimina" gruppo="tasti" /></button>
               </span>
             </div>
             {isAperta && (
               <div className="macro-pesi">
                 <ColonnaPesi
-                  titolo="📦 Prodotti del magazzino"
+                  titolo={conEmoji('magazzino', 'Prodotti del magazzino')}
                   cerca="Cerca fra i prodotti"
                   lato="prodotti"
                   elementi={prodotti}
@@ -124,7 +126,7 @@ export default function MacroCategoryManager({ macros, prodotti, voci }) {
                   onPeso={scriviPeso}
                 />
                 <ColonnaPesi
-                  titolo="🍸 Voci del menù"
+                  titolo={conEmoji('menu', 'Voci del menù')}
                   cerca="Cerca fra le voci"
                   lato="voci"
                   elementi={voci}
@@ -167,7 +169,7 @@ function ColonnaPesi({ titolo, cerca, lato, elementi, macro, macros, onPeso }) {
   return (
     <div className="macro-colonna">
       <div className="row between" style={{ alignItems: 'center', gap: 6 }}>
-        <strong className="small">{titolo}</strong>
+        <strong className="small"><ConIcona testo={titolo} /></strong>
         <label className="row small muted" style={{ gap: 4, alignItems: 'center' }}>
           <input type="checkbox" checked={soloLiberi} onChange={(e) => setSoloLiberi(e.target.checked)} />
           Solo senza macro

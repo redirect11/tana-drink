@@ -220,15 +220,18 @@ describe('che cosa vende questo fornitore, e a quanto', () => {
   it('si toglie un prodotto dal listino', async () => {
     const user = userEvent.setup()
     stato.listini = [{ id: 'nova__campari', supplier_id: 'nova', item_id: 'campari', price: 12.5 }]
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    // Con vitest 4 l'ambiente happy-dom non mette `confirm` sul globale:
+    // vi.spyOn non avrebbe niente da spiare, quindi lo si mette a mano.
+    vi.stubGlobal('confirm', vi.fn(() => true))
     render(<ListinoFornitore fornitore={NOVA} onIndietro={() => {}} />)
     await screen.findByText('Campari')
 
     await user.click(screen.getByLabelText('Dettagli di Campari'))
-    await user.click(await screen.findByText('🗑 Togli dal listino'))
+    await user.click(await screen.findByText('Togli dal listino'))
 
     expect(eliminaRigaListino).toHaveBeenCalledWith('nova', 'campari')
     await waitFor(() => expect(screen.queryByText('Campari')).toBeNull())
+    vi.unstubAllGlobals()
   })
 })
 

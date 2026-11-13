@@ -17,6 +17,8 @@ import { contenutoDelPezzo, formatQty } from '../lib/inventory.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { ETICHETTA_ORIGINE, origineDi, storicoDiCoppia } from '../lib/storicoPrezzi.js'
 import { toastError } from '../lib/toast.js'
+import Icona from './Icona.jsx'
+import AiutoCampo from './AiutoCampo.jsx'
 
 // ── IL LISTINO DI UN FORNITORE (REQ-MAG-035) ─────────────────────────
 //
@@ -447,21 +449,20 @@ export default function ListinoFornitore({ fornitore, onIndietro }) {
                         />
                       </span>
                     </div>
-                    <p className="muted small" style={{ marginTop: 6 }}>
-                      Codice e confezione sono quelli di questo fornitore, e servono a chi
-                      riceve l’ordine dall’altra parte. I <strong>pezzi per collo</strong> si
-                      compilano solo se questo fornitore vende a cartoni o a casse: allora
-                      l’ordine si conta in colli e in magazzino entrano i pezzi che
-                      contengono. Lasciandoli a 1 si compra a pezzo, come per quasi tutti i
-                      prodotti.
-                    </p>
-                    <p className="muted small" style={{ marginTop: 6 }}>
-                      <strong>Prezzo espresso per</strong> dice com’è scritto il listino di
-                      questo fornitore: <em>collo</em> è la cifra che fattura, <em>pz</em> il
-                      prezzo della singola bottiglia, e litri, centilitri, chili o grammi
-                      quando prezza il contenuto. Il prezzo del pezzo si calcola da sé e si
-                      legge accanto al campo.
-                    </p>
+                    <AiutoCampo style={{ marginTop: 6 }}>
+                      Codice e confezione sono quelli del fornitore e compaiono sull’ordine
+                      che riceve. I <strong>pezzi per collo</strong> si indicano solo se il
+                      fornitore vende a cartoni o a casse: l’ordine si conta allora in colli
+                      e a magazzino entrano i pezzi contenuti. Con 1 si acquista a pezzo,
+                      come per la maggior parte dei prodotti.
+                    </AiutoCampo>
+                    <AiutoCampo style={{ marginTop: 6 }}>
+                      <strong>Prezzo espresso per</strong> indica l’unità del listino del
+                      fornitore: <em>collo</em> è l’importo fatturato, <em>pz</em> il prezzo
+                      della singola bottiglia; litri, centilitri, chili o grammi quando il
+                      prezzo è riferito al contenuto. Il prezzo al pezzo è calcolato e
+                      riportato accanto al campo.
+                    </AiutoCampo>
 
                     <StoricoDellaRiga
                       variazioni={storicoDiCoppia(variazioni, fornitore.id, riga.item_id)}
@@ -472,7 +473,7 @@ export default function ListinoFornitore({ fornitore, onIndietro }) {
                       style={{ marginTop: 8 }}
                       onClick={() => togli(riga, nome)}
                     >
-                      🗑 Togli dal listino
+                      <Icona nome="elimina" gruppo="tasti" /> Togli dal listino
                     </button>
                   </div>
                 )}

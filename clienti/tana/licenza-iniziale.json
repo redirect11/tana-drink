@@ -1,0 +1,27 @@
+{
+  "stato": "attiva",
+  "moduli": {
+    "menu_tavoli": true,
+    "ordini_cliente": true,
+    "clienti": true,
+    "magazzino": true,
+    "statistiche": true,
+    "staff": true,
+    "sumup": true,
+    "conta": true,
+    "fatture": true,
+    "scadenzario": true
+  },
+  "temi": [
+    "notte",
+    "meraviglie",
+    "carte"
+  ],
+  "limiti": null,
+  "valida_fino": null,
+  "valida_fino_ts": null,
+  "alla_scadenza": "ferma",
+  "cancellazione": null,
+  "slug": "tana",
+  "regia_url": null
+}

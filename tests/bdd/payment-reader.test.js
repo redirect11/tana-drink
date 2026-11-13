@@ -19,6 +19,9 @@ const cliente = { token: {} }
 
 function makeDeps({ configured = true, seed = {}, responses = {}, errors = {} } = {}) {
   const { db, store } = createFakeFirestore(seed)
+  // Un locale col modulo SumUp (BUG-134): le Functions dei pagamenti lo
+  // chiedono alla licenza. Chi prova il rifiuto ne scrive un'altra.
+  if (!store.licenza) store.licenza = { attuale: { stato: 'attiva', moduli: { sumup: true } } }
   // settings doc serve a quasi tutti i test
   if (!store.settings) store.settings = {}
   const paymentsFetch = vi.fn(async (path, options = {}) => {

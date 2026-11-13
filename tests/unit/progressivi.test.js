@@ -54,7 +54,7 @@ describe('il prossimo numero', () => {
     expect(prendiNumero('cash-1')).toBe(15)
     // Quello che si è dato resta scritto: riaprendo l'app si riparte da lì,
     // non dal numero del server (che è ancora indietro).
-    expect(JSON.parse(localStorage.getItem('tana:progressivi'))['cash-1']).toBe(15)
+    expect(JSON.parse(localStorage.getItem('drink:progressivi'))['cash-1']).toBe(15)
     expect(prossimo(14, 15)).toBe(16)
   })
 

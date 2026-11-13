@@ -118,6 +118,14 @@ Regole di sopravvivenza del modello:
   uno solo e sta in `comandaDaScaricare`: a «pronto» il drink è fatto, e a
   segnarlo è chi l'ha fatto — mentre «servito» lo segna la sala, che sul
   magazzino non scrive.
+- **Una riga può avere la ricetta sua** (`custom: true` + `recipe_items`):
+  il drink ritoccato dal conto e la riga con la scelta del cliente
+  (REQ-CLI-008, `lib/sceltaCliente.js`) restano il drink — `drink_id`,
+  nome, statistiche — ma lo scarico legge la ricetta della riga. Due righe
+  con ricette diverse non si accorpano (`lineSignature`). Il telefono la
+  compone senza leggere il magazzino, che per il cliente è chiuso: le
+  righe da sostituire le scrive l'editor sulla scelta (`sostituisce`), e
+  la disponibilità arriva da `alternative_cliente`.
 - **Lo sconto appartiene alla riscossione, non al conto.** Cade sulle
   righe che si stanno incassando, e all'incasso viene consumato dentro quel
   pagamento (`payments[].sconto`): due riscossioni scontate sono due sconti,
@@ -140,8 +148,15 @@ Regole di sopravvivenza del modello:
   ordine e **l'id fa da capability token**. Le scritture invece passano
   dai ruoli.
 - I claim si assegnano solo dalla callable `staffAdmin` (o
-  `scripts/set-role.js`); il token dura un'ora, e la UI ne forza il
+  `scripts/set-role.js`), più il titolare di un locale della flotta, che
+  la regia crea admin con lo stesso uid che ha da lei (REQ-FLOTTA-029,
+  [flotta.md](flotta.md)); il token dura un'ora, e la UI ne forza il
   rinnovo in sottofondo per non lavorare con un ruolo vecchio.
+- **La licenza la scrive solo la regia**, con le credenziali di servizio:
+  `licenza/attuale` non è scrivibile dall'app (BUG-125), e la copia che la
+  regia lascia in `settings/bar.licenza` per le versioni vecchie non la
+  tocca nessuno, nemmeno il titolare (BUG-126). Il ripristino da backup
+  tiene la licenza che c'è, non quella del file.
 - **App Check** (reCAPTCHA v3) è attivo in produzione: quando il gettone
   non arriva, Firestore risponde «Missing or insufficient permissions» a
   TUTTO, anche alle collection pubbliche — incidente vero, documentato in
@@ -157,6 +172,12 @@ pagamento (contanti/carta a mano, SumUp via Functions,
 acconti, gruppi anche alla romana) → chiusura, e il conto sparisce
 subito dalla coda. Aumenti su un conto in corso confluiscono nella
 comanda giusta senza riaprire quelle servite.
+
+Un ordine dal telefono che il banco cambia (prezzo o ingredienti) aspetta
+il cliente: non è un passo nuovo delle comande ma un campo del conto,
+`attesa_cliente`, scritto insieme alle righe. Finché c'è il conto non
+avanza e non stampa; il cliente accetta o rifiuta, e allo scadere lo
+annulla la coda (REQ-CLI-009, `lib/attesaCliente.js`).
 
 ## Cosa non fare (il riassunto dei divieti architetturali)
 

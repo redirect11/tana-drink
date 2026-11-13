@@ -137,6 +137,10 @@ Regole:
 
 ## Tipografia
 
+- **I caratteri stanno nel pacchetto dell'app** (`@fontsource`, importati in
+  `src/main.jsx`), mai presi da Google o da un altro server: l'indirizzo IP
+  di chi apre il menù è un dato personale (REQ-SIC-004). Solo l'alfabeto
+  latino. Un carattere nuovo si aggiunge allo stesso modo.
 - Corpo: `system-ui` stack — il testo operativo non ha font di fantasia.
 - Titoli (`h1–h3`): serif `Playfair Display` — è la firma del prodotto,
   usata con parsimonia; nel gestionale i titoli sono pochi per scelta
@@ -156,8 +160,208 @@ Regole:
   carattere; ora l'h3 è serif e l'h4 no. Ha la sua regola nel foglio: era
   uno `style` inline (`margin: 16px 0 4px`) ripetuto in mezza SettingsTab.
 
+### Gli stili del menù clienti (REQ-MENU-021, REQ-MENU-022, REQ-MENU-027)
+
+Il menù dei clienti ha più STILI, cioè più forme, che si scelgono in
+Impostazioni ▸ Menù clienti ▸ Stile del menù; i COLORI restano SEMPRE
+quelli del tema del menù clienti. Uno stile può avere una tavolozza sua
+(«Lavagna», «Meraviglie», in `THEME_PRESETS`): la propone il tema del
+marketplace che lo usa, ma resta una tavolozza come le altre, e si cambia;
+il CSS di uno stile passa solo per le variabili e non scrive mai `--bg`,
+`--card`, `--text`, gli accenti o `--btn`. «Classico» è il
+predefinito ed è di tutti; il personale lo vede sempre. «Notte» e
+«Meraviglie» sono della licenza (esclusivi della Tana, REQ-LIC-010); gli altri sono nel catalogo
+dell'app, gratis: si installano con un tasto e si provano sul proprio menù
+prima di sceglierli. Ogni stile dichiara tre caratteri (`--stile-titolo`,
+`--stile-voce`, `--stile-testo`), tutti dentro l'app (REQ-SIC-004).
+
+**Le immagini dei drink, in ogni stile.** La foto caricata dal titolare si
+vede in tutti gli stili, ed è di tutti. I disegni dei drink (illustrazioni
+di Alice e disegni composti) sono del locale che ha «Notte» nella licenza
+(REQ-LIC-013): lui li vede in qualunque stile, gli altri in nessuno. Dove
+non c'è né foto né disegno c'è il segnaposto, un bicchiere al tratto
+neutro e attenuato (`segnapostoDrink`), in ogni stile: nelle card del menù
+Special e nelle slide del carosello sta nello stesso riquadro di un
+disegno, rimpicciolito, perché le card restino allineate. Il logo del
+locale non fa da segnaposto: ripetuto su ogni voce faceva il menù
+giocattolo.
+
+**La struttura personalizzata del menù, in ogni stile** (REQ-MENU-025).
+Con la struttura personalizzata le sezioni sono poche: le schede in alto
+(`.cat-nav.carta`) sono
+più grandi, col carattere dello stile, e restano agganciate sotto la barra
+mentre si scorre. Una sezione snella (`.carta-snella`) è un listino: nome
+a sinistra e prezzo a destra sulla stessa riga, senza immagine né testo
+sotto.
+
+**L'editor della struttura** (Menù → Menù dei clienti, `.struttura-*`)
+mostra il menù com'è al tavolo: card `.menu-item` con immagine, testi e
+prezzo. I testi sono campi `.wys` che si leggono come testo, senza
+riquadro finché non ci si passa sopra (tratteggio) o non ci si scrive
+(bordo d'accento). Sopra ogni campo, `.wys-etichetta` in maiuscoletto
+minuto dice da dove viene il testo; in `--accent` solo quando vale per la
+sola sezione. Il prodotto della cassa sta nel piede della card, sotto un
+filetto tratteggiato, col 🔗. I prodotti della cassa rimasti fuori dal menù
+dei clienti stanno in cima, in un riquadro richiudibile col filo sinistro in
+`--warn` (`.struttura-fuori`): sono un lavoro da smaltire, non un errore.
+
+- **«Lavagna»**: gesso su ardesia verde. Titoli e nomi in `Caveat`, prezzi
+  in giallo gesso, filetti tratteggiati. L'ardesia è la tavolozza
+  «Lavagna» (`#24332d` di fondo, gesso `#f2eee4`, giallo `#f3d27a`); le
+  macchie di gesso sul fondo e le righe sono fatte col colore del testo,
+  così valgono su qualunque tavolozza.
+- **«Meraviglie»** (REQ-MENU-027), esclusivo della Tana: un libro
+  illustrato dell'Ottocento. Titoli, nomi e prezzi in `IM Fell English`,
+  testo in Georgia; le categorie sono capitoli («CAPITOLO III» in
+  maiuscoletto `--accent` sopra il nome, contato dal CSS) con i quattro
+  semi delle carte sotto; voci e riquadri a filetto doppio (`3px double`,
+  `--accent-2` al 55%), angoli quasi vivi, niente ombre; la foto della
+  testata in seppia dentro una cornice doppia chiara, con il titolo sempre
+  chiaro (la foto ha il velo scuro); il cartellino «Bevimi» di sbieco sui
+  disegni, mai sulle foto. La tavolozza «Meraviglie»: avorio `#f3ead6`,
+  inchiostro `#2a1f16`, seppia `#6b5843`, rosso Regina di Cuori `#a8231c`
+  (anche i tasti, piatti), oro antico `#7d5d17`, con le forme di Pico. È
+  l'unico stile che VESTE ANCHE LE ALTRE PAGINE DEI CLIENTI (`pagine:
+  true`): App scrive `data-stile` sulla radice per chi ordina, e le regole
+  `:root[data-stile='meraviglie']` danno caratteri, cornici e testata alla
+  home, agli ordini, allo stato dell'ordine e all'accesso. Ha anche le
+  sue FRASI (testiStile.js): titoli cambiati ed epigrafi in corsivo
+  (`.hero-epigrafe`, `.frase-stile`), ma i tasti e gli stati restano
+  scritti come sempre.
+- **«Déco»**: anni Venti. `Poiret One` in maiuscolo spaziato, simmetria,
+  filetti doppi e un rombo sopra i titoli, l'oro del tema (`--accent-2`).
+- **«Riviera»**: aperitivo all'aperto. Titoli in `Dancing Script`, il
+  tendone a strisce sopra l'apertura, voci come cartoline col bordo
+  colorato, i disegni dei drink nei cerchi.
+- **Il marketplace dei temi** (REQ-MENU-023): una pagina sua, «🛍️
+  Marketplace» nel menu laterale, con Temi, Stili del menù e Installati.
+  Un TEMA è una tavolozza più uno stile. Ogni scheda è un catalogo: in alto
+  la vetrina, un pezzo del menù vero (categoria e due voci) scritto con le
+  classi del menù, coi colori del tema sull'elemento e nel suo stile, alta
+  230px e sfumata in fondo (una maschera, non un filtro); sotto nome,
+  descrizione e, sempre allo stesso posto, «Prova sul menù» a sinistra e il
+  tasto a destra. Sui tasti basta il verbo («Installa», «Usa»): il nome sta
+  nell'aria-label.
+- **Gli stili a ricetta** (REQ-MENU-031): arrivano dalla regia come
+  scelta fra valori fissi, e li disegna il motore di `.stile-ricetta`
+  (index.css) sopra il menù classico. I colori sono sempre quelli del tema
+  (più i sette propri della ricetta, se li ha); le trame dello sfondo e le
+  cornici sono disegnate col colore del testo e con `--accent-2`, mai
+  immagini. I caratteri sono diciotto, tutti nella build; le scritture a
+  mano hanno una scala, se no vengono minuscole.
+- **I temi su misura** (REQ-MENU-030): la sezione «⭐ I tuoi temi», con le
+  stesse schede; il sottotitolo dice «Su misura» al posto del prezzo. Se un
+  tema divide il menù in pagine, le schede delle categorie diventano tasti
+  (`button.cat-chip`, `aria-pressed`) e quella aperta resta accesa coi
+  colori del tasto (`--btn-bg`), in ogni stile; in «Notte», dove le schede
+  sono parole, la si sottolinea con `--accent-2`.
+- **I moduli nel marketplace** (REQ-LIC-012): la stessa scheda, ma al
+  posto della vetrina del menù una fascia alta 96px con l'icona del modulo
+  e lo stato in una pillola. Lo stato si legge prima dal colore: incluso
+  su una velatura di `--ok`, in prova di `--accent-2`, non incluso
+  neutro — quello che manca non deve sembrare un errore. Sotto, il prezzo
+  «15,00 € al mese + IVA»; a sinistra «Prova gratis N giorni» (o «Disdici»),
+  a destra «Aggiungi». La disdetta si conferma nella
+  finestra di conferma di sempre (ConfirmDialog). Un
+  esito andato bene è un riquadro velato di `--ok`; il banner giallo con
+  la scritta rossa resta per gli errori.
+- **«Giornale»** (REQ-MENU-024): una STRUTTURA sua, non una veste sopra le
+  card (MenuGiornale.jsx). Testata col nome del locale in `Playfair`
+  800 fra filetti doppi e la riga «Edizione della sera» con la data;
+  sommario agganciato sotto la barra, la sezione in vista sottolineata con
+  `--accent-2`; prima pagina con l'apertura (occhiello, titolo grande,
+  incisione con didascalia, capolettera solo sui testi lunghi) e «In
+  breve»; sezioni come fasce di inchiostro (`--text` di fondo, `--bg` di
+  testo) con le voci in colonne e senza immagini; tasti a filetto, angoli
+  vivi. Le immagini sono INCISIONI (`segno: 'incisione'`): un solo
+  inchiostro, cornice da lastra, nessun acquerello. Si anima solo
+  l'entrata di testata e prima pagina, e lo scorrimento del sommario; con
+  «riduci movimento», niente. Questa voce sotto è la prima versione, a
+  veste, sostituita.
+- **«Carte»** (REQ-MENU-029, esclusivo della Tana): una STRUTTURA sua
+  (MenuCarte.jsx), dallo schizzo di Flavio. Le sezioni sono carte
+  francesi intere di 128×182 px accavallate di `--k-passo` (100 px: ci sta
+  il nome della sezione; una parola lunga rimpicciolisce la scritta
+  quanto basta), con l'angolo (valore sopra seme) e il seme grande in
+  mezzo, IN MEZZO A UN VENTAGLIO DI CARTE GIRATE: sotto ogni carta una
+  girata intera (rossa, incisa a tratteggio incrociato, bordo avorio), sfalsata di mezza carta
+  e più in basso di `--k-sotto`, un poco storta; a ogni capo una girata
+  inclinata di 11°, col logo del locale in un anello avorio. La carta
+  scelta si alza (e si inclina di 2°), e sotto si apre in grande, larga al
+  più 720 px: una carta sul dorso parte dalla carta toccata nel
+  ventaglio, alla sua misura, scende crescendo e gira fino a essere di
+  taglio, poi la faccia finisce il giro e le voci entrano in fila. Il
+  mazzo resta agganciato sotto la barra mentre si legge, con un fondo
+  pieno (senza sfocatura) solo da agganciato; nessun tasto per tornarci (Flavio,
+  08/11/2026); sul telefono (fino a 640 px) agganciato si disegna al 62%,
+  con `transform`, senza cambiare il posto che occupa. Gli Special non sono
+  nel mazzo: sono il carosello, in cima, con le slide vestite da carta
+  avorio col Jolly negli angoli. La sezione fatta solo di Special (i
+  Signature) di partenza non è nel mazzo (REQ-MENU-037): si apre dal
+  carosello e dal QR, e sulla pagina Special è LA STESSA CARTA del menù,
+  con la sua testa, il suo seme e i suoi testi; il Jolly resta per gli
+  Special sparsi in altre sezioni. Il disegno o la foto accanto alla voce
+  c'è in ogni carta aperta, tranne nelle sezioni «snelle», in una colonna
+  stretta sua (72 px sul telefono, 96 oltre i 560), col testo nell'altra. LE CARTE SONO VECCHIE (11/11/2026):
+  dorso inciso con l'inchiostro consumato, faccia macchiata e con gli
+  spigoli scuriti, quattro dorsi e quattro facce più due pieghe e un
+  angolo piegato distribuiti con passi diversi, perché non siano rovinate
+  tutte uguali; la carta aperta e il carosello hanno la stessa carta, più
+  leggera, e il titolo della sezione non ha un fondo suo. Sono immagini
+  pronte (`public/stili/carte/`, da `scripts/carte-consumate/`): mai filtri
+  SVG calcolati dal browser, che fanno andare il menù a scatti. Le carte hanno
+  colori LORO, non del tema: avorio `#fbf8f1`, inchiostro, rosso `#c3122f`
+  per cuori e quadri, nero per fiori e picche, oro per il Jolly; dentro la
+  carta aperta `--text`, `--muted` e `--line` diventano quelli della carta,
+  così i tasti del menù si leggono anche su un tema scuro, e i disegni dei
+  drink sono quelli col tratto scuro. Scrittura `IM Fell English` (quella
+  di «Meraviglie», da stampa d'epoca alla Lewis Carroll), grande: nomi
+  delle voci 1.32rem, descrizioni 1.08rem, ingredienti in corsivo; prezzi
+  e valori delle carte in `Playfair Display`, perché IM Fell ha solo le
+  cifre antiche, basse. Movimento: all'apertura il mazzo sta 0,3 s chiuso
+  al centro a carte coperte, si stende a ventaglio in 1 s, poi le carte si
+  girano una dopo l'altra (0,5 s l'una, 60 ms di scarto) e la prima si
+  apre quando il mazzo ha quasi finito; la scelta si alza con una molla, la carta aperta
+  esce girata dal ventaglio e si gira (1,1 s: il viaggio più di metà, con
+  una partenza lenta, perché si veda che si stacca dalla carta; la
+  prospettiva del giro è della carta, col fulcro sul bordo alto, così il
+  titolo non salta), le voci entrano con 50 ms fra l'una e l'altra; solo `transform` (con `translate` e `scale`) e `opacity` (anche l'ombra della carta alzata
+  è un'opacità); con «riduci movimento», niente.
+- **«Giornale»** (prima versione): la carta stampata. `Playfair Display` per testata e
+  titoli, testo in serif di sistema, filetti pieni, voci senza scatole; dai
+  760 px le voci di una categoria vanno su due colonne.
+
+- **«Notte»** è la carta stampata al buio: titoli in `Italiana` (alto,
+  sottile, in maiuscolo con un po' di spaziatura), testo in `Jost` leggero,
+  un solo accento, l'oro dei prezzi (`--accent-2`). Niente riquadri: voci
+  a riga, `NOME ······ prezzo`, filo sottile sotto; niente logo al posto
+  della foto; «Aggiungi» è un filo, non un bottone pieno.
+- **Gli Special** in «Notte» sono scene a tutto schermo che scorrono
+  (`SpecialScorrevoli`, GSAP): il bicchiere sale e cresce, il nome arriva
+  lettera per lettera, il fondo prende il colore del drink.
+- **Regole perché scorra liscio**: si animano solo `transform` e `opacity`;
+  i disegni si usano come immagini già fatte (`useDisegnoRaster`), mai come
+  SVG con filtri mentre si muovono; i colori cambiano su un fondale fisso
+  grande quanto lo schermo; niente `backdrop-filter` né `filter: blur`; con
+  «riduci movimento» tutto resta fermo.
+
 ## Componenti
 
+- **Le icone del gestionale** (REQ-UI-031) hanno un tema, scelto in
+  Aspetto per ognuno dei tre gruppi (Navigazione; Tasti e stati; Segnali e
+  messaggi): **Silhouette** (di partenza) disegna Lucide a tratto,
+  monocromo, nel colore del testo attorno e alla sua misura; **Emoji**
+  rimette le emoji. Un'icona si chiede per NOME (`<Icona nome="cassa" />`,
+  vocabolario in `src/lib/icone.js`), mai scrivendo l'emoji nella
+  schermata: una prova lo vieta. Dove serve un testo e non un disegno — un
+  segnaposto, una voce di tendina — `useTestoConIcona` mette l'emoji solo
+  nel tema Emoji; le etichette nei dati si scrivono con `conEmoji` e si
+  mostrano con `<ConIcona>`; conferme e notifiche a comparsa prendono
+  `icona`. Il colore resta solo dove dice
+  qualcosa — i pallini degli stati (`--testo-verde`, `--testo-ambra`,
+  `--testo-rosso`) e le categorie colorate dal locale. Accanto all'icona
+  c'è sempre la parola: l'icona è decorativa (`aria-hidden`). Le pagine del
+  cliente non le usano: hanno lo stile del loro menù.
 - **Bottoni** (`.btn`): gradiente derivato da `--accent-2` (135°, dal
   tono chiaro al tono scuro), testo scuro, raggio 12px, `min-height`
   generoso. Varianti: `secondary` (velo chiaro su card) e `ghost`
@@ -310,6 +514,14 @@ Regole:
   la domanda a cui risponde, la differenza con le tabelle vicine e il
   significato delle righe. Chi la sa leggere non scorre un paragrafo ogni
   volta; chi no la trova dove se lo chiede (REQ-UI-029).
+- **Ogni persona ha il suo colore** (REQ-ORD-023): il quadratino con
+  l'iniziale di chi ha aperto un conto o battuto una riga non è più
+  dell'accento per tutti, ma di una delle otto tinte di
+  `src/lib/colorePersona.js` (rosa, azzurro, viola, arancio, petrolio,
+  ocra, indaco, prugna), scelta dal nome. Tinte scure abbastanza da reggere
+  la lettera bianca nei due temi; il rosso e il verde puri restano agli
+  stati. Lo stesso colore sulla card, nella legenda della coda, nella barra
+  in alto e accanto a ogni riga del conto.
 - **Il colore del conto prende il fondo della card.** Un conto può avere un
   colore suo (campo `colore` sul documento, tavolozza delle categorie):
   serve a riconoscere che tre comande finite in tre colonne diverse sono lo
@@ -553,6 +765,13 @@ Otto temi per riga, si tiene il peggiore.
 7. **Ogni tema nuovo è un preset in `themes.js`**, mai colori sparsi nei
    componenti: se un colore non passa dalle 7 variabili (o dagli stati),
    è nel posto sbagliato.
+8. **Quello che ha una categoria si legge per categorie** (Flavio,
+   22/10/2026: «sempre sempre sempre dividere qualsiasi cosa in
+   categorie»). Un elenco di voci di menù o di prodotti di magazzino parte
+   diviso per categoria, nell'ordine delle categorie, con la scelta «Tutto
+   insieme» accanto (`GruppoChip`); le colonne con un valore si ordinano
+   toccando l'intestazione (`SortTh`), anche dentro le categorie. Il
+   modello è la marginalità del listino (`MarginList`).
 
 ## Breakpoint
 

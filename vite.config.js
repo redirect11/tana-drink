@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { execSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
+import { pluginCliente } from './clienti/pluginCliente.js'
 
 // Su Firebase Hosting il sito è servito dalla radice ("/").
 // Usiamo BrowserRouter lato app, quindi qui serve solo impostare il base path.
@@ -76,6 +77,8 @@ export default defineConfig({
   },
   plugins: [
     react(),
+    // PER CHI SI COMPILA (REQ-VENUE-001): `CLIENTE=<slug>`, default tana.
+    pluginCliente(),
     {
       // IL CHANGELOG VIAGGIA COL DEPLOY. Le note della versione si leggono
       // dentro l'app (Impostazioni → Informazioni): il file sta nella
@@ -116,12 +119,20 @@ export default defineConfig({
         // (le librerie cambiano di rado rispetto al codice dell'app).
         manualChunks(id) {
           if (!id.includes('node_modules')) return
+          // Il client diretto di Firestore (BUG-117) ha un pezzo suo: si
+          // carica solo quando serve, e insieme all'altro peserebbe 138 KB
+          // in più all'avvio di ogni terminale.
+          if (id.includes('/firestore/dist/lite/') || id.includes('/firestore/lite')) return 'firebase-firestore-lite'
           if (id.includes('@firebase/firestore') || id.includes('firebase/firestore')) return 'firebase-firestore'
           if (id.includes('@firebase/auth') || id.includes('firebase/auth')) return 'firebase-auth'
           if (id.includes('@firebase/storage') || id.includes('firebase/storage')) return 'firebase-storage'
           if (id.includes('@firebase/functions') || id.includes('firebase/functions')) return 'firebase-functions'
           if (id.includes('firebase') || id.includes('@firebase')) return 'firebase-core'
           if (id.includes('react-router') || id.includes('@remix-run')) return 'router'
+          // I disegni delle icone (REQ-UI-031) in un pezzo loro: con
+          // `includes('react')` sotto finivano nel pacchetto di React, che
+          // cambiava a ogni icona aggiunta e si riscaricava su ogni terminale.
+          if (id.includes('lucide-react')) return 'icone'
           if (id.includes('react') || id.includes('scheduler')) return 'react'
           return 'vendor'
         },

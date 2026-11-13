@@ -1,3 +1,4 @@
+/* global __DEMO__ */
 import { Routes, Route, Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import LandingPage from './pages/LandingPage.jsx'
 import MenuPage from './pages/MenuPage.jsx'
@@ -10,16 +11,22 @@ import StaffProfilePage from './pages/StaffProfilePage.jsx'
 import PosPage from './pages/PosPage.jsx'
 import { useCustomer, useHasOrders } from './lib/customerAuth.js'
 import { isFirebaseConfigured, auth } from './lib/firebaseClient.js'
-import { isPersonale, isSala } from './lib/ruoli.js'
+import { isPersonale, isSala, isGestore } from './lib/ruoli.js'
+import { colorePersona } from './lib/colorePersona.js'
 import { ricordaRuolo } from './lib/ruoloLocale.js'
-import { onAuthStateChanged } from 'firebase/auth'
+import { onAuthStateChanged, signInWithCustomToken } from 'firebase/auth'
+import { codiceRegiaInAttesa, consumaCodiceRegia, entraDallaRegia } from './lib/passaggioRegia.js'
+import Caricamento from './components/Caricamento.jsx'
 import {
   subscribeSettings,
   DEFAULT_SETTINGS,
   clockIn,
   subscribePrinterConfig,
   saveStaffToken,
+  presentaAllaRegia,
 } from './lib/api.js'
+import { presentaSeServe } from './lib/presentazione.js'
+import { precaricaMenu } from './lib/menuCache.js'
 import { getPushToken } from './lib/push.js'
 import { idDispositivo } from './lib/dispositivo.js'
 import { savePrinterSettings, impostaUtenteStampante } from './lib/printer.js'
@@ -28,6 +35,10 @@ import AvvisiSpenti from './components/AvvisiSpenti.jsx'
 import ChiamataInArrivo from './components/ChiamataInArrivo.jsx'
 import { dismissKeyboard } from './lib/keyboard.js'
 import StatusBell from './components/StatusBell.jsx'
+import PannelloChat from './components/PannelloChat.jsx'
+import TastoAssistente from './components/TastoAssistente.jsx'
+import { aiRaggiungibile } from './lib/aiApi.js'
+import { useTastoAI } from './lib/statoAI.js'
 import ActionSheet from './components/ActionSheet.jsx'
 import StaffDrawer from './components/StaffDrawer.jsx'
 import ClientDrawer from './components/ClientDrawer.jsx'
@@ -35,7 +46,39 @@ import { useTelefono } from './lib/useTelefono.js'
 import { useSchermoIntero } from './lib/useSchermoIntero.js'
 import { logoutStaff } from './lib/logout.js'
 import { resolveThemeVars, applyTheme } from './lib/themes.js'
+import { temaInProva, temaComeColori, stileDelTema } from './lib/marketplaceTemi.js'
+import { coloriConRicetta } from './lib/stiliRicetta.js'
+import { stileInVista, vestePagine, ricettaDelloStile } from './lib/stileMenu.js'
+import { StileCliente } from './lib/testiStile.js'
 import { applicaNomeApp } from './lib/nomeApp.js'
+import { venueDi } from './lib/venue.js'
+import { licenzaDi } from './lib/licenzaInVigore.js'
+import {
+  installazioneBloccata,
+  licenzaNota,
+  menuDigitaleAttivo,
+  accountClientiAttivi,
+  statoLicenza,
+  STATI_LICENZA,
+} from './lib/licenza.js'
+
+// LA DEMO PUBBLICA (REQ-FLOTTA-019): la scelta del ruolo e la fascia «Demo»
+// avvolgono le pagine. Si carica con `import()` solo se la build è la demo:
+// in quella di un locale vero `__DEMO__` vale false e qui resta un
+// componente che restituisce le pagine e basta.
+const PortaDemo = __DEMO__ ? lazy(() => import('./demo/PortaDemo.jsx')) : null
+function ConDemo({ children }) {
+  if (!__DEMO__) return children
+  return (
+    <Suspense fallback={null}>
+      <PortaDemo>{children}</PortaDemo>
+    </Suspense>
+  )
+}
+import FunzioneNonInclusa from './components/FunzioneNonInclusa.jsx'
+import InstallazioneSospesa from './components/InstallazioneSospesa.jsx'
+import AvvisoCancellazione from './components/AvvisoCancellazione.jsx'
+import { socialDelLocale } from './lib/social.js'
 import { envLabel } from './dev/devActions.js'
 import { openCookiePreferences } from './lib/cookieConsent.js'
 import { subscribeUpdateAvailable } from './lib/appVersion.js'
@@ -46,12 +89,17 @@ import { subscribeSottosezioni } from './lib/sottosezioni.js'
 import Tendina from './components/Tendina.jsx'
 import { recordNotif } from './lib/notifyStore.js'
 import NovitaDialog from './components/NovitaDialog.jsx'
+import PropostaAggiornamento from './components/PropostaAggiornamento.jsx'
 import { useOnline } from './lib/useOnline.js'
 import { toastSuccess } from './lib/toast.js'
 import Toasts from './components/Toasts.jsx'
 import ZoomControl from './components/ZoomControl.jsx'
 import { zoomDove } from './lib/zoomDove.js'
-import { useEffect, useRef, useState } from 'react'
+import Icona from './components/Icona.jsx'
+import { TemaIcone } from './lib/temaIcone.js'
+import { AiutiCampi, aiutiCampiAccesi } from './lib/aiutiCampi.js'
+import { temiIconeDi, TUTTE_EMOJI, conEmoji } from './lib/icone.js'
+import { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react'
 
 /* global __APP_VERSION__, __BUILD_ID__ */
 const VERSIONE = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : ''
@@ -69,7 +117,8 @@ export default function App() {
     if (!isFirebaseConfigured) return
     return subscribeSettings(setSettings)
   }, [])
-  const accountsOn = settings.customer_accounts_enabled
+  // Gli account clienti: il modulo (REQ-LIC-002) e l'interruttore del locale.
+  const accountsOn = accountClientiAttivi(settings)
 
   // Nuova versione online (la PWA resta aperta per giorni): banner
   // "tocca per aggiornare" invece di aspettare un reload manuale.
@@ -97,7 +146,7 @@ export default function App() {
       // traccia anche dopo aver chiuso il box. Se il box esce adesso, la
       // notifica nasce già letta — è appena stata mostrata.
       recordNotif(
-        '🎉 L’app è stata aggiornata',
+        conEmoji('festa', 'L’app è stata aggiornata'),
         'Tocca per rivedere cosa è cambiato',
         { href: '/bar?tab=impostazioni&sezione=informazioni', letta: cosa === 'box' }
       )
@@ -148,10 +197,54 @@ export default function App() {
   // interamente nel viewport.
   const [topbarOpen, setTopbarOpen] = useState(false)
   const navigate = useNavigate()
+
+  // DALLA REGIA, CON UN CLIC (REQ-FLOTTA-030): «Apri la tua app» arriva con
+  // un codice, preso all'avvio (main.jsx). Lo si scambia una volta, e si va
+  // dove va un admin appena entrato; se non va, al login del banco, con la
+  // riga che dice perché. Vale anche con l'installazione non attivata.
+  const [entrandoDallaRegia, setEntrandoDallaRegia] = useState(codiceRegiaInAttesa)
+  useEffect(() => {
+    const codice = consumaCodiceRegia()
+    if (codice === null) return
+    entraDallaRegia(codice, { accedi: (token) => signInWithCustomToken(auth, token) }).then((esito) => {
+      setEntrandoDallaRegia(false)
+      navigate('/bar', { replace: true, state: esito.ok ? null : { avvisoAccesso: esito.messaggio } })
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   // Sul telefono la barra tiene il ☰, il logo e due sole azioni: la
   // campanella e i ⋮. Tutto il resto sta nel menu (vedi sotto).
   const telefono = useTelefono()
+
+  // L'ALTEZZA VERA DELLA BARRA IN ALTO (BUG-130). Chi si appiccica sotto la
+  // barra scorrendo — le schede delle categorie del menù, il sommario del
+  // giornale — si fermava a una misura scritta a mano (64 px, poi 68), ma
+  // la barra è alta quanto il suo contenuto: il tasto ☰, i margini, il filo,
+  // la fascia di sistema, e cresce col testo ingrandito del telefono. La
+  // differenza finiva dietro la barra, e le schede sembravano incollate
+  // sotto. Ora la si misura, e la misura sta in `--barra-intera`.
+  const barraInAlto = useRef(null)
+  useEffect(() => {
+    const el = barraInAlto.current
+    if (!el) return undefined
+    const radice = document.documentElement
+    const misura = () => radice.style.setProperty('--barra-intera', `${el.offsetHeight}px`)
+    misura()
+    if (typeof ResizeObserver === 'undefined') return () => radice.style.removeProperty('--barra-intera')
+    const oss = new ResizeObserver(misura)
+    // Il bordo intero, non solo l'interno: la fascia di sistema (e la
+    // striscia della demo) allargano la barra dal margine di sopra, e
+    // l'interno resta uguale — guardando solo quello il cambio non arrivava.
+    oss.observe(el, { box: 'border-box' })
+    return () => {
+      oss.disconnect()
+      radice.style.removeProperty('--barra-intera')
+    }
+  }, [])
   const [menuTopbar, setMenuTopbar] = useState(false)
+  // L'ASSISTENTE AI (REQ-AI-006): un pannello sopra la pagina, per lo staff
+  // di gestione, solo dove l'AI arriva (non nel Free, non nella demo).
+  const [chatAperta, setChatAperta] = useState(false)
   // "Schermo intero" ha senso solo da browser: con l'app installata le
   // barre non ci sono già. Lo stesso stato del tasto nella barra, così la
   // voce del menu sa anche USCIRE e non solo entrare.
@@ -179,13 +272,23 @@ export default function App() {
     if (!online) wasOffline.current = true
     else if (wasOffline.current) {
       wasOffline.current = false
-      toastSuccess('✅ Di nuovo online — sincronizzo le modifiche')
+      toastSuccess('Di nuovo online — sincronizzo le modifiche')
     }
   }, [online])
 
   // Staff loggato (bartender o collaboratore): nel topbar lato cliente
   // mostra il ruolo ed «Esci» al posto di «Accedi».
   const [staffRole, setStaffRole] = useState(null)
+  // Assente, senza credito o attiva (REQ-AI-007): decide il tasto e la voce
+  // del ⋮. Il credito si chiede solo per lo staff di gestione.
+  const assistente = useTastoAI(isGestore(staffRole))
+  // IL CATALOGO SI PRECARICA ALL'INGRESSO DEL PERSONALE (BUG-137): il conto
+  // deve trovarlo in memoria anche se la rete cade prima di aprirlo, da
+  // qualunque sezione ci si arrivi. Un effetto a parte e non dentro
+  // l'ascolto del login: lì un errore finirebbe nel catch che toglie il ruolo.
+  useEffect(() => {
+    if (staffRole) precaricaMenu()
+  }, [staffRole])
   const [staffName, setStaffName] = useState('')
   // CHI STA LAVORANDO A QUESTO TERMINALE (REQ-STAFF-016): può non essere
   // chi ha fatto il login — al tablet del banco si collega un account solo
@@ -274,13 +377,59 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [staffRole])
 
-  // IL NOME DELL'APP SEGUE CHI LA USA: «La Tana del Coniglio» per il
-  // cliente, col suffisso del ruolo per chi lavora. Vale per la linguetta
-  // del browser e per il nome che il telefono propone all'installazione
-  // (vedi src/lib/nomeApp.js: il nome dell'icona si congela lì).
+  // IL LOCALE (REQ-VENUE-002): nome, social e il resto vengono dalle
+  // impostazioni, con la build come riserva. Memorizzato sulle impostazioni:
+  // l'effetto qui sotto riscrive il manifest, e non deve farlo a ogni
+  // disegno.
+  const venue = useMemo(() => venueDi(settings), [settings])
+  const social = useMemo(() => socialDelLocale(venue), [venue])
+  // Il tema delle icone, ricalcolato solo quando cambia davvero: è il
+  // valore del contesto che leggono centinaia di <Icona> (memo), e un
+  // oggetto nuovo a ogni render le ridisegnerebbe tutte.
+  const temaIconeNav = settings.tema_icone_navigazione
+  const temaIconeTasti = settings.tema_icone_tasti
+  const temaIconeSegnali = settings.tema_icone_segnali
+  const temaIcone = useMemo(
+    () => (staffRole ? temiIconeDi(settings) : TUTTE_EMOJI),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [staffRole, temaIconeNav, temaIconeTasti, temaIconeSegnali]
+  )
+  // Sospesa o chiusa dalla regia (REQ-FLOTTA-008): si ferma e lo dice.
+  const bloccata = installazioneBloccata(settings)
+  // L'APP SI PRESENTA ALLA REGIA (REQ-FLOTTA-026): una volta per versione,
+  // dopo l'accesso, e di nuovo se la licenza manca e qualcuno è ancora
+  // collegato (la regia la riscrive). Non è l'attivazione: la licenza c'è
+  // prima dell'app. In sottofondo: nessuno la aspetta, e un errore si
+  // riprova alla prossima apertura.
+  const nonAttivata = statoLicenza(settings) === STATI_LICENZA.NON_ATTIVATA
   useEffect(() => {
-    applicaNomeApp(staffRole)
-  }, [staffRole])
+    presentaSeServe({
+      versione: VERSIONE,
+      collegato: Boolean(uidCollegato),
+      licenzaMancante: nonAttivata,
+      chiama: presentaAllaRegia,
+    })
+  }, [uidCollegato, nonAttivata])
+  // Il menù digitale è un modulo (REQ-LIC-002), e le sue due pagine (/menu e
+  // /menu/special) lo seguono insieme: senza, la stessa pagina che lo dice.
+  const menuDigitale = menuDigitaleAttivo(settings)
+  // FINCHÉ LA LICENZA NON È ARRIVATA NON SI DICE CHE IL MENÙ MANCA (BUG-142):
+  // alla prima apertura, per un secondo, il cliente al tavolo leggeva «Il
+  // menù digitale non è attivo» e poi vedeva il menù. Intanto la stessa
+  // attesa che mostra MenuPage mentre carica.
+  const menuNonIncluso = licenzaNota(settings) ? (
+    <FunzioneNonInclusa nome="Il menù digitale" licenza={licenzaDi(settings)} />
+  ) : (
+    <div className="empty">Carico il menù…</div>
+  )
+
+  // IL NOME DELL'APP SEGUE CHI LA USA: il nome del locale per il cliente,
+  // col suffisso del ruolo per chi lavora. Vale per la linguetta del
+  // browser e per il nome che il telefono propone all'installazione (vedi
+  // src/lib/nomeApp.js: il nome dell'icona si congela lì).
+  useEffect(() => {
+    applicaNomeApp(staffRole, venue)
+  }, [staffRole, venue])
 
   // Tema: SEGUE CHI GUARDA, non l'indirizzo. Prima era un elenco di
   // percorsi, e bastava che ne mancasse uno — il profilo staff, "i miei
@@ -297,10 +446,40 @@ export default function App() {
     location.pathname.startsWith('/menu') &&
     new URLSearchParams(location.search).get('vista') === 'cliente'
   const staffSurface = !!staffRole && !anteprimaCliente
+  // E IL TEMA IN PROVA (REQ-MENU-023): dal marketplace, chi lavora vede il
+  // proprio menù coi colori di un tema prima di usarlo. Solo lui.
+  const temaProvato = staffRole && anteprimaCliente ? temaInProva(settings, location.search) : null
+
+  // LO STILE CHE VESTE LE PAGINE DEI CLIENTI (REQ-MENU-027). Il menù si
+  // veste da sé; uno stile che veste anche le altre pagine («Meraviglie»:
+  // la home, gli ordini, l'accesso) si scrive sulla radice del documento,
+  // come i colori, e le schermate ne leggono le frasi. Segue chi guarda,
+  // come il tema: chi lavora vede il gestionale com'è.
+  const stileCliente = stileInVista(settings, {
+    lavoro: staffSurface,
+    prova: staffRole && anteprimaCliente ? new URLSearchParams(location.search).get('stile') || stileDelTema(temaProvato) : null,
+  })
+  // I colori propri di uno stile a ricetta (REQ-MENU-031) stanno sopra
+  // quelli del tema, come la lavagna: vanno sulla radice coi colori, perché
+  // il fondo della pagina è lì. La ricetta si ricompone a ogni giro: si
+  // guarda il testo dei colori, non l'oggetto.
+  const coloriStile = staffSurface ? '' : JSON.stringify(ricettaDelloStile(settings, stileCliente)?.colori ?? null)
   useEffect(() => {
-    const scope = staffSurface ? settings.theme_staff : settings.theme_client
-    applyTheme(resolveThemeVars(scope))
-  }, [settings, staffSurface])
+    const scope = temaProvato
+      ? temaComeColori(temaProvato)
+      : staffSurface
+        ? settings.theme_staff
+        : settings.theme_client
+    const colori = coloriStile ? JSON.parse(coloriStile) : null
+    applyTheme(resolveThemeVars(coloriConRicetta(scope, colori && { colori })))
+  }, [settings, staffSurface, temaProvato, coloriStile])
+
+  const stilePagine = vestePagine(stileCliente) ? stileCliente : null
+  useEffect(() => {
+    const root = document.documentElement
+    if (stilePagine) root.dataset.stile = stilePagine
+    else delete root.dataset.stile
+  }, [stilePagine])
 
 
   // IL ☰ C'È OVUNQUE, per tutti: chi è dello staff apre il gestionale, il
@@ -342,7 +521,19 @@ export default function App() {
     (location.pathname.startsWith('/menu') && !!staffRole && !anteprimaCliente)
 
   return (
+    // IL TEMA DELLE ICONE (REQ-UI-031) vale per il gestionale: la barra,
+    // il menu laterale, le pagine. Chi non è dello staff (il cliente, anche
+    // sulla barra di «I miei ordini») resta con le emoji di sempre: le sue
+    // pagine hanno lo stile del loro menù (decisione dell'utente, 07/11/2026).
+    <TemaIcone.Provider value={temaIcone}>
+    {/* Gli aiuti sotto i campi delle schede: di partenza nascosti (REQ-UI-032). */}
+    <AiutiCampi.Provider value={aiutiCampiAccesi(settings)}>
     <div className="app">
+      {entrandoDallaRegia && (
+        <div className="overlay ingresso-regia">
+          <Caricamento testo="Accesso dall’area clienti…" />
+        </div>
+      )}
       {/* Mostra/nascondi la topbar ovunque (utile sulle schermate a tutto
           schermo, dove è nascosta). Da aperta è un overlay, non spinge nulla.
           La campanella (notifiche + sync) sta nella topbar: si richiama da qui. */}
@@ -364,7 +555,7 @@ export default function App() {
       )}
       {!online && (
         <div className="offline-ribbon">
-          📴 Offline — puoi continuare a lavorare, tutto si sincronizza al ritorno della connessione
+          <Icona nome="rete-assente" gruppo="segnali" /> Offline — puoi continuare a lavorare, tutto si sincronizza al ritorno della connessione
         </div>
       )}
       {updateReady && (
@@ -372,7 +563,7 @@ export default function App() {
           className="update-banner"
           onClick={() => window.location.reload()}
         >
-          🔄 Nuova versione disponibile — tocca per aggiornare
+          <Icona nome="aggiorna" gruppo="tasti" /> Nuova versione disponibile — tocca per aggiornare
         </button>
       )}
       {novitaAperte && (
@@ -383,6 +574,9 @@ export default function App() {
           }}
         />
       )}
+      {/* GLI AGGIORNAMENTI A SCELTA DEL TITOLARE (REQ-FLOTTA-020): senza la
+          voce nella licenza — la Tana, la cui licenza è nella build — non esce niente. */}
+      <PropostaAggiornamento settings={settings} ruolo={staffRole} inPausa={novitaAperte || bloccata} />
       {/* Notifiche IN APP (sync, ordini da staff/clienti, errori) */}
       <Toasts />
       {/* Zoom della pagina: nella PWA a tutto schermo il browser non lo
@@ -401,7 +595,7 @@ export default function App() {
           <ClientDrawer user={user} profile={profile} accountsOn={accountsOn} />
         )
       )}
-      <header className={`topbar${onBackoffice || staffRole ? ' backoffice' : ''}`}>
+      <header ref={barraInAlto} className={`topbar${onBackoffice || staffRole ? ' backoffice' : ''}`}>
         {/* Menu laterale A SCOMPARSA ovunque: si apre da qui (il tasto
             flottante `.bar-burger` resta solo nelle schermate a tutto
             schermo, dove la topbar è nascosta — lo accende il CSS, non
@@ -411,9 +605,9 @@ export default function App() {
             className="topbar-burger"
             aria-label="Menu"
             title="Menu"
-            onClick={() => window.dispatchEvent(new Event('tana:toggle-drawer'))}
+            onClick={() => window.dispatchEvent(new Event('drink:toggle-drawer'))}
           >
-            ☰
+            <Icona nome="menu_laterale" />
           </button>
         )}
         {/* INDIETRO, NELLA BARRA. Nelle sezioni del gestionale stava dentro
@@ -441,7 +635,7 @@ export default function App() {
           style={{ textDecoration: 'none', color: 'inherit' }}
         >
           <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
-          <span className="brand-nome">La Tana del Coniglio</span>
+          <span className="brand-nome">{venue.venue_name}</span>
         </Link>
         {/* IL TITOLO DELLA PAGINA STA QUI, attaccato al marchio: dentro la
             pagina si prendeva una riga in cima al contenuto, e su un tablet
@@ -453,7 +647,7 @@ export default function App() {
             uguale sul telefono e sul computer. */}
         {pagina && (
           <span className="topbar-pagina">
-            <span aria-hidden>·</span> {(sezioneAttiva?.icona) || pagina.icona}{' '}
+            <span aria-hidden>·</span> <Icona nome={(sezioneAttiva?.icona) || pagina.icona} />{' '}
             {(sezioneAttiva?.label) || pagina.titolo}
           </span>
         )}
@@ -464,6 +658,12 @@ export default function App() {
               terminale» è una domanda del gestionale — a un cliente non
               vuol dire niente e non deve nemmeno comparire. Chi ordina o
               scansiona il QR li riavrà, e saranno i suoi. */}
+          {/* L'ASSISTENTE AI sta con le azioni («cosa posso fare adesso?»),
+              prima della campanella. Sul telefono è una voce del ⋮: lì la
+              zona destra tiene solo campanella e ⋮ (docs/navigazione.md). */}
+          {isGestore(staffRole) && !telefono && aiRaggiungibile() && (
+            <TastoAssistente aperto={chatAperta} onAlterna={() => setChatAperta((v) => !v)} />
+          )}
           {collegato && <StatusBell />}
           {/* A tutto schermo ci va chi LAVORA sull'app per ore (banco, sala):
               al cliente che apre il menù dal telefono non serve, e in mezzo
@@ -493,7 +693,9 @@ export default function App() {
                quadratino è la stessa che marca gli ordini aperti da questa
                persona, così si riconosce a colpo d'occhio chi sta battendo. */
             <Link className="topbar-io" to="/profilo-staff" title="Il mio profilo">
-              <span className="order-by staff">{(nomeInBarra || '?')[0].toUpperCase()}</span>
+              <span className="order-by staff" style={{ background: colorePersona(nomeInBarra) ?? undefined }}>
+                {(nomeInBarra || '?')[0].toUpperCase()}
+              </span>
               <span className="topbar-io-nome">{nomeInBarra}</span>
             </Link>
           ) : telefono ? null : (
@@ -506,7 +708,7 @@ export default function App() {
               )}
               {user ? (
                 <Link className="btn ghost small" to="/profilo">
-                  👤 Ciao, {profile?.nome || user.displayName?.split(' ')[0] || 'Profilo'}
+                  <Icona nome="profilo" gruppo="tasti" />{' '}Ciao, {profile?.nome || user.displayName?.split(' ')[0] || 'Profilo'}
                 </Link>
               ) : accountsOn ? (
                 <Link className="btn ghost small" to="/accedi">Accedi</Link>
@@ -524,16 +726,16 @@ export default function App() {
           spostando quello che c'è sotto proprio mentre lo si tocca. */}
       {telefono && !staffRole && !onBackoffice && (
         <div className="barra-cliente">
-          <Link className="btn ghost small" to="/menu">🍸 Menù</Link>
+          <Link className="btn ghost small" to="/menu"><Icona nome="menu" gruppo="tasti" /> Menù</Link>
           {hasOrders && (
-            <Link className="btn ghost small" to="/ordini">🧾 I miei ordini</Link>
+            <Link className="btn ghost small" to="/ordini"><Icona nome="coda" gruppo="tasti" /> I miei ordini</Link>
           )}
           {user ? (
             <Link className="btn ghost small" to="/profilo">
-              👤 {profile?.nome || user.displayName?.split(' ')[0] || 'Profilo'}
+              <Icona nome="profilo" gruppo="tasti" />{' '}{profile?.nome || user.displayName?.split(' ')[0] || 'Profilo'}
             </Link>
           ) : accountsOn ? (
-            <Link className="btn ghost small" to="/accedi">🔑 Accedi</Link>
+            <Link className="btn ghost small" to="/accedi"><Icona nome="accedi" gruppo="tasti" /> Accedi</Link>
           ) : null}
         </div>
       )}
@@ -544,54 +746,65 @@ export default function App() {
       <ActionSheet
         open={menuTopbar}
         onClose={() => setMenuTopbar(false)}
-        titolo={nomeInBarra ? nomeInBarra : 'La Tana del Coniglio'}
+        titolo={nomeInBarra ? nomeInBarra : venue.venue_name}
         voci={[
 
           {
             id: 'profilo',
-            icon: '⚙️',
+            icon: 'profilo',
             label: 'Il mio profilo',
             hint: 'Nome e password',
             onClick: () => navigate('/profilo-staff'),
           },
+          isGestore(staffRole) && aiRaggiungibile() && !assistente.assente && {
+            id: 'assistente',
+            icon: 'fumetto',
+            label: 'Assistente AI',
+            ...(assistente.senzaCredito
+              ? { hint: assistente.avviso, onClick: assistente.avvisa }
+              : { hint: 'Giacenze, vendite, descrizioni del menù', onClick: () => setChatAperta(true) }),
+          },
           !isSala(staffRole) && {
             id: 'pos',
-            icon: '🍸',
+            icon: 'nuovo-ordine',
             label: 'POS — nuovo ordine',
             onClick: () => navigate('/pos'),
           },
-          !isSala(staffRole) && {
+          // Senza il menù digitale non c'è un menù da guardare (BUG-132).
+          !isSala(staffRole) && menuDigitale && {
             id: 'vista-cliente',
-            icon: '👀',
+            icon: 'vista-cliente',
             label: 'Vista cliente',
             hint: 'Il menù come lo vede chi ordina',
             onClick: () => navigate('/menu?vista=cliente'),
           },
           isSala(staffRole) && {
             id: 'servizio',
-            icon: '🧾',
+            icon: 'coda',
             label: 'Torna alla coda',
             hint: 'La coda ordini, la stessa del banco',
             onClick: () => navigate('/bar'),
           },
           schermoIntero.disponibile && {
             id: 'schermo',
-            icon: schermoIntero.attivo ? '🡼' : '⛶',
+            icon: schermoIntero.attivo ? 'esci-schermo-intero' : 'schermo-intero',
             label: schermoIntero.attivo ? 'Esci da schermo intero' : 'Schermo intero',
             hint: schermoIntero.attivo
               ? null
               : 'Meglio ancora: installa l’app dalla schermata iniziale',
             onClick: schermoIntero.alterna,
           },
-          { id: 'esci', icon: '🚪', label: 'Esci', danger: true, onClick: () => logoutStaff() },
+          { id: 'esci', icon: 'esci', label: 'Esci', danger: true, onClick: () => logoutStaff() },
         ]}
       />
+
+      {chatAperta && isGestore(staffRole) && !assistente.assente && <PannelloChat ruolo={staffRole} onChiudi={() => setChatAperta(false)} />}
 
       {(onBackoffice || !!staffRole) && <AddToHomeHint />}
 
       {!isFirebaseConfigured && (
         <div className="banner">
-          ⚠️ Firebase non è configurato. Imposta <code>VITE_FIREBASE_API_KEY</code> e{' '}
+          <Icona nome="avviso" gruppo="segnali" />{' '}Firebase non è configurato. Imposta <code>VITE_FIREBASE_API_KEY</code> e{' '}
           <code>VITE_FIREBASE_PROJECT_ID</code> (vedi <code>.env.example</code> e{' '}
           <code>firestore.rules</code>).
         </div>
@@ -609,10 +822,21 @@ export default function App() {
           un cerca-persone. */}
       <ChiamataInArrivo ruolo={staffRole} />
 
-      <main>
+      {/* LA CANCELLAZIONE DEI DATI (REQ-LIC-009): sopra a tutto, anche
+          sul locale fermo. */}
+      <AvvisoCancellazione settings={settings} ruolo={staffRole} />
+      {bloccata && <InstallazioneSospesa licenza={licenzaDi(settings)} venue={venue} ruolo={staffRole} />}
+      <main hidden={bloccata}>
+        <StileCliente.Provider value={stilePagine}>
+        <ConDemo>
         <Routes>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/menu" element={<MenuPage />} />
+          {/* IL MENÙ DIGITALE è un modulo (REQ-LIC-002): senza, al suo posto
+              una pagina che lo dice. La Tana ha tutti i moduli. */}
+          <Route path="/menu" element={menuDigitale ? <MenuPage /> : menuNonIncluso} />
+          {/* IL MENÙ SPECIAL (REQ-MENU-018): sotto /menu, così valgono
+              anche qui tema, cassetto e anteprima del cliente. */}
+          <Route path="/menu/special" element={menuDigitale ? <MenuPage speciali /> : menuNonIncluso} />
           <Route path="/ordini" element={<MyOrdersPage />} />
           <Route path="/ordine/:id" element={<OrderStatusPage />} />
           {/* Il dettaglio di una COMANDA: ci si arriva dalla card in
@@ -627,14 +851,16 @@ export default function App() {
           <Route path="/pos" element={<PosPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </ConDemo>
+        </StileCliente.Provider>
       </main>
 
       <footer className="app-footer">
         {/* Social solo lato CLIENTE: nel gestionale sono spazio buttato — chi
             sta al bancone non apre Instagram dal footer del POS. */}
-        {!staffSurface && (
+        {!staffSurface && social.length > 0 && (
           <div className="footer-social">
-            {SOCIALS.map((s) => (
+            {social.map((s) => (
               <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer" aria-label={s.label}>
                 <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                   <path d={s.path} />
@@ -650,37 +876,11 @@ export default function App() {
         </button>
       </footer>
     </div>
+    </AiutiCampi.Provider>
+    </TemaIcone.Provider>
   )
 }
 
-// Social del locale (stessi link della home del sito karaoke).
-const SOCIALS = [
-  {
-    label: 'Instagram',
-    href: 'https://www.instagram.com/latanadelconiglio_nola/',
-    path: 'M7.0301.084c-1.2768.0602-2.1487.264-2.911.5634-.7888.3075-1.4575.72-2.1228 1.3877-.6652.6677-1.075 1.3368-1.3802 2.127-.2954.7638-.4956 1.6365-.552 2.914-.0564 1.2775-.0689 1.6882-.0626 4.947.0062 3.2586.0206 3.6671.0825 4.9473.061 1.2765.264 2.1482.5635 2.9107.308.7889.72 1.4573 1.388 2.1228.6679.6655 1.3365 1.0743 2.1285 1.38.7632.295 1.6361.4961 2.9134.552 1.2773.056 1.6884.069 4.9462.0627 3.2578-.0062 3.668-.0207 4.9478-.0814 1.28-.0607 2.147-.2652 2.9098-.5633.7889-.3086 1.4578-.72 2.1228-1.3881.665-.6682 1.0745-1.3378 1.3795-2.1284.2957-.7632.4966-1.636.552-2.9124.056-1.2809.0692-1.6898.063-4.948-.0063-3.2583-.021-3.6668-.0817-4.9465-.0607-1.2797-.264-2.1487-.5633-2.9117-.3084-.7889-.72-1.4568-1.3876-2.1228C21.2982 1.33 20.628.9208 19.8378.6165 19.074.321 18.2017.1197 16.9244.0645 15.6471.0093 15.236-.005 11.977.0014 8.718.0076 8.31.0215 7.0301.0839m.1402 21.6932c-1.17-.0509-1.8053-.2453-2.2287-.408-.5606-.216-.96-.4771-1.3819-.895-.422-.4178-.6811-.8186-.9-1.378-.1644-.4234-.3624-1.058-.4171-2.228-.0595-1.2645-.072-1.6442-.079-4.848-.007-3.2037.0053-3.583.0607-4.848.05-1.169.2456-1.805.408-2.2282.216-.5613.4762-.96.895-1.3816.4188-.4217.8184-.6814 1.3783-.9003.423-.1651 1.0575-.3614 2.227-.4171 1.2655-.06 1.6447-.072 4.848-.079 3.2033-.007 3.5835.005 4.8495.0608 1.169.0508 1.8053.2445 2.228.408.5608.216.96.4754 1.3816.895.4217.4194.6816.8176.9005 1.3787.1653.4217.3617 1.056.4169 2.2263.0602 1.2655.0739 1.645.0796 4.848.0058 3.203-.0055 3.5834-.061 4.848-.051 1.17-.245 1.8055-.408 2.2294-.216.5604-.4763.96-.8954 1.3814-.419.4215-.8181.6811-1.3783.9-.4224.1649-1.0577.3617-2.2262.4174-1.2656.0595-1.6448.072-4.8493.079-3.2045.007-3.5825-.006-4.848-.0608M16.953 5.5864A1.44 1.44 0 1 0 18.39 4.144a1.44 1.44 0 0 0-1.437 1.4424M5.8385 12.012c.0067 3.4032 2.7706 6.1557 6.173 6.1493 3.4026-.0065 6.157-2.7701 6.1506-6.1733-.0065-3.4032-2.771-6.1565-6.174-6.1498-3.403.0067-6.156 2.771-6.1496 6.1738M8 12.0077a4 4 0 1 1 4.008 3.9921A3.9996 3.9996 0 0 1 8 12.0077',
-  },
-  {
-    label: 'TikTok',
-    href: 'https://www.tiktok.com/@latanadelconiglionola',
-    path: 'M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z',
-  },
-  {
-    label: 'Facebook',
-    href: 'https://www.facebook.com/people/La-tana-del-coniglio/61558657110329/',
-    path: 'M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.848-5.978 5.858-5.978.401 0 .955.042 1.468.103a8.68 8.68 0 0 1 1.141.195v3.325a8.623 8.623 0 0 0-.653-.036 26.805 26.805 0 0 0-.733-.009c-.707 0-1.259.096-1.675.309a1.686 1.686 0 0 0-.679.622c-.258.42-.374.995-.374 1.752v1.297h3.919l-.386 2.103-.287 1.564h-3.246v8.245C19.396 23.238 24 18.179 24 12.044c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.628 3.874 10.35 9.101 11.647Z',
-  },
-  {
-    label: 'Telegram',
-    href: 'https://t.me/+TAnsOyWjRkhiMmRk',
-    path: 'M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z',
-  },
-  {
-    label: 'TripAdvisor',
-    href: 'https://www.tripadvisor.it/Restaurant_Review-g580205-d27184530-Reviews-La_Tana_Del_Coniglio-Nola_Province_of_Naples_Campania.html',
-    path: 'M12.006 4.295c-2.67 0-5.338.784-7.645 2.353H0l1.963 2.135a5.997 5.997 0 0 0 4.04 10.43 5.976 5.976 0 0 0 4.075-1.6L12 19.705l1.922-2.09a5.972 5.972 0 0 0 4.072 1.598 6 6 0 0 0 6-5.998 5.982 5.982 0 0 0-1.957-4.432L24 6.648h-4.35a13.573 13.573 0 0 0-7.644-2.353zM12 6.255c1.531 0 3.063.303 4.504.903C13.943 8.138 12 10.43 12 13.1c0-2.671-1.942-4.962-4.504-5.942A11.72 11.72 0 0 1 12 6.256zM6.002 9.157a4.059 4.059 0 1 1 0 8.118 4.059 4.059 0 0 1 0-8.118zm11.992.002a4.057 4.057 0 1 1 .003 8.115 4.057 4.057 0 0 1-.003-8.115zm-11.992 1.93a2.128 2.128 0 0 0 0 4.256 2.128 2.128 0 0 0 0-4.256zm11.992 0a2.128 2.128 0 0 0 0 4.256 2.128 2.128 0 0 0 0-4.256z',
-  },
-]
 
 // Suggerimento (solo iPad/iPhone in Safari, non ancora installata): per lo
 // schermo intero va aggiunta alla Home. Là l'API Fullscreen non esiste, quindi
@@ -688,7 +888,7 @@ const SOCIALS = [
 function AddToHomeHint() {
   const [dismissed, setDismissed] = useState(() => {
     try {
-      return localStorage.getItem('tana:a2hs') === '1'
+      return localStorage.getItem('drink:a2hs') === '1'
     } catch {
       return false
     }
@@ -708,7 +908,7 @@ function AddToHomeHint() {
   const close = () => {
     setDismissed(true)
     try {
-      localStorage.setItem('tana:a2hs', '1')
+      localStorage.setItem('drink:a2hs', '1')
     } catch {
       /* privata/quota: pazienza */
     }
@@ -751,7 +951,7 @@ function FullscreenButton() {
       title={attivo ? 'Esci da schermo intero' : 'Schermo intero'}
       aria-label={attivo ? 'Esci da schermo intero' : 'Schermo intero'}
     >
-      {attivo ? '🡼' : '⛶'}
+      <Icona nome={attivo ? 'esci-schermo-intero' : 'schermo-intero'} gruppo="tasti" />
     </button>
   )
 }

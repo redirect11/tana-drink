@@ -3,6 +3,8 @@ import { subscribeVouchers, createVoucher, topUpVoucher, deleteVoucher } from '.
 import { formatPrice } from '../lib/orderStatus.js'
 import { totalOutstanding, expiryLabel, isVoucherExpired } from '../lib/vouchers.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
+import Icona from './Icona.jsx'
+import { useTestoConIcona } from '../lib/temaIcone.js'
 
 const EXPIRY_OPTS = [
   ['none', 'Nessuna'],
@@ -15,6 +17,7 @@ const EXPIRY_OPTS = [
 // Sezione VIP: buoni (credito ricaricabile) associati a una persona.
 // Si creano, si ricaricano e si spendono al pagamento (metodo Buono).
 export default function VipTab({ embedded = false }) {
+  const testoConIcona = useTestoConIcona()
   const [vouchers, setVouchers] = useState([])
   const [error, setError] = useState(null)
   const [search, setSearch] = useState('')
@@ -71,11 +74,11 @@ export default function VipTab({ embedded = false }) {
 
   return (
     <div>
-      {!embedded && <h2>🎟 Buoni VIP</h2>}
+      {!embedded && <h2><Icona nome="buono" gruppo="tasti" /> Buoni VIP</h2>}
       {error && <div className="banner">Errore: {error}</div>}
 
       <div className="chip" style={{ width: '100%', justifyContent: 'center', marginBottom: 8, cursor: 'default' }}>
-        💳 Credito in circolazione <strong>{formatPrice(outstanding)}</strong>
+        <Icona nome="carta" gruppo="tasti" />{' '}Credito in circolazione <strong>{formatPrice(outstanding)}</strong>
       </div>
 
       {/* Nuovo buono */}
@@ -120,7 +123,7 @@ export default function VipTab({ embedded = false }) {
 
       <input
         type="search"
-        placeholder="🔍 Cerca intestatario…"
+        placeholder={testoConIcona('cerca', 'Cerca intestatario…')}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         style={{ width: '100%', margin: '10px 0' }}
@@ -140,7 +143,7 @@ export default function VipTab({ embedded = false }) {
           </div>
           {v.note && <div className="muted small">{v.note}</div>}
           <div className="muted small">
-            🗓 {expiryLabel(v)}
+            <Icona nome="giorno" gruppo="tasti" />{' '}{expiryLabel(v)}
           </div>
           <div className="muted small">
             Caricato in tutto: {formatPrice(v.initial || 0)}
@@ -157,10 +160,10 @@ export default function VipTab({ embedded = false }) {
               onChange={(e) => setTopUp((t) => ({ ...t, [v.id]: e.target.value }))}
               style={{ width: 110 }}
             />
-            <button className="btn small" onClick={() => ricarica(v)}>⬆ Ricarica</button>
+            <button className="btn small" onClick={() => ricarica(v)}><Icona nome="importa" gruppo="tasti" /> Ricarica</button>
             <span className="grow" />
             {Number(v.balance) === 0 && (
-              <button className="btn ghost small" onClick={() => setConfirmDel(v)}>🗑</button>
+              <button className="btn ghost small" onClick={() => setConfirmDel(v)} aria-label="Elimina" title="Elimina"><Icona nome="elimina" gruppo="tasti" /></button>
             )}
           </div>
         </div>
@@ -169,7 +172,8 @@ export default function VipTab({ embedded = false }) {
 
       {confirmDel && (
         <ConfirmDialog
-          title="🗑 Eliminare il buono?"
+          icona="elimina"
+          title="Eliminare il buono?"
           message={`Il buono di ${confirmDel.holder_name} (saldo ${formatPrice(confirmDel.balance)}) verrà eliminato.`}
           confirmLabel="Elimina"
           danger

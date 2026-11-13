@@ -11,17 +11,23 @@ import {
   segnaScontrinoStampato,
 } from '../lib/api.js'
 import { readerCheckout } from '../lib/paymentsApi.js'
-import { formatPrice, PAYMENT_METHOD_LABELS } from '../lib/orderStatus.js'
+import { formatPrice } from '../lib/orderStatus.js'
 import { useOnline } from '../lib/useOnline.js'
+import { useCashSession } from '../lib/cashSession.js'
 import { useResizable } from '../lib/useResizable.js'
+import { contantiProbabili, restoDa, leggiImporto } from '../lib/resto.js'
 import { allServed } from '../lib/comande.js'
 import { chiudiImpagato } from '../lib/api.js'
 import { patchImpagato } from '../lib/impagato.js'
 import { activeVouchers } from '../lib/vouchers.js'
-import { printScontrino, printScontrinoAcconto, printFattura, loadPrinterSettings, aliquotaScontrino, claimReceiptPrint, reclaimReceiptPrint, releaseReceiptPrint, scontrinoGiaUscito } from '../lib/printer.js'
+import { printScontrino, printScontrinoAcconto, printFattura, loadPrinterSettings, scontrinoAutomatico, aliquotaScontrino, claimReceiptPrint, reclaimReceiptPrint, releaseReceiptPrint, scontrinoGiaUscito, datiFiscaliDelLocale } from '../lib/printer.js'
+import { mailFattura } from '../lib/mailFattura.js'
 import { accontoDaStampare, tastoAcconto } from '../lib/scontrinoAcconto.js'
-import { moduloAttivo } from '../lib/licenza.js'
+import { moduloAttivo, sumupAttivo } from '../lib/licenza.js'
+import { scontiConsentiti, stampaConsentita, servizioAttivo } from '../lib/limiti.js'
 import { showToast, toastError } from '../lib/toast.js'
+import Icona from './Icona.jsx'
+import MetodoPagamento from './MetodoPagamento.jsx'
 import {
   remainingItems,
   paidAmount,
@@ -108,6 +114,9 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   // `impagato` (REQ-CASSA-016): il conto si chiude senza incasso, e lo
   // scontrino esce con la nota in grande — sempre, anche con l'auto-stampa
   // spenta: la nota è la ragione per cui si stampa.
+  // Nel piano senza stampa (REQ-LIC-016) non esce niente, nemmeno per
+  // l'impagato, e non ci sono preconto, fattura o carta da tacere.
+  const stampaOn = stampaConsentita(settings)
   const closePaid = (incasso = null, { senzaStampa = false, impagato = null } = {}) => {
     const perStampa = impagato
       ? { ...order, impagato }
@@ -135,12 +144,15 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
       // d'ufficio) vale la pretesa normale: una copia e basta.
       if (
         order.daily_number != null &&
+        stampaOn &&
         // «Riscuoti (senza stampa)»: il gesto dice esplicitamente che la
         // carta non serve — cliente che rifiuta lo scontrino di cortesia,
         // conto interno. Non si prende nemmeno la pretesa: se il conto
         // verrà riaperto e riscosso normale, la stampa esce come sempre.
         !senzaStampa &&
-        (impagato || loadPrinterSettings().autoPrintScontrino) &&
+        // Da chi sta incassando dipende anche se esce da sola: c'è chi la
+        // vuole solo alla cassa del banco (REQ-STAMPA-021).
+        (impagato || scontrinoAutomatico(chi?.()?.role, loadPrinterSettings())) &&
         // Il segno sta SUL DATO: un altro terminale l'ha già stampato e qui
         // non esce la seconda copia.
         !scontrinoGiaUscito(order)
@@ -269,6 +281,10 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
     email: '',
   })
   const [readerStarted, setReaderStarted] = useState(false)
+  // QUANTO HA DATO IL CLIENTE, in contanti (REQ-PAG-015). È un numero suo:
+  // non cambia quello che si incassa, serve solo a dire il resto.
+  const [ricevuti, setRicevuti] = useState(null)
+  const [altroRicevuti, setAltroRicevuti] = useState('')
   // Buoni VIP: elenco e beneficiario scelto per il pagamento col buono.
   const [vouchers, setVouchers] = useState([])
   const [voucherId, setVoucherId] = useState('')
@@ -287,6 +303,9 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
     setDisplay(null)
     setAcc(null)
     setOp(null)
+    // I contanti del cliente di prima non valgono per l'incasso dopo.
+    setRicevuti(null)
+    setAltroRicevuti('')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [order.id, paymentsCount])
 
@@ -328,14 +347,16 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   const paid = paidAmount(order)
   // Incassare non vuol dire aver consegnato: seguendo la preparazione il
   // conto resta aperto finché le comande non sono servite.
-  const autoServeBase = settings?.workflow_enabled === false
+  const autoServeBase = !servizioAttivo(settings)
   // Il tasto in più lo decide il locale (Impostazioni → Gestione
   // preparazione): serve dove si consegna e si incassa nello stesso gesto.
   const riscuotiEServi = settings?.riscuoti_e_servi === true
   // «Riscuoti (senza stampa)»: acceso dalle impostazioni del locale. Serve
   // dove capita spesso che lo scontrino di cortesia non lo voglia nessuno:
   // un tasto in più qui vale solo se quel caso è la normalità del locale.
-  const riscuotiSenzaStampa = settings?.riscuoti_senza_stampa === true
+  const riscuotiSenzaStampa = stampaOn && settings?.riscuoti_senza_stampa === true
+  // IL RESTO IN CONTANTI (REQ-PAG-015): un'impostazione del locale.
+  const restoAttivo = settings?.resto_contanti === true
   // La fattura di cortesia al cliente: funzione premium (lib/licenza.js).
   const fattureOn = moduloAttivo(settings, 'fatture')
   const due = orderDue(order)
@@ -346,6 +367,15 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   const scontoFuoriMisura = scontoEccessivo(order)
   const served = allServed(order)
   const closed = order.payment_status === 'pagato'
+  // A CASSA CHIUSA SI BATTE MA NON SI INCASSA (REQ-CASSA-017). Un incasso
+  // senza sessione non finisce in nessuna chiusura: la sera dopo il
+  // contante contato non torna con niente. I tasti che chiudono soldi —
+  // riscuotere, acconto, impagato — restano al loro posto ma spenti, col
+  // motivo scritto sopra; il preconto e lo sconto restano. Finché la
+  // sessione non è arrivata dalla cache non si spegne niente: «chiusa» va
+  // detto quando lo si sa, non al primo istante.
+  const { open: cassaAperta, loading: cassaInArrivo } = useCashSession()
+  const cassaChiusa = !cassaAperta && !cassaInArrivo
   // LE DUE VIE ALTERNATIVE SI DECIDONO QUI, non nel JSX: la riga che le
   // ospita esiste solo se ce n'è almeno una, altrimenti sotto il tasto
   // grande resterebbe un contenitore vuoto con la sua aria.
@@ -467,21 +497,27 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   // far aspettare il cassiere davanti a una transazione che non partirà.
   const senzaRete = !online
   const methods = [
-    { key: 'banco', label: 'Contante', emoji: '💵' },
-    { key: 'carta', label: 'Carta di Credito', emoji: '💳' },
+    { key: 'banco', label: 'Contante', icona: 'paghe' },
+    { key: 'carta', label: 'Carta di Credito', icona: 'carta' },
+  ]
+  // SENZA FUNCTIONS IL LETTORE NON C'È (REQ-LIC-004): sul profilo leggero
+  // del piano Free nessuno parla coi server di SumUp, e un tasto che non
+  // può funzionare non si mostra. Il conto si chiude a mano, in contanti o
+  // come carta su un POS esterno.
+  if (sumupAttivo(settings)) methods.push(
     {
       key: 'lettore',
       label: 'SumUp',
-      emoji: '📟',
+      icona: 'lettore',
       disabled: !readerReady || senzaRete,
       // Niente sottotitolo sul tasto: il motivo si legge SOLO se lo si tocca.
       // Scritto lì sotto stava sempre in mezzo, mangiava una riga a una
       // schermata che ne ha poche, e chi incassa non lo leggeva comunque.
       motivo: senzaRete
-        ? '📶 Senza rete il lettore SumUp non può autorizzare: incassa e registra come Carta di Credito.'
+        ? 'Senza rete il lettore SumUp non può autorizzare: incassa e registra come Carta di Credito.'
         : 'Il lettore SumUp non è ancora configurato: si attiva in Impostazioni → Pagamenti.',
     },
-  ]
+  )
   // Buono come SCONTO (non metodo di pagamento): si applica al totale e si
   // detrae dal saldo del beneficiario, anche parzialmente. Importo proposto:
   // il residuo, mai oltre il saldo o il totale.
@@ -558,6 +594,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   // «Riscuoti» e «Riscuoti e servi» sono lo stesso incasso: cambia solo se
   // le comande risultano servite — e quindi se il conto si chiude adesso.
   const riscuoti = ({ servi = false, senzaStampa = false, conAcconto = false } = {}) => {
+    if (cassaChiusa) return
     const autoServe = autoServeBase || servi
     const items = !manual && splitting ? selection : null
     // ── LO SCONTO SI CONSUMA QUI ──────────────────────────────────────
@@ -654,12 +691,13 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
     // la carta non esce lo si dice, e basta — l'incasso è registrato lo
     // stesso, e ristampare un acconto è un gesto, non un guaio.
     else if (
+      stampaOn &&
       accontoDaStampare({
         settings,
         chiude: willClose,
         senzaStampa,
         colTasto: conAcconto,
-        autoStampa: loadPrinterSettings().autoPrintScontrino,
+        autoStampa: scontrinoAutomatico(chi?.()?.role, loadPrinterSettings()),
       })
     ) {
       printScontrinoAcconto(order, { amount: toPay, method, items, sconto }).catch((e) => {
@@ -673,6 +711,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   // Come contante e carta: il conto si chiude SUBITO a schermo e la
   // scrittura va in sottofondo; se non riesce lo si dice nel dettaglio.
   const confermaImpagato = () => {
+    if (cassaChiusa) return
     const nota = notaImpagato.trim() || null
     const chiSono = chi?.() ?? null
     // Lo stesso segno che scrive l'api, per lo scontrino che esce adesso.
@@ -772,33 +811,8 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
     })
 
   // Invio via email: si apre il client di posta con la fattura già scritta.
-  const invoiceMailto = (inv) => {
-    const s = loadPrinterSettings()
-    const righe = (inv.items || [])
-      .map((i) => `${i.qty}x ${i.name} — ${formatPrice(i.qty * i.unit_price)}`)
-      .join('\n')
-    const c = inv.customer || {}
-    const body = [
-      `Fattura di cortesia n. ${inv.number}`,
-      `${s.businessName || ''}`,
-      '',
-      `Intestata a: ${c.denominazione || ''}`,
-      c.piva ? `P.IVA: ${c.piva}` : null,
-      c.cf ? `CF: ${c.cf}` : null,
-      c.indirizzo ? `Indirizzo: ${c.indirizzo}` : null,
-      '',
-      righe,
-      inv.discount_amount > 0 ? `Sconto: −${formatPrice(inv.discount_amount)}` : null,
-      `Totale: ${formatPrice(inv.total)}`,
-      '',
-      'Documento non fiscale — copia di cortesia.',
-    ]
-      .filter((r) => r !== null)
-      .join('\n')
-    return `mailto:${encodeURIComponent(c.email || '')}?subject=${encodeURIComponent(
-      `Fattura di cortesia n. ${inv.number}`
-    )}&body=${encodeURIComponent(body)}`
-  }
+  const invoiceMailto = (inv) =>
+    mailFattura(inv, { nomeLocale: loadPrinterSettings().businessName || '', datiFiscali: datiFiscaliDelLocale() })
 
   const sendInvoiceEmail = (inv) => {
     window.location.href = invoiceMailto(inv)
@@ -836,7 +850,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             era in mezzo alle righe dei drink, dove sembrava una voce del
             conto. Qui sta dove si guarda per sapere di chi è il conto. */}
         <h3 style={{ margin: 0 }}>
-          💳 Pagamento · #{order.daily_number ?? '—'}
+          <Icona nome="carta" gruppo="tasti" />{' '}Pagamento · #{order.daily_number ?? '—'}
           {dove && <span className="muted"> · {dove}</span>}
         </h3>
         <button className="btn ghost small" onClick={onClose}>✕ Chiudi</button>
@@ -867,7 +881,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               <div className="payscreen-comandi">
                 {remaining.some((r) => r.qty > 1) && (
                   <button className="btn ghost small" onClick={() => setSeparati((v) => !v)}>
-                    {separati ? '🔗 Unisci uguali' : '≣ Separa uguali'}
+                    {separati ? <><Icona nome="unisci" gruppo="tasti" /> Unisci uguali</> : <><Icona nome="separa" gruppo="tasti" /> Separa uguali</>}
                   </button>
                 )}
                 {/* UN TASTO SOLO CHE CAMBIA SCRITTA, come i suoi vicini. Dice
@@ -912,7 +926,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                             onClick={() => tocca(r, 'etichetta', i)}
                             disabled={closed}
                           >
-                            {r.custom ? '✨ ' : ''}{r.name}
+                            {r.custom && <><Icona nome="special" gruppo="tasti" />{' '}</>}{r.name}
                             <span className="muted small"> · 1× {formatPrice(r.unit_price)}</span>
                           </button>
                           <span className="qty">
@@ -965,7 +979,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                     onClick={() => tocca(r, 'etichetta')}
                     disabled={closed}
                   >
-                    {r.custom ? '✨ ' : ''}{r.name}
+                    {r.custom && <><Icona nome="special" gruppo="tasti" />{' '}</>}{r.name}
                     <span className="muted small"> · {r.qty}× {formatPrice(r.unit_price)}</span>
                   </button>
                   <span className="qty">
@@ -992,7 +1006,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                             righe le copre solo chi le sceglie qui a
                             sinistra. */}
                         {p.cosa ? 'Pagate' : 'Acconto'}
-                        {p.metodo ? ` · ${PAYMENT_METHOD_LABELS[p.metodo] || p.metodo}` : ''}
+                        {p.metodo && <> · <MetodoPagamento metodo={p.metodo} /></>}
                         {p.quando ? ` · ${String(p.quando).slice(11, 16)}` : ''}
                       </span>
                       <span>{formatPrice(p.importo)}</span>
@@ -1007,7 +1021,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                         hanno fatto quattordici euro invece di sedici. */}
                     {p.sconto && (
                       <div className="muted small" style={{ paddingLeft: 10, opacity: 0.8 }}>
-                        🎁 {p.sconto.etichetta} −{formatPrice(p.sconto.importo)}
+                        <Icona nome="sconto" gruppo="tasti" />{' '}{p.sconto.etichetta} −{formatPrice(p.sconto.importo)}
                       </div>
                     )}
                   </div>
@@ -1103,12 +1117,31 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               Resto: <strong>{formatPrice(change)}</strong> (si incassano {formatPrice(toPay)})
             </p>
           )}
+          {/* QUANTO DÀ IL CLIENTE E QUANTO RESTO DARE (REQ-PAG-015). Solo
+              coi contanti e solo se il locale l'ha acceso. Il resto si
+              calcola su quello che si sta incassando adesso — anche una
+              parte del conto — e non tocca l'importo. */}
+          {restoAttivo && method === 'banco' && !closed && toPay > 0 && (
+            <RestoContanti
+              importo={toPay}
+              ricevuti={ricevuti}
+              altro={altroRicevuti}
+              scegli={(v) => {
+                setRicevuti(v)
+                setAltroRicevuti('')
+              }}
+              scrivi={(testo) => {
+                setAltroRicevuti(testo)
+                setRicevuti(leggiImporto(testo))
+              }}
+            />
+          )}
           {readerStarted && order.payment_status === 'in_attesa' && (
             <p className="muted small" style={{ margin: '2px 0 0', flexShrink: 0 }}>
-              📟 Transazione avviata sul lettore: il conto si aggiorna da solo all'esito.
+              <Icona nome="lettore" gruppo="tasti" />{' '}Transazione avviata sul lettore: il conto si aggiorna da solo all'esito.
             </p>
           )}
-          {closed && <p style={{ margin: '2px 0 0', flexShrink: 0 }}>✅ Conto pagato e chiuso.</p>}
+          {closed && <p style={{ margin: '2px 0 0', flexShrink: 0 }}><Icona nome="fatto" gruppo="segnali" /> Conto pagato e chiuso.</p>}
 
           <div className="paypad" role="group" aria-label="Tastierino importo">
             <button className="paypad-key danger" onClick={clear}>C</button>
@@ -1156,6 +1189,11 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               Quando quel tasto è spento nelle impostazioni resta solo questo
               `title`: è l'unico posto dov'era, e serviva un posto che non
               rubasse una riga. */}
+          {!closed && cassaChiusa && (
+            <div className="banner payscreen-cassa-chiusa" role="status">
+              <Icona nome="rosso" gruppo="segnali" /> Cassa chiusa: per incassare va aperta la cassa.
+            </div>
+          )}
           {!closed && (
             <button
               className="btn block payscreen-collect"
@@ -1164,7 +1202,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                   ? `Comande non ancora servite: il conto resta aperto anche dopo l'incasso${riscuotiEServi ? ', a meno di «Riscuoti e servi»' : ''}.`
                   : undefined
               }
-              disabled={saving || scontoFuoriMisura || (due > 0 && !(toPay > 0))}
+              disabled={cassaChiusa || saving || scontoFuoriMisura || (due > 0 && !(toPay > 0))}
               onClick={() => riscuoti()}
             >
               {due <= 0 ? 'Chiudi conto · 0,00 €' : `Riscuotere · ${formatPrice(toPay)}`}
@@ -1186,7 +1224,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               {mostraSenzaStampa && (
                 <button
                   className="btn ghost payscreen-collect-muto"
-                  disabled={saving || scontoFuoriMisura || !(toPay > 0)}
+                  disabled={cassaChiusa || saving || scontoFuoriMisura || !(toPay > 0)}
                   onClick={() => riscuoti({ senzaStampa: true })}
                 >
                   Riscuoti (senza stampa) · {formatPrice(toPay)}
@@ -1206,7 +1244,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                 <button
                   className={`btn ghost payscreen-collect-acconto${chiudeOra ? ' spento' : ''}`}
                   aria-disabled={chiudeOra || undefined}
-                  disabled={saving || scontoFuoriMisura || !(toPay > 0)}
+                  disabled={cassaChiusa || saving || scontoFuoriMisura || !(toPay > 0)}
                   onClick={() =>
                     chiudeOra
                       ? showToast(
@@ -1224,7 +1262,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               {mostraEServi && (
                 <button
                   className="btn ghost payscreen-collect-servi"
-                  disabled={saving || scontoFuoriMisura || (due > 0 && !(toPay > 0))}
+                  disabled={cassaChiusa || saving || scontoFuoriMisura || (due > 0 && !(toPay > 0))}
                   onClick={() => riscuoti({ servi: true })}
                 >
                   Riscuoti e servi · chiude il conto
@@ -1242,17 +1280,19 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               giorno che il modulo si riaccende. */}
           <div style={{ display: 'flex', gap: 6, marginTop: 8, flexShrink: 0 }}>
             <button className="btn ghost small grow" onClick={() => setShowLottery(true)}>
-              🎟 Codice Lotteria{order.lottery_code ? ' ✓' : ''}
+              <Icona nome="buono" gruppo="tasti" />{' '}Codice Lotteria{order.lottery_code ? ' ✓' : ''}
             </button>
-            <button
-              className="btn ghost small grow"
-              onClick={() => printScontrino(order).catch((e) => setError(`Stampa: ${e.message}`))}
-            >
-              🖨 Preconto
-            </button>
+            {stampaOn && (
+              <button
+                className="btn ghost small grow"
+                onClick={() => printScontrino(order).catch((e) => setError(`Stampa: ${e.message}`))}
+              >
+                <Icona nome="stampa" gruppo="tasti" /> Preconto
+              </button>
+            )}
             {fattureOn && (
               <button className="btn ghost small grow" onClick={() => setShowInvoice(true)}>
-                📧 Invia fattura{order.invoice_number ? ' ✓' : ''}
+                <Icona nome="email" gruppo="tasti" />{' '}Invia fattura{order.invoice_number ? ' ✓' : ''}
               </button>
             )}
           </div>
@@ -1278,7 +1318,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                 disabled={closed || (m.disabled && !m.motivo)}
                 onClick={() => (spento ? toastError(m.motivo) : setMethod(m.key))}
               >
-                {m.emoji} {m.label}
+                <Icona nome={m.icona} gruppo="tasti" /> {m.label}
                 {m.key === 'lettore' && readerReady && settings.sumup_reader_name ? (
                   <span className="muted small"> ({settings.sumup_reader_name})</span>
                 ) : null}
@@ -1290,15 +1330,18 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               il conto, non un metodo di pagamento — quindi un tasto a parte,
               che apre la sua finestra invece di diventare il metodo scelto. */}
           {!closed && due > 0 && (
-            <button type="button" className="payscreen-method" onClick={() => setImpagatoAperta(true)}>
-              🕗 Impagato
+            <button type="button" className="payscreen-method" disabled={cassaChiusa} onClick={() => setImpagatoAperta(true)}>
+              <Icona nome="orario" gruppo="tasti" /> Impagato
             </button>
           )}
 
           <div style={{ marginTop: 'auto' }}>
-            {!closed && (
+            {/* NIENTE SCONTI NEL PIANO FREE (REQ-LIC-003, `limiti.sconti`):
+                il tasto non c'è. Resta solo se il conto ne porta già uno,
+                per poterlo vedere e togliere. */}
+            {!closed && (scontiConsentiti(settings) || (order.discount_amount || 0) > 0) && (
               <button className="btn ghost small block" onClick={() => setShowDiscount(true)}>
-                {order.discount?.type === 'buono' ? '🎟 Buono' : '🎁 Sconto'}
+                {order.discount?.type === 'buono' ? <><Icona nome="buono" gruppo="tasti" /> Buono</> : <><Icona nome="sconto" gruppo="tasti" /> Sconto</>}
                 {(order.discount_amount || 0) > 0 ? ` (−${formatPrice(order.discount_amount)})` : ''}
               </button>
             )}
@@ -1310,7 +1353,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
       {impagatoAperta && (
         <div className="overlay confirm-overlay" onClick={() => setImpagatoAperta(false)}>
           <div className="confirm-box" role="dialog" aria-label="Chiudi impagato" onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0 }}>🕗 Chiudi impagato</h3>
+            <h3 style={{ marginTop: 0 }}><Icona nome="orario" gruppo="tasti" /> Chiudi impagato</h3>
             <p className="muted small" style={{ margin: '0 0 10px' }}>
               Il conto si chiude senza incasso: {formatPrice(due)} restano da riscuotere. Le comande risultano
               servite. Per incassarlo in seguito si riapre il conto e si riscuote.
@@ -1349,7 +1392,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             onClick={(e) => e.stopPropagation()}
           >
             <div className="row between" style={{ alignItems: 'center' }}>
-              <h3 style={{ margin: 0 }}>🎁 Sconto</h3>
+              <h3 style={{ margin: 0 }}><Icona nome="sconto" gruppo="tasti" /> Sconto</h3>
               <button className="btn ghost small" onClick={() => setShowDiscount(false)}>✕</button>
             </div>
 
@@ -1376,12 +1419,13 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                 className={`btn small grow ${discType === 'buono' ? '' : 'ghost'}`}
                 disabled={vipList.length === 0}
                 title={vipList.length === 0 ? 'Nessun buono con saldo' : 'Sconto col buono'}
+                aria-label="Buono"
                 onClick={() => {
                   setDiscType('buono')
                   setDiscDigits('')
                 }}
               >
-                🎟
+                <Icona nome="buono" gruppo="tasti" />
               </button>
             </div>
 
@@ -1389,7 +1433,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                 al suo saldo e si applica al totale come uno sconto. */}
             {discType === 'buono' && (
               <div style={{ marginTop: 10 }}>
-                <label htmlFor="disc-voucher">🎟 Buono di</label>
+                <label htmlFor="disc-voucher"><Icona nome="buono" gruppo="tasti" /> Buono di</label>
                 <select
                   id="disc-voucher"
                   value={voucherId}
@@ -1493,7 +1537,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             onClick={(e) => e.stopPropagation()}
           >
             <div className="row between" style={{ alignItems: 'center' }}>
-              <h3 style={{ margin: 0 }}>🎟 Codice Lotteria</h3>
+              <h3 style={{ margin: 0 }}><Icona nome="buono" gruppo="tasti" /> Codice Lotteria</h3>
               <button className="btn ghost small" onClick={() => setShowLottery(false)}>✕</button>
             </div>
             <p className="muted small" style={{ margin: '8px 0' }}>
@@ -1526,14 +1570,14 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             onClick={(e) => e.stopPropagation()}
           >
             <div className="row between" style={{ alignItems: 'center' }}>
-              <h3 style={{ margin: 0 }}>📧 Fattura di cortesia</h3>
+              <h3 style={{ margin: 0 }}><Icona nome="email" gruppo="tasti" /> Fattura di cortesia</h3>
               <button className="btn ghost small" onClick={() => setShowInvoice(false)}>✕</button>
             </div>
 
             {invoice ? (
               <>
                 <p style={{ margin: '10px 0 4px' }}>
-                  ✅ Emessa la fattura <strong>n. {invoice.number}</strong> ·{' '}
+                  <Icona nome="fatto" gruppo="segnali" />{' '}Emessa la fattura <strong>n. {invoice.number}</strong> ·{' '}
                   {formatPrice(invoice.total)}
                 </p>
                 <p className="muted small" style={{ margin: '0 0 10px' }}>
@@ -1541,21 +1585,23 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                   gestionale, tab Fatture.
                 </p>
                 <button className="btn block" onClick={() => sendInvoiceEmail(invoice)}>
-                  📧 Invia via email{invoice.customer?.email ? ` a ${invoice.customer.email}` : ''}
+                  <Icona nome="email" gruppo="tasti" />{' '}Invia via email{invoice.customer?.email ? ` a ${invoice.customer.email}` : ''}
                 </button>
-                <button
-                  className="btn secondary block"
-                  style={{ marginTop: 6 }}
-                  onClick={() => printFattura(invoice).catch((e) => setError(`Stampa: ${e.message}`))}
-                >
-                  🖨 Stampa fattura
-                </button>
+                {stampaOn && (
+                  <button
+                    className="btn secondary block"
+                    style={{ marginTop: 6 }}
+                    onClick={() => printFattura(invoice).catch((e) => setError(`Stampa: ${e.message}`))}
+                  >
+                    <Icona nome="stampa" gruppo="tasti" /> Stampa fattura
+                  </button>
+                )}
               </>
             ) : (
               <>
                 {order.invoice_number && (
                   <p className="muted small" style={{ margin: '8px 0 0' }}>
-                    ⚠️ Per questo conto risulta già emessa la fattura n.{' '}
+                    <Icona nome="avviso" gruppo="segnali" />{' '}Per questo conto risulta già emessa la fattura n.{' '}
                     {order.invoice_number} (vedi tab Fatture).
                   </p>
                 )}
@@ -1627,6 +1673,50 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// IL RIQUADRO DEL RESTO (REQ-PAG-015): i contanti probabili a portata di
+// dito, una cifra qualsiasi a mano, e sotto il resto da dare — grande,
+// perché si legge con le monete in mano.
+function RestoContanti({ importo, ricevuti, altro, scegli, scrivi }) {
+  const proposte = contantiProbabili(importo)
+  const { resto, mancano } = ricevuti != null ? restoDa(ricevuti, importo) : { resto: 0, mancano: 0 }
+  return (
+    <div className="resto-box" role="group" aria-label="Contanti ricevuti">
+      <div className="resto-scelte">
+        <span className="muted small">Il cliente dà</span>
+        {proposte.map((v) => (
+          <button
+            key={v}
+            type="button"
+            className={`chip${ricevuti === v && !altro ? ' active' : ''}`}
+            aria-pressed={ricevuti === v && !altro}
+            onClick={() => scegli(v)}
+          >
+            {formatPrice(v)}
+          </button>
+        ))}
+        <input
+          className="resto-altro"
+          inputMode="decimal"
+          aria-label="Altro importo ricevuto"
+          placeholder="Altro"
+          value={altro}
+          onChange={(e) => scrivi(e.target.value)}
+        />
+      </div>
+      {ricevuti != null &&
+        (mancano > 0 ? (
+          <p className="resto-esito neg">
+            Mancano <strong>{formatPrice(mancano)}</strong>
+          </p>
+        ) : (
+          <p className="resto-esito">
+            Resto da dare <strong>{formatPrice(resto)}</strong>
+          </p>
+        ))}
     </div>
   )
 }

@@ -1,8 +1,8 @@
 import {
   ORDER_STATUSES,
-  STATUS_EMOJI,
   formatPrice,
   statoAlBanco,
+  STATUS_ICONA,
 } from '../lib/orderStatus.js'
 import { useState } from 'react'
 import { hhmm } from '../lib/ore.js'
@@ -20,6 +20,7 @@ import {
 } from '../lib/comande.js'
 import PreparazioneParziale from './PreparazioneParziale.jsx'
 import ScegliConsegna from './ScegliConsegna.jsx'
+import Icona, { ConIcona } from './Icona.jsx'
 
 // ── IL DETTAGLIO DI UNA COMANDA ──────────────────────────────────────
 //
@@ -88,7 +89,7 @@ export default function ComandaDetail({
             ← Torna alla coda
           </button>
           <button className="btn small comanda-det-conto" onClick={onApriConto}>
-            🧾 Apri il conto #{order.daily_number ?? '—'}
+            <Icona nome="coda" gruppo="tasti" />{' '}Apri il conto #{order.daily_number ?? '—'}
           </button>
         </div>
         <div className="bignum comanda-det-num">
@@ -102,17 +103,21 @@ export default function ComandaDetail({
         </div>
         <div className="row comanda-det-bolli">
           <span className={`pill ${comanda.status}`}>
-            {divisa ? '✂️ Divisa' : `${STATUS_EMOJI[comanda.status]} ${statoAlBanco(comanda.status, order.service_mode)}`}
+            {divisa ? (
+              <ConIcona nome="dividi" testo="Divisa" />
+            ) : (
+              <ConIcona nome={STATUS_ICONA[comanda.status]} testo={statoAlBanco(comanda.status, order.service_mode)} />
+            )}
           </span>
           {/* ACCONTO: qualcosa è già stato incassato ma il conto è aperto.
               Serve saperlo anche da qui: chi finisce la comanda spesso è
               quello che poi porta il conto al tavolo. */}
           {order.payment_status === 'parziale' && (
             <span className="pill acconto" title={`Già incassati ${formatPrice(paidAmount(order))}`}>
-              💳 Acconto
+              <Icona nome="carta" gruppo="tasti" /> Acconto
             </span>
           )}
-          {order.payment_status === 'pagato' && <span className="pill pagato">💶 Pagato</span>}
+          {order.payment_status === 'pagato' && <span className="pill pagato"><Icona nome="contanti" gruppo="tasti" /> Pagato</span>}
           <span className="muted small comanda-det-eta">
             {daQuanto(comanda.created_at || order.created_at)}
           </span>
@@ -125,7 +130,7 @@ export default function ComandaDetail({
       <div className="steps comanda-det-passi">
         {tappeComanda(comanda).map((t) => (
           <div className={`step${t.fatta ? ' done' : ''}${t.adesso ? ' active' : ''}`} key={t.stato}>
-            {STATUS_EMOJI[t.stato]}
+            <Icona nome={STATUS_ICONA[t.stato]} gruppo="tasti" />
             <br />
             {statoAlBanco(t.stato, order.service_mode)}
             <br />
@@ -144,7 +149,7 @@ export default function ComandaDetail({
         {righe.map((i, idx) => (
           <div className="row between comanda-det-riga" key={i.line_id ?? `${i.drink_id}-${idx}`}>
             <span className="comanda-det-nome">
-              <strong>{i.qty}×</strong> {i.custom ? '✨ ' : ''}
+              <strong>{i.qty}×</strong> {i.custom && <><Icona nome="special" gruppo="tasti" />{' '}</>}
               {i.name}
               {/* La nota della RIGA è quella che cambia come si prepara:
                   sta attaccata alla riga, non in fondo alla comanda. */}
@@ -218,7 +223,7 @@ export default function ComandaDetail({
               className="btn ghost small block comanda-det-dividi"
               onClick={() => setDividendo(true)}
             >
-              ✂️ Preparazione parziale
+              <Icona nome="dividi" gruppo="tasti" /> Preparazione parziale
             </button>
           ))}
         {/* ── SERVIZIO O RITIRO ──────────────────────────────
@@ -243,9 +248,11 @@ export default function ComandaDetail({
             />
           </div>
         )}
-        <button className="btn ghost small block comanda-det-stampa" onClick={onStampa}>
-          🖨 Ristampa la comanda
-        </button>
+        {onStampa && (
+          <button className="btn ghost small block comanda-det-stampa" onClick={onStampa}>
+            <Icona nome="stampa" gruppo="tasti" /> Ristampa la comanda
+          </button>
+        )}
       </div>
       </div>
     </div>

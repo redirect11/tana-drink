@@ -11,7 +11,7 @@
 // parlare tanto con Firestore vero quanto con l'emulatore, e che il limite dei
 // 200 e la paginazione restino dove stanno — in un posto solo.
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { client, clientEmulatore, idDi } from '../../scripts/lib-firestore.js'
+import { client, clientEmulatore, idDi, documentiDelBackup, aCampi } from '../../scripts/lib-firestore.js'
 
 function rispondi(...risposte) {
   const chiamate = []
@@ -82,5 +82,22 @@ describe('il client REST degli script', () => {
     await expect(clientEmulatore('localhost:8081').documenti('inventory_items')).rejects.toThrow(
       /PERMISSION_DENIED/
     )
+  })
+})
+
+// BUG-129: lo storico che il backup dell'app salva ma non può rimettere si
+// rimette con scripts/ripristina-db.js, che quindi legge anche il file
+// dell'app ({ righe: [{ id, dati }] }) oltre al suo ({ id, fields }).
+describe('i documenti di un backup, dei due formati', () => {
+  it('quelli di backup-db.js restano come sono', () => {
+    const docs = [{ id: 'a', fields: { n: { integerValue: '1' } } }]
+    expect(documentiDelBackup(docs)).toBe(docs)
+  })
+
+  it('quelli del backup dell’app diventano campi di Firestore', () => {
+    expect(documentiDelBackup({ righe: [{ id: '2025-01-03', dati: { totale: 900, giorno: 'ven' } }] })).toEqual([
+      { id: '2025-01-03', fields: aCampi({ totale: 900, giorno: 'ven' }) },
+    ])
+    expect(documentiDelBackup(undefined)).toEqual([])
   })
 })

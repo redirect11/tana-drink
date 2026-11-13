@@ -52,6 +52,8 @@ import {
 import { saveDrinkFromForm } from '../lib/saveDrink.js'
 import { toastError } from '../lib/toast.js'
 import DrinkForm from './DrinkForm.jsx'
+import Icona from './Icona.jsx'
+import { useTestoConIcona } from '../lib/temaIcone.js'
 
 // Colonna categorie + griglia prodotti (il "centro" del POS). Oltre alle
 // categorie ci sono due raccolte speciali: ⭐ Preferiti (i drink che il
@@ -164,7 +166,10 @@ export default function PosProductPicker({
   // Cosa dice la striscia a sinistra delle tile (vedi lib/strisce.js).
   modoStriscia = MODO_STRISCIA_DEFAULT,
   scorteVerdi = false,
+  // Sul profilo leggero la scheda prodotto non carica foto (REQ-LIC-004).
+  fotoConsentite = true,
 }) {
+  const testoConIcona = useTestoConIcona()
   const [selectedCat, setSelectedCat] = useState(null)
   const [query, setQuery] = useState('')
   const cercaRef = useRef(null)
@@ -394,8 +399,8 @@ export default function PosProductPicker({
 
   // Voci della barra: Preferiti e Recenti in cima, poi le categorie.
   const specialCats = [
-    ...(favorites.length ? [{ key: '__fav__', label: '⭐ Preferiti', count: favorites.length }] : []),
-    ...(recentIds.length ? [{ key: '__recent__', label: '🕘 Recenti', count: recentIds.length }] : []),
+    ...(favorites.length ? [{ key: '__fav__', label: 'Preferiti', icona: 'preferito', count: favorites.length }] : []),
+    ...(recentIds.length ? [{ key: '__recent__', label: 'Recenti', icona: 'orario', count: recentIds.length }] : []),
   ]
 
   // Etichetta categoria: una riga sola, si accorcia con l'ellissi (mai a capo).
@@ -422,9 +427,9 @@ export default function PosProductPicker({
             title={sc.label}
           >
             {categoryDisplay === 'icon' ? (
-              <span aria-hidden style={{ fontSize: '1.2em' }}>{sc.label.slice(0, 2)}</span>
+              <span aria-hidden style={{ fontSize: '1.2em' }}><Icona nome={sc.icona} gruppo="tasti" /></span>
             ) : (
-              <span style={catLabel}>{sc.label}</span>
+              <span style={catLabel}><Icona nome={sc.icona} gruppo="tasti" /> {sc.label}</span>
             )}
           </button>
         ))}
@@ -490,7 +495,7 @@ export default function PosProductPicker({
               setQuery(e.target.value)
             }}
             onFocus={() => onInteract?.()}
-            placeholder="🔍 Cerca prodotto…"
+            placeholder={testoConIcona('cerca', 'Cerca prodotto…')}
             aria-label="Cerca prodotto"
             style={{ flex: 1, minWidth: 0, ...(compact ? { fontSize: '0.9rem', padding: '8px 10px' } : {}) }}
           />
@@ -537,7 +542,7 @@ export default function PosProductPicker({
             className="muted small"
             style={{ margin: 0, padding: compact ? '4px 8px 0' : '6px 10px 0', flexShrink: 0 }}
           >
-            🔍 Nessun prodotto per «{query.trim()}».
+            <Icona nome="cerca" gruppo="tasti" />{' '}Nessun prodotto per «{query.trim()}».
           </p>
         )}
         {/* In «organizza» la griglia sta dentro il contesto di
@@ -693,7 +698,7 @@ export default function PosProductPicker({
                 setMenuDrink(null)
               }}
             >
-              ✏️ Modifica prodotto (prezzo, ingredienti…)
+              <Icona nome="modifica" gruppo="tasti" />{' '}Modifica prodotto (prezzo, ingredienti…)
             </button>
             <button
               className="btn ghost small block"
@@ -711,7 +716,7 @@ export default function PosProductPicker({
                 }
               }}
             >
-              🚫 Togli dalla griglia (non disponibile)
+              <Icona nome="vietato" gruppo="segnali" />{' '}Togli dalla griglia (non disponibile)
             </button>
           </div>
         </div>
@@ -728,6 +733,7 @@ export default function PosProductPicker({
               initial={editDrink}
               categories={cats}
               inventory={inventory}
+              fotoConsentite={fotoConsentite}
               onCreateCategory={async (name) => {
                 const cat = await createCategory({ name, sort_order: cats.length })
                 return cat

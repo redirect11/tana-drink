@@ -17,6 +17,14 @@ const {
   groupOrderPaidPatch,
   orderDue,
 } = require('./payment-core')
+const { richiediModulo } = require('./licenza-core')
+
+// SOLO DOVE IL MODULO C'È (BUG-134). Si controlla dove un pagamento PARTE:
+// checkout online, associazione del lettore, incasso sul lettore, conto di
+// un gruppo. Leggere l'esito di un pagamento già partito, fermarlo,
+// dissociare il lettore e ricevere i webhook restano sempre possibili: un
+// pagamento avviato prima che il modulo andasse via deve potersi chiudere.
+const soloConSumup = (db) => richiediModulo(db, 'sumup')
 
 // Chi può incassare (tutto il personale) e chi configura il lettore
 // (chi sta al banco). L'admin fa quello che fa il bartender: lasciarlo
@@ -27,6 +35,10 @@ const BANCO = ['admin', 'bartender']
 function err(code, message) {
   return { code, message }
 }
+
+// Il nome del locale nelle descrizioni SumUp (REQ-VENUE-005): lo dà chi
+// costruisce le dipendenze (functions/index.js, da VENUE_NAME).
+const nomeLocale = (deps) => (typeof deps?.venueName === 'function' ? deps.venueName() : 'Il locale')
 
 async function getOrder(db, orderId) {
   if (!orderId) throw err('invalid-argument', 'orderId obbligatorio.')
@@ -43,6 +55,7 @@ async function getOrder(db, orderId) {
 async function createCheckout(deps, { orderId } = {}) {
   const { db, paymentsFetch, isConfigured, merchantCode, now } = deps
   if (!isConfigured()) return { unavailable: true }
+  await soloConSumup(db)
 
   const { ref, order } = await getOrder(db, orderId)
   if (order.status === 'annullato') {
@@ -76,7 +89,7 @@ async function createCheckout(deps, { orderId } = {}) {
     attempts,
     total: order.total,
     merchantCode: merchantCode(),
-    description: `Ordine #${order.daily_number ?? '—'} — La Tana del Coniglio`,
+    description: `Ordine #${order.daily_number ?? '—'} — ${nomeLocale(deps)}`,
   })
   const created = await paymentsFetch('/v0.1/checkouts', {
     method: 'POST',
@@ -164,6 +177,7 @@ async function pairReader(deps, auth, { pairing_code } = {}) {
   const { db, paymentsFetch, isConfigured, merchantCode } = deps
   requireRole(auth, BANCO)
   if (!isConfigured()) return { unavailable: true }
+  await soloConSumup(db)
   const code = String(pairing_code || '').trim().toUpperCase()
   if (!code) throw err('invalid-argument', 'Inserisci il codice di pairing.')
 
@@ -220,6 +234,7 @@ async function readerCheckout(deps, auth, { orderId, amount = null, items = null
   const { db, paymentsFetch, isConfigured, merchantCode, webhookUrl } = deps
   requireRole(auth, STAFF_ROLES)
   if (!isConfigured()) return { unavailable: true }
+  await soloConSumup(db)
 
   const settings = await readerSettings(db)
   if (!settings.sumup_reader_id) {
@@ -246,7 +261,7 @@ async function readerCheckout(deps, auth, { orderId, amount = null, items = null
 
   const payload = buildReaderCheckoutPayload({
     total: toCharge,
-    description: `Ordine #${order.daily_number ?? '—'} — La Tana del Coniglio`,
+    description: `Ordine #${order.daily_number ?? '—'} — ${nomeLocale(deps)}`,
     returnUrl: webhookUrl(),
     affiliate: typeof deps.affiliate === 'function' ? deps.affiliate() : null,
     orderId,
@@ -397,6 +412,7 @@ async function settleGroupPayment(deps, paymentId, { transactionId = null } = {}
 async function createGroupCheckout(deps, { paymentId } = {}) {
   const { db, paymentsFetch, isConfigured, merchantCode } = deps
   if (!isConfigured()) return { unavailable: true }
+  await soloConSumup(db)
   const { ref, payment } = await getPaymentDoc(db, paymentId)
   if (payment.status === 'pagato') return { alreadyPaid: true }
 
@@ -416,7 +432,7 @@ async function createGroupCheckout(deps, { paymentId } = {}) {
         orderId: paymentId,
         total: payment.amount,
         merchantCode: merchantCode(),
-        description: 'Conto gruppo — La Tana del Coniglio',
+        description: `Conto gruppo — ${nomeLocale(deps)}`,
       })
     ),
   })
@@ -447,6 +463,7 @@ async function groupReaderCheckout(deps, auth, { paymentId } = {}) {
   const { db, paymentsFetch, isConfigured, merchantCode, webhookUrl } = deps
   requireRole(auth, STAFF_ROLES)
   if (!isConfigured()) return { unavailable: true }
+  await soloConSumup(db)
   const settings = await readerSettings(db)
   if (!settings.sumup_reader_id) {
     throw err('failed-precondition', 'Nessun lettore associato: fai il pairing dalle impostazioni.')
@@ -463,7 +480,7 @@ async function groupReaderCheckout(deps, auth, { paymentId } = {}) {
         body: JSON.stringify(
           buildReaderCheckoutPayload({
             total: payment.amount,
-            description: 'Conto gruppo — La Tana del Coniglio',
+            description: `Conto gruppo — ${nomeLocale(deps)}`,
             returnUrl: webhookUrl(),
             affiliate: typeof deps.affiliate === 'function' ? deps.affiliate() : null,
             orderId: paymentId,

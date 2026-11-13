@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { auth } from '../lib/firebaseClient.js'
+import { useVenue } from '../lib/useVenue.js'
 import {
   listStaff,
   listUtenti,
@@ -26,6 +27,9 @@ import {
 import ConfirmDialog from './ConfirmDialog.jsx'
 import VipTab from './VipTab.jsx'
 import { Sottosezioni } from '../lib/sottosezioni.js'
+import AvvisoPiano from './AvvisoPiano.jsx'
+import { staffConsentito, MESSAGGI_PIANO } from '../lib/limiti.js'
+import Icona, { ConIcona } from './Icona.jsx'
 
 // GESTIONE UTENTI. Due elenchi in uno: il personale (admin/bartender/staff)
 // e i clienti registrati dal sito. La nomina dei ruoli è dell'admin: da qui
@@ -35,13 +39,14 @@ import { Sottosezioni } from '../lib/sottosezioni.js'
 // Il bartender vede gli elenchi e può chiamare col cerca-persone, ma non
 // tocca i ruoli: dare le chiavi del locale è dell'amministratore.
 const SEZIONI_UTENTI = [
-  { id: 'utenze', icona: '👥', label: 'Utenze registrate' },
-  { id: 'cassa', icona: '🟢', label: 'Chi apre la cassa' },
-  { id: 'nuovo', icona: '➕', label: 'Nuovo account' },
-  { id: 'vip', icona: '🎟', label: 'Buoni VIP' },
+  { id: 'utenze', icona: 'staff', label: 'Utenze registrate' },
+  { id: 'cassa', icona: 'cassa', label: 'Chi apre la cassa' },
+  { id: 'nuovo', icona: 'aggiungi', label: 'Nuovo account' },
+  { id: 'vip', icona: 'buono', label: 'Buoni VIP' },
 ]
 
 export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
+  const venue = useVenue()
   const admin = isAdmin(role)
   // Tre sezioni come nelle altre pagine; si apre sull'elenco, che è il
   // motivo per cui si viene qui. Chi non è amministratore ha solo quello.
@@ -65,9 +70,18 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
   const [callTarget, setCallTarget] = useState(null)
   const [callMessage, setCallMessage] = useState('')
 
+  // UN UTENTE SOLO (REQ-LIC-003, `limiti.utenti_max: 1`), o il profilo
+  // leggero senza la Function `staffAdmin` che crea e nomina gli account:
+  // l'app la usa solo il titolare, con l'account della registrazione. La
+  // pagina lo dice invece di chiamare una Function che non c'è.
+  const [impostazioni, setImpostazioni] = useState(settingsIniziali)
+  useEffect(() => subscribeSettings(setImpostazioni, () => {}), [])
+  const conStaff = staffConsentito(impostazioni)
+
   useEffect(() => subscribePendingCalls(setPendingCalls), [])
 
   async function reload() {
+    if (!conStaff) return
     try {
       // L'admin vede tutti (clienti compresi): è da lì che nomina. Al
       // bartender la callable nega l'elenco completo, e va bene: gli serve
@@ -86,7 +100,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
   useEffect(() => {
     reload()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [admin])
+  }, [admin, conStaff])
 
   async function run(fn) {
     setBusy(true)
@@ -143,6 +157,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
     )
   }, [users, cerca])
 
+  if (!conStaff) return <AvvisoPiano messaggio={MESSAGGI_PIANO.staff} impostazioni={impostazioni} />
   if (error && !users) return <div className="banner">Errore: {error}</div>
   if (!users) return <div className="empty">Carico gli utenti…</div>
 
@@ -156,14 +171,14 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
           {u.disabled && <span className="pill annullato" style={{ marginLeft: 6 }}>sospeso</span>}
         </div>
         <div className="desc">
-          {RUOLO_ETICHETTA[u.role] ?? u.role}
+          <ConIcona testo={RUOLO_ETICHETTA[u.role] ?? u.role} />
           {u.name && u.email ? ` · ${u.email}` : ''}
         </div>
       </div>
       <div className="row" style={{ gap: 6 }}>
         {RUOLI.includes(u.role) && u.uid !== myUid && !u.disabled && (
           pendingCalls.some((c) => c.to_uid === u.uid) ? (
-            <span className="pill in_preparazione">📟 In chiamata…</span>
+            <span className="pill in_preparazione"><Icona nome="lettore" gruppo="tasti" /> In chiamata…</span>
           ) : (
             <button
               className="btn small"
@@ -171,7 +186,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
               title="Chiama (cerca-persone)"
               onClick={() => setCallTarget(u)}
             >
-              📟
+              <Icona nome="lettore" gruppo="tasti" />
             </button>
           )
         )}
@@ -186,7 +201,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
                 setCambioRuolo(u)
               }}
             >
-              🎚 Ruolo
+              <Icona nome="ruolo" gruppo="tasti" /> Ruolo
             </button>
             <button
               className="btn ghost small"
@@ -202,7 +217,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
                 })
               }
             >
-              {u.disabled ? '▶' : '⏸'}
+              <Icona nome={u.disabled ? 'avvia' : 'pausa'} gruppo="tasti" />
             </button>
             <button
               className="btn ghost small"
@@ -212,13 +227,13 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
                 setConfirm({
                   title: `Eliminare ${u.email}?`,
                   message:
-                    'Operazione irreversibile: l’account sparisce. Se serve solo togliergli l’accesso, usa ⏸ Sospendi.',
+                    'Operazione irreversibile: l’account sparisce. Se serve solo togliergli l’accesso, usa Sospendi.',
                   danger: true,
                   run: () => run(() => removeStaff(u.uid)),
                 })
               }
             >
-              🗑
+              <Icona nome="elimina" gruppo="tasti" />
             </button>
           </>
         )}
@@ -275,7 +290,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="cameriera@latanadelconiglio.it"
+                placeholder={`cameriera@${venue.venue_email_domain || 'esempio.it'}`}
               />
               <label htmlFor="staff-password">Password (min 6 caratteri)</label>
               <input
@@ -296,7 +311,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
                     className={`mode-option${nuovoRuolo === value ? ' active' : ''}`}
                     onClick={() => setNuovoRuolo(value)}
                   >
-                    {RUOLO_ETICHETTA[value]}
+                    <ConIcona testo={RUOLO_ETICHETTA[value]} />
                   </button>
                 ))}
               </div>
@@ -304,7 +319,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
                 {RUOLO_DESCRIZIONE[nuovoRuolo]}
               </p>
               <button className="btn block" style={{ marginTop: 12 }} type="submit" disabled={busy}>
-                {busy ? 'Creo…' : '➕ Crea account'}
+                {busy ? 'Creo…' : <><Icona nome="aggiungi" gruppo="tasti" /> Crea account</>}
               </button>
             </form>
           )}
@@ -370,7 +385,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
                   className={`mode-option${ruoloScelto === value ? ' active' : ''}`}
                   onClick={() => setRuoloScelto(value)}
                 >
-                  {RUOLO_ETICHETTA[value]}
+                  <ConIcona testo={RUOLO_ETICHETTA[value]} />
                 </button>
               ))}
             </div>
@@ -428,7 +443,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
       {callTarget && (
         <div className="overlay confirm-overlay" onClick={() => setCallTarget(null)}>
           <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0 }}>📟 Chiama {callTarget.name || callTarget.email}</h3>
+            <h3 style={{ marginTop: 0 }}><Icona nome="lettore" gruppo="tasti" /> Chiama {callTarget.name || callTarget.email}</h3>
             <p className="muted" style={{ marginTop: 0 }}>
               Il dispositivo vibrerà con insistenza finché non risponde.
             </p>
@@ -443,7 +458,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
                 Annulla
               </button>
               <button className="btn grow" onClick={sendCall}>
-                📟 Chiama
+                <Icona nome="lettore" gruppo="tasti" /> Chiama
               </button>
             </div>
           </div>

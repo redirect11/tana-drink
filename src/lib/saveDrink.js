@@ -2,9 +2,11 @@
 // Storage, righe ricetta → recipe_items in unità base, create/update.
 // Condiviso fra il backoffice (MenuManager) e il POS (Organizza → menu
 // prodotto), così la logica di salvataggio è una sola.
+import { sceltaIllustrazione } from './illustrazioneDrink.js'
 import { createDrink, updateDrink } from './api.js'
 import { uploadDrinkImage, deleteDrinkImageByUrl } from './storage.js'
 import { toBaseQty, baseUnit } from './inventory.js'
+import { puoCreareProdotto, maxProdotti, MESSAGGI_PIANO, fotoConsentite } from './limiti.js'
 
 // Righe editabili → recipe_items persistiti (quantità convertite in unità base).
 export function buildRecipeItems(rows, inventory) {
@@ -40,10 +42,27 @@ export function aliquotaVendita(valore) {
 }
 
 // `existing`: il prodotto in modifica (null per crearne uno nuovo).
-export async function saveDrinkFromForm({ form, existing = null, inventory = [], categories = [] }) {
+// `impostazioni` e `prodotti` (quelli già in carta): servono ai limiti del
+// piano (REQ-LIC-003). Senza limiti nella licenza non cambiano niente, e chi
+// non li passa salva come sempre. Il controllo sta QUI, dove si salva, e non
+// solo sul tasto: un prodotto nuovo nasce anche dal POS e da una copia.
+export async function saveDrinkFromForm({
+  form,
+  existing = null,
+  inventory = [],
+  categories = [],
+  impostazioni = null,
+  prodotti = null,
+}) {
+  const nuovo = !(existing && existing.id)
+  if (nuovo && prodotti && !puoCreareProdotto(impostazioni, prodotti.length)) {
+    throw new Error(MESSAGGI_PIANO.prodotti(maxProdotti(impostazioni)))
+  }
   let imageUrl = form.image_url ?? null
   const previousUrl = existing?.image_url ?? null
-  if (form._file) imageUrl = await uploadDrinkImage(form._file)
+  // Sul profilo leggero Storage non c'è: la foto scelta non si carica (il
+  // tasto è già nascosto, questa è la cintura).
+  if (form._file && fotoConsentite(impostazioni)) imageUrl = await uploadDrinkImage(form._file)
 
   const catName = (categories || []).find((c) => c.id === form.category_id)?.name
   const payload = {
@@ -51,6 +70,9 @@ export async function saveDrinkFromForm({ form, existing = null, inventory = [],
     // il fallback ''.trim() il salvataggio con campi vuoti crashava.
     name: (form.name || '').trim(),
     description: (form.description || '').trim() || null,
+    ingredienti: (form.ingredienti || '').trim() || null,
+    segue_giacenze: form.segue_giacenze === true,
+    nome_cliente: (form.nome_cliente || '').trim() || null,
     category_id: form.category_id || null,
     category: catName || null, // denormalizzato per compat/fallback
     recipe: (form.recipe || '').trim() || null,
@@ -62,11 +84,20 @@ export async function saveDrinkFromForm({ form, existing = null, inventory = [],
     sale_vat: aliquotaVendita(form.sale_vat),
     available: !!form.available,
     image_url: imageUrl,
+    speciale: !!form.speciale,
+    // Il disegno composto, pulito; un id di testo è uno della prima
+    // versione e resta com'è finché non lo si cambia.
+    illustrazione:
+      typeof form.illustrazione === 'string' ? form.illustrazione : sceltaIllustrazione(form.illustrazione),
   }
 
-  if (existing && existing.id) await updateDrink(existing.id, payload)
-  else await createDrink(payload)
+  // L'id torna con quello che si è salvato: chi crea un prodotto per
+  // metterlo subito da qualche parte (una sezione del menù dei clienti,
+  // REQ-MENU-036) non deve andarlo a cercare per nome.
+  let id = existing?.id ?? null
+  if (nuovo) id = (await createDrink(payload))?.id ?? null
+  else await updateDrink(existing.id, payload)
 
   if (previousUrl && previousUrl !== imageUrl) deleteDrinkImageByUrl(previousUrl)
-  return payload
+  return { ...payload, id }
 }

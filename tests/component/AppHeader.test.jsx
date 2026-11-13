@@ -19,6 +19,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from '../helpers/router.jsx'
 import '@testing-library/jest-dom/vitest'
+import { CON_LICENZA } from '../helpers/licenza.js'
 
 // Chi è collegato: lo decide ogni test prima di montare.
 let ruoloClaim = null
@@ -56,10 +57,17 @@ vi.mock('../../src/lib/customerAuth.js', () => ({
 const TEMA_STAFF = { preset: 'notte-blu', custom: null }
 const TEMA_CLIENTE = { preset: 'crema', custom: null }
 vi.mock('../../src/lib/api.js', () => ({
+  // La presentazione alla regia (REQ-FLOTTA-026) qui non parte: nei test
+  // non c'è VITE_REGIA_PROGETTO, ma l'app la importa comunque.
+  presentaAllaRegia: vi.fn(() => Promise.resolve({ ok: false, status: 0, errore: null })),
   DEFAULT_SETTINGS: {},
   settingsIniziali: () => ({}),
   subscribeSettings: (cb) => {
     cb({
+      ...CON_LICENZA,
+      // Lo stile della Tana che veste tutte le pagine dei clienti
+      // (REQ-MENU-027): nella licenza dei test c'è.
+      stile_menu: 'meraviglie',
       customer_accounts_enabled: true,
       theme_staff: { preset: 'notte-blu', custom: null },
       theme_client: { preset: 'crema', custom: null },
@@ -74,6 +82,9 @@ vi.mock('../../src/lib/api.js', () => ({
   },
   createManualGroup: vi.fn(),
   clockIn: vi.fn(async () => {}),
+  // Il catalogo che l'app precarica all'ingresso del personale (BUG-137).
+  subscribeDrinks: () => () => {},
+  subscribeCategories: () => () => {},
   subscribePrinterConfig: () => () => {},
 }))
 
@@ -338,7 +349,7 @@ describe('le novità dopo un aggiornamento', () => {
   it('build nuova: il box con le note esce da sé', async () => {
     // Una build già vista diversa da questa: è lo stato di chi riapre l'app
     // dopo un aggiornamento, comunque ci sia arrivato.
-    localStorage.setItem('tana:novita:vista', 'build-vecchia')
+    localStorage.setItem('drink:novita:vista', 'build-vecchia')
     apri('/menu')
     expect(await screen.findByRole('dialog', { name: 'Novità di questa versione' })).toBeInTheDocument()
     expect(await screen.findByText(/La cosa nuova/)).toBeInTheDocument()
@@ -346,10 +357,10 @@ describe('le novità dopo un aggiornamento', () => {
 
   it('chiuso il box, la build risulta vista e non torna più', async () => {
     const user = userEvent.setup()
-    localStorage.setItem('tana:novita:vista', 'build-vecchia')
+    localStorage.setItem('drink:novita:vista', 'build-vecchia')
     const { unmount } = apri('/menu')
     await user.click(await screen.findByRole('button', { name: 'Ho capito' }))
-    expect(localStorage.getItem('tana:novita:vista')).not.toBe('build-vecchia')
+    expect(localStorage.getItem('drink:novita:vista')).not.toBe('build-vecchia')
     unmount()
     apri('/menu')
     // Il box non torna, e non torna nemmeno DOPO che la seconda apertura ha
@@ -365,10 +376,10 @@ describe('le novità dopo un aggiornamento', () => {
   // comunque — già letto, perché è appena stato mostrato — così l'aggiornamento
   // si ritrova nello storico della campanella.
   it('resta traccia in campanella, come notifica già letta', async () => {
-    localStorage.setItem('tana:novita:vista', 'build-vecchia')
+    localStorage.setItem('drink:novita:vista', 'build-vecchia')
     apri('/menu')
     await screen.findByRole('dialog', { name: 'Novità di questa versione' })
-    const notifiche = JSON.parse(localStorage.getItem('tana:notifs') || '[]')
+    const notifiche = JSON.parse(localStorage.getItem('drink:notifs') || '[]')
     expect(notifiche[0].title).toMatch(/aggiornata/i)
     expect(notifiche[0].href).toMatch(/tab=impostazioni/)
     expect(notifiche[0].letta).toBe(true)
@@ -378,7 +389,7 @@ describe('le novità dopo un aggiornamento', () => {
     apri('/menu')
     await screen.findByText('PAGINA MENU')
     expect(screen.queryByRole('dialog', { name: 'Novità di questa versione' })).toBeNull()
-    expect(JSON.parse(localStorage.getItem('tana:notifs') || '[]')).toEqual([])
+    expect(JSON.parse(localStorage.getItem('drink:notifs') || '[]')).toEqual([])
   })
 })
 
@@ -401,5 +412,40 @@ describe('la campanella e chi non è entrato', () => {
     clienteLoggato = null
     apri('/')
     expect(await screen.findByTestId('campanella')).toBeInTheDocument()
+  })
+})
+
+// LO STILE CHE VESTE LE PAGINE SEGUE CHI GUARDA, come i colori
+// (REQ-MENU-027): «Meraviglie» si scrive sulla radice per il cliente,
+// ovunque vada; a chi lavora il gestionale resta com'è.
+describe('lo stile delle pagine dei clienti segue chi guarda', () => {
+  const stile = () => document.documentElement.dataset.stile
+
+  it('al cliente, sulla home e sui suoi ordini', async () => {
+    apri('/')
+    await waitFor(() => expect(stile()).toBe('meraviglie'))
+  })
+
+  it('a chi lavora no, nemmeno sulle pagine dei clienti', async () => {
+    ruoloClaim = 'admin'
+    apri('/ordini')
+    // Il ruolo arriva dopo il primo giro: si aspetta che lo stile se ne vada.
+    await waitFor(() => expect(stile()).toBeUndefined())
+    expect(screen.getByText('PAGINA MIEI ORDINI')).toBeInTheDocument()
+  })
+
+  it('nella vista cliente sì: è com’è il menù per chi ordina', async () => {
+    ruoloClaim = 'admin'
+    apri('/menu?vista=cliente')
+    await waitFor(() => expect(stile()).toBe('meraviglie'))
+  })
+})
+
+// L'ALTEZZA VERA DELLA BARRA (BUG-130): l'app la misura e la scrive in
+// `--barra-intera`, a cui si appiccicano le schede delle categorie.
+describe('l’altezza della barra in alto', () => {
+  it('si misura e si scrive sulla radice', async () => {
+    apri('/menu')
+    await waitFor(() => expect(document.documentElement.style.getPropertyValue('--barra-intera')).toMatch(/^\d+px$/))
   })
 })

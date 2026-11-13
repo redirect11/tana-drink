@@ -23,17 +23,27 @@ export function recipeCost(rows, itemsById, { gross = true } = {}) {
   let cost = 0
   const missing = []
   for (const r of rows || []) {
-    const qty = Number(r?.qty) || 0
-    if (qty <= 0) continue
-    const item = itemsById?.[r.inventory_item_id]
-    const per = item ? costPerUnit(item, r.unit, { gross }) : null
-    if (per == null) {
+    if (!((Number(r?.qty) || 0) > 0)) continue
+    const c = costoRiga(r, itemsById?.[r.inventory_item_id], { gross })
+    if (c == null) {
       missing.push(r?.name || r?.inventory_item_id || '?')
       continue
     }
-    cost += per * qty
+    cost += c
   }
   return { cost: Math.round(cost * 10000) / 10000, missing }
+}
+
+// COSTO DI UNA SOLA RIGA DI RICETTA (REQ-MENU-034): qty × costo al
+// dettaglio nell'unità scritta. Flavio, 10/11/2026, guardando il Gold Rush:
+// il totale da solo non dice QUALE ingrediente pesa (60 ml di Jim Beam sono
+// 1,14 €, il ghiaccio pochi centesimi). Null quando la quantità manca o il
+// costo dell'articolo non si conosce: «non lo so», non «zero».
+export function costoRiga(row, item, { gross = true } = {}) {
+  const qty = Number(row?.qty) || 0
+  if (!(qty > 0) || !item) return null
+  const per = costPerUnit(item, row.unit, { gross })
+  return per == null ? null : per * qty
 }
 
 // Arrotondamento "da listino": per eccesso al passo scelto (0,50 €).
@@ -51,6 +61,22 @@ export function suggestedPrice(cost, { markup = DEFAULT_MARKUP, step = DEFAULT_R
   const m = Number(markup) || 0
   if (!(c > 0) || !(m > 0)) return null
   return roundPrice(c * m, step)
+}
+
+// IL RICARICO DETTO AL CONTRARIO: IL DRINK COST (REQ-MENU-033).
+// Flavio, 09/11/2026: «adesso si ragiona a quanto deve essere il food
+// cost, il drink cost di quello che io vado a vendere», ma «matematicamente
+// è la stessa cosa». ×3 vuol dire che gli ingredienti sono un terzo del
+// prezzo, il 33,3%; ×5 il 20%. Si salva una cosa sola, il ricarico: il
+// drink cost è un altro modo di scriverlo, e i due non possono discordare.
+export function drinkCostDi(markup) {
+  const m = Number(markup)
+  return m > 0 ? Math.round((100 / m) * 10) / 10 : null
+}
+
+export function ricaricoDaDrinkCost(percento) {
+  const p = Number(percento)
+  return p > 0 ? Math.round((100 / p) * 100) / 100 : null
 }
 
 // Ricarico effettivo di un prezzo rispetto al costo (es. 2.8 = ×2,8):
@@ -92,6 +118,9 @@ export function marginReport(drinks, itemsById, { markup = DEFAULT_MARKUP } = {}
     righe.push({
       id: d.id,
       name: d.name,
+      // La categoria del menù: la tabella si legge divisa per categorie.
+      category_id: d.category_id ?? null,
+      category: d.category ?? null,
       price,
       cost,
       missing,
@@ -116,4 +145,56 @@ export function marginReport(drinks, itemsById, { markup = DEFAULT_MARKUP } = {}
     parziali: conta('parziale'),
     senzaCosto: conta('no_costo'),
   }
+}
+
+// ── La marginalità in tabella: ordine e categorie (REQ-MENU-002) ──────
+// Flavio, 22/10/2026: «bisognerebbe mettere sempre la divisione in
+// categorie … poter vedere questo confronto, o vederlo così tutto
+// mischiato … anche la possibilità di metterlo in ordine secondo
+// determinati valori», cioè ricarico, margine, costo, prezzo.
+
+// Le righe ordinate su una colonna: 'name', 'cost', 'price', 'margin',
+// 'markup'. I valori che mancano (un ricarico senza costo) stanno sempre
+// in fondo, in qualunque verso: non sono né i migliori né i peggiori.
+// A parità si va per nome, così l'ordine non salta fra un giro e l'altro.
+export function ordinaMargini(righe, { col = 'markup', dir = 'asc' } = {}) {
+  const segno = dir === 'desc' ? -1 : 1
+  const perNome = (a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'it')
+  return [...(righe || [])].sort((a, b) => {
+    if (col === 'name') return segno * perNome(a, b)
+    const va = a[col]
+    const vb = b[col]
+    if (va == null && vb == null) return perNome(a, b)
+    if (va == null) return 1
+    if (vb == null) return -1
+    return segno * (va - vb) || perNome(a, b)
+  })
+}
+
+// Le righe divise per categoria del menù, nell'ordine delle categorie
+// (sort_order), con «Senza categoria» in fondo. Una voce vecchia che ha
+// solo il NOME della categoria si riconosce dal nome. Per ogni categoria
+// anche il ricarico e il margine medi, sulle voci che li hanno: è il
+// confronto fra famiglie che una lista mischiata non fa vedere.
+// Le righe dentro ogni categoria restano nell'ordine in cui arrivano.
+export function marginiPerCategoria(righe, categorie) {
+  const ordine = [...(categorie || [])].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+  const gruppi = new Map(ordine.map((c) => [c.id, { id: c.id, nome: c.name, categoria: c, righe: [] }]))
+  const perNome = new Map(ordine.map((c) => [c.name, c.id]))
+  const senza = { id: 'none', nome: 'Senza categoria', categoria: null, righe: [] }
+  for (const r of righe || []) {
+    const id = gruppi.has(r.category_id) ? r.category_id : perNome.get(r.category)
+    ;(gruppi.get(id) || senza).righe.push(r)
+  }
+  const media = (valori) => {
+    const v = valori.filter((x) => x != null)
+    return v.length ? Math.round((v.reduce((s, x) => s + x, 0) / v.length) * 100) / 100 : null
+  }
+  return [...gruppi.values(), senza]
+    .filter((g) => g.righe.length > 0)
+    .map((g) => ({
+      ...g,
+      ricaricoMedio: media(g.righe.map((r) => r.markup)),
+      margineMedio: media(g.righe.map((r) => r.margin)),
+    }))
 }

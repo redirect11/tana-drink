@@ -134,15 +134,15 @@ describe('prodotto libero', () => {
     // niente tendina: ricerca + chip
     await user.type(screen.getByLabelText('Ingredienti'), 'rum')
     await user.click(screen.getByRole('button', { name: '+ Rum bianco' }))
-    await user.type(screen.getByLabelText('Quantità Rum bianco'), '5')
+    await user.type(screen.getByLabelText('Quantità Rum bianco'), '50')
     await user.click(screen.getByRole('button', { name: /Aggiungi/ }))
     const arg = onAdd.mock.calls[0][0]
     expect(arg.recipe_items).toEqual([
       {
         inventory_item_id: 'rum',
         name: 'Rum bianco',
-        unit: 'ml', // unità BASE dell'articolo (si inserisce in cl)
-        qty: toBaseQty(5, 'cl'),
+        unit: 'ml', // unità BASE dell'articolo (si inserisce in ml, REQ-MAG-054)
+        qty: toBaseQty(50, 'ml'),
       },
     ])
   })
@@ -219,9 +219,9 @@ describe('la finestra della ricetta', () => {
         initial={{ name: 'Negroni', price: 8, recipe_items: [], note: '' }}
       />
     )
-    const nuova = await screen.findByRole('button', { name: '✨ Salva nuova' })
+    const nuova = await screen.findByRole('button', { name: 'Salva nuova' })
     const gruppo = nuova.closest('.cd-azioni')
     const tasti = [...gruppo.querySelectorAll('button')].map((b) => b.textContent.trim())
-    expect(tasti).toEqual(['Annulla', 'Salva 8,00\u00a0€', '✨ Salva nuova'])
+    expect(tasti).toEqual(['Annulla', 'Salva 8,00\u00a0€', 'Salva nuova'])
   })
 })

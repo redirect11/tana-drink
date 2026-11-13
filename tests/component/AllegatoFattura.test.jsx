@@ -217,7 +217,10 @@ describe('si riapre, si sostituisce, si toglie', () => {
   // Il file viene cancellato davvero: è l'unica copia che il locale ha di
   // quel documento, quindi si chiede conferma.
   it('togliere chiede conferma, e la fattura torna senza allegato', async () => {
-    const conferma = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    // Con vitest 4 l'ambiente happy-dom non mette `confirm` sul globale:
+    // vi.spyOn non avrebbe niente da spiare, quindi lo si mette a mano.
+    const conferma = vi.fn(() => true)
+    vi.stubGlobal('confirm', conferma)
     const user = userEvent.setup()
     render(<SupplierInvoicesPanel />)
     await user.click(await screen.findByRole('button', { name: /Togli l’allegato dal documento di Nova #1556/ }))
@@ -225,17 +228,17 @@ describe('si riapre, si sostituisce, si toglie', () => {
     expect(conferma).toHaveBeenCalledWith(expect.stringMatching(/cancellato/))
     await waitFor(() => expect(togli).toHaveBeenCalledWith('inv-1'))
     await waitFor(() => expect(screen.getAllByText('senza allegato')).toHaveLength(2))
-    conferma.mockRestore()
+    vi.unstubAllGlobals()
   })
 
   it('rispondendo di no non si cancella niente', async () => {
-    const conferma = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    vi.stubGlobal('confirm', vi.fn(() => false))
     const user = userEvent.setup()
     render(<SupplierInvoicesPanel />)
     await user.click(await screen.findByRole('button', { name: /Togli l’allegato dal documento di Nova #1556/ }))
 
     expect(togli).not.toHaveBeenCalled()
-    conferma.mockRestore()
+    vi.unstubAllGlobals()
   })
 })
 

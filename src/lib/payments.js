@@ -11,8 +11,15 @@
 // l'opzione "paga dopo" diventa «Paga allo staff alla consegna» e il
 // vincolo del banco non si applica (deciso dal proprietario).
 
+import { sumupAttivo } from './licenza.js'
+import { conEmoji } from './icone.js'
+
+// IL MODULO, NON SOLO L'IMPOSTAZIONE (BUG-133). `payments_online_enabled`
+// resta scritto anche quando il modulo SumUp va via o si spegne: con
+// «pagamento obbligatorio» acceso, gli ordini nascevano in attesa di un
+// pagamento che non si poteva fare e restavano fuori dalla coda.
 export function paymentOptions(settings = {}) {
-  const enabled = !!settings.payments_online_enabled
+  const enabled = !!settings.payments_online_enabled && sumupAttivo(settings)
   const required = enabled && !!settings.payments_online_required
   const serviceMode = settings.service_mode || 'banco'
   const tavoloOnly = serviceMode === 'tavolo'
@@ -27,7 +34,7 @@ export function paymentOptions(settings = {}) {
     // Si può scegliere di pagare dopo (al banco o allo staff al tavolo).
     allowCounter: !required,
     counterForcesBanco,
-    counterLabel: tavoloOnly ? '💶 Paga allo staff alla consegna' : '💶 Paga al bancone',
+    counterLabel: conEmoji('contanti', tavoloOnly ? 'Paga allo staff alla consegna' : 'Paga al bancone'),
   }
 }
 

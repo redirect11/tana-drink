@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 
-const CART_KEY = 'tana_cart_v1'
-const ORDERS_KEY = 'tana_my_orders_v1'
+const CART_KEY = 'drink_cart_v1'
+const ORDERS_KEY = 'drink_my_orders_v1'
 
 function read(key, fallback) {
   try {
@@ -18,6 +18,44 @@ function write(key, value) {
   } catch {
     /* storage non disponibile: ignora */
   }
+}
+
+// LA CHIAVE DI UNA RIGA è quello che arriva al banco: il drink del
+// gestionale e, se il cliente l'ha letto con un altro nome, quel nome
+// (REQ-MENU-025). «Gin Fizz» e «Tom Collins» su «SOUR 7» restano due righe;
+// lo stesso Negroni preso da «Suggeriti dallo staff» e dai «Grandi
+// classici» è una riga sola. Era la voce del menù dei clienti, e lo stesso
+// drink da due sezioni faceva due righe «Negroni × 1».
+// LE SCELTE DEL CLIENTE (REQ-MENU-042) fanno parte della chiave: un Gin
+// Tonic col Mare e uno col Tanqueray sono due righe, due coi Mare una.
+export const chiaveRiga = (i) =>
+  [i.nome_carta ? `${i.drink_id}·${i.nome_carta}` : i.drink_id, ...(i.scelte || []).map((s) => `${s.etichetta}=${s.id}`)].join('+')
+
+// Il nome che il cliente legge nel carrello: quello che ha scelto, con le
+// sue scelte di ingredienti (REQ-MENU-042).
+export function nomeLetto(i) {
+  const nome = i.nome_carta || i.name
+  const scelte = (i.scelte || []).map((s) => s.nome).join(', ')
+  return scelte ? `${nome} (${scelte})` : nome
+}
+
+// UNA RIGA NUOVA. L'ordine porta il drink del GESTIONALE, col suo nome:
+// è quello che il banco conosce, che scala il magazzino e che finisce
+// nelle statistiche. Se il menù dei clienti lo chiama in un altro modo (il
+// nome per il cliente della scheda, o quello di una voce del menù),
+// quel nome va nella nota della riga, che al banco dice cosa preparare
+// («SOUR 7 — Gin Fizz»); al cliente, nel carrello, resta il nome che ha
+// scelto.
+export function rigaDelCarrello(drink) {
+  const riga = {
+    drink_id: drink.drink_id ?? drink.id,
+    name: drink.nome_gestionale ?? drink.name,
+    price: drink.price,
+    qty: 1,
+    sumup_product_id: drink.sumup_product_id ?? null,
+  }
+  const diverso = (drink.name || '').trim().toLowerCase() !== (riga.name || '').trim().toLowerCase()
+  return diverso ? { ...riga, nome_carta: drink.name, note: drink.name } : riga
 }
 
 // Carrello persistito in localStorage. La scrittura avviene SUBITO,
@@ -37,26 +75,21 @@ export function useCart() {
     setItems(next)
   }, [])
 
-  const add = useCallback((drink) => {
+  // Una riga già composta (con le scelte del cliente, sceltaCliente.js) o
+  // quella di un drink com'è.
+  const aggiungiRiga = useCallback((nuova) => {
+    const chiave = chiaveRiga(nuova)
     update((prev) => {
-      const found = prev.find((i) => i.drink_id === drink.id)
+      const found = prev.find((i) => chiaveRiga(i) === chiave)
       if (found) {
         return prev.map((i) =>
-          i.drink_id === drink.id ? { ...i, qty: i.qty + 1 } : i
+          chiaveRiga(i) === chiave ? { ...i, qty: i.qty + 1 } : i
         )
       }
-      return [
-        ...prev,
-        {
-          drink_id: drink.id,
-          name: drink.name,
-          price: drink.price,
-          qty: 1,
-          sumup_product_id: drink.sumup_product_id ?? null,
-        },
-      ]
+      return [...prev, nuova]
     })
   }, [update])
+  const add = useCallback((drink) => aggiungiRiga(rigaDelCarrello(drink)), [aggiungiRiga])
 
   // Drink custom composto al volo dal bartender: riga a sé (id univoco
   // locale), con la ricetta incorporata per lo scarico inventario.
@@ -75,10 +108,10 @@ export function useCart() {
     ])
   }, [update])
 
-  const setQty = useCallback((drinkId, qty) => {
+  const setQty = useCallback((chiave, qty) => {
     update((prev) =>
       prev
-        .map((i) => (i.drink_id === drinkId ? { ...i, qty } : i))
+        .map((i) => (chiaveRiga(i) === chiave ? { ...i, qty } : i))
         .filter((i) => i.qty > 0)
     )
   }, [update])
@@ -88,7 +121,7 @@ export function useCart() {
   const count = items.reduce((s, i) => s + i.qty, 0)
   const total = items.reduce((s, i) => s + i.qty * Number(i.price || 0), 0)
 
-  return { items, add, addCustom, setQty, clear, count, total }
+  return { items, add, aggiungiRiga, addCustom, setQty, clear, count, total }
 }
 
 // Memoria locale degli ID degli ordini effettuati da questo dispositivo,

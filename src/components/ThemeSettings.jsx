@@ -1,4 +1,12 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { stiliDisponibili, stileMenu, patchDisinstalla, vesteDelloStile, stiliRicettaInstallati } from '../lib/stileMenu.js'
+import { urlProvaMenu } from '../lib/marketplaceTemi.js'
+import { formatPrice } from '../lib/orderStatus.js'
+import Icona from './Icona.jsx'
+import { TemaIcone } from '../lib/temaIcone.js'
+import { temaIconeDi, GRUPPI_ICONE } from '../lib/icone.js'
+import { CHIAVE_AIUTI_CAMPI, aiutiCampiAccesi } from '../lib/aiutiCampi.js'
 import {
   THEME_FIELDS,
   THEME_PRESETS,
@@ -25,7 +33,7 @@ import {
 export default function ThemeSettings({ settings, onSave }) {
   return (
     <div className="card settings-section">
-      <h3>🎨 Aspetto</h3>
+      <h3><Icona nome="temi" /> Aspetto</h3>
       <ThemeEditor
         title="Gestionale — quello che vedi ora"
         hint="I colori di chi lavora: coda, cassa, impostazioni, profilo."
@@ -35,6 +43,116 @@ export default function ThemeSettings({ settings, onSave }) {
         onSave={(t) => onSave({ theme_staff: t })}
       />
       <CardDellaCoda settings={settings} onSave={onSave} />
+      <IconeDelGestionale settings={settings} onSave={onSave} />
+      <AiutiDelleSchede settings={settings} onSave={onSave} />
+    </div>
+  )
+}
+
+// ── GLI AIUTI SOTTO I CAMPI (REQ-UI-032) ─────────────────────────────
+//
+// Richiesta dell'08/11/2026: «rimuovere gli aiuti sopra tutti i campi
+// compilabili o almeno permettere di abilitarli/disabilitarli». Sta in
+// Aspetto per la regola dell'utente del 20/08/2026: come si vede una cosa,
+// di qualunque sezione, si decide qui. Due tasti come per le card della
+// coda: le due risposte hanno lo stesso peso.
+function AiutiDelleSchede({ settings, onSave }) {
+  const accesi = aiutiCampiAccesi(settings)
+  const opzione = (valore, nome) => (
+    <button
+      type="button"
+      className={`mode-option${accesi === valore ? ' active' : ''}`}
+      aria-pressed={accesi === valore}
+      onClick={() => onSave({ [CHIAVE_AIUTI_CAMPI]: valore })}
+    >
+      {nome}
+    </button>
+  )
+  return (
+    <div style={{ marginTop: 18 }}>
+      <h4 style={{ margin: '0 0 4px' }}>Aiuti sotto i campi</h4>
+      <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+        Le righe di spiegazione sotto i campi delle schede: drink, prodotti di magazzino, listini, documenti
+        dei fornitori. Valgono per tutti i terminali del locale.
+      </p>
+      <div className="mode-choice" role="group" aria-label="Aiuti sotto i campi">
+        {opzione(false, 'Nascosti')}
+        {opzione(true, 'Visibili')}
+      </div>
+    </div>
+  )
+}
+
+// ── LE ICONE DEL GESTIONALE (REQ-UI-031) ──────────────────────────────
+//
+// Flavio, 07/11/2026: le emoji colorate «danno un senso un po' troppo a
+// pazziella»; nei programmi professionali le icone sono silhouette
+// monocrome. «Silhouette» è il tema di partenza (decisione dell'utente);
+// «Emoji» rimette quelle di prima. UN TEMA PER GRUPPO (decisione
+// dell'utente, 07/11/2026): navigazione, tasti e stati, segnali e messaggi
+// si scelgono a parte. Ogni scelta mostra cinque icone del suo gruppo nel
+// suo tema, così si vede cosa si sceglie prima di sceglierlo.
+const ICONE_DI_PROVA = {
+  navigazione: ['coda', 'cassa', 'magazzino', 'staff', 'impostazioni'],
+  tasti: ['modifica', 'elimina', 'aggiungi', 'stampa', 'contanti'],
+  segnali: ['avviso', 'fatto', 'attesa', 'licenza', 'cerca'],
+}
+const DESCRIZIONE_GRUPPO = {
+  navigazione: 'Menu laterale, sezioni e sottosezioni, barra in alto, moduli.',
+  tasti: 'Tasti, titoli delle sezioni, metodi di pagamento, stati dei conti.',
+  segnali: 'Avvisi e conferme nei testi, messaggi, campi di ricerca.',
+}
+
+function IconeDelGestionale({ settings, onSave }) {
+  return (
+    <div style={{ marginTop: 18 }}>
+      <h4 style={{ margin: '0 0 4px' }}>Le icone del gestionale</h4>
+      <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+        Il disegno delle icone del gestionale, gruppo per gruppo. Le pagine dei clienti seguono lo stile del
+        loro menù. I segnali di stato restano colorati in entrambi i casi.
+      </p>
+      {Object.entries(GRUPPI_ICONE).map(([gruppo, g]) => (
+        <SceltaIcone
+          key={gruppo}
+          gruppo={gruppo}
+          label={g.label}
+          tema={temaIconeDi(settings, gruppo)}
+          scegli={(id) => onSave({ [g.chiave]: id })}
+        />
+      ))}
+    </div>
+  )
+}
+
+function SceltaIcone({ gruppo, label, tema, scegli }) {
+  const opzione = (id, nome) => (
+    <button
+      type="button"
+      className={`mode-option${tema === id ? ' active' : ''}`}
+      aria-pressed={tema === id}
+      aria-label={`${label}: ${nome}`}
+      onClick={() => scegli(id)}
+    >
+      <TemaIcone.Provider value={{ [gruppo]: id }}>
+        <span className="icone-prova" aria-hidden="true">
+          {ICONE_DI_PROVA[gruppo].map((n) => (
+            <Icona key={n} nome={n} gruppo={gruppo} />
+          ))}
+        </span>
+      </TemaIcone.Provider>{' '}
+      {nome}
+    </button>
+  )
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{label}</div>
+      <div className="muted" style={{ fontSize: '0.8rem', margin: '0 0 6px' }}>
+        {DESCRIZIONE_GRUPPO[gruppo]}
+      </div>
+      <div className="mode-choice">
+        {opzione('silhouette', 'Silhouette')}
+        {opzione('emoji', 'Emoji')}
+      </div>
     </div>
   )
 }
@@ -70,28 +188,103 @@ function CardDellaCoda({ settings, onSave }) {
           className={`mode-option${colore ? '' : ' active'}`}
           onClick={() => onSave({ bordo_colore_conto: false })}
         >
-          💳 Com&apos;è messo il conto
+          <Icona nome="carta" gruppo="tasti" />{' '}Com&apos;è messo il conto
         </button>
         <button
           className={`mode-option${colore ? ' active' : ''}`}
           onClick={() => onSave({ bordo_colore_conto: true })}
         >
-          🎨 Il colore del conto
+          <Icona nome="temi" gruppo="tasti" /> Il colore del conto
         </button>
       </div>
     </div>
   )
 }
 
-// Il tema del menù dei clienti, da mostrare nella sua sezione.
+// Il tema del menù dei clienti, da mostrare nella sua sezione: prima la
+// forma (lo stile, REQ-MENU-021), poi i colori, che valgono per tutti e due
+// gli stili.
 export function TemaMenuClienti({ settings, onSave }) {
   return (
-    <ThemeEditor
+    <>
+      <StileMenuClienti settings={settings} onSave={onSave} />
+      <ThemeEditor
       title="Colori del menù"
       hint="Come lo vedono i clienti sul telefono. Per provarlo: menu ▸ Vista cliente."
       value={settings.theme_client}
       onSave={(t) => onSave({ theme_client: t })}
-    />
+      />
+    </>
+  )
+}
+
+// LO STILE DEL MENÙ (REQ-MENU-021, REQ-MENU-022): qui si sceglie fra gli
+// stili che il locale ha; il catalogo, per installarne altri, sta nel
+// Marketplace (REQ-MENU-023). Ogni stile si può PROVARE sul proprio menù
+// prima di sceglierlo: l'anteprima del cliente, con lo stile in prova, la
+// vede solo chi la apre.
+// Ogni scheda ha un assaggio dello stile (nome e prezzo di un drink) scritto
+// con le sue regole: si vede la differenza senza leggere la descrizione.
+
+function AssaggioStile({ id, settings }) {
+  const veste = vesteDelloStile(settings, id)
+  return (
+    <span className={`assaggio-stile ${veste.className || 'stile-classico'}`} style={veste.style} aria-hidden="true" {...veste.attributi}>
+      <span className="assaggio-nome">Negroni</span>
+      <span className="assaggio-prezzo">{formatPrice(9)}</span>
+    </span>
+  )
+}
+
+export function StileMenuClienti({ settings, onSave }) {
+  const attuale = stileMenu(settings)
+  const stili = stiliDisponibili(settings)
+  return (
+    <div style={{ margin: '14px 0 18px' }} role="group" aria-labelledby="stile-menu-titolo">
+      <h4 id="stile-menu-titolo" style={{ margin: '0 0 4px' }}>Stile del menù</h4>
+      <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+        Impaginazione, caratteri e movimento del menù e degli Special per i clienti. I colori sono quelli
+        scelti sotto. Il personale vede sempre lo stile classico.
+      </p>
+      <div className="mode-choice stili-menu">
+        {stili.map((s) => (
+          <div key={s.id} className={`stile-scheda${attuale === s.id ? ' active' : ''}`}>
+            <button
+              type="button"
+              className={`mode-option${attuale === s.id ? ' active' : ''}`}
+              aria-pressed={attuale === s.id}
+              onClick={() => onSave({ stile_menu: s.id })}
+            >
+              <AssaggioStile id={s.id} settings={settings} />
+              <strong>{s.nome}</strong>
+              <span className="muted small" style={{ display: 'block', fontWeight: 400 }}>
+                {s.desc}
+              </span>
+            </button>
+            <div className="stile-azioni">
+              <a className="link-inline small" href={urlProvaMenu('stile', s.id)}>
+                Prova sul menù
+              </a>
+              {(s.gratis || stiliRicettaInstallati(settings).some((r) => r.id === s.id)) && (
+                <button type="button" className="link-inline small" onClick={() => onSave(patchDisinstalla(settings, s.id))}>
+                  Disinstalla
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Il catalogo degli stili (e dei temi) sta nella pagina del
+          marketplace (REQ-MENU-023): qui si sceglie fra quelli installati. */}
+      <p className="muted small" style={{ margin: '10px 0 0' }}>
+        Altri stili e temi, gratis, nel{' '}
+        <Link className="link-inline" to="/bar?tab=marketplace">
+          marketplace
+        </Link>
+        .
+      </p>
+    </div>
   )
 }
 
@@ -167,7 +360,7 @@ function ThemeEditor({ title, hint, value, onSave, livePreview = false }) {
 
       {!customizing ? (
         <button className="btn ghost small" onClick={startCustomize}>
-          🎛 Personalizza colori
+          <Icona nome="regola" gruppo="tasti" /> Personalizza colori
         </button>
       ) : (
         <div style={{ marginTop: 8 }}>
@@ -191,7 +384,7 @@ function ThemeEditor({ title, hint, value, onSave, livePreview = false }) {
               ↩︎ Ripristina preset
             </button>
             <button className="btn small" onClick={saveCustom}>
-              💾 Salva tema
+              <Icona nome="salva" gruppo="tasti" /> Salva tema
             </button>
           </div>
         </div>

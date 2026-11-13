@@ -3,6 +3,7 @@ import { formatPrice } from '../lib/orderStatus.js'
 import { paidAmount } from '../lib/pagamento.js'
 import { destinazioneConto } from '../lib/coda.js'
 import { COLORI_CONTO, coloreDelConto } from '../lib/coloriConto.js'
+import Icona, { ConIcona } from './Icona.jsx'
 
 // ── QUELLO CHE LE DUE LAVAGNE A CORSIE HANNO IN COMUNE ───────────────
 //
@@ -63,7 +64,7 @@ export function Corsia({
     <section className={`corsia${classe ? ' ' + classe : ''}`} ref={refCorsia}>
       <div className={`row between corsia-testa corsia-${corsia.id}`}>
         <span className="corsia-titolo">
-          {corsia.titolo} <span className="muted small">{quanti}</span>
+          <ConIcona testo={corsia.titolo} /> <span className="muted small">{quanti}</span>
         </span>
         <span className="price small">{formatPrice(corsia.totale)}</span>
       </div>
@@ -166,7 +167,7 @@ export function TastoColoreConto({ order, onApri }) {
       title={v.hint}
       onClick={v.onClick}
     >
-      {v.icon} {v.label}
+      <Icona nome={v.icon} gruppo="tasti" /> {v.label}
     </button>
   )
 }
@@ -240,7 +241,7 @@ export function BolloAcconto({ order }) {
   if (order?.payment_status !== 'parziale') return null
   return (
     <span className="pill acconto small" title={`Già incassati ${formatPrice(paidAmount(order))}`}>
-      💳 Acconto
+      <Icona nome="carta" gruppo="tasti" /> Acconto
     </span>
   )
 }

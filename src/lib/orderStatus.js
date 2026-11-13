@@ -1,4 +1,5 @@
 import { isPersonale } from './ruoli.js'
+import { conEmoji, emojiDi } from './icone.js'
 
 // Stati dell'ordine, in ordine di avanzamento.
 // "tipo salumeria": ogni ordine ha un numero progressivo giornaliero.
@@ -96,24 +97,33 @@ export const CANCEL_PHRASES = {
 // ordine» e una come «Ordine ricevuto» (BUG-073). Un test le tiene
 // allineate: tests/unit/paroleDegliAvvisi.test.js.
 export const AVVISO_NUOVO_ORDINE = {
-  titolo: '🆕 Nuovo ordine',
+  titolo: conEmoji('novita', 'Nuovo ordine'),
   corpo: (numero) => `Ordine #${numero ?? '—'} ricevuto.`,
 }
 
 // UN CONTO CHE TORNA IN CODA NON È UN ORDINE NUOVO. È un conto che il banco
 // aveva già visto, annullato, e che qualcuno ha rimesso in piedi: chiamarlo
 // «nuovo» manda a cercare un ordine che non è mai arrivato.
-export const AVVISO_RIPRISTINO = { titolo: '↩️ Conto ripristinato' }
+//
+// L'icona è «riapri» del vocabolario: con la freccia ↩️, che il vocabolario
+// non conosce, nel tema monocromo la campanella e il fumetto mostravano
+// l'unica emoji colorata rimasta (REQ-UI-031).
+export const AVVISO_RIPRISTINO = { titolo: conEmoji('riapri', 'Conto ripristinato') }
 
-export const STATUS_EMOJI = {
-  [ORDER_STATUSES.APERTO]: '🟢',
-  [ORDER_STATUSES.RICEVUTO]: '🧾',
-  [ORDER_STATUSES.IN_PREPARAZIONE]: '🍹',
-  [ORDER_STATUSES.PRONTO]: '🔔',
-  [ORDER_STATUSES.RITIRATO]: '✅',
-  [ORDER_STATUSES.PAGATO]: '💶',
-  [ORDER_STATUSES.ANNULLATO]: '✖️',
+// L'icona di ogni stato, come nome del vocabolario (lib/icone.js): il
+// gestionale la disegna nel tema (<Icona nome={STATUS_ICONA[s]} />); chi
+// scrive testo — le pagine del cliente, le notifiche — usa STATUS_EMOJI.
+export const STATUS_ICONA = {
+  [ORDER_STATUSES.APERTO]: 'verde',
+  [ORDER_STATUSES.RICEVUTO]: 'coda',
+  [ORDER_STATUSES.IN_PREPARAZIONE]: 'in-preparazione',
+  [ORDER_STATUSES.PRONTO]: 'pronto',
+  [ORDER_STATUSES.RITIRATO]: 'fatto',
+  [ORDER_STATUSES.PAGATO]: 'contanti',
+  [ORDER_STATUSES.ANNULLATO]: 'annullato',
 }
+
+export const STATUS_EMOJI = Object.fromEntries(Object.entries(STATUS_ICONA).map(([s, nome]) => [s, emojiDi(nome)]))
 
 // Etichette leggibili del metodo di pagamento di un ordine.
 // GLI STESSI METODI, PER LA STAMPANTE. Niente emoji (la testina stampa
@@ -135,12 +145,12 @@ export const PAYMENT_METHOD_PRINT = {
 }
 
 export const PAYMENT_METHOD_LABELS = {
-  online: '💳 Online',
-  lettore: '📟 SumUp (lettore)',
-  banco: '💶 Contante',
-  carta: '💳 Carta di credito',
-  buono: '🎟 Buono VIP',
-  misto: '💶+💳 Misto',
+  online: conEmoji('carta', 'Online'),
+  lettore: conEmoji('lettore', 'SumUp (lettore)'),
+  banco: conEmoji('contanti', 'Contante'),
+  carta: conEmoji('carta', 'Carta di credito'),
+  buono: conEmoji('buono', 'Buono VIP'),
+  misto: `${emojiDi('contanti')}+${emojiDi('carta')} Misto`,
 }
 
 // Ordine in cui i metodi compaiono nei riepiloghi di cassa. Chi NON è in
@@ -150,10 +160,21 @@ export const PAYMENT_METHOD_LABELS = {
 // dove appare e con che etichetta — contato lo è comunque, da subito.
 export const CASH_METHOD_ORDER = ['banco', 'carta', 'lettore', 'online', 'buono']
 
-// Etichetta di un metodo mai visto prima: meglio il codice grezzo in chiaro
-// che farlo sparire in un altro secchio.
-export function paymentMethodLabel(method) {
-  return PAYMENT_METHOD_LABELS[method] || `❓ ${method || 'non indicato'}`
+// IL METODO A SCHERMO, DIVISO IN ICONA E NOME (REQ-UI-031): l'icona la
+// disegna il tema del gestionale (components/MetodoPagamento.jsx), il nome
+// resta quello di sempre. Le etichette con l'emoji qui sopra restano per
+// chi scrive testo semplice (un messaggio, un'esportazione).
+export const PAYMENT_METHOD_ICONA = {
+  online: 'carta',
+  lettore: 'lettore',
+  banco: 'contanti',
+  carta: 'carta',
+  buono: 'buono',
+  misto: 'contanti',
+}
+
+export function paymentMethodNome(method) {
+  return (PAYMENT_METHOD_LABELS[method] || '').replace(/^\S+\s/, '') || method || 'non indicato'
 }
 
 // Metodi da mostrare in un riepilogo: i noti sempre (anche a zero, così le

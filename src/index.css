@@ -126,7 +126,9 @@ a {
   --safe-top: env(safe-area-inset-top, 0px);
   /* Altezza della barra in alto (logo + azioni), senza la fascia di sistema:
      serve a chi si "appiccica" scorrendo — le categorie a sinistra — per
-     fermarsi SOTTO l'intestazione invece che finirci dietro. */
+     fermarsi SOTTO l'intestazione invece che finirci dietro. È una stima:
+     chi si appiccica alla barra usa `--barra-intera`, l'altezza vera che
+     App misura (BUG-130), e questa solo finché la misura non c'è. */
   --barra-alta: 68px;
 }
 @media (display-mode: standalone) {
@@ -668,6 +670,12 @@ a.btn.block {
   background: rgba(243, 156, 18, 0.2);
   color: #ffd591;
 }
+/* Il conto aspetta che il cliente accetti le modifiche (REQ-CLI-009). */
+.pill.attesa-cliente {
+  background: rgba(243, 156, 18, 0.2);
+  color: var(--warn);
+  border: 1px dashed var(--warn);
+}
 .pill.in_preparazione {
   background: rgba(52, 152, 219, 0.2);
   color: #9ad0ff;
@@ -710,6 +718,352 @@ a.btn.block {
 .menu-item h3 {
   margin: 0 0 4px;
 }
+/* La card si tocca per aprire il dettaglio (REQ-MENU-020); il nome è il
+   tasto vero per la tastiera, ma si legge come un titolo. */
+.menu-item {
+  cursor: pointer;
+}
+.menu-item-nome {
+  all: unset;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+.menu-item-nome:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+/* La descrizione corta nella card, per intero nel dettaglio. */
+.menu-item-descrizione {
+  margin: 0 0 6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* UN NOME LUNGO NON SPINGE FUORI «AGGIUNGI» (BUG-120). Una parola sola in
+   maiuscolo («BASILICONIGLIO», «BOULEVARDIER») non va a capo, e la colonna
+   del testo non si stringeva sotto la sua larghezza: sul telefono il tasto
+   usciva dal bordo della card. Ora il testo si stringe, il tasto no, e il
+   nome scende un poco con lo schermo stretto prima di andare a capo. */
+.menu-item .row > .grow {
+  min-width: 0;
+}
+.menu-item .row > .btn,
+.menu-item .row > .qty {
+  flex-shrink: 0;
+}
+.menu-item .grow > h3 {
+  font-size: clamp(0.9rem, 3.8vw, 1.17rem);
+  overflow-wrap: anywhere;
+}
+
+/* ── IL MENÙ SPECIAL (REQ-MENU-018) ──────────────────────────────────
+   NEI COLORI DEL MENÙ. La prima versione era un foglio di carta chiara
+   dentro il menù scuro, e stonava: «anche il resto del menu dovrebbe
+   essere coerente con i colori … disegni bianchi su fondo scuro»
+   (l'utente, 29/10/2026). Le card prendono le variabili del tema, e le
+   illustrazioni hanno due versioni, tratto bianco o scuro, scelte dal
+   fondo (useFondoChiaro). */
+.speciali-carosello {
+  margin: 4px 0 14px;
+}
+/* «✨ Special» e «Vedi tutti» staccati dalla slide: a filo del bordo della
+   card sembravano scritti sopra (BUG-120). */
+.speciali-carosello-testa {
+  align-items: baseline;
+  margin-bottom: 10px;
+}
+.speciali-tutti {
+  font-size: 0.9rem;
+}
+.carosello {
+  position: relative;
+}
+.carosello-fila {
+  display: flex;
+  /* Uno spazio fra una slide e l'altra: attaccate, mentre si scorreva
+     sembravano una scheda sola. Il passo dei pallini lo legge da qui
+     (passoDelCarosello). */
+  gap: 14px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 18px;
+}
+.carosello-fila::-webkit-scrollbar {
+  display: none;
+}
+/* UNA SLIDE PER VOLTA, larga quanto il riquadro: il disegno a sinistra e
+   il testo a destra; sotto i 360px il disegno va sopra. */
+.carosello-slide {
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 44% 1fr;
+  gap: 12px;
+  align-items: center;
+  min-height: 200px;
+  padding: 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  color: var(--text);
+  text-decoration: none;
+}
+.carosello-slide img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+}
+.carosello-testo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+/* I nomi sono in maiuscolo e lunghi («BASILICONIGLIO»): nella metà destra
+   di una slide su telefono uscivano dalla card, tagliati (BUG-120). Il
+   titolo cresce con lo schermo (4.4vw: «BASILICONIGLIO» intero su un
+   telefono da 390px), e se non basta va a capo. */
+.carosello-testo strong {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-size: clamp(0.95rem, 4.4vw, 1.35rem);
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+/* Gli ingredienti sotto la descrizione: corsivi e piccoli come nel menù,
+   al massimo due righe (REQ-MENU-019). */
+.carosello-ingredienti {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-style: italic;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.carosello-descrizione {
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+@media (max-width: 360px) {
+  .carosello-slide {
+    grid-template-columns: 1fr;
+  }
+  .carosello-slide img {
+    max-width: 200px;
+    margin: 0 auto;
+  }
+}
+/* I pallini: bersagli larghi, segno piccolo (guardrail 2). */
+.carosello-punti {
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+  margin-top: 4px;
+}
+.carosello-punti button {
+  width: calc(28px / var(--zoom, 1));
+  height: calc(28px / var(--zoom, 1));
+  padding: 0;
+  border: none;
+  background: none;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.carosello-punti button::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--line);
+  transition: width 0.15s ease, background 0.15s ease;
+}
+.carosello-punti button.attivo::before {
+  width: 20px;
+  background: var(--accent);
+}
+.speciali-testata {
+  border-radius: 16px;
+  padding: 16px;
+  margin: 0 0 12px;
+  text-align: center;
+  background: var(--card);
+  border: 1px solid var(--line);
+}
+.speciali-testata h2 {
+  margin: 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-size: 1.8rem;
+}
+.speciali-tema {
+  margin: 4px 0 10px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  color: var(--muted);
+}
+.menu-item.speciale h3 {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-size: 1.3rem;
+}
+/* Il menù Special in griglia: due colonne sul telefono, tre dai 700px.
+   Ogni card è una colonna — disegno, nome, descrizione, prezzo — con
+   «Aggiungi» in fondo e largo quanto la card: nella stessa riga le card
+   hanno la stessa altezza e i tasti stanno allineati. */
+.speciali-griglia {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+@media (min-width: 700px) {
+  .speciali-griglia {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+.speciali-griglia .menu-item.speciale {
+  margin: 0;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+}
+.speciali-griglia .menu-item.speciale > .row.between {
+  flex: 1;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+/* I nomi sono in maiuscolo e lunghi («BASILICONIGLIO»): su mezzo telefono
+   il titolo cresce con lo schermo, e se non basta va a capo invece di
+   uscire dalla card. */
+.speciali-griglia .menu-item.speciale h3 {
+  font-size: clamp(0.85rem, 3.6vw, 1.05rem);
+  overflow-wrap: anywhere;
+}
+/* Il prezzo scende in fondo, sopra «Aggiungi»: con descrizioni di
+   lunghezza diversa, nella stessa riga prezzi e tasti stanno alla stessa
+   altezza. */
+.speciali-griglia .menu-item.speciale .grow {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.speciali-griglia .menu-item.speciale .grow > .price {
+  margin-top: auto;
+}
+.speciali-griglia .menu-item.speciale .grow > p {
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+.speciali-griglia .menu-item.speciale .btn.small {
+  width: 100%;
+  margin-top: auto;
+}
+.speciali-griglia .menu-item.speciale .qty {
+  justify-content: center;
+  margin-top: auto;
+}
+.speciale-img {
+  display: block;
+  width: 100%;
+  max-width: 280px;
+  aspect-ratio: 1;
+  object-fit: contain;
+  margin: 0 auto 6px;
+}
+/* Il bicchiere neutro occupa lo stesso riquadro di un disegno, così le
+   card della griglia e le slide restano allineate, ma più piccolo dentro:
+   a tutta grandezza un'icona sembra un errore. */
+.speciale-img.segnaposto,
+.carosello-slide img.segnaposto {
+  padding: 22%;
+  opacity: 0.75;
+}
+.illustrazioni {
+  margin-top: 8px;
+}
+.illustrazioni-griglia {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 8px;
+  margin-top: 4px;
+}
+.illustrazione-voce {
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  padding: 4px;
+  min-height: calc(72px / var(--zoom, 1));
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8rem;
+  background: none;
+  color: inherit;
+}
+.illustrazione-voce.scelta {
+  border-color: var(--accent);
+}
+.illustrazione-anteprima {
+  display: block;
+  width: 180px;
+  aspect-ratio: 1;
+  margin: 6px auto;
+}
+.colori-drink {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 6px;
+}
+.colore-drink {
+  width: calc(36px / var(--zoom, 1));
+  height: calc(36px / var(--zoom, 1));
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  cursor: pointer;
+  padding: 0;
+}
+.colore-drink.scelta {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.illustrazione-voce img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  display: block;
+}
+.special-mini {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.qr-special {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.qr-special img {
+  width: 200px;
+  height: 200px;
+  background: #fff;
+  border-radius: 8px;
+}
 
 /* Foto drink */
 .drink-thumb {
@@ -723,7 +1077,22 @@ a.btn.block {
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* Drink senza foto: logo come segnaposto, leggermente attenuato. */
+/* Il disegno del drink (illustrazioneDrink, quando non c'è una foto): più
+   grande della foto e intero, senza riquadro — è un disegno al tratto, e
+   nella casella da 64 px, ritagliato, non si leggeva. */
+.drink-thumb.disegno {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+  background: none;
+  border: 0;
+  border-radius: 0;
+}
+
+/* Drink senza foto né disegno: il bicchiere neutro (segnapostoDrink),
+   leggermente attenuato. Si vede in ogni stile: le eccezioni di Notte,
+   Lavagna, Déco e Riviera nascondevano il LOGO, che ripetuto su ogni voce
+   faceva il menù giocattolo; il bicchiere no (l'utente, 04/11/2026). */
 .drink-thumb.placeholder {
   object-fit: contain;
   padding: 8px;
@@ -898,6 +1267,35 @@ a.btn.block {
 .inv-item:last-child {
   border-bottom: none;
 }
+/* UNA FUNZIONE NON INCLUSA NEL PIANO (REQ-LIC-002). */
+.funzione-non-inclusa { display: flex; justify-content: center; padding: 32px 16px; }
+.funzione-non-inclusa .card { max-width: 480px; text-align: center; }
+.funzione-non-inclusa .btn { display: inline-block; margin-top: 10px; }
+
+/* UN LIMITE DEL PIANO (REQ-LIC-003): la frase e il collegamento alla regia,
+   come scheda o in una riga sola dentro un elenco. */
+.avviso-piano { margin: 8px 0; }
+.avviso-piano p { margin: 0 0 6px; font-size: 0.9rem; }
+.avviso-piano.compatto { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.avviso-piano.compatto p { margin: 0; flex: 1 1 220px; }
+/* La firma del prodotto in fondo al menù digitale (limiti.marchio). */
+.marchio-prodotto { text-align: center; margin: 18px 0 8px; font-size: 0.8rem; }
+
+/* L'INSTALLAZIONE SOSPESA O CHIUSA (REQ-FLOTTA-008): una scheda sola in
+   mezzo alla pagina, sopra tutto. */
+.installazione-sospesa {
+  min-height: calc(100dvh / var(--zoom, 1) - var(--safe-top));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+.installazione-sospesa .card {
+  max-width: 520px;
+  text-align: center;
+}
+.installazione-sospesa .btn { display: inline-block; margin-top: 10px; }
+
 /* STORICO INVENTARI (REQ-MAG-052): ogni inventario chiuso è un tasto largo
    quanto la scheda, date a sinistra e valori a destra. */
 .storico-inventario-riga {
@@ -1217,6 +1615,11 @@ label {
   grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
+/* Un tasto che il piano o il ruolo toglie lascia la riga con un figlio
+   solo: prende tutta la larghezza invece di restare a metà. */
+.grid-2 > :only-child {
+  grid-column: 1 / -1;
+}
 
 .app-footer {
   text-align: center;
@@ -1368,6 +1771,20 @@ label {
   color: rgba(255, 255, 255, 0.78);
   margin: 4px 0 0;
   font-size: 0.95rem;
+}
+
+/* LE FRASI DI UNO STILE (REQ-MENU-027, testiStile.js): ci sono solo dove
+   lo stile le scrive. Sopra la testata, l'epigrafe; sotto lo stato
+   dell'ordine, una riga in corsivo che non prende il posto dello stato. */
+.hero-epigrafe {
+  color: rgba(255, 255, 255, 0.86);
+  margin: 8px 0 0;
+  font-style: italic;
+}
+.frase-stile {
+  margin: 10px 0 0;
+  font-style: italic;
+  color: var(--muted);
 }
 
 /* ── Box ordine attivo nel menù ──────────────────────────────── */
@@ -2486,6 +2903,23 @@ body.fullbleed .bar-content {
 .order-by.client {
   background: rgba(150, 150, 150, 0.22);
 }
+/* Accanto al nome di una riga del conto (REQ-ORD-023): il segno non si
+   stringe quando il nome è lungo, è il nome a perdere lettere. */
+/* Da dove deve venire il gesto perché la stampa automatica parta
+   (REQ-STAMPA-021): sotto l'interruttore che riguarda, la parola e i gettoni
+   sulla stessa riga, che va a capo sul telefono. */
+.stampa-da {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 2px 0 10px;
+}
+.riga-autore {
+  flex-shrink: 0;
+  margin-right: 6px;
+  font-size: 0.9em;
+}
 .order-legend {
   display: flex;
   flex-wrap: wrap;
@@ -3466,6 +3900,26 @@ body.bar-wide .app {
 .menu-card.off .grid-card-toggle {
   color: #fff;
 }
+/* E ANCHE QUELLO CHE SI APRE CON «AZIONI» (BUG-119). Il grigio scuro è lo
+   stesso con tutti i temi, ma i tasti dentro prendevano il testo del tema:
+   sui temi chiari scuro su scuro, e «Modifica» o «Rendi disponibile» non
+   si leggevano (l'utente, 29/10/2026, con una foto: «con i temi chiari e
+   le cose scure non si leggono i testi»). Qui l'inchiostro è quello del
+   grigio, non quello del tema. */
+.menu-card.off .grid-card-actions {
+  border-top-color: rgba(255, 255, 255, 0.14);
+}
+.menu-card.off .grid-card-actions .muted {
+  color: rgba(255, 255, 255, 0.78);
+}
+/* Il secondo selettore vince sulle varianti dei temi chiari
+   (`:root[data-luma='light'] .btn.ghost` e `.btn.secondary`), che
+   altrimenti riportano bordi e fondo dei tasti al nero. */
+.menu-card.off .grid-card-actions .btn, :root[data-luma] .menu-card.off .grid-card-actions .btn {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.35);
+}
 /* Striscia sinistra per lo stato scorte (come le card ordini). */
 .admin-card.ass-assortimento { border-left: 4px solid var(--line); }
 .admin-card.ass-linea { border-left: 4px solid #3498db; }
@@ -3721,6 +4175,114 @@ body.drawer-open .status-bell-float { display: none; }
 .table-scroll {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+}
+/* IL RESTO IN CONTANTI (REQ-PAG-015), sopra il tastierino del pagamento.
+   Una riga sola di tasti che va a capo sugli schermi stretti, e l'esito in
+   grande: si legge con le monete in mano. Non cresce oltre il suo
+   contenuto, per non rubare altezza al tastierino (BUG-075). */
+.resto-box {
+  flex-shrink: 0;
+  margin: 4px 0 2px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.resto-scelte {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.resto-altro {
+  width: 6.5em;
+  min-height: calc(40px / var(--zoom, 1));
+}
+.resto-esito {
+  margin: 6px 0 0;
+  text-align: right;
+  font-size: 1.15rem;
+}
+.resto-esito strong {
+  font-size: 1.5rem;
+}
+
+/* LA MARGINALITÀ DEL LISTINO IN TABELLA (REQ-MENU-002): costo, prezzo,
+   margine e ricarico in colonna, divisa per categorie. Più grande della
+   tabella delle macro: il prezzo che prima stava «scritto piccolo» sotto il
+   nome (Flavio, 22/10/2026) qui è un numero da leggere. La voce resta
+   ferma a sinistra quando la tabella scorre sul telefono. */
+.margin-tab {
+  border-collapse: collapse;
+  min-width: 100%;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+.margin-tab th,
+.margin-tab td {
+  padding: 6px 8px;
+  text-align: right;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--line);
+}
+.margin-tab .rowhead {
+  text-align: left;
+  white-space: normal;
+  min-width: 9em;
+  position: sticky;
+  left: 0;
+  background: var(--card);
+  font-weight: 400;
+}
+.margin-tab thead th {
+  vertical-align: bottom;
+}
+/* L'INTESTAZIONE OCCUPA TUTTA LA CELLA (BUG-138). SortTh è un pulsante
+   nato per le tabelle a griglia del magazzino, dove la cella è lui; dentro
+   un <th> restava largo quanto la sua etichetta e si appoggiava a sinistra,
+   mentre i numeri sotto stanno a destra. Sul telefono le colonne sono
+   strette e non si notava; sul PC la tabella si allarga a tutta la pagina e
+   «Costo» finiva sopra il nulla, col suo numero mezza colonna più in là. */
+.margin-tab th .inv-th {
+  width: 100%;
+}
+.margin-tab .margin-cat th,
+.margin-tab .margin-cat td {
+  background: var(--bg-2);
+  font-weight: 700;
+  padding-top: 12px;
+}
+.margin-tab .margin-cat-punto {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+.margin-tab .margin-nome {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  min-height: calc(36px / var(--zoom, 1));
+}
+.margin-tab .margin-nome:hover {
+  text-decoration: underline;
+}
+.margin-tab .margin-nota {
+  display: block;
+}
+.margin-tab .margin-consigliato {
+  font-weight: 700;
+}
+/* L'utile per categoria (REQ-STAT-008) usa la stessa tabella, col totale
+   in fondo staccato dalle righe. */
+.utili-tab tfoot th,
+.utili-tab tfoot td {
+  border-top: 2px solid var(--line);
+  font-weight: 700;
 }
 .macro-tab {
   border-collapse: collapse;
@@ -4058,17 +4620,31 @@ body.drawer-open .status-bell-float { display: none; }
 /* ── Navigazione categorie (chips scorrevoli) ─────────────────── */
 .cat-nav {
   position: sticky;
-  top: 64px;
+  /* Sotto la barra, all'altezza misurata (BUG-130): a 64 px fissi i primi
+     pixel della fila finivano dietro la barra, che è più alta, e le schede
+     restavano attaccate al suo filo. */
+  top: var(--barra-intera, calc(var(--safe-top) + var(--barra-alta)));
   z-index: 5;
   display: flex;
   gap: 8px;
   overflow-x: auto;
-  padding: 8px 0 12px;
+  /* A tutta larghezza, come la barra in alto: esce dal padding di .app. */
+  margin: 0 -16px;
+  padding: 8px 16px 12px;
   scrollbar-width: none;
   -ms-overflow-style: none;
   -webkit-overflow-scrolling: touch;
-  background: color-mix(in srgb, var(--bg) 92%, transparent);
-  backdrop-filter: blur(8px);
+  /* FERMA NELLA PAGINA NON HA UN FONDO SUO (BUG-120): una fascia di colore
+     pieno, più stretta dello schermo, staccava sul fondo sfumato della
+     pagina. Il fondo arriva solo quando si appiccica sotto la barra in alto
+     e le card le passano sotto (useIncollata), ed è quello della barra. */
+  background: transparent;
+  transition: background 0.15s ease;
+}
+.cat-nav.incollata {
+  background: color-mix(in srgb, var(--bg-2) 90%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
 }
 
 .cat-nav::-webkit-scrollbar {
@@ -4095,6 +4671,376 @@ body.drawer-open .status-bell-float { display: none; }
   background: var(--btn-bg);
   border-color: transparent;
   color: var(--btn-ink);
+}
+
+/* LE SCHEDE CHE CAMBIANO PAGINA (REQ-MENU-030), quando il tema divide il
+   menù in pagine: sono tasti, non collegamenti, e quella aperta resta
+   accesa. `.cat-nav` davanti perché la scheda accesa vinca anche sugli
+   stili che danno alle schede un fondo trasparente. */
+button.cat-chip {
+  font-family: inherit;
+  cursor: pointer;
+}
+.cat-nav .cat-chip[aria-pressed='true'] {
+  background: var(--btn-bg);
+  border-color: transparent;
+  color: var(--btn-ink);
+}
+.stile-notte .cat-nav .cat-chip[aria-pressed='true'] {
+  background: transparent;
+  color: var(--text);
+  border-bottom-color: var(--accent-2);
+}
+
+/* LE SEZIONI DELLA CARTA DEI CLIENTI (REQ-MENU-025) sono poche: schede
+   grandi, che restano in alto mentre si scorre. Flavio, 04/11/2026: «ne
+   saranno di meno, dovranno essere messe più grandi». Il carattere resta
+   quello dello stile; cambia la misura, in ogni stile. */
+.cat-nav.carta {
+  gap: 10px;
+  padding-block: 10px 14px;
+}
+.cat-nav.carta .cat-chip {
+  font-size: 1.05rem;
+  padding: 10px 20px;
+}
+.stile-notte .cat-nav.carta {
+  gap: 28px;
+}
+.stile-notte .cat-nav.carta .cat-chip {
+  font-size: 0.95rem;
+  letter-spacing: 0.18em;
+  padding: 10px 2px;
+}
+
+/* UNA SEZIONE SNELLA della carta: nome e prezzo su una riga, senza
+   immagine e senza racconto. Le bibite si leggono come un listino. */
+.carta-snella .menu-item {
+  padding-block: 10px;
+}
+.carta-snella .menu-item .grow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.carta-snella .menu-item h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+/* ── L'EDITOR DEL MENÙ DEI CLIENTI (REQ-MENU-025) ─────────────────
+   Le card hanno la forma di quelle del menù, e i testi sono campi che si
+   leggono come testo: senza riquadro finché non ci si passa sopra o non
+   ci si scrive. Sopra ogni campo un'etichetta minuta dice da dove viene il
+   testo; quando è proprio della sezione prende il colore d'accento. La
+   prima versione era un modulo di caselle grigie, e il nome «in grigio»
+   (il segnaposto) non si capiva cosa fosse (l'utente, 05/11/2026). */
+.struttura-legenda {
+  margin: 0 0 10px;
+  color: var(--muted);
+}
+.struttura-legenda dt {
+  color: var(--text);
+  font-weight: 600;
+  margin-top: 6px;
+}
+.struttura-legenda dd {
+  margin: 2px 0 0;
+}
+.struttura-sezione {
+  border-top: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+}
+/* Una sezione nascosta si riconosce già dall'indice, chiusa. */
+.struttura-sezione.nascosta .struttura-apri strong,
+.struttura-sezione.nascosta .struttura-corpo > :not(.struttura-barra) {
+  opacity: 0.5;
+}
+.struttura-barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.struttura-barra select {
+  width: auto;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+}
+.struttura-spunta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+}
+.struttura-spunta input {
+  width: auto;
+}
+/* Il gruppo della sezione (REQ-MENU-030): una casella corta in barra, alla
+   misura della tendina accanto, non un campo a tutta larghezza. */
+.struttura-gruppo {
+  width: 11em;
+  max-width: 100%;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+}
+.struttura-nota {
+  margin: 0 0 8px;
+}
+.wys-campo {
+  margin: 0 0 4px;
+}
+.wys-etichetta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.wys-etichetta label {
+  margin: 0;
+  font-size: inherit;
+  color: inherit;
+  font-weight: 600;
+}
+.wys-origine::before {
+  content: '· ';
+}
+.wys-origine.proprio {
+  color: var(--accent);
+}
+.btn.small.wys-ripristina {
+  padding: 1px 6px;
+  min-height: 0;
+  line-height: 1.2;
+  font-size: 0.68rem;
+  text-transform: none;
+  letter-spacing: 0;
+}
+/* Il campo che si legge come testo. `font: inherit` anche perché un
+   textarea, di suo, ha il carattere a larghezza fissa. */
+.wys {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px dashed transparent;
+  border-radius: 6px;
+  padding: 2px 6px;
+  margin-left: -7px;
+  width: calc(100% + 7px);
+  resize: vertical;
+}
+.wys:hover {
+  border-color: var(--line, rgba(255, 255, 255, 0.18));
+}
+.wys:focus {
+  outline: none;
+  border-style: solid;
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--card) 70%, transparent);
+}
+.wys::placeholder {
+  font-style: italic;
+  opacity: 0.6;
+}
+.wys-nome .wys {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+.wys-titolo .wys {
+  font-family: var(--serif);
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-style: italic;
+}
+/* LA VISTA COMPATTA (REQ-MENU-035). L'utente, 10/11/2026, davanti a
+   centinaia di card: «deve essere una vista più compatta e maneggevole».
+   La sezione è una riga che si apre; dentro, le voci sono righe della lista
+   lunga di sempre (inv-list, DESIGN.md), col dettaglio sotto la riga. La
+   striscia a sinistra dice la voce che al tavolo non si vede. */
+.struttura-testa {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.struttura-apri {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  min-height: var(--riga-lista);
+  padding: 6px 4px;
+  background: none;
+  border: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.struttura-apri:disabled {
+  cursor: default;
+}
+.struttura-freccia {
+  width: 1em;
+  color: var(--muted);
+}
+.struttura-corpo {
+  padding: 4px 0 8px;
+}
+.struttura-comandi {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 0;
+  background: var(--bg);
+  /* Il contenitore che scorre ha un margine sopra: senza questa ombra
+     piena, fra la barra in alto e questi comandi si vedevano passare le
+     righe. */
+  box-shadow: 0 -24px 0 var(--bg);
+}
+.struttura-comandi > .btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.struttura-cerca {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+.struttura-scelte {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--accent);
+}
+.struttura-scelte select {
+  width: auto;
+  padding: 6px 8px;
+  font-size: 0.85rem;
+}
+.struttura-riga.da-guardare {
+  border-left-color: var(--warn);
+}
+.struttura-riga-main {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.struttura-riga-main > input[type='checkbox'] {
+  width: auto;
+  flex: 0 0 auto;
+}
+.struttura-riga-nome {
+  display: flex;
+  flex: 1 1 160px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  min-width: 0;
+  padding: 0;
+  background: none;
+  border: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.struttura-riga-nome:disabled {
+  cursor: default;
+}
+.struttura-riga-nome .inv-row-name {
+  flex-shrink: 1;
+}
+.struttura-riga .struttura-tasti {
+  margin-left: auto;
+}
+.struttura-avviso {
+  margin: 0 0 6px;
+  color: var(--warn);
+}
+.struttura-collegamento {
+  margin-top: 6px;
+  min-width: 0;
+}
+.struttura-prodotto {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.struttura-collegamento select {
+  padding: 6px 10px;
+  font-size: 0.9rem;
+}
+.struttura-tasti {
+  display: flex;
+  gap: 4px;
+}
+.struttura-aggiungi {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.struttura-aggiungi select {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+.struttura-aggiungi .btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.struttura-tasti select {
+  width: auto;
+  max-width: 11rem;
+  padding: 6px 8px;
+  font-size: 0.85rem;
+}
+/* I prodotti della cassa rimasti fuori dal menù dei clienti: un elenco da
+   smaltire, con «Aggiungi a…» su ogni riga. */
+.struttura-fuori {
+  margin-top: 8px;
+  border-left: 3px solid var(--warn);
+}
+.struttura-fuori summary {
+  cursor: pointer;
+}
+.struttura-fuori-riga {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+}
+.struttura-fuori-riga select {
+  width: auto;
+  padding: 6px 8px;
+  font-size: 0.85rem;
+}
+.struttura-avviso-in-linea {
+  color: var(--warn);
+}
+.struttura-fine {
+  margin-top: 24px;
+  text-align: center;
+}
+
+/* L'ingresso dall'area clienti (REQ-FLOTTA-030): un attimo, a tutto
+   schermo, mentre l'app scambia il codice della regia. */
+.overlay.ingresso-regia {
+  align-items: center;
+  background: var(--bg);
 }
 
 /* ── Intestazione categoria ──────────────────────────────────── */
@@ -4334,6 +5280,52 @@ body.drawer-open .status-bell-float { display: none; }
    schermo: diviso per lo zoom, resta largo quanto a zoom 1. Anche il tetto
    sullo schermo si divide, perché i vw dentro `#root` si scalano come i
    px. */
+/* IL DETTAGLIO DEL DRINK PER IL CLIENTE (REQ-MENU-020): immagine grande,
+   nome e prezzo, descrizione intera, ingredienti uno per riga. */
+.dettaglio-drink-img {
+  display: block;
+  width: 100%;
+  max-height: 260px;
+  aspect-ratio: 1;
+  object-fit: contain;
+  margin: 0 auto 10px;
+}
+.dettaglio-drink-testa {
+  align-items: baseline;
+  gap: 10px;
+}
+.dettaglio-drink-testa h2 {
+  margin: 0;
+  font-size: 1.35rem;
+  overflow-wrap: anywhere;
+}
+.dettaglio-drink-descrizione {
+  margin: 8px 0 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+.dettaglio-drink-sezione {
+  margin: 16px 0 6px;
+  font-size: 1rem;
+}
+.dettaglio-drink-ingredienti {
+  margin: 0;
+  padding-left: 18px;
+  line-height: 1.6;
+}
+.dettaglio-drink-azioni {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 18px;
+}
+.dettaglio-drink-azioni .btn.small {
+  width: 100%;
+}
+.dettaglio-drink-azioni .qty {
+  justify-content: center;
+}
+
 .confirm-box.larga {
   max-width: none;
   width: calc(min(var(--larga, 520px), 94vw) / var(--zoom, 1));
@@ -4430,6 +5422,15 @@ body.drawer-open .status-bell-float { display: none; }
   background: var(--btn-bg);
   border-color: transparent;
   color: var(--btn-ink);
+}
+/* Il testo secondario dentro una scelta attiva (la descrizione di uno
+   stile, l'esempio di un formato) prende l'inchiostro del tasto, appena più
+   leggero: il grigio `--muted` è pensato per il fondo della pagina, e sul
+   colore del tasto non si leggeva (BUG-146: grigio su pesca, col tema
+   «catppuccin»). Vale per ogni tema. */
+.mode-option.active :is(.muted, .formato-prezzi-esempio) {
+  color: var(--btn-ink);
+  opacity: 0.85;
 }
 
 .persons-counter {
@@ -5205,6 +6206,20 @@ body.fullbleed,
 /* Maniglia per l'ALTEZZA del pannello ordine (telefono). Larga tutta la
    riga e con un segno al centro: si prende senza mirare. Si accende quando
    ha preso, perché il dito copre quello che sta toccando. */
+/* LE MANIGLIE NON SI SELEZIONANO (BUG-118): tenendo premuto per armarle,
+   Android apriva il menu della pressione lunga o selezionava il testo
+   vicino, e il gesto si interrompeva. */
+.posd-altezza-handle, .posd-foot-handle, .posd-resize-handle, .payscreen-resize-handle {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+/* Mentre una maniglia è presa, niente transizioni: la colonna che si anima
+   dietro al dito arriva sempre in ritardo, e si vede a scatti (BUG-118). */
+.posd-body.trascinando .posd-comanda, .posd-body.trascinando .posd-cats {
+  transition: none;
+}
+
 .posd-altezza-handle {
   flex-shrink: 0;
   height: 20px;
@@ -6872,8 +7887,11 @@ body:has(.overlay) .zoom-control {
   /* minmax(0, 1fr) e non 1fr: una colonna "1fr" non scende MAI sotto la
      larghezza del suo contenuto, quindi ingrandendo i tasti dalla maniglia
      la riga sfondava e "Annulla" finiva mezzo fuori schermo. Così invece
-     le tre colonne restano uguali e si stringono davvero. */
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+     le tre colonne restano uguali e si stringono davvero. Le colonne
+     sono quanti i tasti: nel piano senza stampa «Invia» non c'è, e gli
+     altri due si dividono la riga. */
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
   gap: 8px;
   /* Non si stringe col piede (BUG-077): sul telefono è l'ultima riga e
      sotto non c'è altro che possa cedere al posto suo. */
@@ -9238,4 +10256,3111 @@ body.pagina-piena .inv-scheda {
    la sua seconda riga, e si premeva quello sbagliato di corsa. */
 .comanda-det-dividi {
   margin-top: 12px;
+}
+
+
+/* ── LO STILE «NOTTE» DEL MENÙ CLIENTI (REQ-MENU-021) ─────────────────────
+   L'utente, 30/10/2026: «la home deve essere più elegante ... al momento
+   sembra troppo giocattoloso», e «serve qualcosa di elegante per il menu,
+   non solo per la home». Il classico resta il predefinito; questo si sceglie
+   in Impostazioni ▸ Menù clienti ▸ Stile del menù.
+   È la carta stampata al buio: niente riquadri, righe sottili, titoli in un
+   carattere alto e sottile (Italiana), testo in un geometrico leggero (Jost),
+   un solo accento — l'oro dei prezzi, che è --accent-2 del tema. I COLORI
+   SONO QUELLI DEL TEMA del menù clienti: lo stile cambia la forma.
+   Riferimento: Mùn Rooftop, Roma (munrooftoprome.com) — righe grandi in
+   maiuscolo sottile, scene a tutto schermo per i drink.
+   Si applica solo ai clienti: la classe sta sulla pagina del menù quando
+   chi guarda non è del personale. */
+.stile-notte {
+  --notte-titolo: 'Italiana', 'Didot', 'Bodoni 72', Georgia, serif;
+  --notte-testo: 'Jost', 'Futura', 'Avenir Next', 'Segoe UI', sans-serif;
+  font-family: var(--notte-testo);
+  font-weight: 300;
+}
+
+/* L'apertura: la foto del locale a tutta larghezza, senza cornice. */
+.stile-notte .hero {
+  margin: 0 -16px 22px;
+  border-radius: 0;
+  box-shadow: none;
+}
+.stile-notte .hero::after {
+  display: none;
+}
+.stile-notte .hero-overlay {
+  min-height: 52svh;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 10px;
+  padding: 40px 20px 34px;
+  background: linear-gradient(180deg, rgba(10, 10, 18, 0.2), rgba(10, 10, 18, 0.75));
+}
+.stile-notte .hero-logo {
+  width: 54px;
+  height: 54px;
+}
+.stile-notte .hero-title {
+  font-family: var(--notte-titolo);
+  font-weight: 400;
+  font-size: clamp(2.4rem, 12vw, 5rem);
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+.stile-notte .hero-sub {
+  font-size: 0.72rem;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+}
+
+/* I titoli: alti e sottili, in maiuscolo, con un filo dopo. */
+.stile-notte .cat-header {
+  font-family: var(--notte-titolo);
+  font-weight: 400;
+  font-style: normal;
+  font-size: clamp(1.9rem, 8.5vw, 3rem);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+.stile-notte .cat-header::after {
+  height: 1px;
+  background: var(--line);
+  opacity: 1;
+}
+
+/* Le categorie: parole, non gettoni. */
+.stile-notte .cat-chip {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
+  padding: 6px 2px;
+  font-weight: 400;
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.stile-notte .cat-chip:hover,
+.stile-notte .cat-chip:focus-visible {
+  color: var(--text);
+  border-bottom-color: var(--accent-2);
+  background: transparent;
+}
+.stile-notte .cat-nav {
+  gap: 22px;
+}
+
+/* La voce: una riga, NOME ....... prezzo, senza riquadro. */
+.stile-notte .menu-item {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+  padding: 18px 0;
+}
+.stile-notte .menu-item .drink-thumb {
+  width: 52px;
+  height: 52px;
+  border-radius: 4px;
+  border: 0;
+  margin-right: 4px;
+}
+.stile-notte .menu-item .drink-thumb.disegno {
+  width: 88px;
+  height: 88px;
+  border-radius: 0;
+  margin-right: 10px;
+}
+.stile-notte .menu-item .row > .grow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 12px;
+  row-gap: 4px;
+  align-items: baseline;
+}
+.stile-notte .menu-item .grow > h3 {
+  grid-column: 1;
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-family: var(--notte-testo);
+  font-style: normal;
+  font-weight: 500;
+  font-size: 0.92rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+.stile-notte .menu-item .grow > h3::after {
+  content: '';
+  flex: 1;
+  min-width: 16px;
+  border-bottom: 1px dotted var(--line);
+  transform: translateY(-4px);
+}
+.stile-notte .menu-item .grow > .price {
+  grid-column: 2;
+  grid-row: 1;
+  font-family: var(--notte-titolo);
+  font-size: 1.25rem;
+  color: var(--accent-2);
+}
+.stile-notte .menu-item .grow > p {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.stile-notte .menu-item .menu-item-descrizione {
+  -webkit-line-clamp: 2;
+  font-size: 0.9rem;
+}
+.stile-notte .menu-item .ingredients {
+  font-size: 0.82rem;
+}
+/* «Aggiungi»: un filo, non un bottone pieno. */
+:root .stile-notte .menu-item .btn.small {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line);
+  box-shadow: none;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+/* Il carosello degli Special in home: la slide senza scatola. */
+.stile-notte .carosello-slide {
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+}
+.stile-notte .carosello-fila {
+  border-radius: 0;
+}
+.stile-notte .carosello-testo strong {
+  font-family: var(--notte-titolo);
+  font-style: normal;
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.stile-notte .carosello-testo .price {
+  font-family: var(--notte-titolo);
+  color: var(--accent-2);
+  font-size: 1.15rem;
+}
+.stile-notte .carosello-punti button.attivo::before {
+  background: var(--accent-2);
+}
+.stile-notte .speciali-tutti {
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+/* Il dettaglio: stesso carattere della carta, ingredienti centrati. */
+.stile-notte .dettaglio-drink {
+  text-align: center;
+}
+.stile-notte .dettaglio-drink-testa {
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.stile-notte .dettaglio-drink-testa h2 {
+  font-family: var(--notte-titolo);
+  font-weight: 400;
+  font-size: clamp(1.9rem, 9vw, 2.6rem);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  line-height: 1.05;
+}
+.stile-notte .dettaglio-drink-testa .price {
+  font-family: var(--notte-titolo);
+  font-size: 1.35rem;
+  color: var(--accent-2);
+}
+.stile-notte .dettaglio-drink-sezione {
+  font-family: var(--notte-testo);
+  font-weight: 400;
+  font-size: 0.7rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.stile-notte .dettaglio-drink-ingredienti {
+  list-style: none;
+  padding: 0;
+  font-family: var(--notte-titolo);
+  font-size: 1.2rem;
+}
+
+/* ── Gli Special a scorrimento (SpecialScorrevoli) ────────────────────────
+   PERCHÉ SCORRA LISCIO: si muovono solo trasformazioni e opacità; il colore
+   della scena sta su un fondale fisso grande quanto lo schermo (cambiarlo
+   ridipinge una schermata, non una sezione alta otto); niente filtri e
+   niente sfocature dietro. */
+.notte-special {
+  position: relative;
+  isolation: isolate;
+  margin: 0 -16px;
+}
+.notte-fondale {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: transparent;
+  transition: background-color 0.9s ease;
+  pointer-events: none;
+}
+.notte-apertura {
+  min-height: 86svh;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 40px 20px;
+}
+.notte-stella {
+  display: block;
+  color: var(--accent-2);
+  font-size: 1.6rem;
+  margin-bottom: 14px;
+}
+.notte-apertura h2 {
+  font-family: var(--notte-titolo);
+  font-weight: 400;
+  margin: 0;
+  font-size: clamp(3.4rem, 18vw, 8.5rem);
+  line-height: 0.95;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  will-change: transform, opacity;
+}
+.notte-tema {
+  font-family: var(--notte-titolo);
+  font-size: clamp(1.1rem, 4.6vw, 1.5rem);
+  color: var(--muted);
+  margin: 16px 0 0;
+}
+.notte-torna {
+  display: inline-block;
+  margin-top: 30px;
+  font-size: 0.72rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--text);
+  text-decoration: none;
+  border-bottom: 1px solid var(--accent-2);
+  padding-bottom: 4px;
+}
+.notte-nastro {
+  overflow: hidden;
+  border-block: 1px solid var(--line);
+  padding-block: 14px;
+  white-space: nowrap;
+}
+.notte-nastro-riga {
+  display: inline-block;
+  font-family: var(--notte-titolo);
+  font-size: clamp(1.5rem, 7vw, 2.8rem);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  will-change: transform;
+}
+.notte-scena {
+  height: 170svh;
+  position: relative;
+  scroll-margin-top: 0;
+}
+.notte-palco {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  align-items: center;
+  justify-items: center;
+  padding: calc(var(--safe-top) + var(--barra-alta) + 12px) 20px 110px;
+}
+/* IL DISEGNO PRENDE TUTTO LO SPAZIO SOPRA IL TESTO. Con una misura fissa
+   (320 px al massimo) su uno schermo grande restava un francobollo in mezzo
+   al vuoto (l'utente, 02/11/2026: «le immagini nel menu special le vedo
+   ancora piccole»). Ora è alto quanto la riga che gli resta, fino a 560 px,
+   e mai più largo dello schermo. */
+.notte-disegno {
+  height: 100%;
+  min-height: 0;
+  max-height: min(88vw, 560px);
+  max-width: 100%;
+  aspect-ratio: 1;
+  position: relative;
+  will-change: transform;
+}
+/* Sugli schermi larghi e bassi il testo sotto il disegno ruba proprio
+   l'altezza che manca: il disegno va a sinistra e il testo a destra, e il
+   disegno ha tutta l'altezza dello schermo. */
+@media (min-width: 900px) and (min-aspect-ratio: 5/4) {
+  .notte-palco {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    column-gap: 40px;
+  }
+}
+.notte-disegno img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.notte-alone {
+  position: absolute;
+  inset: 10%;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--tinta, var(--accent-2)) 0%, transparent 68%);
+  opacity: 0.22;
+}
+.notte-testo {
+  text-align: center;
+  max-width: 34rem;
+  display: grid;
+  gap: 8px;
+  will-change: transform, opacity;
+}
+.notte-numero {
+  font-size: 0.68rem;
+  letter-spacing: 0.32em;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.notte-nome {
+  font-family: var(--notte-titolo);
+  font-weight: 400;
+  margin: 0;
+  font-size: clamp(1.9rem, 8.6vw, 4.4rem);
+  line-height: 1;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+.notte-parola {
+  display: inline-block;
+  white-space: nowrap;
+}
+.notte-lettera {
+  display: inline-block;
+}
+.notte-descrizione {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+  text-wrap: pretty;
+}
+.notte-ingredienti {
+  margin: 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.notte-ingredienti span + span::before {
+  content: '✦';
+  color: var(--accent-2);
+  padding-inline: 0.7em;
+  font-size: 0.6rem;
+}
+.notte-prezzo {
+  font-family: var(--notte-titolo);
+  font-size: 1.45rem;
+  color: var(--accent-2);
+  font-variant-numeric: tabular-nums;
+}
+.notte-tasti {
+  display: flex;
+  justify-content: center;
+  margin-top: 4px;
+}
+:root .stile-notte .notte-tasti .btn.small {
+  background: var(--text);
+  color: var(--bg);
+  border: 0;
+  box-shadow: none;
+  border-radius: 999px;
+  padding: 11px 26px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.notte-indice {
+  padding: 60px 0 40px;
+}
+.notte-indice h2 {
+  font-family: var(--notte-titolo);
+  font-weight: 400;
+  text-align: center;
+  font-size: 1.5rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin: 0 0 22px;
+}
+.notte-indice ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+}
+.notte-indice a {
+  display: grid;
+  grid-template-columns: 3em minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 10px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+  text-decoration: none;
+  transition: background-color 0.35s, padding-left 0.35s;
+}
+.notte-indice a:hover,
+.notte-indice a:focus-visible {
+  background: color-mix(in srgb, var(--tinta, var(--accent-2)) 20%, transparent);
+  padding-left: 28px;
+}
+.notte-indice .n {
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.notte-indice .t {
+  font-family: var(--notte-titolo);
+  font-size: clamp(1.4rem, 6.6vw, 2.2rem);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+.notte-indice .p {
+  font-family: var(--notte-titolo);
+  color: var(--accent-2);
+  font-size: 1.15rem;
+  font-variant-numeric: tabular-nums;
+}
+/* «Riduci movimento»: le scene si leggono una sotto l'altra, ferme. */
+@media (prefers-reduced-motion: reduce) {
+  .notte-scena {
+    height: auto;
+  }
+  .notte-palco {
+    position: relative;
+    height: auto;
+    min-height: 100svh;
+  }
+  /* Senza un palco alto quanto lo schermo l'altezza «di tutta la riga» non
+     c'è: il disegno torna a una misura sua. */
+  .notte-disegno {
+    height: auto;
+    width: min(88vw, 560px, 60svh);
+  }
+  .notte-fondale,
+  .notte-indice a {
+    transition: none;
+  }
+}
+
+
+/* ── GLI STILI GRATIS DEL MENÙ CLIENTI (REQ-MENU-022) ────────────────────
+   L'utente, 02/11/2026: «per ora metterei un tot di temi gratis, escludiamo
+   lo stile Notte. Parlo di temi per il menu». Quattro vesti sopra il menù
+   classico — stesse voci, stesso carosello, stessa griglia degli Special —
+   che cambiano caratteri, filetti e impaginazione. I COLORI sono quelli del
+   tema del menù clienti, anche per «Lavagna»: la sua ardesia è una
+   tavolozza (themes.js), proposta dal tema e cambiabile (REQ-MENU-027).
+   Ogni stile dichiara i suoi tre caratteri (titolo, nome della voce, testo):
+   li usano le regole comuni qui sotto e l'assaggio nelle Impostazioni, che
+   così si scrive con lo stile vero. I caratteri sono dentro l'app
+   (REQ-SIC-004, src/main.jsx). */
+.stile-notte {
+  --stile-titolo: var(--notte-titolo);
+  --stile-voce: var(--notte-testo);
+  --stile-testo: var(--notte-testo);
+}
+.stile-lavagna {
+  --stile-titolo: 'Caveat', 'Segoe Print', 'Bradley Hand', cursive;
+  --stile-voce: 'Caveat', 'Segoe Print', 'Bradley Hand', cursive;
+  --stile-testo: 'Jost', 'Segoe UI', system-ui, sans-serif;
+}
+.stile-deco {
+  --stile-titolo: 'Poiret One', 'Jost', 'Futura', sans-serif;
+  --stile-voce: 'Poiret One', 'Jost', 'Futura', sans-serif;
+  --stile-testo: 'Jost', 'Futura', 'Segoe UI', sans-serif;
+}
+.stile-riviera {
+  --stile-titolo: 'Dancing Script', 'Brush Script MT', cursive;
+  --stile-voce: 'Jost', 'Segoe UI', sans-serif;
+  --stile-testo: 'Jost', 'Segoe UI', sans-serif;
+}
+.stile-giornale {
+  --stile-titolo: 'Playfair Display', 'Didot', Georgia, serif;
+  --stile-voce: 'Playfair Display', Georgia, serif;
+  --stile-testo: Georgia, 'Times New Roman', 'Noto Serif', serif;
+}
+
+/* Le regole comuni: caratteri al loro posto, e la voce in riga
+   «NOME … prezzo», che è come si legge una carta. */
+:is(.stile-lavagna, .stile-deco, .stile-riviera, .stile-meraviglie) {
+  font-family: var(--stile-testo);
+}
+:is(.stile-lavagna, .stile-deco, .stile-riviera, .stile-meraviglie) :is(.hero-title, .cat-header) {
+  font-family: var(--stile-titolo);
+  font-style: normal;
+  text-wrap: balance;
+}
+:is(.stile-lavagna, .stile-deco, .stile-riviera, .stile-meraviglie) .menu-item .grow > h3 {
+  font-family: var(--stile-voce);
+  margin: 0;
+}
+:is(.stile-lavagna, .stile-deco, .stile-meraviglie) .menu-item .row > .grow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 12px;
+  row-gap: 4px;
+  align-items: baseline;
+}
+:is(.stile-lavagna, .stile-deco, .stile-meraviglie) .menu-item .grow > h3 {
+  grid-column: 1;
+}
+:is(.stile-lavagna, .stile-deco, .stile-meraviglie) .menu-item .grow > .price {
+  grid-column: 2;
+  grid-row: 1;
+}
+:is(.stile-lavagna, .stile-deco, .stile-meraviglie) .menu-item .grow > p {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+/* SUL TELEFONO IL PREZZO VA SOTTO IL NOME. Accanto al nome, al prezzo e
+   al tasto «Aggiungi» la colonna del nome restava di pochi caratteri, e in
+   «Lavagna» spezzava i nomi a metà parola («Negroni Sbagliat-o»). */
+@media (max-width: 520px) {
+  :is(.stile-lavagna, .stile-deco, .stile-meraviglie) .menu-item .row > .grow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  :is(.stile-lavagna, .stile-deco, .stile-meraviglie) .menu-item .grow > .price {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}
+
+/* «LAVAGNA»: gesso su ardesia. Fino alla 1.10.15 i colori li scriveva
+   qui, tutti, e il tema del menù non contava; ora l'ardesia è la tavolozza
+   «Lavagna» (themes.js), che il tema propone e che si cambia (REQ-MENU-027).
+   Qui restano le righe a gessetto e le macchie di gesso sul fondo, fatte
+   col colore del testo: su qualunque tavolozza sono il suo gesso. */
+.stile-lavagna {
+  --line: color-mix(in srgb, var(--text) 28%, transparent);
+  color: var(--text);
+  background:
+    radial-gradient(ellipse at 18% 8%, color-mix(in srgb, var(--text) 7%, transparent), transparent 55%),
+    radial-gradient(ellipse at 82% 72%, color-mix(in srgb, var(--text) 4.5%, transparent), transparent 50%),
+    var(--bg);
+}
+/* La pagina, non l'assaggio: la lavagna arriva ai bordi dello schermo. */
+.stile-lavagna:not(.assaggio-stile):not(.vetrina-tema) {
+  margin: 0 -16px;
+  padding: 0 16px 28px;
+  min-height: 100svh;
+}
+.stile-lavagna .hero {
+  margin: 0 -16px 18px;
+  border-radius: 0;
+  box-shadow: none;
+}
+.stile-lavagna .hero-title {
+  font-weight: 700;
+  font-size: clamp(2.6rem, 12vw, 4.6rem);
+  line-height: 1;
+}
+.stile-lavagna .cat-header {
+  font-weight: 700;
+  font-size: clamp(2rem, 9vw, 2.8rem);
+  text-align: center;
+}
+.stile-lavagna .cat-header::after {
+  height: 2px;
+  opacity: 1;
+  background: repeating-linear-gradient(90deg, var(--line) 0 14px, transparent 14px 20px);
+}
+.stile-lavagna .cat-chip {
+  background: transparent;
+  border: 1px dashed var(--line);
+  color: var(--text);
+  font-family: var(--stile-voce);
+  font-size: 1.15rem;
+}
+.stile-lavagna .menu-item {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px dashed var(--line);
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+  padding: 14px 0;
+}
+.stile-lavagna .menu-item .drink-thumb {
+  background: transparent;
+  border: 0;
+}
+.stile-lavagna .menu-item .grow > h3 {
+  font-size: clamp(1.3rem, 5vw, 1.6rem);
+  font-weight: 700;
+  line-height: 1.1;
+}
+.stile-lavagna .menu-item .grow > .price {
+  font-family: var(--stile-titolo);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--accent-2);
+}
+:root .stile-lavagna .menu-item .btn.small {
+  background: transparent;
+  color: var(--text);
+  border: 1.5px solid var(--text);
+  box-shadow: none;
+  border-radius: 10px 14px 9px 13px;
+  font-family: var(--stile-voce);
+  font-size: 1.1rem;
+  padding: 4px 12px;
+}
+.stile-lavagna :is(.carosello-slide, .speciali-griglia .menu-item.speciale) {
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+}
+
+/* «DÉCO»: anni Venti. Simmetria, caratteri alti e sottili in maiuscolo,
+   filetti doppi e un rombo nel mezzo, l'oro del tema (--accent-2). */
+.stile-deco .hero {
+  border-radius: 0;
+  box-shadow: none;
+  outline: 1px solid var(--accent-2);
+  outline-offset: -10px;
+}
+.stile-deco .hero-overlay {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.stile-deco .hero-title {
+  font-size: clamp(2.2rem, 10vw, 4rem);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.stile-deco .cat-header {
+  font-size: clamp(1.5rem, 6.5vw, 2.2rem);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-align: center;
+}
+.stile-deco .cat-header::before {
+  /* Accanto al titolo, non sopra: il titolo è disposto in riga (col
+     filetto dopo), e un blocco lì diventava un puntino a sinistra. */
+  content: '◆';
+  font-size: 0.45em;
+  color: var(--accent-2);
+  letter-spacing: 0;
+  align-self: center;
+  margin-right: 0.5em;
+}
+.stile-deco .cat-header::after {
+  height: 4px;
+  opacity: 1;
+  background: none;
+  border-top: 1px solid var(--accent-2);
+  border-bottom: 1px solid var(--accent-2);
+}
+.stile-deco .cat-chip {
+  background: transparent;
+  border: 1px solid var(--accent-2);
+  border-radius: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.stile-deco .menu-item {
+  border-radius: 0;
+  box-shadow: none;
+  border: 1px solid var(--line);
+  outline: 1px solid var(--line);
+  outline-offset: 3px;
+  margin: 10px 4px 16px;
+}
+.stile-deco .menu-item .grow > h3 {
+  font-size: 1.15rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.stile-deco .menu-item .grow > .price {
+  font-family: var(--stile-titolo);
+  font-size: 1.2rem;
+  color: var(--accent-2);
+  letter-spacing: 0.06em;
+}
+:root .stile-deco .menu-item .btn.small {
+  background: transparent;
+  color: var(--accent-2);
+  border: 1px solid var(--accent-2);
+  box-shadow: none;
+  border-radius: 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+/* Sul telefono il maiuscolo spaziato, la cornice doppia e il tasto
+   lasciavano al nome una colonna da sei lettere: «NEGRO-NI SBAGLI-ATO».
+   Meno spaziatura, cornice più stretta, e la parola lunga si sillaba. */
+@media (max-width: 520px) {
+  .stile-deco .menu-item {
+    margin: 8px 3px 12px;
+  }
+  .stile-deco .menu-item .grow > h3 {
+    font-size: 1rem;
+    letter-spacing: 0.05em;
+    overflow-wrap: normal;
+    hyphens: auto;
+  }
+  :root .stile-deco .menu-item .btn.small {
+    letter-spacing: 0.08em;
+    padding-inline: 8px;
+  }
+}
+.stile-deco :is(.carosello-slide, .speciali-griglia .menu-item.speciale) {
+  border-radius: 0;
+  border: 1px solid var(--accent-2);
+}
+
+/* «RIVIERA»: aperitivo all'aperto. Titoli in corsivo, il tendone a strisce
+   sopra l'apertura, le voci come cartoline coi disegni nei cerchi. Righe
+   e cerchi prendono i colori del tema. */
+.stile-riviera .hero {
+  border-radius: 22px;
+  border-top: 14px solid transparent;
+  border-image: repeating-linear-gradient(90deg, var(--accent) 0 22px, var(--bg) 22px 44px) 14;
+}
+.stile-riviera .hero-title {
+  font-weight: 700;
+  font-size: clamp(2.6rem, 12vw, 4.4rem);
+  line-height: 1;
+}
+.stile-riviera .cat-header {
+  font-weight: 700;
+  font-size: clamp(2rem, 9vw, 2.7rem);
+  color: var(--accent);
+}
+.stile-riviera .cat-header::after {
+  height: 3px;
+  opacity: 1;
+  border-radius: 3px;
+  background: repeating-linear-gradient(90deg, var(--accent) 0 10px, transparent 10px 16px);
+}
+.stile-riviera .cat-chip {
+  border-radius: 999px;
+  font-weight: 600;
+}
+.stile-riviera .menu-item {
+  border-radius: 20px;
+  border: 0;
+  border-left: 6px solid var(--accent);
+}
+.stile-riviera .menu-item .drink-thumb.disegno {
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 22%, transparent) 0 62%, transparent 64%);
+  padding: 4px;
+}
+.stile-riviera .menu-item .grow > h3 {
+  font-weight: 600;
+  font-size: 1.08rem;
+}
+.stile-riviera .menu-item .grow > .price {
+  font-family: var(--stile-titolo);
+  font-weight: 700;
+  font-size: 1.45rem;
+  color: var(--accent);
+}
+:root .stile-riviera .menu-item .btn.small {
+  border-radius: 999px;
+}
+.stile-riviera :is(.carosello-slide, .speciali-griglia .menu-item.speciale) {
+  border-radius: 24px;
+}
+
+/* ── IL MOTORE DEGLI STILI A RICETTA (REQ-MENU-031) ──────────────────────
+   Uno stile a ricetta non ha regole sue: è una scelta fra valori fissi
+   (lib/stiliRicetta.js), che arriva sul contenitore del menù come
+   attributi `data-*` e variabili dei caratteri (vesteRicetta). Ogni valore
+   ha qui la sua regola, e un test lo controlla. Il valore di partenza di
+   ogni dimensione non scrive l'attributo: è quello che `.stile-ricetta`
+   disegna da sé. Tutto passa dalle variabili del tema, così una ricetta
+   vale su qualunque tavolozza. */
+.stile-ricetta {
+  --r-angolo: 14px;
+  font-family: var(--stile-testo);
+}
+.stile-ricetta[data-angoli='vivi'] {
+  --r-angolo: 0px;
+}
+.stile-ricetta[data-angoli='tondi'] {
+  --r-angolo: 22px;
+}
+
+/* I caratteri al loro posto. I titoli al peso del carattere: quelli da
+   titolo (Abril, Bebas, Pacifico) sono già pieni, e il grassetto finto li
+   impasta. Il nome della voce al 700 dove il carattere lo ha. */
+.stile-ricetta :is(.hero-title, .cat-header) {
+  font-family: var(--stile-titolo);
+  font-style: normal;
+  font-weight: 400;
+  text-wrap: balance;
+}
+.stile-ricetta .menu-item .grow > h3 {
+  font-family: var(--stile-voce);
+  font-weight: var(--peso-voce, 700);
+  font-size: calc(clamp(0.9rem, 3.8vw, 1.17rem) * var(--scala-voce, 1));
+  margin: 0;
+}
+.stile-ricetta :is(.cat-chip, .menu-item .price) {
+  font-family: var(--stile-voce);
+}
+
+/* I TITOLI. La categoria è una colonna: il nome, e sotto l'intestazione. */
+.stile-ricetta .cat-header {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: calc(1.35rem * var(--scala-titolo, 1));
+}
+.stile-ricetta[data-titoli-maiuscolo='true'] :is(.hero-title, .cat-header, .cat-chip) {
+  text-transform: uppercase;
+}
+.stile-ricetta[data-titoli-corsivo='true'] :is(.hero-title, .cat-header) {
+  font-style: italic;
+}
+.stile-ricetta[data-titoli-allineamento='centro'] .cat-header {
+  align-items: center;
+  text-align: center;
+}
+.stile-ricetta[data-titoli-dimensione='grande'] .cat-header {
+  font-size: calc(clamp(1.7rem, 7.5vw, 2.3rem) * var(--scala-titolo, 1));
+  line-height: 1.1;
+}
+.stile-ricetta[data-titoli-dimensione='enorme'] .cat-header {
+  font-size: calc(clamp(2.3rem, 11vw, 3.4rem) * var(--scala-titolo, 1));
+  line-height: 1.02;
+}
+.stile-ricetta[data-titoli-spaziatura='stretta'] :is(.hero-title, .cat-header) {
+  letter-spacing: -0.02em;
+}
+.stile-ricetta[data-titoli-spaziatura='larga'] :is(.hero-title, .cat-header) {
+  letter-spacing: 0.16em;
+}
+
+/* L'INTESTAZIONE, sotto il nome della categoria. Di partenza nessuna. */
+.stile-ricetta .cat-header::after {
+  display: none;
+}
+.stile-ricetta[data-intestazione] .cat-header::after {
+  display: block;
+  align-self: stretch;
+  flex: none;
+  height: 1px;
+  border-radius: 0;
+  opacity: 1;
+  background: var(--line);
+}
+.stile-ricetta[data-intestazione='filetto'] .cat-header::after {
+  background: color-mix(in srgb, var(--text) 35%, transparent);
+}
+.stile-ricetta[data-intestazione='doppio-filetto'] .cat-header::after {
+  height: 4px;
+  background: none;
+  border-top: 1px solid var(--accent-2);
+  border-bottom: 1px solid var(--accent-2);
+}
+.stile-ricetta[data-intestazione='tratteggio'] .cat-header::after {
+  height: 2px;
+  background: repeating-linear-gradient(90deg, color-mix(in srgb, var(--text) 40%, transparent) 0 12px, transparent 12px 18px);
+}
+.stile-ricetta[data-intestazione='punti'] .cat-header::after {
+  height: 4px;
+  background: radial-gradient(circle, var(--accent-2) 1.5px, transparent 2px) 0 50% / 10px 4px repeat-x;
+}
+.stile-ricetta[data-intestazione='fregio'] .cat-header::after {
+  content: '❦';
+  height: auto;
+  background: none;
+  font-family: Georgia, 'Segoe UI Symbol', serif;
+  font-style: normal;
+  font-size: 0.6em;
+  line-height: 1;
+  color: var(--accent-2);
+}
+
+/* GLI ANGOLI delle voci, delle schede e dell'apertura. */
+.stile-ricetta :is(.menu-item, .carosello-slide, .hero, .cat-chip) {
+  border-radius: var(--r-angolo);
+}
+
+/* LA VOCE. Di partenza la card del menù classico; in riga, come sulla
+   lavagna, senza riquadro; in colonna, in alto l'immagine e i tasti, e
+   sotto il nome e la descrizione a tutta larghezza (con l'immagine dopo il
+   testo, sulla prova del 06/11/2026, restava sola in fondo alla voce). */
+.stile-ricetta:is([data-voce-forma='riga'], [data-voce-forma='colonna']) .menu-item:not(.speciale) {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+  padding: 12px 0;
+}
+.stile-ricetta[data-voce-forma='colonna'] .menu-item:not(.speciale) {
+  padding-block: 16px;
+}
+.stile-ricetta[data-voce-forma='colonna'] .menu-item:not(.speciale) .row {
+  flex-wrap: wrap;
+  row-gap: 10px;
+}
+.stile-ricetta[data-voce-forma='colonna'] .menu-item:not(.speciale) .row > .grow {
+  flex: 1 1 100%;
+  order: 1;
+}
+
+/* IL PREZZO. Di partenza accanto al nome; sotto, dopo la descrizione; coi
+   puntini, una riga di punti fino al prezzo, come una carta stampata. */
+.stile-ricetta .menu-item .row > .grow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 12px;
+  row-gap: 4px;
+  align-items: baseline;
+}
+.stile-ricetta .menu-item .grow > h3 {
+  grid-column: 1;
+}
+.stile-ricetta .menu-item .grow > .price {
+  grid-column: 2;
+  grid-row: 1;
+}
+.stile-ricetta .menu-item .grow > p {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.stile-ricetta[data-voce-prezzo='sotto'] .menu-item .row > .grow {
+  display: block;
+}
+.stile-ricetta[data-voce-prezzo='sotto'] .menu-item .grow > p {
+  margin: 4px 0 6px;
+}
+.stile-ricetta[data-voce-prezzo='puntini'] .menu-item .grow > h3 {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4em;
+}
+.stile-ricetta[data-voce-prezzo='puntini'] .menu-item .grow > h3::after {
+  content: '';
+  flex: 1;
+  min-width: 1.5em;
+  border-bottom: 2px dotted color-mix(in srgb, var(--text) 40%, transparent);
+}
+/* SUL TELEFONO IL PREZZO VA SOTTO IL NOME, come negli stili dell'app:
+   accanto al nome, al prezzo e ad «Aggiungi» la colonna del nome restava
+   di pochi caratteri e spezzava i nomi a metà parola. I puntini, senza un
+   prezzo a cui arrivare, se ne vanno. */
+@media (max-width: 520px) {
+  .stile-ricetta .menu-item .row > .grow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .stile-ricetta .menu-item .grow > .price {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  .stile-ricetta[data-voce-prezzo='puntini'] .menu-item .grow > h3::after {
+    display: none;
+  }
+}
+
+/* IL SEPARATORE fra una voce e l'altra: solo senza riquadro, in riga o in
+   colonna (le card si separano da sé). */
+.stile-ricetta[data-voce-forma][data-voce-separatore='filetto'] .menu-item:not(.speciale) {
+  border-bottom: 1px solid var(--line);
+}
+.stile-ricetta[data-voce-forma][data-voce-separatore='tratteggio'] .menu-item:not(.speciale) {
+  border-bottom: 1px dashed color-mix(in srgb, var(--text) 35%, transparent);
+}
+.stile-ricetta[data-voce-forma][data-voce-separatore='punti'] .menu-item:not(.speciale) {
+  border-bottom: 2px dotted color-mix(in srgb, var(--text) 35%, transparent);
+}
+
+/* L'IMMAGINE della voce: di partenza tonda. */
+.stile-ricetta .menu-item .drink-thumb {
+  border-radius: 50%;
+}
+.stile-ricetta[data-voce-immagine='quadrata'] .menu-item .drink-thumb {
+  border-radius: calc(var(--r-angolo) / 2);
+}
+.stile-ricetta[data-voce-immagine='nascosta'] .menu-item:not(.speciale) .drink-thumb {
+  display: none;
+}
+
+/* LO SFONDO: la tinta del tema, o una trama disegnata col colore del testo
+   sopra quella tinta (mai un'immagine: niente da scaricare). Con una trama
+   o una cornice il menù arriva ai bordi dello schermo, come la lavagna. */
+.stile-ricetta:is([data-sfondo], [data-cornice]):not(.assaggio-stile):not(.vetrina-tema) {
+  position: relative;
+  margin: 0 -16px;
+  padding: 0 16px 28px;
+  min-height: 100svh;
+}
+.stile-ricetta[data-sfondo='grana'] {
+  background:
+    radial-gradient(color-mix(in srgb, var(--text) 7%, transparent) 0.8px, transparent 1.2px) 0 0 / 5px 5px,
+    radial-gradient(color-mix(in srgb, var(--text) 5%, transparent) 0.8px, transparent 1.2px) 2px 3px / 7px 7px,
+    var(--bg);
+}
+.stile-ricetta[data-sfondo='carta'] {
+  background:
+    radial-gradient(ellipse at 25% 10%, color-mix(in srgb, var(--accent-2) 9%, transparent), transparent 60%),
+    radial-gradient(ellipse at 80% 90%, color-mix(in srgb, var(--text) 5%, transparent), transparent 55%),
+    var(--bg);
+}
+.stile-ricetta[data-sfondo='gesso'] {
+  background:
+    radial-gradient(ellipse at 18% 8%, color-mix(in srgb, var(--text) 7%, transparent), transparent 55%),
+    radial-gradient(ellipse at 82% 72%, color-mix(in srgb, var(--text) 4.5%, transparent), transparent 50%),
+    var(--bg);
+}
+.stile-ricetta[data-sfondo='righe'] {
+  background:
+    repeating-linear-gradient(to bottom, transparent 0 27px, color-mix(in srgb, var(--text) 9%, transparent) 27px 28px),
+    var(--bg);
+}
+.stile-ricetta[data-sfondo='quadretti'] {
+  background:
+    linear-gradient(color-mix(in srgb, var(--text) 8%, transparent) 1px, transparent 1px) 0 0 / 22px 22px,
+    linear-gradient(90deg, color-mix(in srgb, var(--text) 8%, transparent) 1px, transparent 1px) 0 0 / 22px 22px,
+    var(--bg);
+}
+
+/* LA CORNICE attorno al menù: disegnata sopra, a mezzo margine dal bordo,
+   così non sposta niente e non si tocca. */
+.stile-ricetta[data-cornice]::before {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  pointer-events: none;
+  border-radius: var(--r-angolo);
+}
+.stile-ricetta.vetrina-tema[data-cornice] {
+  position: relative;
+}
+.stile-ricetta[data-cornice='sottile']::before {
+  border: 1px solid color-mix(in srgb, var(--text) 30%, transparent);
+}
+.stile-ricetta[data-cornice='doppia']::before {
+  border: 4px double var(--accent-2);
+}
+.stile-ricetta[data-cornice='angoli']::before {
+  --c: var(--accent-2);
+  background:
+    linear-gradient(var(--c), var(--c)) top left / 26px 2px,
+    linear-gradient(var(--c), var(--c)) top left / 2px 26px,
+    linear-gradient(var(--c), var(--c)) top right / 26px 2px,
+    linear-gradient(var(--c), var(--c)) top right / 2px 26px,
+    linear-gradient(var(--c), var(--c)) bottom left / 26px 2px,
+    linear-gradient(var(--c), var(--c)) bottom left / 2px 26px,
+    linear-gradient(var(--c), var(--c)) bottom right / 26px 2px,
+    linear-gradient(var(--c), var(--c)) bottom right / 2px 26px;
+  background-repeat: no-repeat;
+}
+.assaggio-stile.stile-ricetta::before {
+  display: none;
+}
+
+/* ── «MERAVIGLIE»: IL LIBRO ILLUSTRATO (REQ-MENU-027) ─────────────────────
+   Lo stile esclusivo della Tana alla Lewis Carroll. L'utente, 05/11/2026:
+   «non solo le immagini dei drink ma anche la pagina deve richiamare un po'
+   lo stile e anche i testi», la home compresa, «titoli e frasi, tasti
+   chiari». La pagina di un libro dell'Ottocento: caratteri da stampa
+   d'epoca, le categorie come capitoli numerati, i semi delle carte della
+   Regina come fregio, cornici a filetto doppio. I COLORI SONO DEL TEMA: la
+   tavolozza «Meraviglie» (themes.js) li propone, ma si cambia, e qui tutto
+   passa per le variabili. I tasti restano quelli del tema, piatti e
+   leggibili: chi ordina deve capire subito che cosa tocca. */
+.stile-meraviglie {
+  --stile-titolo: 'IM Fell English', 'Iowan Old Style', Georgia, serif;
+  --stile-voce: 'IM Fell English', 'Iowan Old Style', Georgia, serif;
+  --stile-testo: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+  --m-filetto: color-mix(in srgb, var(--accent-2) 55%, transparent);
+  counter-reset: capitolo;
+}
+/* Le categorie sono capitoli: «Capitolo III» sopra il nome, i quattro semi
+   sotto. Il numero lo conta il CSS, così segue l'ordine del menù da solo. */
+.stile-meraviglie .cat-header {
+  counter-increment: capitolo;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-weight: 400;
+  font-size: clamp(1.7rem, 7vw, 2.3rem);
+  text-align: center;
+  margin-top: 38px;
+}
+.stile-meraviglie .cat-header::before {
+  content: 'Capitolo ' counter(capitolo, upper-roman);
+  font-family: var(--stile-testo);
+  font-style: normal;
+  font-size: 0.7rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.stile-meraviglie .cat-header::after {
+  content: '♠  ♥  ♣  ♦';
+  flex: none;
+  height: auto;
+  background: none;
+  opacity: 1;
+  font-style: normal;
+  font-size: 0.8rem;
+  letter-spacing: 0.4em;
+  color: var(--accent);
+}
+/* Gli Special stanno prima dei capitoli, come il frontespizio: non sono
+   il «Capitolo I», e il menù comincia a contare dalla prima categoria. */
+.stile-meraviglie .speciali-carosello .cat-header {
+  counter-increment: none;
+  align-items: flex-start;
+  margin-top: 0;
+}
+.stile-meraviglie .speciali-carosello .cat-header::before {
+  content: none;
+}
+.stile-meraviglie .cat-chip {
+  background: transparent;
+  border: 1px solid var(--m-filetto);
+  border-radius: 2px;
+  font-family: var(--stile-voce);
+  font-style: italic;
+  font-size: 1rem;
+}
+/* La voce: un riquadro a filetto doppio, come le tavole fuori testo. */
+.stile-meraviglie .menu-item {
+  background: var(--card);
+  border: 3px double var(--m-filetto);
+  border-radius: 2px;
+  box-shadow: none;
+}
+.stile-meraviglie .menu-item .grow > h3 {
+  font-weight: 400;
+  font-size: 1.3rem;
+  line-height: 1.15;
+}
+.stile-meraviglie .menu-item .grow > .price {
+  font-family: var(--stile-titolo);
+  font-style: italic;
+  font-size: 1.3rem;
+  color: var(--accent);
+}
+.stile-meraviglie .menu-item .ingredients {
+  font-style: italic;
+}
+/* Il cartellino «Bevimi» sul disegno, appeso di sbieco come quello della
+   bottiglia nel libro. Solo sui disegni: su una foto sarebbe una scritta
+   sopra un bicchiere vero. È un'etichetta, non un tasto. */
+.stile-meraviglie .menu-item .row {
+  position: relative;
+}
+.stile-meraviglie .menu-item .drink-thumb.disegno + .grow::before {
+  content: 'Bevimi';
+  position: absolute;
+  top: -4px;
+  left: -6px;
+  transform: rotate(-9deg);
+  padding: 1px 7px;
+  background: var(--card);
+  border: 1px solid var(--m-filetto);
+  border-radius: 2px;
+  font-family: var(--stile-titolo);
+  font-style: italic;
+  font-size: 0.78rem;
+  color: var(--accent);
+  pointer-events: none;
+}
+.stile-meraviglie :is(.carosello-slide, .speciali-griglia .menu-item.speciale) {
+  border: 3px double var(--m-filetto);
+  border-radius: 2px;
+}
+
+/* LE PAGINE DEI CLIENTI, NON SOLO IL MENÙ: la home, gli ordini, lo stato
+   dell'ordine, l'accesso. App scrive lo stile sulla radice (data-stile)
+   solo per chi ordina, come fa coi colori: il gestionale non si veste. */
+:root[data-stile='meraviglie'] {
+  --m-titoli: 'IM Fell English', 'Iowan Old Style', Georgia, serif;
+  --m-filetto: color-mix(in srgb, var(--accent-2) 55%, transparent);
+}
+:root[data-stile='meraviglie'] main {
+  font-family: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+}
+:root[data-stile='meraviglie'] :is(main h1, main h2, main h3, .brand, .bignum) {
+  font-family: var(--m-titoli);
+  font-weight: 400;
+}
+:root[data-stile='meraviglie'] main .card {
+  border: 3px double var(--m-filetto);
+  box-shadow: none;
+}
+/* La testata: la foto in seppia, come una tavola stampata, dentro una
+   cornice a filetto doppio al posto dell'oro di casa. */
+:root[data-stile='meraviglie'] .hero {
+  border-radius: 2px;
+}
+:root[data-stile='meraviglie'] .hero::after {
+  inset: 8px;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  border: 3px double color-mix(in srgb, #fff 70%, transparent);
+  opacity: 1;
+  -webkit-mask: none;
+  mask: none;
+}
+:root[data-stile='meraviglie'] .hero-img {
+  filter: sepia(0.6) brightness(0.55);
+}
+:root[data-stile='meraviglie'] .hero-overlay {
+  padding: 26px;
+  /* La foto ha sempre il velo scuro sopra, con qualunque tavolozza: il
+     titolo è chiaro per forza, anche quando il testo della pagina è
+     inchiostro su avorio. */
+  color: #fbf6ea;
+}
+:root[data-stile='meraviglie'] .hero-title {
+  font-size: clamp(2.2rem, 9vw, 3.2rem);
+  font-weight: 400;
+  line-height: 1.05;
+}
+:root[data-stile='meraviglie'] :is(.hero-sub, .hero-epigrafe) {
+  font-family: var(--m-titoli);
+  font-style: italic;
+  font-size: 1.05rem;
+}
+:root[data-stile='meraviglie'] .landing section.card h2 {
+  font-family: var(--m-titoli);
+  font-size: 1.6rem;
+  color: var(--accent);
+}
+:root[data-stile='meraviglie'] .landing-nav a {
+  font-family: var(--m-titoli);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.05rem;
+}
+:root[data-stile='meraviglie'] .frase-stile {
+  font-family: var(--m-titoli);
+  font-size: 1.05rem;
+}
+
+/* ── GLI STILI INSTALLATI, IN IMPOSTAZIONI (REQ-MENU-022) ─────────────────
+   Ogni scheda: l'assaggio dello stile, nome e descrizione, e sotto «Prova
+   sul menù» e «Disinstalla». Il catalogo sta nel Marketplace. */
+.stili-menu {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: 10px;
+}
+.stile-scheda {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+/* LA DESCRIZIONE PROPOSTA DALL'AI (REQ-AI-003, DescrizioneAI.jsx): la proposta
+   sta in un riquadro a sé sotto il campo, perché si legga come una proposta
+   da accettare e non come il testo già scritto. */
+.descrizione-ai {
+  margin: 6px 0 12px;
+}
+/* GLI INGREDIENTI A ETICHETTE (REQ-MENU-040, IngredientiVoce.jsx). I tipi
+   si distinguono coi ruoli del tema e col tratto, non con colori nuovi
+   (DESIGN.md): il prodotto ha il bordo pieno, la categoria tratteggiato;
+   quello che viene dalla ricetta ha l'accento. Accanto a ogni
+   suggerimento c'è anche il suo gruppo a parole. */
+.etichette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.etichette.nascoste .etichetta {
+  opacity: 0.5;
+}
+.etichetta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--muted);
+  border-radius: 999px;
+  font-size: 0.85rem;
+}
+.etichetta button {
+  border: 0;
+  background: none;
+  color: inherit;
+  padding: 0 2px;
+  cursor: pointer;
+}
+.etichetta.tipo-categoria,
+.etichetta.tipo-categoria_cassa {
+  border-style: dashed;
+}
+.etichetta.tipo-testo {
+  border-color: transparent;
+  background: var(--card);
+}
+.etichetta.proposta {
+  border: 1px dashed var(--accent);
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+.etichette-campo {
+  flex: 1;
+  min-width: 140px;
+}
+.etichette-suggerimenti {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 4px;
+  border: 1px solid var(--muted);
+  border-radius: 10px;
+  background: var(--card);
+  display: grid;
+  gap: 2px;
+}
+.suggerimento {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-left: 3px solid var(--muted);
+  background: none;
+  color: var(--text);
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.suggerimento.gruppo-ricetta {
+  border-left-color: var(--accent);
+}
+.suggerimento.gruppo-ricetta-categoria {
+  border-left: 3px dashed var(--accent);
+}
+.suggerimento.gruppo-categoria {
+  border-left-style: dashed;
+}
+.suggerimento.gruppo-cassa {
+  border-left-color: var(--accent-2);
+}
+.suggerimento.gruppo-testo {
+  border-left-color: transparent;
+}
+/* LA SCELTA DEL CLIENTE SU UN'ETICHETTA (REQ-MENU-042). */
+.etichetta.con-scelta {
+  border-color: var(--accent);
+}
+.scelta-cliente {
+  margin-top: 6px;
+  padding: 8px 10px;
+  border: 1px dashed var(--accent);
+  border-radius: 10px;
+}
+.scelta-cliente-riga {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+.scelta-supplemento {
+  width: 6rem;
+}
+/* La scelta al telefono (REQ-MENU-042): una domanda per etichetta. */
+.scelta-ingredienti-gruppo {
+  border: 0;
+  margin: 0 0 12px;
+  padding: 0;
+}
+.scelta-ingredienti-gruppo legend {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.scelta-ingredienti-opzione {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+  min-height: 44px;
+}
+.etichette-proposte {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 6px;
+}
+.descrizione-ai-proposta {
+  padding: 10px 12px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  background: var(--tile-bg);
+}
+/* L'ASSISTENTE AI (REQ-AI-006, PannelloChat.jsx): un pannello sopra la
+   pagina, sul lato destro, alto quanto la finestra. Sul telefono prende
+   tutta la larghezza. La conversazione scorre, il campo per scrivere resta
+   in fondo. */
+.pannello-chat {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(420px, 100vw);
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border-left: 1px solid var(--line);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.18);
+}
+.pannello-chat-testa,
+.pannello-chat-piede {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.pannello-chat-piede {
+  border-bottom: 0;
+  border-top: 1px solid var(--line);
+  align-items: stretch;
+}
+.pannello-chat-piede textarea {
+  flex: 1;
+  resize: none;
+}
+.pannello-chat-corpo {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+.pannello-chat-riga {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  white-space: pre-wrap;
+}
+.pannello-chat-riga.tu {
+  justify-self: end;
+  background: var(--tile-bg);
+}
+.pannello-chat-riga.ai {
+  border: 1px solid var(--line);
+}
+.pannello-chat-riga.attivita,
+.pannello-chat-costo {
+  padding: 0 12px 8px;
+  font-size: 0.8rem;
+  opacity: 0.75;
+}
+.pannello-chat-riga.attivita {
+  padding: 0;
+}
+/* IL TASTO DELL'ASSISTENTE SENZA CREDITO (REQ-AI-007): grigio, con
+   l'avviso nell'angolo; toccandolo ricorda di ricaricare. */
+.topbar-chat {
+  position: relative;
+}
+.topbar-chat.senza-credito,
+.tasto-ai.senza-credito {
+  opacity: 0.55;
+}
+.topbar-chat-avviso {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  line-height: 1;
+  font-size: 0.75rem;
+}
+/* IL DOCUMENTO LETTO DALL'AI (REQ-AI-001, FatturaDaAI.jsx): una riga letta
+   per riquadro, con la descrizione del documento sopra il prodotto
+   abbinato e i tre numeri sotto, che su un telefono non ci stanno in fila
+   con il resto. */
+.fattura-ai-riga {
+  display: grid;
+  gap: 6px;
+  padding: 8px 10px;
+  margin-top: 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--tile-bg);
+}
+.fattura-ai-numeri {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.fattura-ai-numeri label {
+  display: grid;
+  gap: 2px;
+  font-size: 0.8rem;
+}
+/* IL RITAGLIO DELLA FOTO DI UN PRODOTTO (REQ-MENU-039, RitaglioFoto.jsx): la
+   cornice quadrata a scacchi chiari, dove la foto si trascina e si
+   ingrandisce. `touch-action: none` perché il dito che trascina la foto non
+   faccia scorrere la pagina o ingrandire lo schermo. */
+.ritaglio-foto {
+  max-width: 380px;
+}
+.ritaglio-spazio {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+.ritaglio-cornice {
+  position: relative;
+  overflow: hidden;
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px var(--line);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.ritaglio-cornice:active {
+  cursor: grabbing;
+}
+.ritaglio-cornice img {
+  position: absolute;
+  max-width: none;
+  pointer-events: none;
+}
+.ritaglio-foto input[type='range'] {
+  width: 100%;
+}
+/* LA SCELTA DEL FORMATO DEI PREZZI DEL MENÙ (REQ-MENU-038, Impostazioni →
+   Menù clienti): tre tasti, ognuno col suo esempio sotto il nome. */
+.formato-prezzi {
+  margin-top: 14px;
+}
+.formato-prezzi-titolo {
+  margin: 0 0 2px;
+  font-weight: 600;
+}
+.formato-prezzi-esempio {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.82rem;
+  font-weight: 400;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.stile-scheda > .mode-option {
+  flex: 1;
+  text-align: left;
+}
+.stile-azioni {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.assaggio-stile {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  font-family: var(--stile-testo, inherit);
+}
+.assaggio-nome {
+  font-family: var(--stile-voce, inherit);
+  font-size: 1.1rem;
+}
+.assaggio-prezzo {
+  font-family: var(--stile-titolo, inherit);
+  color: var(--accent-2);
+}
+
+/* ── LA PAGINA DEL MARKETPLACE (REQ-MENU-023) ────────────────────────────
+   Un catalogo: schede grandi, ognuna con una vetrina — un pezzo del menù
+   vero (categoria e due voci) con le classi del menù, i colori del tema
+   scritti sull'elemento e il suo stile. Sotto, nome, descrizione e tasti,
+   sempre allo stesso posto. */
+.pagina-marketplace h2 {
+  margin: 0 0 4px;
+}
+.griglia-marketplace {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: 16px;
+  margin-top: 14px;
+}
+.scheda-marketplace {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  /* Il rilievo della `.card`: sul tema scuro staccava il riquadro, e senza
+     la scheda sembrava un buco nella pagina. */
+  background: var(--velo-superficie), var(--card);
+  min-width: 0;
+}
+.scheda-marketplace-testo {
+  padding: 12px 14px 0;
+  flex: 1;
+}
+.scheda-marketplace-testo h3 {
+  margin: 0 0 4px;
+}
+.scheda-marketplace-testo p {
+  margin: 0 0 4px;
+}
+.scheda-marketplace-azioni {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 14px 14px;
+}
+.vetrina-tema {
+  background: var(--bg);
+  color: var(--text);
+  padding: 12px 12px 4px;
+  height: 230px;
+  overflow: hidden;
+  pointer-events: none;
+  /* Il menù continua: la voce tagliata in fondo sfuma invece di finire a
+     metà prezzo. È una maschera, non un filtro: niente sfocature. */
+  -webkit-mask-image: linear-gradient(to bottom, #000 78%, transparent);
+  mask-image: linear-gradient(to bottom, #000 78%, transparent);
+}
+.vetrina-tema .cat-header {
+  margin: 0 0 8px;
+  font-size: 1.4rem;
+}
+.vetrina-tema .menu-item {
+  margin: 0 0 8px;
+  padding: 10px 12px;
+}
+
+/* I MODULI (REQ-LIC-012): al posto della vetrina del menù, una fascia con
+   l'icona e lo stato. Lo stato si legge dal colore prima che dalla parola:
+   incluso col verde di `--ok`, in prova con `--accent-2`, non incluso
+   neutro — il catalogo di quello che manca non deve sembrare un errore. */
+.vetrina-modulo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 96px;
+  padding: 0 16px;
+  background: color-mix(in srgb, var(--text) 5%, var(--card));
+  border-bottom: 1px solid var(--line);
+}
+.vetrina-modulo-icona {
+  font-size: 2.6rem;
+  line-height: 1;
+}
+/* Sopra la `.pill` di sempre: solo il bordo e il colore dello stato. */
+.vetrina-modulo-stato {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  white-space: normal;
+  text-align: right;
+}
+.vetrina-modulo-incluso {
+  background: color-mix(in srgb, var(--ok) 12%, var(--card));
+}
+.vetrina-modulo-incluso .vetrina-modulo-stato {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--ok) 60%, transparent);
+}
+.vetrina-modulo-prova {
+  background: color-mix(in srgb, var(--accent-2) 14%, var(--card));
+}
+.vetrina-modulo-prova .vetrina-modulo-stato {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent-2) 60%, transparent);
+}
+.avviso-marketplace {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--ok) 55%, transparent);
+  background: color-mix(in srgb, var(--ok) 10%, var(--card));
+  font-size: 0.9rem;
+}
+
+/* ── LO STILE «GIORNALE»: LA PRIMA PAGINA (REQ-MENU-024) ─────────────────
+   L'utente, 02/11/2026: «gli stili devono avere anche UX diverse e
+   immagini diverse», «basta che sia figa e fluida la UX». Una struttura sua
+   (MenuGiornale.jsx): testata, sommario agganciato che segue la lettura,
+   prima pagina con l'articolo d'apertura e «In breve», sezioni in colonna.
+   Inchiostro e carta sono i colori del tema (Gazzetta: nero su bianco;
+   Inchiostro: chiaro su scuro); i caratteri quelli dello stile. Si
+   anima solo transform e opacity, e con «riduci movimento» niente. */
+.stile-giornale {
+  --g-titoli: var(--stile-titolo);
+  --g-filetto: color-mix(in srgb, var(--text) 85%, transparent);
+}
+.g-testata {
+  text-align: center;
+  padding: 18px 0 10px;
+  border-bottom: 4px double var(--g-filetto);
+  margin-bottom: 6px;
+}
+.g-edizione {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 6px 0;
+  border-top: 1px solid var(--g-filetto);
+  border-bottom: 1px solid var(--g-filetto);
+  font-size: 0.68rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.g-nome {
+  font-family: var(--g-titoli);
+  font-weight: 800;
+  font-size: clamp(2.6rem, 11vw, 5.6rem);
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+  margin: 16px 0 6px;
+  text-wrap: balance;
+}
+.g-motto {
+  margin: 0;
+  font-style: italic;
+  color: var(--muted);
+}
+
+/* Il sommario: resta sotto la barra mentre si scorre, e dice dove si è. */
+.g-sommario {
+  position: sticky;
+  top: var(--barra-intera, calc(var(--safe-top) + var(--barra-alta)));
+  z-index: 5;
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin: 0 -16px;
+  padding: 10px 16px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--g-filetto);
+}
+.g-sommario::-webkit-scrollbar {
+  display: none;
+}
+.g-sommario-titolo {
+  font-family: var(--g-titoli);
+  font-weight: 800;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  flex-shrink: 0;
+}
+.g-sommario a {
+  flex-shrink: 0;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding-bottom: 3px;
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s, border-color 0.2s;
+}
+.g-sommario a.attiva,
+.g-sommario a:hover {
+  color: var(--text);
+  border-bottom-color: var(--accent-2);
+}
+
+/* La prima pagina: l'apertura grande, «In breve» accanto (sotto, sul
+   telefono). */
+.g-prima-pagina {
+  display: grid;
+  gap: 22px;
+  padding: 18px 0 8px;
+  border-bottom: 3px double var(--g-filetto);
+}
+@media (min-width: 860px) {
+  .g-prima-pagina {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: 32px;
+  }
+  .g-in-breve {
+    border-left: 1px solid var(--line);
+    padding-left: 24px;
+  }
+}
+.g-occhiello {
+  margin: 0 0 6px;
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent-2);
+}
+.g-titolo {
+  margin: 0 0 12px;
+  font-family: var(--g-titoli);
+  font-weight: 800;
+  line-height: 1.02;
+  text-wrap: balance;
+}
+.g-apertura .g-titolo {
+  font-size: clamp(2.1rem, 8vw, 3.8rem);
+}
+.g-breve .g-titolo {
+  font-size: 1.35rem;
+  margin-bottom: 6px;
+}
+:is(.g-titolo, .g-voce h4) button {
+  all: unset;
+  cursor: pointer;
+}
+:is(.g-titolo, .g-voce h4) button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.g-figura {
+  margin: 0 0 12px;
+}
+.g-figura img {
+  display: block;
+  width: 100%;
+  max-width: 440px;
+  aspect-ratio: 1;
+  margin: 0 auto;
+}
+.g-figura figcaption {
+  margin-top: 6px;
+  text-align: center;
+  font-style: italic;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.g-breve {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 84px;
+  column-gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.g-breve > :not(.g-figura) {
+  grid-column: 1;
+}
+.g-breve .g-figura {
+  grid-column: 2;
+  grid-row: 1 / span 4;
+  margin: 0;
+}
+.g-rubrica {
+  margin: 0 0 4px;
+  font-family: var(--g-titoli);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.9rem;
+  border-bottom: 2px solid var(--g-filetto);
+  padding-bottom: 4px;
+}
+.g-testo {
+  margin: 0 0 6px;
+  line-height: 1.55;
+}
+.g-capolettera::first-letter {
+  float: left;
+  font-family: var(--g-titoli);
+  font-weight: 800;
+  font-size: 3.4em;
+  line-height: 0.82;
+  padding: 4px 8px 0 0;
+}
+.g-ingredienti {
+  margin: 0 0 8px;
+  font-size: 0.82rem;
+  font-style: italic;
+  color: var(--muted);
+}
+.g-chiusa {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.g-prezzo {
+  font-family: var(--g-titoli);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.g-apertura .g-prezzo {
+  font-size: 1.5rem;
+}
+
+/* Le sezioni: un filetto nero col nome, le voci in colonna. */
+.g-sezione {
+  margin-top: 30px;
+  scroll-margin-top: calc(var(--safe-top) + var(--barra-alta) + 52px);
+}
+.g-sezione-titolo {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 4px;
+  padding: 6px 10px;
+  background: var(--text);
+  color: var(--bg);
+  font-family: var(--g-titoli);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.g-sezione-conto {
+  font-family: var(--stile-testo);
+  font-weight: 400;
+  font-style: italic;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.8rem;
+}
+.g-colonne {
+  column-gap: 30px;
+  column-rule: 1px solid var(--line);
+}
+@media (min-width: 760px) {
+  .g-colonne {
+    column-count: 2;
+  }
+}
+@media (min-width: 1150px) {
+  .g-colonne {
+    column-count: 3;
+  }
+}
+.g-voce {
+  break-inside: avoid;
+  padding: 12px 0;
+  border-bottom: 1px dotted var(--line);
+}
+.g-voce h4 {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 4px;
+  font-family: var(--g-titoli);
+  font-weight: 700;
+  font-size: 1.08rem;
+}
+.g-puntini {
+  flex: 1;
+  min-width: 14px;
+  border-bottom: 1px dotted var(--muted);
+  transform: translateY(-4px);
+}
+.g-voce .g-testo {
+  font-style: italic;
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+.g-voce-tasti {
+  display: flex;
+  justify-content: flex-end;
+}
+:root .g-giornale .btn.small {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--text);
+  border-radius: 0;
+  box-shadow: none;
+  font-family: var(--g-titoli);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+:root .g-giornale .btn.small:hover {
+  background: var(--text);
+  color: var(--bg);
+}
+
+/* «Stiamo servendo il numero»: nel giornale non è una card, è
+   l'ultim'ora fra due filetti. */
+.stile-giornale .serving-box {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 12px;
+  margin: 8px 0;
+  padding: 6px 0;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--g-filetto);
+  border-bottom: 1px solid var(--g-filetto);
+  border-radius: 0;
+  box-shadow: none;
+  font-style: italic;
+}
+.stile-giornale .serving-box::before {
+  content: 'Ultim’ora';
+  font-style: normal;
+  font-family: var(--g-titoli);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.75rem;
+  color: var(--accent-2);
+}
+.stile-giornale .serving-nums {
+  margin: 0;
+}
+.stile-giornale .serving-num {
+  font-family: var(--g-titoli);
+  font-size: 1.2rem;
+}
+
+/* Nella vetrina del marketplace la testata è in scala. */
+.vetrina-tema .g-testata {
+  padding-top: 0;
+}
+.vetrina-tema .g-nome {
+  font-size: 2.2rem;
+  margin: 8px 0 4px;
+}
+/* Nella scheda stretta la data andava a capo: basta l'edizione. */
+.vetrina-tema .g-edizione {
+  justify-content: center;
+}
+.vetrina-tema .g-edizione span + span {
+  display: none;
+}
+
+/* All'apertura la pagina «si stampa»: testata e prima pagina entrano con
+   un niente di movimento. */
+@media (prefers-reduced-motion: no-preference) {
+  .g-testata,
+  .g-prima-pagina {
+    animation: g-stampa 0.6s ease-out both;
+  }
+  .g-prima-pagina {
+    animation-delay: 0.12s;
+  }
+}
+@keyframes g-stampa {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── LO STILE «CARTE»: IL MAZZO (REQ-MENU-029) ────────────────────────────
+   L'idea di Flavio e il suo schizzo del 06/11/2026: le sezioni sono carte
+   francesi in fila, accavallate, e la carta scelta si alza e si apre sotto,
+   in grande (MenuCarte.jsx). A inizio fila il MAZZO COPERTO, carte intere
+   girate sul dorso, da cui le altre escono all'apertura.
+   La prima versione teneva le carte dentro una fascia di dorsi che ne
+   copriva la metà di sotto; l'utente, 06/11/2026: «le carte le vorrei un
+   po' più grandi, il mazzo di carte coperte, le carte devono essere intere,
+   adesso sono tagliate, non sembra un mazzo, i font anche un po' più grandi
+   ma in uno stile Lewis Carroll». Quindi carte intere, più grandi, e la
+   scrittura è IM Fell English (quella di «Meraviglie», da stampa d'epoca).
+   Le carte hanno colori loro, non del tema: una carta da gioco è bianca,
+   coi semi rossi e neri, su qualunque fondo (nello schizzo, il nero). Il
+   tema resta sul fondo della pagina e sui tasti «Aggiungi». Dentro la carta
+   aperta le variabili del testo diventano quelle della carta, così i tasti
+   del menù (la quantità, i più e i meno) restano leggibili anche quando il
+   tema è scuro.
+   Si anima solo transform e opacity, e con «riduci movimento» niente. */
+.stile-carte {
+  --k-carta: #fbf8f1;
+  --k-inchiostro: #1f1b17;
+  --k-tenue: #5f564c;
+  --k-rosso: #c3122f;
+  --k-nero: var(--k-inchiostro);
+  --k-oro: #9a6b12;
+  --k-filo: rgba(31, 27, 23, 0.16);
+  --k-scrittura: 'IM Fell English', 'Iowan Old Style', Georgia, serif;
+  /* Le cifre di IM Fell sono quelle antiche, basse («8,oo»), e il carattere
+     non ha le altre: prezzi e valori delle carte vanno in Playfair, della
+     stessa epoca, con le cifre alte. */
+  --k-cifre: 'Playfair Display', var(--k-scrittura);
+  --k-molla: cubic-bezier(0.2, 0.9, 0.25, 1.12);
+  /* Una carta, e quanto ne resta scoperto dalla successiva: ci deve stare
+     il nome di una sezione senza andare a capo a metà parola. */
+  --k-larga: 128px;
+  --k-alta: 182px;
+  --k-passo: 100px;
+  /* Il ventaglio di carte girate: quanto stanno più in basso quelle sotto
+     le carte, e quanto si vede di quelle inclinate ai capi. */
+  --k-sotto: 44px;
+  --k-capo: calc(var(--k-larga) * 0.42);
+}
+.stile-carte [data-seme='cuori'],
+.stile-carte [data-seme='quadri'] {
+  --k-tinta: var(--k-rosso);
+}
+.stile-carte [data-seme='fiori'],
+.stile-carte [data-seme='picche'] {
+  --k-tinta: var(--k-nero);
+}
+.stile-carte [data-seme='jolly'] {
+  --k-tinta: var(--k-oro);
+}
+
+.k-testata {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  padding: 18px 0 4px;
+}
+.k-nome {
+  margin: 0;
+  font-family: var(--k-scrittura);
+  font-weight: 400;
+  font-size: clamp(2rem, 9vw, 2.9rem);
+  line-height: 1.05;
+  text-wrap: balance;
+}
+.k-motto {
+  margin: 0;
+  font-family: var(--k-scrittura);
+  font-style: italic;
+  font-size: 1.1rem;
+  color: var(--muted);
+}
+
+/* LA FILA. Scorre di lato; le carte stanno un poco abbassate e la scelta
+   si alza. Stanno tutte DENTRO la fila, anche abbassate: una carta che ne
+   usciva di sotto faceva scorrere la fila in verticale quando la si
+   centrava. Con poche carte la fila sta in mezzo.
+   IL MAZZO RESTA AGGANCIATO sotto la barra mentre si legge (Flavio,
+   08/11/2026). Come le schede delle categorie (BUG-120): fermo nella
+   pagina non ha un fondo suo, che staccherebbe sul fondo del tema; il fondo
+   arriva quando si aggancia e la carta aperta gli passa sotto. Sta sopra
+   la carta aperta (z-index), che sotto non deve spuntare. Il fondo è
+   pieno, senza la sfocatura delle schede: sopra una pagina che scorre
+   mentre le carte si animano, sul telefono la sfocatura costa (come per
+   gli Special a scorrimento di «Notte»). */
+.k-mazzo-segnaposto {
+  scroll-margin-top: var(--barra-intera, calc(var(--safe-top) + var(--barra-alta)));
+}
+.k-mazzo {
+  position: sticky;
+  top: var(--barra-intera, calc(var(--safe-top) + var(--barra-alta)));
+  z-index: 3;
+  margin: 6px -16px 18px;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+.k-mazzo.incollata {
+  background: color-mix(in srgb, var(--bg-2) 97%, transparent);
+  border-bottom: 1px solid var(--line);
+}
+.k-ventaglio {
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  /* Niente aggancio dello scorrimento: all'apertura la fila si agganciava
+     al centro della prima carta scoperta, e il mazzo coperto, che sta
+     prima, restava tagliato fuori dallo schermo. La carta toccata la centra
+     già il tocco (MenuCarte.jsx). */
+  scrollbar-width: none;
+  padding: 0 16px;
+}
+.k-ventaglio::-webkit-scrollbar {
+  display: none;
+}
+/* SUL TELEFONO IL MAZZO AGGANCIATO SI RIMPICCIOLISCE (REQ-MENU-029, l'utente,
+   11/11/2026: «altrimenti prende metà dello schermo»): a carte intere,
+   agganciato sotto la barra, lasciava alla sezione che si legge meno di
+   metà dello schermo. Fermo nella pagina resta grande.
+   SI RIMPICCIOLISCE IL DISEGNO, NON IL POSTO CHE OCCUPA: `transform` non
+   sposta niente nella pagina. Cambiando l'altezza vera, il testo sotto
+   salirebbe di colpo nell'istante dell'aggancio, e il browser, che tiene
+   fermo quello che si sta leggendo, potrebbe riportare la pagina indietro
+   e sganciare il mazzo: aggancia, sgancia, aggancia. Il posto resta, vuoto
+   e trasparente (i tocchi lo attraversano), e il fondo pieno copre solo la
+   parte dove il mazzo si vede. */
+@media (max-width: 640px) {
+  .k-mazzo {
+    --k-stretta: 0.62;
+    --k-alta-stretta: calc((var(--k-alta) + var(--k-sotto) + 56px) * var(--k-stretta));
+  }
+  .k-mazzo .k-ventaglio {
+    transform-origin: top left;
+  }
+  /* `overflow-x: clip`: mentre si rimpicciolisce il ventaglio è già largo
+     per la misura finale ma non ancora stretto, e per un quinto di secondo
+     allargherebbe la pagina di lato. */
+  .k-mazzo.incollata {
+    background: none;
+    border-bottom: 0;
+    pointer-events: none;
+    overflow-x: clip;
+  }
+  .k-mazzo.incollata::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    height: var(--k-alta-stretta);
+    background: color-mix(in srgb, var(--bg-2) 97%, transparent);
+    border-bottom: 1px solid var(--line);
+  }
+  /* Larga quanto serve perché, rimpicciolita, arrivi ancora ai due bordi
+     dello schermo: la fila scorre come prima. */
+  .k-mazzo.incollata .k-ventaglio {
+    position: relative;
+    width: calc(100% / var(--k-stretta));
+    transform: scale(var(--k-stretta));
+    pointer-events: auto;
+  }
+}
+@media (max-width: 640px) and (prefers-reduced-motion: no-preference) {
+  .k-mazzo .k-ventaglio {
+    transition: transform 0.22s ease;
+  }
+}
+/* IL CENTRO DELLO SCHERMO, VISTO DALLA FILA: sul telefono la fila è più
+   larga dello schermo e comincia da sinistra, quindi il centro è a metà del
+   ventaglio (50cqw) e non a metà della fila. È il punto da cui il mazzo si
+   apre (k-dal-centro). */
+.k-ventaglio {
+  container-type: inline-size;
+}
+.k-ventaglio .k-fila {
+  --k-centro: min(50cqw, var(--k-meta));
+}
+.k-fila {
+  --k-giu: 24px;
+  /* Metà della fila (`--n` carte, FilaCarte): da lì parte il mazzo
+     all'apertura, quando la fila sta tutta nello schermo. */
+  --k-meta: calc((48px + 2 * var(--k-capo) + (var(--n, 1) - 1) * var(--k-passo) + var(--k-larga)) / 2);
+  --k-centro: var(--k-meta);
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  width: max-content;
+  height: calc(var(--k-alta) + var(--k-giu) + var(--k-sotto) + 24px);
+  margin: 0 auto;
+  padding: 8px 34px 0 14px;
+}
+
+/* IL VENTAGLIO DI CARTE GIRATE, come nello schizzo di Flavio: una girata
+   sotto ogni carta scoperta, sfalsata di mezza carta e più in basso di
+   `--k-sotto`, che spunta fra una carta e l'altra; una girata inclinata a
+   ogni capo, di cui si vede `--k-capo`. Stanno sotto le carte scoperte
+   (z-index), e sono disegno: niente tocchi. */
+.k-dorso {
+  flex: none;
+  width: var(--k-larga);
+  height: var(--k-alta);
+  border-radius: 10px;
+  background-color: var(--k-rosso);
+  background-image:
+    repeating-linear-gradient(45deg, color-mix(in srgb, var(--k-carta) 32%, transparent) 0 1.5px, transparent 1.5px 9px),
+    repeating-linear-gradient(-45deg, color-mix(in srgb, var(--k-carta) 32%, transparent) 0 1.5px, transparent 1.5px 9px);
+  box-shadow:
+    inset 0 0 0 6px var(--k-carta),
+    inset 0 0 0 7px color-mix(in srgb, var(--k-rosso) 50%, transparent),
+    0 6px 14px -8px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+.k-dorso-sotto {
+  position: absolute;
+  z-index: 0;
+  top: calc(8px + var(--k-giu) + var(--k-sotto));
+  left: calc(14px + var(--k-capo) + var(--i) * var(--k-passo) + var(--k-passo) / 2);
+  transform: rotate(var(--storta, 0deg));
+}
+.k-dorso-capo {
+  position: relative;
+  z-index: 0;
+}
+.k-dorso-primo {
+  margin-right: calc(var(--k-capo) - var(--k-larga));
+  transform: translateY(calc(var(--k-giu) + var(--k-sotto) / 2)) rotate(-11deg);
+}
+.k-dorso-ultimo {
+  margin-left: calc(var(--k-capo) - var(--k-passo));
+  transform: translateY(calc(var(--k-giu) + var(--k-sotto) / 2)) rotate(11deg);
+}
+
+/* Il logo del locale in mezzo alle girate ai capi, in un anello avorio. */
+.k-dorso-logo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 60%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--k-carta);
+  box-shadow:
+    0 0 0 4px var(--k-carta),
+    0 0 0 5px color-mix(in srgb, var(--k-rosso) 60%, transparent);
+  transform: translate(-50%, -50%);
+}
+
+/* LE CARTE SCOPERTE: intere, accavallate di un passo, sopra le girate. */
+.k-carta {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: var(--k-larga);
+  height: var(--k-alta);
+  margin-right: calc(var(--k-passo) - var(--k-larga));
+  padding: 9px 10px;
+  text-align: left;
+  font: 400 0.95rem/1.15 var(--k-scrittura);
+  color: var(--k-inchiostro);
+  background: var(--k-carta);
+  border: 1px solid var(--k-filo);
+  border-radius: 10px;
+  box-shadow: -6px 0 14px -8px rgba(0, 0, 0, 0.5);
+  transform: translateY(var(--k-giu));
+  cursor: pointer;
+}
+/* La carta alzata resta al suo posto nella fila: portata davanti copriva
+   l'angolo della successiva, e se ne leggeva mezzo nome.
+   L'ombra della carta alzata cambia con l'opacità, non con box-shadow:
+   si anima solo quello che il telefono muove senza ridisegnare. */
+.k-carta::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 18px 30px -14px rgba(0, 0, 0, 0.75);
+  opacity: 0;
+  pointer-events: none;
+}
+/* IL DORSO DI UNA CARTA SCOPERTA: all'apertura il mazzo si stende a carte
+   coperte e poi le gira (k-si-gira). A fermo non c'è. */
+.k-carta::before {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  inset: -1px;
+  border-radius: inherit;
+  background-color: var(--k-rosso);
+  background-image:
+    repeating-linear-gradient(45deg, color-mix(in srgb, var(--k-carta) 32%, transparent) 0 1.5px, transparent 1.5px 9px),
+    repeating-linear-gradient(-45deg, color-mix(in srgb, var(--k-carta) 32%, transparent) 0 1.5px, transparent 1.5px 9px);
+  box-shadow:
+    inset 0 0 0 6px var(--k-carta),
+    inset 0 0 0 7px color-mix(in srgb, var(--k-rosso) 50%, transparent);
+  opacity: 0;
+  pointer-events: none;
+}
+.k-carta[aria-pressed='true'] {
+  transform: translateY(0) rotate(-2deg);
+}
+.k-carta[aria-pressed='true']::after {
+  opacity: 1;
+}
+.k-carta:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 3px;
+}
+.k-carta .k-indice .k-valore {
+  font-size: 1.35rem;
+}
+.k-carta .k-indice .k-seme {
+  font-size: 1.15rem;
+}
+/* Il nome sta nella parte che la carta accanto lascia scoperta, e va a
+   capo fra le parole: spezzate a caso («Suggeri ti») non si leggevano. */
+.k-carta-nome {
+  width: calc(var(--k-passo) - 14px);
+  overflow-wrap: break-word;
+  /* La parola più lunga ci deve stare intera (misuraNome): la scritta si
+     rimpicciolisce quanto serve, e mai sopra la misura della carta. */
+  font-size: min(0.95rem, calc((var(--k-passo) - 16px) / var(--k-parola, 1)));
+}
+/* Il seme grande in mezzo, come sulle carte vere: sta nella parte che
+   resta scoperta. */
+.k-pip {
+  position: absolute;
+  left: calc(var(--k-passo) / 2 - 4px);
+  bottom: 18px;
+  transform: translateX(-50%);
+  font-size: 2.6rem;
+  line-height: 1;
+  color: var(--k-tinta);
+  opacity: 0.85;
+}
+
+/* L'ANGOLO: valore sopra seme, nel colore del seme. */
+.k-indice {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  align-self: flex-start;
+  line-height: 1;
+  color: var(--k-tinta);
+}
+.k-valore {
+  font-family: var(--k-cifre);
+}
+.k-jolly-scritta {
+  font-size: 0.62em;
+  letter-spacing: 0.08em;
+}
+
+/* La carta in volo, sul dorso, quando se ne sceglie una (il movimento è
+   sotto): senza movimento non si vede. */
+.k-in-volo {
+  display: block;
+  position: relative;
+  z-index: 3;
+  height: 0;
+  pointer-events: none;
+}
+.k-in-volo::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: min(100%, 720px);
+  margin: 0 auto;
+  aspect-ratio: 128 / 182;
+  border-radius: 18px;
+  background-color: var(--k-rosso);
+  background-image:
+    repeating-linear-gradient(45deg, color-mix(in srgb, var(--k-carta) 32%, transparent) 0 1.5px, transparent 1.5px 9px),
+    repeating-linear-gradient(-45deg, color-mix(in srgb, var(--k-carta) 32%, transparent) 0 1.5px, transparent 1.5px 9px);
+  box-shadow:
+    inset 0 0 0 9px var(--k-carta),
+    0 24px 44px -22px rgba(0, 0, 0, 0.75);
+  transform-origin: 50% 0;
+  opacity: 0;
+}
+
+/* LA CARTA APERTA. Le variabili del testo sono quelle della carta: i tasti
+   del menù dentro la carta si leggono anche su un tema scuro. */
+.k-aperta {
+  --text: var(--k-inchiostro);
+  --muted: var(--k-tenue);
+  --line: var(--k-filo);
+  --bg: var(--k-carta);
+  --bg-2: #f1ebe0;
+  --card: #fffdf8;
+  position: relative;
+  /* Su uno schermo largo la carta resta una carta: a tutta riga i puntini
+     fra nome e prezzo diventavano lunghi mezzo metro. */
+  max-width: 720px;
+  margin: 0 auto 24px;
+  padding: 0 18px 64px;
+  font-family: var(--k-scrittura);
+  color: var(--k-inchiostro);
+  background: var(--k-carta);
+  border-radius: 18px;
+  box-shadow:
+    0 0 0 1px var(--k-filo),
+    0 26px 50px -26px rgba(0, 0, 0, 0.75);
+  transform-origin: 50% 0;
+}
+/* La testa della carta aperta scorre con la carta: agganciato resta il
+   mazzo, sopra (e due fasce agganciate si mangiavano il telefono). */
+.k-aperta-testa {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0 -18px;
+  padding: 14px 18px 12px;
+  /* Senza un fondo suo: è la stessa carta del resto, macchie comprese. Con
+     l'avorio pulito il titolo sembrava un'etichetta nuova incollata su una
+     carta vecchia (l'utente, 11/11/2026: «anche il titolo deve essere
+     coerente»). */
+  border-bottom: 1px solid var(--k-filo);
+  border-radius: 18px 18px 0 0;
+}
+.k-aperta .k-indice .k-valore {
+  font-size: 1.8rem;
+}
+.k-aperta .k-indice .k-seme {
+  font-size: 1.5rem;
+}
+.k-aperta-titolo {
+  flex: 1;
+  min-width: 0;
+}
+.k-gruppo {
+  margin: 0;
+  font-style: italic;
+  font-size: 1.05rem;
+  line-height: 1.2;
+  color: var(--k-tinta);
+}
+.k-aperta-titolo h2 {
+  margin: 2px 0 0;
+  /* Il carattere va scritto: titoli e voci hanno quello del tema. */
+  font: 400 clamp(1.7rem, 7.5vw, 2.2rem) / 1.08 var(--k-scrittura);
+  text-wrap: balance;
+}
+.k-aperta > .k-indice-basso {
+  position: absolute;
+  right: 18px;
+  bottom: 14px;
+  transform: rotate(180deg);
+}
+
+/* LA VOCE: «NOME ···· prezzo», la descrizione, gli ingredienti, e sotto, a
+   destra, il tasto. L'immagine solo sul Jolly: il disegno intero e grande,
+   senza cerchio. Tondo e piccolo, col tratto chiaro sul bianco, «si vede
+   male, anzi poco, non si capisce l'immagine» (l'utente, 06/11/2026). */
+.k-voce {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px 12px;
+  padding: 16px 0;
+  border-bottom: 1px dashed var(--k-filo);
+}
+.k-voce-img {
+  flex: none;
+  width: 104px;
+  height: 104px;
+  object-fit: contain;
+}
+/* LA VOCE COL DISEGNO, SU DUE COLONNE (l'utente, 11/11/2026: «andrebbe
+   impaginata meglio»). In fila col testo, un disegno da 104 px si mangiava
+   un terzo del telefono: il nome andava a capo, il prezzo si staccava e il
+   tasto per ordinare scendeva sotto il disegno, a sinistra. Ora il disegno
+   ha una colonna stretta sua, centrato sull'altezza del testo; nome, prezzo
+   e descrizione stanno nell'altra, e i tasti sotto il testo, a destra. */
+.k-voce-illustrata {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px 14px;
+}
+.k-voce-illustrata .k-voce-img {
+  grid-row: 1 / span 2;
+  width: 72px;
+  height: 88px;
+}
+.k-voce-illustrata .k-voce-testo,
+.k-voce-illustrata .k-voce-tasti {
+  grid-column: 2;
+}
+.k-voce-illustrata .k-voce-tasti {
+  justify-self: end;
+}
+@media (min-width: 560px) {
+  .k-voce-illustrata {
+    grid-template-columns: 96px minmax(0, 1fr);
+    column-gap: 20px;
+  }
+  .k-voce-illustrata .k-voce-img {
+    width: 96px;
+    height: 112px;
+  }
+}
+.k-voce-testo {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.k-voce h3 {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  font: 400 1.32rem/1.2 var(--k-scrittura);
+}
+.k-voce h3 button {
+  padding: 0;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.k-voce h3 button:focus-visible {
+  outline: 2px solid var(--k-tinta, var(--k-inchiostro));
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+.k-puntini {
+  flex: 1;
+  min-width: 14px;
+  border-bottom: 2px dotted var(--k-filo);
+}
+.k-prezzo {
+  white-space: nowrap;
+  color: var(--k-tinta);
+  font-family: var(--k-cifre);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.k-descrizione {
+  margin: 6px 0 0;
+  font-size: 1.08rem;
+  line-height: 1.4;
+  color: var(--k-tenue);
+}
+.k-ingredienti {
+  margin: 4px 0 0;
+  font-style: italic;
+  font-size: 0.98rem;
+  line-height: 1.4;
+  color: var(--k-tenue);
+}
+.k-voce-tasti {
+  flex-basis: 100%;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* IL CAROSELLO DEGLI SPECIAL È UNA CARTA ANCHE LUI (l'utente, 11/11/2026:
+   «il carosello nel tema di Alice dovrebbe essere più in tema, no?»). Era
+   la scheda scura del menù classico, sopra un mazzo di carte avorio. Ora
+   ogni slide è un Jolly: carta avorio, la stella negli angoli (quello in
+   basso capovolto, come su una carta), il nome nel carattere del mazzo e il
+   prezzo nel rosso dei semi. I disegni arrivano col tratto scuro
+   (MenuPage.jsx, `disegniChiari`). */
+.stile-carte .carosello-fila {
+  border-radius: 12px;
+}
+.stile-carte .carosello-slide {
+  --text: var(--k-inchiostro);
+  --muted: var(--k-tenue);
+  position: relative;
+  padding: 30px 18px;
+  font-family: var(--k-scrittura);
+  color: var(--k-inchiostro);
+  background: var(--k-carta);
+  border: 1px solid var(--k-filo);
+  border-radius: 12px;
+  box-shadow:
+    inset 0 0 0 5px var(--k-carta),
+    inset 0 0 0 6px color-mix(in srgb, var(--k-oro) 45%, transparent);
+}
+.stile-carte .carosello-slide::before,
+.stile-carte .carosello-slide::after {
+  content: '★';
+  position: absolute;
+  font: 1.15rem/1 var(--k-cifre);
+  color: var(--k-oro);
+}
+.stile-carte .carosello-slide::before {
+  top: 12px;
+  left: 14px;
+}
+.stile-carte .carosello-slide::after {
+  right: 14px;
+  bottom: 12px;
+  transform: rotate(180deg);
+}
+.stile-carte .carosello-testo strong {
+  font-family: var(--k-scrittura);
+  font-style: normal;
+  font-weight: 400;
+  font-size: clamp(1.15rem, 5.4vw, 1.6rem);
+}
+.stile-carte .carosello-descrizione {
+  font-size: 0.98rem;
+}
+.stile-carte .carosello-testo .price {
+  font-family: var(--k-cifre);
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--k-rosso);
+}
+.stile-carte .carosello-punti button.attivo::before {
+  background: var(--k-rosso);
+}
+.stile-carte .speciali-carosello .cat-header {
+  font-family: var(--k-scrittura);
+  font-weight: 400;
+}
+
+/* LE CARTE SONO VECCHIE, E DISEGNATE COME NEL LIBRO (l'utente, 11/11/2026:
+   «il retro delle carte dovrebbe essere disegnato in stile Lewis Carroll,
+   un po' più rovinato, magari qualche carta un po' rovinata. Parlo sia del
+   retro che avanti»; e poi: «non rovinarle tutte uguali»). Prima il dorso
+   era un reticolo netto, da mazzo nuovo, e la faccia un avorio pulito.
+   IL DORSO è un'incisione: tratteggio incrociato tirato a mano (le righe
+   tremano), doppia cornice e un ovale coi quattro semi, con l'inchiostro che
+   manca dove la carta si è consumata. LA FACCIA ha le macchie d'umido e
+   gli spigoli scuriti di una carta maneggiata.
+   NON SONO ROVINATE TUTTE UGUALI: quattro dorsi e quattro facce, dalla
+   carta quasi nuova a quella che ne ha viste tante, e tre segni (due
+   pieghe e un angolo piegato) che toccano solo ad alcune. Dorso, faccia e
+   segno girano con passi diversi (4, 4 e 5 o 7), così la stessa
+   combinazione non torna per un bel pezzo di mazzo.
+   Dorsi e facce sono IMMAGINI GIÀ PRONTE (public/stili/carte/*.webp), non
+   disegni calcolati dal telefono: nascono dagli SVG con filtri di rumore
+   di scripts/carte-consumate/ (li trasforma rasterizza.mjs, lì accanto), e
+   lasciati nel foglio il browser li ricalcolava per ogni carta e la pagina
+   si muoveva a scatti. Il rosso e l'avorio sono dentro le immagini, uguali
+   a `--k-rosso` e `--k-carta` un poco invecchiati. Le pieghe sono due
+   righe, e restano scritte qui.
+   Solo fondi fermi: niente di questo si anima. */
+.stile-carte {
+  --k-dorso-a: url('/stili/carte/dorso-a.webp');
+  --k-dorso-b: url('/stili/carte/dorso-b.webp');
+  --k-dorso-c: url('/stili/carte/dorso-c.webp');
+  --k-dorso-d: url('/stili/carte/dorso-d.webp');
+  --k-carta-a: url('/stili/carte/carta-a.webp');
+  --k-carta-b: url('/stili/carte/carta-b.webp');
+  --k-carta-c: url('/stili/carte/carta-c.webp');
+  --k-carta-d: url('/stili/carte/carta-d.webp');
+  --k-carta-grande: url('/stili/carte/carta-grande.webp');
+  --k-piega-angoli: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 182' preserveAspectRatio='none'%3E%3Cpath d='M-4 150 L46 186' stroke='%235a3c14' stroke-width='.7' opacity='0.4' fill='none'/%3E%3Cpath d='M-4 151.2 L46 187.2' stroke='%23fff' stroke-width='.6' opacity='0.7' fill='none'/%3E%3Cpath d='M92 -3 L131 26' stroke='%235a3c14' stroke-width='.7' opacity='0.3' fill='none'/%3E%3Cpath d='M92 -1.8 L131 27.2' stroke='%23fff' stroke-width='.6' opacity='0.6' fill='none'/%3E%3C/svg%3E");
+  --k-piega-mezzo: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 182' preserveAspectRatio='none'%3E%3Cpath d='M-3 96 L131 88' stroke='%235a3c14' stroke-width='.7' opacity='0.28' fill='none'/%3E%3Cpath d='M-3 97.2 L131 89.2' stroke='%23fff' stroke-width='.6' opacity='0.5800000000000001' fill='none'/%3E%3C/svg%3E");
+  --k-angolo: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 182' preserveAspectRatio='none'%3E%3Cpath d='M100 186 L131 150' stroke='%235a3c14' stroke-width='.7' opacity='0.45' fill='none'/%3E%3Cpath d='M100 187.2 L131 151.2' stroke='%23fff' stroke-width='.6' opacity='0.75' fill='none'/%3E%3C/svg%3E");
+}
+/* (I selettori sono scritti per esteso: dentro `:is()` uno pseudo-elemento
+   non vale, e la regola salterebbe in silenzio.) */
+.stile-carte .k-dorso,
+.stile-carte .k-carta::before,
+.stile-carte .k-in-volo::after {
+  background-image: var(--k-dorso-b);
+  background-size: 100% 100%;
+}
+/* LA CARTA IN VOLO È GRANDE quanto la carta aperta (fino a 720 px): con
+   l'immagine dei dorsi piccoli, da 256 px, si vedeva sgranata e sfocata
+   (l'utente, 11/11/2026: «i dorsi delle carte quando si zummano per mostrare
+   il menù sono molto blurry e pixelosi»). Ha un'immagine sua, a 720 px. */
+.stile-carte .k-in-volo::after {
+  background-image: url('/stili/carte/dorso-grande.webp');
+}
+.stile-carte .k-dorso-sotto:nth-of-type(4n + 1),
+.stile-carte .k-carta:nth-of-type(4n + 2)::before {
+  background-image: var(--k-dorso-a);
+}
+.stile-carte .k-dorso-sotto:nth-of-type(4n + 2),
+.stile-carte .k-carta:nth-of-type(4n + 3)::before {
+  background-image: var(--k-dorso-d);
+}
+.stile-carte .k-dorso-sotto:nth-of-type(4n + 3),
+.stile-carte .k-carta:nth-of-type(4n)::before,
+.stile-carte .k-dorso-ultimo {
+  background-image: var(--k-dorso-c);
+}
+.stile-carte .k-carta {
+  --k-faccia: var(--k-carta-b);
+  --k-segno: none;
+  background-image: var(--k-segno), var(--k-faccia);
+  background-size: 100% 100%;
+}
+.stile-carte .k-carta:nth-of-type(4n + 1) {
+  --k-faccia: var(--k-carta-a);
+}
+.stile-carte .k-carta:nth-of-type(4n + 3) {
+  --k-faccia: var(--k-carta-d);
+}
+.stile-carte .k-carta:nth-of-type(4n) {
+  --k-faccia: var(--k-carta-c);
+}
+.stile-carte .k-carta:nth-of-type(5n + 3) {
+  --k-segno: var(--k-piega-angoli);
+}
+.stile-carte .k-carta:nth-of-type(7n + 5) {
+  --k-segno: var(--k-piega-mezzo);
+}
+.stile-carte .k-carta:nth-of-type(7n + 2) {
+  --k-segno: var(--k-angolo);
+}
+/* Gli spigoli non sono tutti uguali: una carta maneggiata li ha chi più chi
+   meno arrotondati. */
+.stile-carte .k-carta:nth-of-type(3n + 1) {
+  border-radius: 9px 12px 10px 13px / 12px 9px 13px 10px;
+}
+.stile-carte .k-carta:nth-of-type(3n + 2) {
+  border-radius: 12px 9px 13px 9px / 10px 12px 9px 13px;
+}
+.stile-carte .k-carta:nth-of-type(3n) {
+  border-radius: 10px 14px 8px 11px / 9px 11px 12px 14px;
+}
+/* La carta aperta e le slide degli Special sono grandi: la carta invecchiata
+   fa da fondo a mattonelle, disegnata apposta perché la giunta non si veda
+   (a misura della carta le macchie diventerebbero laghi), e più leggera
+   che sulle carte piccole: dietro al menù si legge (l'utente, 11/11/2026:
+   «la filigrana dietro al menù mi sembra troppo evidente»). */
+.stile-carte :is(.k-aperta, .carosello-slide) {
+  background-image: var(--k-carta-grande);
+  background-size: 380px 540px;
+}
+
+/* Nella vetrina del marketplace il mazzo sta in alto, e sotto si vede
+   l'inizio della carta aperta. */
+.vetrina-tema.stile-carte {
+  padding-top: 0;
+}
+.vetrina-tema .k-fila {
+  margin-bottom: 14px;
+}
+.vetrina-tema .k-aperta {
+  padding-top: 4px;
+}
+
+/* Il movimento. ALL'APERTURA IL MAZZO SI APRE COME LO APRE UN CROUPIER
+   (l'utente, 11/11/2026: «sembra che le carte arrivino dal nulla e troppo
+   velocemente… apri il ventaglio e poi gira tutte le carte»): il mazzo sta
+   un attimo chiuso al centro, a carte coperte; si stende a ventaglio, ogni
+   carta fino al suo posto (sul telefono verso sinistra, dove la fila
+   comincia); poi le carte si girano, una dopo l'altra. Prima uscivano già
+   scoperte dal capo di sinistra, in 0,6 s e sfalsate di 55 ms: troppe
+   scritte in corsa una sull'altra, e sembrava uno sfarfallio (BUG-143).
+   La stesa muove `translate` e il giro `scale`, proprietà a sé: così non
+   toccano `transform`, che è della carta alzata. Poi la scelta si alza con
+   una molla, e la carta aperta arriva dal mazzo. */
+@media (prefers-reduced-motion: no-preference) {
+  .k-fila {
+    --k-ferma: 0.3s;
+    --k-stesa: 1s;
+    --k-giro: 0.5s;
+    --k-scarto: 60ms;
+  }
+  .k-carta {
+    --k-posto: calc(14px + var(--k-capo) + var(--i, 0) * var(--k-passo));
+    transition: transform 0.34s var(--k-molla);
+    animation:
+      k-dal-centro var(--k-stesa) cubic-bezier(0.45, 0, 0.2, 1) var(--k-ferma) backwards,
+      k-si-gira var(--k-giro) linear calc(var(--k-ferma) + var(--k-stesa) + var(--i, 0) * var(--k-scarto)) backwards;
+  }
+  .k-carta::before {
+    animation: k-dorso-su var(--k-giro) linear calc(var(--k-ferma) + var(--k-stesa) + var(--i, 0) * var(--k-scarto)) backwards;
+  }
+  .k-carta::after {
+    transition: opacity 0.34s;
+  }
+  /* Le girate fanno parte del mazzo: si stendono con le carte. */
+  .k-dorso {
+    animation: k-dal-centro var(--k-stesa) cubic-bezier(0.45, 0, 0.2, 1) var(--k-ferma) backwards;
+  }
+  .k-dorso-sotto {
+    --k-posto: calc(14px + var(--k-capo) + var(--i, 0) * var(--k-passo) + var(--k-passo) / 2);
+  }
+  .k-dorso-primo {
+    --k-posto: 14px;
+  }
+  .k-dorso-ultimo {
+    --k-posto: calc(14px + 2 * var(--k-capo) + (var(--n, 1) - 1) * var(--k-passo));
+  }
+  /* LA PRIMA CARTA SI APRE QUANDO IL MAZZO HA QUASI FINITO DI GIRARSI
+     (`k-apertura`, MenuCarte.jsx: finché non se ne sceglie una): prima
+     volava sopra un mazzo ancora chiuso. Scelta una carta, niente attesa. */
+  .k-apertura {
+    --k-prima: 1.7s;
+  }
+  /* LA CARTA SCELTA ESCE DAL VENTAGLIO, SI GIRA E SI POPOLA: una carta
+     sul dorso (.k-in-volo, con le proporzioni di una carta) parte piccola
+     dall'alto e gira fino a essere di taglio; lì subentra la faccia, cioè
+     la carta aperta, che finisce il giro; poi le voci entrano una dopo
+     l'altra. Il dorso in volo è un elemento a parte: dentro la carta
+     aperta sarebbe stato alto quanto tutta la sezione, una striscia invece
+     di una carta. Rifà tutto ogni volta che si sceglie una carta (la carta
+     aperta passa da nascosta a visibile, il volo ha la sua chiave).
+     All'indietro e basta: finita l'animazione la carta aperta torna senza
+     transform, e la sua testa agganciata con lei. */
+  /* I tempi: il viaggio dal ventaglio alla carta aperta più di metà del
+     tutto, che a 0,8 s «non si vede che esce dal mazzo»; a 1,4 s era
+     «leggermente» lento: 1,1 s. Poi il giro, poi le voci. */
+  .k-in-volo::after {
+    animation: k-dorso-in-volo 1.1s linear var(--k-prima, 0s) both;
+  }
+  .k-aperta {
+    animation: k-faccia 1.1s linear var(--k-prima, 0s) backwards;
+  }
+  .k-voce {
+    animation: k-voce-entra 0.35s ease-out backwards;
+    animation-delay: calc(var(--k-prima, 0s) + 0.85s + var(--n, 0) * 50ms);
+  }
+}
+@media (prefers-reduced-motion: no-preference) and (hover: hover) {
+  .k-carta:not([aria-pressed='true']):hover {
+    transform: translateY(calc(var(--k-giu) - 8px));
+  }
+}
+/* Ferme al loro inizio, cioè a mazzo chiuso e coperto, finché i caratteri
+   non sono arrivati (BUG-141, MenuCarte.jsx): il titolo che cambiava
+   carattere spostava il mazzo mentre si apriva, e le carte si giravano con
+   la scritta ancora nel carattere di riserva. */
+.k-aspetta .k-carta,
+.k-aspetta .k-carta::before,
+.k-aspetta .k-dorso,
+.k-aspetta .k-in-volo::after,
+.k-aspetta .k-aperta,
+.k-aspetta .k-voce {
+  animation-play-state: paused;
+}
+/* LA STESA: ogni pezzo del mazzo parte dal centro (`--k-centro`, il suo
+   mezzo lì) e va al suo posto (`--k-posto`, il suo bordo sinistro nella
+   fila). Niente opacità: le carte ci sono dal primo istante, coperte. */
+@keyframes k-dal-centro {
+  from {
+    translate: calc(var(--k-centro) - var(--k-posto) - var(--k-larga) / 2) 0;
+  }
+}
+/* IL GIRO: la carta si stringe fino a essere di taglio e si riallarga; a
+   metà il dorso (k-dorso-su) lascia il posto alla faccia. */
+@keyframes k-si-gira {
+  0% {
+    scale: 1 1;
+    animation-timing-function: ease-in;
+  }
+  50% {
+    scale: 0.03 1;
+    animation-timing-function: ease-out;
+  }
+  100% {
+    scale: 1 1;
+  }
+}
+@keyframes k-dorso-su {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  50.01%,
+  100% {
+    opacity: 0;
+  }
+}
+/* Il volo: parte dalla carta toccata nel ventaglio, alla sua misura
+   (--da-x, --da-y, --da-scala, da partenzaDelVolo; senza, dall'alto),
+   scende crescendo fino al posto della carta aperta, poi gira fino a
+   essere di taglio. Lì subentra la faccia, che finisce il giro.
+   LA PROSPETTIVA È DELLA CARTA (perspective() nella trasformazione, col
+   fulcro sul bordo alto), non della pagina: con quella della pagina,
+   centrata sopra il ventaglio, a metà giro il bordo alto della carta
+   veniva tirato su di 28 px e poi tornava giù, e il titolo della sezione
+   «rimbalzava in alto non appena si gira la carta» (l'utente,
+   06/11/2026). Col fulcro sul bordo alto, quel bordo non si muove.
+   Ogni passo scrive le stesse funzioni nello stesso ordine, così il
+   browser le interpola una per una. */
+@keyframes k-dorso-in-volo {
+  0% {
+    opacity: 0;
+    transform: perspective(1400px) translate(var(--da-x, 0px), var(--da-y, -140px)) scale(var(--da-scala, 0.3)) rotate(-2deg)
+      rotateY(0deg);
+    /* Parte piano, perché si veda che si stacca dalla carta toccata. */
+    animation-timing-function: cubic-bezier(0.5, 0, 0.25, 1);
+  }
+  5% {
+    opacity: 1;
+  }
+  58% {
+    opacity: 1;
+    transform: perspective(1400px) translate(0px, 0px) scale(0.92) rotate(0deg) rotateY(0deg);
+    animation-timing-function: cubic-bezier(0.5, 0, 0.9, 0.6);
+  }
+  76.9% {
+    opacity: 1;
+    transform: perspective(1400px) translate(0px, 0px) scale(0.92) rotate(0deg) rotateY(90deg);
+  }
+  77%,
+  100% {
+    opacity: 0;
+    transform: perspective(1400px) translate(0px, 0px) scale(0.92) rotate(0deg) rotateY(90deg);
+  }
+}
+@keyframes k-faccia {
+  0%,
+  76.9% {
+    opacity: 0;
+    transform: perspective(1400px) scale(0.92) rotateY(-90deg);
+  }
+  77% {
+    opacity: 1;
+    transform: perspective(1400px) scale(0.92) rotateY(-90deg);
+    animation-timing-function: cubic-bezier(0.2, 0.6, 0.3, 1);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(1400px) scale(1) rotateY(0deg);
+  }
+}
+@keyframes k-voce-entra {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+/* ── LE ICONE DEL GESTIONALE (REQ-UI-031) ─────────────────────────────────
+   «Silhouette»: i disegni di Lucide prendono il colore e la misura del
+   testo attorno, quindi qui c'è solo l'allineamento con la riga. I pallini
+   degli stati restano colorati in ogni tema, con gli inchiostri di stato
+   (DESIGN.md, Profondità): sono un colore, non un disegno. */
+.icona {
+  flex-shrink: 0;
+  vertical-align: -0.15em;
+}
+/* Un'icona accesa, piena invece che a tratto: la stella dei preferiti. */
+.icona.icona-piena {
+  fill: currentColor;
+}
+.icona-pallino {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 0.7em;
+  height: 0.7em;
+  border-radius: 50%;
+  vertical-align: 0.02em;
+  background: var(--muted);
+}
+.icona-pallino-verde { background: var(--testo-verde); }
+.icona-pallino-ambra { background: var(--testo-ambra); }
+.icona-pallino-rosso { background: var(--testo-rosso); }
+.icona-pallino-spento { background: transparent; box-shadow: inset 0 0 0 1.5px var(--muted); }
+/* Le cinque icone di prova accanto a ogni tema, in Aspetto. */
+.icone-prova {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  margin-right: 6px;
 }

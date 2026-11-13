@@ -27,13 +27,24 @@ const impostazioni = vi.hoisted(() => ({
   // I MODULI PREMIUM (REQ-LIC-001) come li scrive il documento del bar:
   // qui ci sono solo gli interruttori D'USO, che dicono se il locale li sta
   // usando. Cosa il locale HA lo dice la licenza (licenza.js), e per queste
-  // prove è quella vera: scadenzario incluso, conta no.
+  // prove è scritta qui: scadenzario incluso, conta e fatture ai clienti no.
   // Le chiavi stanno QUI e non solo nella prova che le cambia: l'assign del
   // beforeEach aggiunge, non toglie, e un valore scritto da una prova
   // resterebbe addosso a tutte quelle dopo.
   modulo_conta_enabled: true,
   modulo_scadenzario_enabled: true,
-  licenza: null,
+  licenza: {
+    moduli: {
+      menu_tavoli: true,
+      ordini_cliente: true,
+      clienti: true,
+      magazzino: true,
+      statistiche: true,
+      staff: true,
+      sumup: true,
+      scadenzario: true,
+    },
+  },
   business_day_cutoff_hour: 5,
   orario_apertura: '18:30',
   orario_chiusura: '03:30',
@@ -61,6 +72,9 @@ vi.mock('../../src/lib/paymentsApi.js', () => ({
 }))
 vi.mock('../../src/components/PrinterSetup.jsx', () => ({
   default: () => <div>PANNELLO STAMPANTE</div>,
+}))
+vi.mock('../../src/components/CreditoAI.jsx', () => ({
+  default: () => <div>PANNELLO CREDITO AI</div>,
 }))
 vi.mock('../../src/components/BackupPanel.jsx', () => ({
   default: () => <div>PANNELLO BACKUP</div>,
@@ -151,6 +165,7 @@ describe('impostazioni a schede', () => {
     mostra()
     for (const voce of [
       'Aspetto',
+      'Il locale',
       'Menù clienti',
       'Gestione menù',
       'Catalogo prodotti',
@@ -161,7 +176,9 @@ describe('impostazioni a schede', () => {
       'Gruppi di ordini',
       'Clienti',
       'Stampante',
-      'Funzioni premium',
+      // «Licenza» dal REQ-LIC-007: il gruppo mostra anche il riepilogo
+      // della licenza, e le funzioni premium sono quello che comprende.
+      'Licenza',
       'Sistema',
     ]) {
       expect(screen.getByRole('button', { name: new RegExp(voce) })).toBeInTheDocument()
@@ -174,6 +191,9 @@ describe('impostazioni a schede', () => {
     const user = userEvent.setup()
     mostra()
     const attese = [
+      // BUG-139: il riquadro dell'identità del locale non aveva un gruppo, e
+      // non si apriva da nessuna parte.
+      ['Il locale', [/^Il locale$/]],
       ['Menù clienti', [/Menù clienti/]],
       ['Gestione menù', [/Gestione menù/]],
       ['Catalogo prodotti', [/Catalogo/]],
@@ -237,7 +257,7 @@ describe('la vista del banco', () => {
     const suoi = [
       ...titolo.nextElementSibling.nextElementSibling.querySelectorAll('button'),
     ]
-    expect(suoi.map((b) => b.textContent)).toEqual(['🚦 Corsie di stato'])
+    expect(suoi.map((b) => b.textContent.trim())).toEqual(['Corsie di stato'])
     expect(suoi[0]).toHaveClass('active')
     expect(suoi[0]).toBeEnabled()
   })
@@ -261,6 +281,22 @@ describe('gli interruttori dei tasti di incasso stanno in Pagamenti', () => {
   // non solo «c'è da qualche parte in pagina».
   const sezioneDi = (testo) =>
     screen.getByText(testo).closest('.settings-section').querySelector('h3').textContent
+
+  // IL RESTO IN CONTANTI (REQ-PAG-015): si accende dove si incassa.
+  it('«Calcolo del resto in contanti» sta in Pagamenti, spento, e si accende', async () => {
+    const user = userEvent.setup()
+    const { updateSettings } = await import('../../src/lib/api.js')
+    mostra()
+    await apriPagamenti(user)
+    expect(sezioneDi('Calcolo del resto in contanti')).toBe('Pagamenti')
+    const interruttore = screen
+      .getByText('Calcolo del resto in contanti')
+      .closest('.toggle-row')
+      .querySelector('input[type="checkbox"]')
+    expect(interruttore).not.toBeChecked()
+    await user.click(interruttore)
+    expect(updateSettings).toHaveBeenCalledWith({ resto_contanti: true })
+  })
 
   it('«incassare e servire insieme» sta accanto al suo gemello, in Pagamenti', async () => {
     const user = userEvent.setup()
@@ -351,7 +387,7 @@ describe('gli interruttori dei tasti di incasso stanno in Pagamenti', () => {
 // sotto diventa rossa, perché il tocco non parte nemmeno.
 describe('le funzioni premium (REQ-LIC-001)', () => {
   const apriPremium = async (user) => {
-    await user.click(screen.getByRole('button', { name: /Funzioni premium/ }))
+    await user.click(screen.getByRole('button', { name: /Licenza/ }))
   }
   const interruttoreDi = (etichetta) =>
     screen.getByText(etichetta).closest('.toggle-row').querySelector('input[type="checkbox"]')
@@ -369,7 +405,7 @@ describe('le funzioni premium (REQ-LIC-001)', () => {
     // Il registro è professionale: si dice cosa fa e com'è messa, niente
     // toni da venditore (DESIGN.md, guardrail 3).
     expect(screen.getAllByText(/Funzione premium: non inclusa\./).length).toBeGreaterThan(0)
-    expect(screen.getByText(/Funzione premium, inclusa in questa installazione\./)).toBeInTheDocument()
+    expect(screen.getAllByText(/Funzione premium, inclusa in questa installazione\./).length).toBeGreaterThan(0)
     expect(screen.queryByText(/sblocca|acquista|scopri/i)).toBeNull()
   })
 
@@ -406,11 +442,35 @@ describe('le funzioni premium (REQ-LIC-001)', () => {
     stop()
   })
 
+  // REQ-LIC-015: l'inventario richiede il magazzino. Incluso senza la sua
+  // base non lavora, e l'interruttore lo dice invece di accendersi per
+  // finta.
+  it('quella INCLUSA ma senza la sua base dice quale manca, e non si accende', async () => {
+    impostazioni.licenza = { moduli: { conta: true } }
+    const { subscribeToasts, dismissToast } = await import('../../src/lib/toast.js')
+    let visti = []
+    const stop = subscribeToasts((t) => {
+      visti = t
+    })
+    const user = userEvent.setup()
+    const { updateSettings } = await import('../../src/lib/api.js')
+    mostra()
+    await apriPremium(user)
+    expect(screen.getByText(/Richiede «Magazzino e fornitori»\./)).toBeInTheDocument()
+    updateSettings.mockClear()
+    await user.click(interruttoreDi('Inventario di magazzino'))
+    expect(visti.some((t) => /Si attiva quando è attivo anche quello/.test(t.message))).toBe(true)
+    expect(updateSettings).not.toHaveBeenCalled()
+    expect(interruttoreDi('Inventario di magazzino')).not.toBeChecked()
+    visti.forEach((t) => dismissToast(t.id))
+    stop()
+  })
+
   // L'INVENTARIO HA UNA SCELTA SUA, sotto il suo interruttore e solo quando
   // c'è: riaprire da sé alla chiusura, o lasciar fare a mano (Daniele,
   // 17/09/2026). Di suo riapre.
   it('l’inventario incluso porta con sé la scelta «riapre da sé», accesa di suo', async () => {
-    impostazioni.licenza = { moduli: { conta: true, fatture: false, scadenzario: true } }
+    impostazioni.licenza = { moduli: { magazzino: true, conta: true, fatture: false, scadenzario: true } }
     const user = userEvent.setup()
     const { updateSettings } = await import('../../src/lib/api.js')
     mostra()
@@ -455,7 +515,7 @@ describe('le funzioni premium (REQ-LIC-001)', () => {
     const interruttore = interruttoreDi('Fatture ai fornitori')
     expect(interruttore).not.toBeChecked()
     expect(interruttore).not.toHaveAttribute('aria-disabled')
-    expect(screen.getByText(/Funzione premium, inclusa in questa installazione\./)).toBeInTheDocument()
+    expect(screen.getAllByText(/Funzione premium, inclusa in questa installazione\./).length).toBeGreaterThan(0)
 
     updateSettings.mockClear()
     await user.click(interruttore)
@@ -465,14 +525,15 @@ describe('le funzioni premium (REQ-LIC-001)', () => {
   it('la licenza che include la conta le sblocca l’interruttore', async () => {
     // Il punto di innesto della Fase 3, visto dalla schermata: cambia il
     // DATO, e la riga passa da bloccata a normale senza toccare il codice.
-    impostazioni.licenza = { moduli: { conta: true, scadenzario: true } }
+    impostazioni.licenza = { moduli: { magazzino: true, conta: true, scadenzario: true } }
     const user = userEvent.setup()
     mostra()
     await apriPremium(user)
     const interruttore = interruttoreDi('Inventario di magazzino')
     expect(interruttore).toBeChecked()
     expect(interruttore).not.toHaveAttribute('aria-disabled')
-    expect(screen.getAllByText(/Funzione premium, inclusa in questa installazione\./)).toHaveLength(2)
+    // Due righe del magazzino più i moduli del prodotto (REQ-LIC-002), tutti inclusi.
+    expect(screen.getAllByText(/Funzione premium, inclusa in questa installazione\./).length).toBeGreaterThanOrEqual(2)
   })
 })
 
@@ -507,5 +568,158 @@ describe('giornata di lavoro', () => {
     mostra()
     await user.click(screen.getByRole('button', { name: /Cassa e giornata/ }))
     expect(screen.getByText(/serata verrebbe divisa su due giornate/)).toBeInTheDocument()
+  })
+})
+
+// IL TEMPO PER RISPONDERE ALLE MODIFICHE DEL BANCO (REQ-CLI-009): lo
+// decide il titolare, 10 minuti di partenza, fra 1 e 120.
+describe('modifiche da confermare', () => {
+  it('10 minuti di partenza; il titolare li cambia, entro i limiti', async () => {
+    const { updateSettings } = await import('../../src/lib/api.js')
+    updateSettings.mockClear()
+    const user = userEvent.setup()
+    mostra()
+    await user.click(screen.getByRole('button', { name: /Menù clienti/ }))
+    const campo = screen.getByLabelText('Tempo per rispondere (minuti)')
+    expect(campo).toHaveValue(10)
+    fireEvent.change(campo, { target: { value: '5' } })
+    fireEvent.blur(campo)
+    expect(updateSettings).toHaveBeenCalledWith({ attesa_cliente_minuti: 5 })
+    fireEvent.change(campo, { target: { value: '500' } })
+    fireEvent.blur(campo)
+    expect(updateSettings).toHaveBeenLastCalledWith({ attesa_cliente_minuti: 120 })
+  })
+})
+
+// IL RICARICO ANCHE COME DRINK COST (REQ-MENU-033). I due campi scrivono
+// lo stesso valore, il ricarico: scritto il 20% di drink cost, si salva ×5.
+describe('prezzo consigliato: ricarico e drink cost', () => {
+  it('×3 si legge anche come 33,3%; scritto il 20%, si salva il ricarico ×5', async () => {
+    const { updateSettings } = await import('../../src/lib/api.js')
+    updateSettings.mockClear()
+    impostazioni.price_markup = 3
+    const user = userEvent.setup()
+    mostra()
+    await user.click(screen.getByRole('button', { name: /Prezzi e supplementi/ }))
+    expect(screen.getByLabelText('Ricarico sul costo')).toHaveValue(3)
+    const drinkCost = screen.getByLabelText('Drink cost')
+    expect(drinkCost).toHaveValue(33.3)
+
+    fireEvent.change(drinkCost, { target: { value: '20' } })
+    fireEvent.blur(drinkCost)
+    expect(updateSettings).toHaveBeenCalledWith({ price_markup: 5 })
+  })
+})
+
+// IL PIANO FREE NELLE IMPOSTAZIONI (REQ-LIC-003, REQ-LIC-004). Sul profilo
+// leggero SumUp non c'è: i suoi interruttori lasciano il posto a una riga
+// che lo dice. Un modulo in prova dice fino a quando (licenza.prove). Senza
+// licenza — la Tana — gli interruttori di SumUp ci sono come sempre.
+describe('il piano Free nelle impostazioni', () => {
+  // Trovato nella revisione del 30/10/2026: un piano a pagamento senza il
+  // modulo leggeva «Nel piano Free…».
+  it('un piano a pagamento senza il modulo SumUp dice che il modulo non è nel piano, non «Free»', async () => {
+    const user = userEvent.setup()
+    impostazioni.licenza = { piano: 'base', moduli: { sumup: false } }
+    mostra()
+    await user.click(screen.getByRole('button', { name: /Cassa e giornata/ }))
+    expect(screen.queryByText('Pagamento online (SumUp)')).toBeNull()
+    expect(screen.getByText(/un modulo che il tuo piano non include/)).toBeInTheDocument()
+    expect(screen.queryByText(/Nel piano Free il conto si chiude/)).toBeNull()
+  })
+
+  it('niente interruttori di SumUp, e il perché', async () => {
+    const user = userEvent.setup()
+    impostazioni.licenza = { piano: 'free', moduli: {}, limiti: { marchio: true } }
+    mostra()
+    await user.click(screen.getByRole('button', { name: /Cassa e giornata/ }))
+    expect(screen.queryByText('Lettore SumUp Solo')).toBeNull()
+    expect(screen.queryByText('Pagamento online (SumUp)')).toBeNull()
+    expect(screen.getByText(/I pagamenti con SumUp sono dei piani a pagamento\./)).toBeInTheDocument()
+  })
+
+  it('senza licenza gli interruttori di SumUp ci sono', async () => {
+    const user = userEvent.setup()
+    mostra()
+    await user.click(screen.getByRole('button', { name: /Cassa e giornata/ }))
+    expect(screen.getByText('Lettore SumUp Solo')).toBeInTheDocument()
+    expect(screen.queryByText(/piani a pagamento/)).toBeNull()
+  })
+
+  // REQ-LIC-016: senza stampa nel piano, al posto della stampante la frase
+  // del piano, e spariscono le altre sezioni della carta.
+  it('senza stampa nel piano, al posto della stampante c’è la frase del piano', async () => {
+    const user = userEvent.setup()
+    impostazioni.licenza = { piano: 'free', moduli: {}, limiti: { stampa: false } }
+    mostra()
+    await user.click(screen.getByRole('button', { name: /Stampante/ }))
+    expect(screen.queryByText('PANNELLO STAMPANTE')).toBeNull()
+    expect(screen.queryByRole('heading', { name: /Campi dello scontrino/ })).toBeNull()
+    expect(screen.getByText('La stampa di comande e scontrini è dei piani a pagamento.')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Cassa e giornata/ }))
+    expect(screen.queryByRole('heading', { name: /^Stampa automatica$/ })).toBeNull()
+    expect(screen.queryByText('Un tasto per incassare senza stampare')).toBeNull()
+  })
+
+  // REQ-LIC-005: senza comande nel piano, al posto della preparazione la
+  // frase del piano; tempi di servizio e stampa automatica della comanda
+  // non ci sono. Lo scontrino automatico sì.
+  it('senza comande nel piano, al posto della preparazione c’è la frase del piano', async () => {
+    const user = userEvent.setup()
+    impostazioni.licenza = { piano: 'free', moduli: {}, limiti: { comande: false } }
+    mostra()
+    await user.click(screen.getByRole('button', { name: /Servizio$/ }))
+    expect(screen.queryByText('Segui la preparazione degli ordini')).toBeNull()
+    expect(screen.queryByRole('heading', { name: /Tempi di servizio/ })).toBeNull()
+    expect(screen.getByText(/^Nel piano Free la cassa è semplice/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Cassa e giornata/ }))
+    expect(screen.queryByText('Stampa la comanda all’arrivo dell’ordine')).toBeNull()
+    expect(screen.getByText('Stampa lo scontrino alla riscossione del conto')).toBeInTheDocument()
+  })
+
+  // REQ-AI-003 e REQ-LIC-017: il credito AI sta con la licenza, e nel Free
+  // senza AI non c'è.
+  it('il credito AI sta nel gruppo Licenza, e senza AI nel piano no', async () => {
+    const user = userEvent.setup()
+    mostra()
+    await user.click(screen.getByRole('button', { name: /Licenza/ }))
+    expect(screen.getByText('PANNELLO CREDITO AI')).toBeInTheDocument()
+    cleanup()
+    localStorage.setItem('drink:licenza', JSON.stringify({ piano: 'free', moduli: {}, limiti: { ai: false } }))
+    mostra()
+    await user.click(screen.getByRole('button', { name: /Licenza/ }))
+    expect(screen.queryByText('PANNELLO CREDITO AI')).toBeNull()
+  })
+
+  it('un modulo in prova dice fino a quando', async () => {
+    const user = userEvent.setup()
+    impostazioni.licenza = {
+      piano: 'free',
+      moduli: { magazzino: true },
+      prove: { magazzino: '2026-11-13T10:00:00.000Z' },
+    }
+    mostra()
+    await user.click(screen.getByRole('button', { name: /Licenza/ }))
+    expect(screen.getByText(/In prova fino al 13 novembre\./)).toBeInTheDocument()
+  })
+})
+
+// REQ-LIC-007. La licenza si legge nel suo gruppo, accanto alle funzioni
+// premium, e la legge il titolare: al banco non serve.
+describe('la licenza in Impostazioni (REQ-LIC-007)', () => {
+  it('il titolare la trova nel gruppo Licenza, sopra le funzioni premium', async () => {
+    const user = userEvent.setup()
+    mostra()
+    await user.click(screen.getByRole('button', { name: /Licenza/ }))
+    expect(screen.getByRole('heading', { name: 'Licenza' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Funzioni premium' })).toBeInTheDocument()
+  })
+
+  it('il bartender vede le funzioni premium, non la licenza', async () => {
+    const user = userEvent.setup()
+    mostra({ role: 'bartender' })
+    await user.click(screen.getByRole('button', { name: /Licenza/ }))
+    expect(screen.queryByRole('heading', { name: 'Licenza' })).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Funzioni premium' })).toBeInTheDocument()
   })
 })

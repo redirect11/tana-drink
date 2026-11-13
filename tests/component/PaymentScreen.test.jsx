@@ -9,8 +9,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, within, waitFor, cleanup, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
+import { CON_LICENZA } from '../helpers/licenza.js'
 
 vi.mock('../../src/lib/api.js', () => ({
+  // La cassa della serata è aperta: il pagamento lo chiede (REQ-CASSA-017).
+  subscribeOpenCashSession: (cb) => {
+    cb({ id: 'cassa-test', status: 'open' })
+    return () => {}
+  },
   registerPayment: vi.fn(() => Promise.resolve({ closed: false })),
   markOrderPaid: vi.fn(() => Promise.resolve()),
   setOrderDiscount: vi.fn(() => Promise.resolve()),
@@ -36,11 +42,17 @@ vi.mock('../../src/lib/api.js', () => ({
 vi.mock('../../src/lib/paymentsApi.js', () => ({
   readerCheckout: vi.fn(() => Promise.resolve({})),
 }))
-vi.mock('../../src/lib/printer.js', () => ({
+vi.mock('../../src/lib/printer.js', async (originale) => {
+  const vero = await originale()
+  const loadPrinterSettings = vi.fn(() => ({ businessName: 'La Tana' }))
+  return {
   printScontrino: vi.fn(() => Promise.resolve()),
   printScontrinoAcconto: vi.fn(() => Promise.resolve()),
   printFattura: vi.fn(() => Promise.resolve()),
-  loadPrinterSettings: vi.fn(() => ({ businessName: 'La Tana' })),
+  loadPrinterSettings,
+  // La regola «da dove» è quella vera, sulle impostazioni finte del
+  // terminale (REQ-STAMPA-021).
+  scontrinoAutomatico: (role) => vero.scontrinoAutomatico(role, loadPrinterSettings()),
   // L'ALIQUOTA È UNA SOLA, quella del locale (BUG-084): non sta più fra le
   // impostazioni della stampante. Qui il finto legge `sale_vat` come il vero.
   aliquotaScontrino: (impostazioni) => Number(impostazioni?.sale_vat ?? 10),
@@ -49,7 +61,8 @@ vi.mock('../../src/lib/printer.js', () => ({
   reclaimReceiptPrint: vi.fn(() => true),
   releaseReceiptPrint: vi.fn(),
   scontrinoGiaUscito: vi.fn(() => false),
-}))
+  }
+})
 vi.mock('../../src/lib/toast.js', () => ({ showToast: vi.fn(), toastError: vi.fn() }))
 
 import PaymentScreen from '../../src/components/PaymentScreen.jsx'
@@ -112,11 +125,13 @@ const conComandaDaServire = () =>
     ],
   })
 
-const noReader = { payments_reader_enabled: false, sumup_reader_id: null, sale_vat: 10 }
-const withReader = { payments_reader_enabled: true, sumup_reader_id: 'reader1' }
+const noReader = { ...CON_LICENZA, payments_reader_enabled: false, sumup_reader_id: null, sale_vat: 10 }
+const withReader = { ...CON_LICENZA, payments_reader_enabled: true, sumup_reader_id: 'reader1' }
 // LA FATTURA AL CLIENTE È UNA FUNZIONE PREMIUM (REQ-LIC-001) e per questa
 // installazione non è inclusa: il tasto c'è solo dove la licenza la dà.
 const conFatture = { ...noReader, licenza: { moduli: { fatture: true } } }
+// E senza: la Tana le ha (piano Completo), un locale con un piano più piccolo no.
+const senzaFatture = { ...noReader, licenza: { moduli: { ...noReader.licenza.moduli, fatture: false } } }
 
 function mount(order, settings = noReader) {
   return render(
@@ -343,6 +358,19 @@ describe('metodi di pagamento', () => {
     )
   })
 
+  // REQ-LIC-005: nel piano senza comande il servizio è spento anche con
+  // l'interruttore acceso. Si incassa e si serve tutto insieme — è lì che le
+  // comande risultano servite e il magazzino si scala — e il tasto in più
+  // non c'è.
+  it('piano senza comande: incassare serve già tutto, come col servizio spento', async () => {
+    const user = userEvent.setup()
+    const free = { ...noReader, workflow_enabled: true, riscuoti_e_servi: true, licenza: { piano: 'free', moduli: {}, limiti: { comande: false } } }
+    mount(conComandaDaServire(), free)
+    expect(screen.queryByRole('button', { name: /Riscuoti e servi/ })).toBeNull()
+    await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
+    expect(registerPayment).toHaveBeenCalledWith('ord1', expect.objectContaining({ autoServe: true }))
+  })
+
   it('senza gli stati del servizio il tasto in più non serve', () => {
     // Lì incassare serve già tutto: due tasti direbbero la stessa cosa.
     mount(conComandaDaServire(), { ...noReader, workflow_enabled: false, riscuoti_e_servi: true })
@@ -372,7 +400,7 @@ describe('metodi di pagamento', () => {
     mount(baseOrder())
     await user.click(screen.getByRole('button', { name: /Sconto/ }))
     const modal = within(screen.getByRole('dialog', { name: 'Sconto' }))
-    expect(modal.getByRole('button', { name: '🎟' })).toBeDisabled()
+    expect(modal.getByRole('button', { name: 'Buono' })).toBeDisabled()
     // niente più metodo di pagamento "Buono VIP"
     expect(screen.queryByRole('button', { name: /Buono VIP/ })).not.toBeInTheDocument()
   })
@@ -383,7 +411,7 @@ describe('metodi di pagamento', () => {
     mount(baseOrder())
     await user.click(screen.getByRole('button', { name: /Sconto/ }))
     const modal = within(screen.getByRole('dialog', { name: 'Sconto' }))
-    await user.click(modal.getByRole('button', { name: '🎟' }))
+    await user.click(modal.getByRole('button', { name: 'Buono' }))
     await user.selectOptions(modal.getByLabelText(/Buono di/), 'v1')
     // saldo 10 < dovuto 22 → si applicano 10 di sconto attingendo al buono
     expect(modal.getByText(/Dal buono: −10,00 €/)).toBeInTheDocument()
@@ -1705,7 +1733,7 @@ describe('le tre colonne del pagamento si trascinano', () => {
 // l'UNICA porta della modale, quindi toglierlo chiude tutto il flusso.
 describe('il tasto «Invia fattura» è una funzione premium', () => {
   it('col modulo non incluso il tasto non c’è, e gli altri due restano', () => {
-    mount(baseOrder())
+    mount(baseOrder(), senzaFatture)
     expect(screen.queryByRole('button', { name: /Invia fattura/ })).toBeNull()
     // Gli altri due della riga non si toccano.
     expect(screen.getByRole('button', { name: /Codice Lotteria/ })).toBeInTheDocument()
@@ -1725,7 +1753,7 @@ describe('il tasto «Invia fattura» è una funzione premium', () => {
     // sull'ordine, e torna a vedersi appena il modulo si riaccende.
     const user = userEvent.setup()
     const conto = { ...baseOrder(), invoice_number: 7 }
-    const spento = mount(conto)
+    const spento = mount(conto, senzaFatture)
     expect(screen.queryByRole('button', { name: /Invia fattura/ })).toBeNull()
     spento.unmount()
 
@@ -1762,5 +1790,94 @@ describe('chiudere impagato', () => {
   it('un conto senza niente da incassare non ha il tasto', () => {
     mount(baseOrder({ payments: [{ amount: 22, method: 'banco' }] }))
     expect(screen.queryByRole('button', { name: /Impagato/ })).toBeNull()
+  })
+})
+
+// QUANTO DÀ IL CLIENTE E QUANTO RESTO DARE (REQ-PAG-015). L'utente,
+// 26/10/2026: «opzionale attivabile nelle impostazioni, la possibilità di
+// inserire quanto il cliente dà e deve uscire quanto resto dare». Il resto
+// si calcola su quello che si incassa adesso, e non cambia l'importo.
+describe('il resto in contanti', () => {
+  const conResto = { ...noReader, resto_contanti: true }
+
+  it('spento di partenza: il riquadro non c’è', () => {
+    mount(baseOrder())
+    expect(screen.queryByRole('group', { name: 'Contanti ricevuti' })).toBeNull()
+  })
+
+  it('acceso, coi contanti propone i tagli e dice il resto', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder(), conResto)
+    const riquadro = within(screen.getByRole('group', { name: 'Contanti ricevuti' }))
+    // Il conto è 22 €: si propongono 25, 30, 50 e 100.
+    expect(riquadro.getAllByRole('button').map((b) => b.textContent.replace(/\s/g, ' '))).toEqual([
+      '25,00 €',
+      '30,00 €',
+      '50,00 €',
+      '100,00 €',
+    ])
+    await user.click(riquadro.getByRole('button', { name: /50,00/ }))
+    expect(riquadro.getByText(/Resto da dare/)).toHaveTextContent('28,00')
+    // L'importo che si incassa resta il conto.
+    expect(payAmount()).toHaveTextContent('22,00')
+  })
+
+  it('incassando solo alcune righe, il resto è su quelle e non diventa un acconto', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder(), conResto)
+    await user.click(screen.getAllByRole('button', { name: 'Togli Mojito dal pagamento' })[0])
+    await user.click(screen.getByRole('button', { name: 'Togli Gin Tonic dal pagamento' }))
+    expect(payAmount()).toHaveTextContent('7,00')
+    const riquadro = within(screen.getByRole('group', { name: 'Contanti ricevuti' }))
+    await user.type(riquadro.getByRole('textbox', { name: 'Altro importo ricevuto' }), '20')
+    expect(riquadro.getByText(/Resto da dare/)).toHaveTextContent('13,00')
+    await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
+    expect(registerPayment).toHaveBeenCalledWith('ord1', expect.objectContaining({ amount: 7, method: 'banco' }))
+  })
+
+  it('se i contanti non bastano lo dice', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder(), conResto)
+    const riquadro = within(screen.getByRole('group', { name: 'Contanti ricevuti' }))
+    await user.type(riquadro.getByRole('textbox', { name: 'Altro importo ricevuto' }), '20')
+    expect(riquadro.getByText(/Mancano/)).toHaveTextContent('2,00')
+  })
+
+  it('con la carta il riquadro non c’è', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder(), conResto)
+    await user.click(screen.getByRole('button', { name: /Carta di Credito/ }))
+    expect(screen.queryByRole('group', { name: 'Contanti ricevuti' })).toBeNull()
+  })
+})
+
+// IL PIANO FREE ALLA CASSA (REQ-LIC-003, REQ-LIC-004). Niente sconti, omaggi
+// e maggiorazioni (`limiti.sconti: false`), e niente lettore SumUp: sul
+// profilo leggero non ci sono le Functions che parlano coi suoi server, e
+// il conto si chiude a mano, in contanti o come carta su un POS esterno.
+// Senza limiti nella licenza la cassa è quella di sempre.
+describe('la cassa del piano Free', () => {
+  const FREE = {
+    ...withReader,
+    licenza: { piano: 'free', moduli: {}, limiti: { sconti: false, conti_aperti_max: 5 } },
+  }
+
+  it('non ha il tasto dello sconto né SumUp, e si chiude in contanti o con la carta', () => {
+    mount(baseOrder(), FREE)
+    expect(screen.queryByRole('button', { name: /Sconto/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /SumUp/ })).toBeNull()
+    expect(screen.getByRole('button', { name: /Contante/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Carta di Credito/ })).toBeInTheDocument()
+  })
+
+  it('uno sconto già sul conto resta visibile, per poterlo togliere', () => {
+    mount(baseOrder({ discount: { type: 'percent', value: 10 }, discount_amount: 2.2 }), FREE)
+    expect(screen.getByRole('button', { name: /Sconto/ })).toBeInTheDocument()
+  })
+
+  it('senza limiti nella licenza ci sono lo sconto e SumUp, come sempre', () => {
+    mount(baseOrder(), withReader)
+    expect(screen.getByRole('button', { name: /Sconto/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /SumUp/ })).toBeInTheDocument()
   })
 })

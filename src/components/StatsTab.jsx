@@ -4,6 +4,7 @@ import {
   fetchVenditeStoriche,
   fetchSerateStoriche,
   fetchDrinks,
+  fetchInventoryItems,
   fetchCashSessions,
   subscribeSettings,
   DEFAULT_SETTINGS,
@@ -18,6 +19,7 @@ import {
   revenueByDayInRange,
   topProducts,
   revenueByCategory,
+  utiliPerCategoria,
   hourRangeReport,
   ingredientUsage,
   prepTimeStats,
@@ -34,6 +36,7 @@ import CalendarioServizio from './CalendarioServizio.jsx'
 import CampoDataOra from './CampoDataOra.jsx'
 import { fetchGiorniDiServizio } from '../lib/giorniDiServizio.js'
 import { nelPeriodo } from '../lib/magazzinoPeriodo.js'
+import Icona from './Icona.jsx'
 
 const fmtMin = (m) => (m == null ? '—' : `${Math.round(m * 10) / 10} min`)
 // Prezzo compatto per le etichette dei grafici (niente centesimi).
@@ -109,8 +112,8 @@ const oraPerEsteso = (locale) => {
 // Incassato, ed è per quello che le sottosezioni erano sparite — una sola
 // voce spuntata da sé nel menu è una scelta che non è una scelta.)
 const SEZIONI = [
-  { id: 'serate', icona: '📒', label: 'Per serata' },
-  { id: 'periodo', icona: '📈', label: 'Per periodo' },
+  { id: 'serate', icona: 'registro', label: 'Per serata' },
+  { id: 'periodo', icona: 'andamento', label: 'Per periodo' },
 ]
 
 export default function StatsTab() {
@@ -130,6 +133,9 @@ function DailyStats({ sezione = 'serate' }) {
   const [loaded, setLoaded] = useState(false)
   const [orders, setOrders] = useState([])
   const [drinks, setDrinks] = useState([])
+  // I prodotti di magazzino: il costo del venduto per l'utile per categoria
+  // si ricava dalle ricette valorizzate su questi.
+  const [prodotti, setProdotti] = useState([])
   const [error, setError] = useState(null)
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   useEffect(() => subscribeSettings(setSettings, () => {}), [])
@@ -174,20 +180,31 @@ function DailyStats({ sezione = 'serate' }) {
             alle: allOra(shiftDay(p.al, 1), cutoff),
           }
     )
-  // Scritta un'ora, le giornate che la contengono restano al passo: servono
-  // a caricare abbastanza dati e al magazzino del periodo.
-  const scriviOra = (campo, valore) =>
-    valore &&
-    setPeriodo((p) => {
-      const nuovo = { ...p, [campo]: valore }
-      const da = istanteDaOraDiRoma(nuovo.dalle)
-      const a = istanteDaOraDiRoma(nuovo.alle)
-      return {
-        ...nuovo,
-        dal: da ? businessDayKey(da, cutoff) : p.dal,
-        al: a ? businessDayKey(a, cutoff) : p.al,
-      }
-    })
+  // LE DUE ORE SI SCRIVONO IN UNA BOZZA E SI APPLICANO CON UN TASTO. Flavio,
+  // vocale del 22/10/2026: «se io metto la data di inizio lui mi inizia a
+  // caricare la data di inizio fino ad oggi … con un tasto ok che mi avvia
+  // poi da lì il calcolo del periodo sarebbe meglio, così ragiona una sola
+  // volta quando lo dico io». Prima ogni tocco alle caselle ricalcolava, e
+  // scrivere l'inizio voleva dire aspettare un calcolo che non serviva.
+  // `bozza` è null quando coincide con quello che si sta guardando.
+  const [bozza, setBozza] = useState(null)
+  const scritto = bozza || { dalle: periodo.dalle, alle: periodo.alle }
+  const scriviOra = (campo, valore) => valore && setBozza({ ...scritto, [campo]: valore })
+  // La bozza è buona quando la fine viene dopo l'inizio.
+  const bozzaValida = useMemo(() => {
+    const da = istanteDaOraDiRoma(scritto.dalle)
+    const a = istanteDaOraDiRoma(scritto.alle)
+    return Boolean(da && a && da < a)
+  }, [scritto.dalle, scritto.alle])
+  // Applicata, le giornate che contengono le due ore restano al passo:
+  // servono a caricare abbastanza dati e al magazzino del periodo.
+  const applicaBozza = () => {
+    if (!bozza || !bozzaValida) return
+    const da = istanteDaOraDiRoma(bozza.dalle)
+    const a = istanteDaOraDiRoma(bozza.alle)
+    setPeriodo((p) => ({ ...p, ...bozza, dal: businessDayKey(da, cutoff), al: businessDayKey(a, cutoff) }))
+    setBozza(null)
+  }
   // I giorni di servizio per i calendari del periodo (REQ-STAT-007), dalla
   // lib condivisa: letti una volta, tenuti in mano.
   const [giorniDiServizio, setGiorniDiServizio] = useState(new Set())
@@ -324,9 +341,11 @@ function DailyStats({ sezione = 'serate' }) {
       fetchOrdersBetween(from, oggi, cutoff),
       fetchDrinks({}).catch(() => []),
       fetchVenditeStoriche(from, oggi),
+      fetchInventoryItems().catch(() => []),
     ])
-      .then(([o, d, storiche]) => {
+      .then(([o, d, storiche, inv]) => {
         if (!active) return
+        setProdotti(inv)
         setOrders(unisciVendite(o, storiche, { drinks: d, cutoffHour: cutoff, dal: from, al: oggi }))
         setDrinks(d)
         setLoaded(true)
@@ -375,6 +394,7 @@ function DailyStats({ sezione = 'serate' }) {
       ord = orders.filter((o) => selSet.has(businessDayKey(o.created_at, cutoff)))
     }
     const drinksById = Object.fromEntries(drinks.map((d) => [d.id, d]))
+    const itemsById = Object.fromEntries(prodotti.map((p) => [p.id, p]))
     return {
       sel,
       kpi: kpiSummary(ord, sel),
@@ -399,6 +419,9 @@ function DailyStats({ sezione = 'serate' }) {
       // taglia via.
       classifica: aggregateProducts(ord),
       byCategory: revenueByCategory(ord, drinksById).slice(0, 10),
+      // Tutte le categorie, non le prime dieci: è una classifica, e chi sta
+      // in fondo è metà della risposta.
+      utiliCategorie: utiliPerCategoria(ord, drinksById, itemsById),
       // Cosa si è venduto DAVVERO nella fascia scelta (totale, prodotti,
       // categorie), sugli STESSI conti del periodo: qui si stringe l'ora, non
       // le date — quelle le ha già dette chi ha scelto il periodo.
@@ -408,7 +431,7 @@ function DailyStats({ sezione = 'serate' }) {
       split: serviceModeSplit(ord),
       extras: extrasBreakdown(ord),
     }
-  }, [loaded, giorniAttivi, orders, drinks, periodo, personalizzato, istanti, intervallo, hourRange, dayRange, cutoff, serata, sessions, contiTiller, diTiller])
+  }, [loaded, giorniAttivi, orders, drinks, prodotti, periodo, personalizzato, istanti, intervallo, hourRange, dayRange, cutoff, serata, sessions, contiTiller, diTiller])
 
   if (error) return <div className="banner">Errore: {error}</div>
   if (!loaded) return <div className="empty">Carico le statistiche…</div>
@@ -468,7 +491,10 @@ function DailyStats({ sezione = 'serate' }) {
           <button
             key={v}
             className={`chip${periodo.preset === v ? ' active' : ''}`}
-            onClick={() => setPeriodo(periodoDaPreset(v, businessDayKey(new Date(), cutoff)))}
+            onClick={() => {
+              setBozza(null)
+              setPeriodo(periodoDaPreset(v, businessDayKey(new Date(), cutoff)))
+            }}
           >
             {v} giorni
           </button>
@@ -486,8 +512,8 @@ function DailyStats({ sezione = 'serate' }) {
             <CampoDataOra
               id="periodo-dalle"
               label="Inizio"
-              valore={periodo.dalle}
-              max={periodo.alle}
+              valore={scritto.dalle}
+              max={scritto.alle}
               oggi={businessDayKey(new Date(), cutoff)}
               servizio={giorniDiServizio}
               onChange={(v) => scriviOra('dalle', v)}
@@ -495,21 +521,26 @@ function DailyStats({ sezione = 'serate' }) {
             <CampoDataOra
               id="periodo-alle"
               label="Fine"
-              valore={periodo.alle}
-              min={periodo.dalle}
+              valore={scritto.alle}
+              min={scritto.dalle}
               oggi={businessDayKey(new Date(), cutoff)}
               servizio={giorniDiServizio}
               onChange={(v) => scriviOra('alle', v)}
             />
+            <button type="button" className="btn small" style={{ alignSelf: 'flex-end' }} onClick={applicaBozza} disabled={!bozza || !bozzaValida}>
+              Applica
+            </button>
           </div>
           <p className="muted small" style={{ margin: '0 0 12px' }}>
-            {istanti ? (
+            {!bozzaValida ? (
+              'L’ora di fine deve venire dopo quella di inizio.'
+            ) : bozza ? (
+              'Tocca «Applica» per calcolare il periodo scritto.'
+            ) : (
               <>
                 Dalle {oraPerEsteso(periodo.dalle)} alle {oraPerEsteso(periodo.alle)}: {view.sel.length}{' '}
                 {view.sel.length === 1 ? 'giornata' : 'giornate'} con ordini.
               </>
-            ) : (
-              'L’ora di fine deve venire dopo quella di inizio.'
             )}
           </p>
         </>
@@ -639,7 +670,7 @@ function ClassificaVenduto({ righe }) {
     <div className="card">
       <div className="row between" style={{ alignItems: 'center' }}>
         <h3 className="cat-header" style={{ margin: 0 }}>
-          🏆 Classifica del venduto
+          <Icona nome="classifica" gruppo="tasti" /> Classifica del venduto
         </h3>
         <button type="button" className="btn ghost small" onClick={() => setPerIncasso((v) => !v)}>
           {perIncasso ? 'Ordina per pezzi' : 'Ordina per incasso'}
@@ -667,6 +698,77 @@ function ClassificaVenduto({ righe }) {
   )
 }
 
+// L'UTILE PER CATEGORIA, IN CLASSIFICA (REQ-STAT-008): incassato meno
+// costo del venduto, dalle ricette. Una tabella e non un grafico: i tre
+// numeri si leggono insieme, e la differenza fra incassato e utile è
+// proprio quello che si vuole vedere.
+function UtiliPerCategoria({ righe }) {
+  if (righe.length === 0) return null
+  const tot = righe.reduce(
+    (s, r) => ({ incassato: s.incassato + r.incassato, costo: s.costo + r.costo, utile: s.utile + r.utile }),
+    { incassato: 0, costo: 0, utile: 0 }
+  )
+  const parziali = righe.some((r) => r.parziale)
+  return (
+    <div className="card">
+      <h3 className="cat-header" style={{ margin: 0 }}>
+        <Icona nome="contanti" gruppo="tasti" /> Utile per categoria
+      </h3>
+      <p className="muted small" style={{ margin: '8px 0 6px' }}>
+        Incassato meno il costo del venduto, ricavato dalle ricette delle voci di menù. Importi IVA compresa.
+      </p>
+      <div className="table-scroll">
+        <table className="margin-tab utili-tab">
+          <thead>
+            <tr>
+              <th className="rowhead">Categoria</th>
+              <th>Incassato</th>
+              <th>Costo del venduto</th>
+              <th>Utile</th>
+            </tr>
+          </thead>
+          <tbody>
+            {righe.map((r, i) => (
+              <tr key={r.name}>
+                <th scope="row" className="rowhead">
+                  <span className="muted small" style={{ marginRight: 6 }}>
+                    {i + 1}
+                  </span>
+                  {r.name}
+                  {r.parziale && <span className="muted small"> *</span>}
+                </th>
+                <td>{formatPrice(r.incassato)}</td>
+                <td>{formatPrice(r.costo)}</td>
+                <td className={r.utile < 0 ? 'neg' : ''}>
+                  <strong>{formatPrice(r.utile)}</strong>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr>
+              <th scope="row" className="rowhead">
+                Totale
+              </th>
+              <td>{formatPrice(tot.incassato)}</td>
+              <td>{formatPrice(tot.costo)}</td>
+              <td className={tot.utile < 0 ? 'neg' : ''}>
+                <strong>{formatPrice(tot.utile)}</strong>
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      {parziali && (
+        <p className="muted small" style={{ margin: '6px 0 0' }}>
+          * Costo incompleto: alcune voci non hanno ricetta, o un ingrediente non ha costo. L’utile di quella
+          categoria è più alto del vero.
+        </p>
+      )}
+    </div>
+  )
+}
+
 // ── IL CORPO DELLE STATISTICHE ───────────────────────────────────────
 // Gli stessi grafici per tutte e due le sottosezioni: cambia solo QUALI
 // ordini ci finiscono dentro (una serata, o le ultime N giornate), e quello
@@ -677,7 +779,7 @@ function ClassificaVenduto({ righe }) {
 // inutile»): i due grafici per giornata e il KPI «incasso / giornata», che
 // con una giornata sola ripetono l'incasso.
 function CorpoStatistiche({ view, comandi, intervallo, cutoff, perGiornata = true }) {
-  const { kpi, byHour, byDay, byDayRange, top, classifica, byCategory, ingredients, prep, split, extras, fascia } =
+  const { kpi, byHour, byDay, byDayRange, top, classifica, byCategory, utiliCategorie, ingredients, prep, split, extras, fascia } =
     view
   const { hourRange, setHourRange, dayRange, setDayRange } = comandi
   return (
@@ -695,7 +797,7 @@ function CorpoStatistiche({ view, comandi, intervallo, cutoff, perGiornata = tru
       </div>
 
       {perGiornata && (
-        <ChartCard title="📈 Incasso per giornata">
+        <ChartCard icona="andamento" title="Incasso per giornata">
           <VBars
             data={byDay.map((s) => ({
               label: `${s.weekday} ${s.label}`,
@@ -707,7 +809,7 @@ function CorpoStatistiche({ view, comandi, intervallo, cutoff, perGiornata = tru
         </ChartCard>
       )}
 
-      <ChartCard title="🕙 Incasso per fascia oraria">
+      <ChartCard icona="orario" title="Incasso per fascia oraria">
         <TimeRange value={hourRange} onChange={setHourRange} />
         <VBars
           data={byHour.buckets.map((b) => ({
@@ -723,7 +825,7 @@ function CorpoStatistiche({ view, comandi, intervallo, cutoff, perGiornata = tru
           i prodotti e le categorie. Risponde a "fra le 22 e l'una cosa vendo?" */}
       {/* Le date non ci sono più: fa fede il periodo scelto in cima
           (19/09/2026). Qui si stringe soltanto l'ora. */}
-      <ChartCard title="🧾 Venduto nella fascia oraria">
+      <ChartCard icona="coda" title="Venduto nella fascia oraria">
         <TimeRange value={hourRange} onChange={setHourRange} />
         <div className="row between" style={{ alignItems: 'baseline', margin: '8px 0' }}>
           <span className="muted small">
@@ -763,7 +865,7 @@ function CorpoStatistiche({ view, comandi, intervallo, cutoff, perGiornata = tru
       </ChartCard>
 
       {perGiornata && (
-        <ChartCard title="📅 Incasso per giornata nella fascia scelta">
+        <ChartCard icona="calendario" title="Incasso per giornata nella fascia scelta">
           <TimeRange value={dayRange} onChange={setDayRange} />
           <VBars
             data={byDayRange.map((s) => ({
@@ -776,16 +878,16 @@ function CorpoStatistiche({ view, comandi, intervallo, cutoff, perGiornata = tru
         </ChartCard>
       )}
 
-      <ChartCard title="💰 Top prodotti per incasso">
+      <ChartCard icona="incasso" title="Top prodotti per incasso">
         <HBars data={top.byRevenue.map((p) => ({ label: p.name, value: p.revenue, text: formatPrice(p.revenue) }))} />
       </ChartCard>
 
-      <ChartCard title="🔥 Prodotti più richiesti">
+      <ChartCard icona="richiesti" title="Prodotti più richiesti">
         <HBars data={top.byQty.map((p) => ({ label: p.name, value: p.qty, text: `${p.qty} pz` }))} />
       </ChartCard>
 
       {ingredients.length > 0 && (
-        <ChartCard title="🧪 Ingredienti più usati">
+        <ChartCard icona="prova" title="Ingredienti più usati">
           <HBars
             data={ingredients.map((u) => ({
               label: u.name,
@@ -797,10 +899,12 @@ function CorpoStatistiche({ view, comandi, intervallo, cutoff, perGiornata = tru
       )}
 
       {byCategory.length > 0 && (
-        <ChartCard title="🗂 Incasso per categoria">
+        <ChartCard icona="raggruppa" title="Incasso per categoria">
           <HBars data={byCategory.map((c) => ({ label: c.name, value: c.revenue, text: formatPrice(c.revenue) }))} />
         </ChartCard>
       )}
+
+      <UtiliPerCategoria righe={utiliCategorie || []} />
 
       {/* ── I DUE ELENCHI DEL PERIODO (REQ-STAT-002) ───────────────────
           Flavio, 17/09/2026: «tutti questi dati mi servirebbero in formato di
@@ -832,11 +936,11 @@ function CorpoStatistiche({ view, comandi, intervallo, cutoff, perGiornata = tru
             <Row k="Sconti concessi (già dedotti)" v={`−${formatPrice(extras.sconti)}`} />
           )}
           <Row
-            k="🍸 Al tavolo"
+            k={<><Icona nome="menu" gruppo="tasti" /> Al tavolo</>}
             v={`${split.tavolo.ordini} ordini · ${formatPrice(split.tavolo.incasso)}`}
           />
           <Row
-            k="🚶 Al banco"
+            k={<><Icona nome="a-piedi" gruppo="tasti" /> Al banco</>}
             v={`${split.banco.ordini} ordini · ${formatPrice(split.banco.incasso)}`}
           />
           {prep.prepMax && (
@@ -884,10 +988,13 @@ function Kpi({ label, value, sub }) {
   )
 }
 
-function ChartCard({ title, children }) {
+function ChartCard({ icona, title, children }) {
   return (
     <div className="card">
-      <h3 className="cat-header" style={{ marginTop: 0 }}>{title}</h3>
+      <h3 className="cat-header" style={{ marginTop: 0 }}>
+        {icona && <><Icona nome={icona} gruppo="tasti" />{' '}</>}
+        {title}
+      </h3>
       {children}
     </div>
   )

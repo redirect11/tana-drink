@@ -5133,3 +5133,970 @@ bugs:
       - tests/unit/css.test.js
       - tests/component/PaymentScreen.test.jsx
       - tests/component/CustomDrinkForm.test.jsx
+  - id: BUG-117
+    title: "«Movimenti» di un prodotto non si apriva o si apriva in ritardo: l'SDK scorreva tutta la cache dei movimenti"
+    area: "src/lib/api.js (fetchMovimentiProdotto, toIso), src/lib/firebaseClient.js (firestoreLite), src/components/MovimentiProdotto.jsx"
+    severity: media
+    priority: P2
+    description: >
+      L'utente, 23/10/2026: «la funzione MOVIMENTI di un qualsiasi prodotto
+      non si apre o si apre con ritardo». Non era la query (l'indice
+      composto item_id + created_at c'e', pronto, in test e in produzione,
+      e lato server risponde in meno di un secondo) ne' il numero di
+      movimenti del prodotto: succedeva anche coi prodotti con tre righe.
+      Era la cache su disco del Firestore dell'app: a ogni domanda nuova,
+      prima di andare in rete, l'SDK scorre in IndexedDB TUTTI i documenti
+      della collezione che ha in cache, e inventario, controllo di
+      magazzino e bilancio ne leggono decine di migliaia. Misurato in Chrome
+      headless contro l'emulatore con 25.000 movimenti: a cache vuota
+      0,3 s, a cache piena 1,2-1,4 s, con la CPU rallentata quattro volte
+      1,7-2,9 s, per qualunque prodotto; sul tablet, con disco piu' lento e
+      piu' movimenti, secondi in piu'. Ora la finestra legge col client
+      diretto di Firestore (`firebase/firestore/lite`, caricato la prima
+      volta che serve): stessa app, stesso accesso, niente cache — nelle
+      stesse prove 0,2-0,3 s. Senza rete si ripiega sulla lettura di prima,
+      che risponde con la cache. `toIso` riconosce il Timestamp dal metodo:
+      il client diretto ha una sua classe, e col controllo sulla classe le
+      date restavano oggetti e i movimenti cadevano fuori periodo. Le righe
+      usano un formatter della data solo, invece di uno per riga. Le altre
+      letture grosse dei movimenti (controllo di magazzino, magazzino nel
+      periodo, bilancio) hanno lo stesso costo e restano da valutare.
+    status: fixed
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, magazzino, prestazioni]
+    test_cases:
+      - tests/unit/movimentiDalServer.test.js
+  - id: BUG-118
+    title: "Le maniglie del conto andavano a scatti, e sul telefono quella del riepilogo bloccava tutto"
+    area: "src/lib/useResizable.js, src/components/OrderPosDetail.jsx, src/index.css"
+    severity: alta
+    priority: P1
+    description: >
+      L'utente, 24/10/2026, con una foto del telefono in produzione: «le
+      maniglie nella schermata dell'ordine sono scattose e nella
+      visualizzazione smartphone la maniglia del riepilogo dell'ordine
+      blocca tutto». Tre cause nello stesso attrezzo (useResizable):
+      (1) ogni movimento del dito diventava uno stato di React, e ogni
+      stato ridisegnava l'intera schermata del conto, griglia dei prodotti
+      compresa, con una scrittura su localStorage a ogni pixel: sul
+      telefono il gesto fermava tutto; (2) il pannello del conto ha una
+      transizione sulla larghezza, quindi mentre si trascinava la colonna
+      si animava DIETRO al dito e arrivava sempre in ritardo; (3) col dito
+      la maniglia si arma tenendo premuto 400 ms, che e' anche il momento
+      in cui Chrome su Android apre il menu della pressione lunga o
+      comincia a selezionare il testo vicino: il gesto si interrompeva e la
+      pagina poteva restare in selezione.
+      Ora, con `dalVivo`, mentre si trascina la misura va dritta nella
+      variabile CSS dell'elemento (--pos-comanda-w, --pos-cats-w e le loro
+      scale, --foot-scale, --pos-comanda-h) una volta per fotogramma, e lo
+      stato (con la memoria per dispositivo) si aggiorna una volta sola,
+      quando si lascia. Con una maniglia presa `.posd-body` ha la classe
+      `trascinando`, che spegne le transizioni. Le maniglie non si
+      selezionano (-webkit-touch-callout, user-select) e il menu della
+      pressione lunga si annulla; se il browser si riprende il dito la
+      presa finisce lì. Verificato coi test, non ancora su un telefono.
+    status: fixed
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, pos, ui]
+    test_cases:
+      - tests/unit/useResizable.test.js
+      - tests/component/OrderPosDetail.test.jsx
+      - tests/unit/css.test.js
+  - id: BUG-119
+    title: "Col tema chiaro, nella card di una voce fuori menu aperta, i tasti non si leggevano"
+    area: "src/index.css (.menu-card.off .grid-card-actions)"
+    severity: media
+    priority: P2
+    description: >
+      L'utente, 29/10/2026, con una foto della gestione del menu' sul tema
+      chiaro: «con i temi chiari e le cose scure non si leggono i testi».
+      Le voci fuori menu hanno un fondo grigio scuro fisso (chiesto da
+      Flavio il 03/09/2026 perche' si vedessero da lontano), e il testo
+      della card era stato fissato bianco; ma quello che si apre con
+      «Azioni» — la ricetta in breve e i tasti Modifica, Duplica, Rendi
+      disponibile, Elimina — prendeva ancora l'inchiostro del tema, che sui
+      temi chiari e' scuro: scuro su scuro. Ora anche quella parte ha
+      l'inchiostro chiaro del grigio, con qualunque tema. Gli altri fondi
+      scuri fissi del foglio sono i veli dietro le finestre, senza testo.
+    status: fixed
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, ui, menu]
+    test_cases:
+      - tests/unit/css.test.js
+  - id: BUG-120
+    title: "Nel menu' del cliente il nome nel carosello usciva dalla card, e la fila delle categorie aveva un fondo suo"
+    area: "src/index.css (.carosello-testo strong, .speciali-carosello-testa, .cat-nav), src/pages/MenuPage.jsx, src/lib/useIncollata.js"
+    severity: bassa
+    priority: P2
+    description: >
+      L'utente, 29/10/2026, con due foto del menu' sul telefono (1.9.7-beta,
+      sul test): «il titolo esce fuori la card, i testi sopra sono attaccati
+      al carosello. Lo sfondo della lista categorie ha un colore diverso».
+      Tre difetti. Il nome di uno special nella meta' destra della slide
+      («BASILICONIGLIO», in maiuscolo) era piu' largo dello spazio e veniva
+      tagliato dal bordo: ora cresce con lo schermo e, se non basta, va a
+      capo. «Special» e «Vedi tutti» erano a filo della slide: ora ne sono
+      staccati. La fila delle categorie aveva un fondo pieno, piu' stretto
+      dello schermo, che sul fondo sfumato della pagina faceva una fascia
+      di un altro colore: ora, ferma nella pagina, non ha un fondo suo;
+      quando si appiccica sotto la barra in alto prende il fondo della
+      barra, a tutta larghezza, perche' li' le card le scorrono sotto. Per
+      sapere quando e' appiccicata c'e' `useIncollata`. Nella prova e'
+      venuto fuori un quarto difetto della stessa famiglia: nell'elenco
+      normale un nome lungo di una parola sola («BOULEVARDIER») spingeva
+      «Aggiungi» oltre il bordo della card. Ora la colonna del testo si
+      stringe e il tasto no.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, ui, menu]
+    test_cases:
+      - tests/unit/useIncollata.test.jsx
+  - id: BUG-121
+    title: "Nel menu' del cliente gli ingredienti erano gli articoli di magazzino: ghiaccio, manodopera, formati"
+    area: "src/pages/MenuPage.jsx, src/lib/ingredientiCarta.js"
+    severity: media
+    priority: P2
+    description: >
+      Venuto fuori il 29/10/2026 lavorando a REQ-MENU-019, leggendo le
+      ricette del test: la riga degli ingredienti sotto un drink stampava le
+      righe della ricetta cosi' com'erano, cioe' articoli di magazzino. Su
+      108 voci si leggeva, per esempio, «Jim Beam · Limone Succo Homemade 1kg
+      - 50cl · Zucchero Sciroppo Homemade 1kg - 150cl · ... · Ghiaccio
+      Hoshizaki · Tempo di Lavorazione». La manodopera doveva restare fuori
+      (REQ-MAG-012), ma il filtro guardava solo l'unita' U, e nelle ricette
+      vecchie e' ancora in grammi. Ora restano fuori ghiaccio e manodopera
+      (anche per nome), e dal nome si toglie il formato della confezione.
+    status: fixed
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, menu, vista-cliente]
+    test_cases:
+      - tests/component/MenuPage.test.jsx
+
+  - id: BUG-122
+    title: "Con la 1.10.0 la Tana avrebbe perso menu' digitale, clienti, magazzino, statistiche, personale e SumUp: la licenza degli strumenti di sviluppo taceva sui moduli nuovi"
+    area: "src/lib/licenza.js (moduloIncluso)"
+    severity: alta
+    priority: P0
+    description: >
+      Trovato il 30/10/2026 nella revisione del rilascio 1.10.0, prima di
+      ogni tag: mai uscito. La Tana (test e produzione) ha in
+      settings/bar.licenza solo la voce `moduli`, senza piano, scritta dagli
+      strumenti di sviluppo quando i moduli erano tre (conta, fatture,
+      scadenzario). La 1.10.0 ne aggiunge sette (REQ-LIC-002), e la regola
+      «se la licenza c'e' e' lei la verita', anche per quello che tace» li
+      avrebbe spenti tutti al primo avvio. Ora il silenzio e' un no solo per
+      la licenza della regia, che scrive sempre anche il piano; una licenza
+      senza piano comanda solo sui moduli che nomina, e gli altri tornano
+      alla tabella (incluso). Nessun dato della Tana toccato.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, licenza]
+    test_cases:
+      - tests/unit/licenza.test.js
+  - id: BUG-123
+    title: "Al banco alcuni gesti aspettano la conferma del server: a rete spenta restano fermi"
+    area: "src/components/PaymentScreen.jsx, src/lib/api.js (creaOrdine, refundVoucher), src/components/OrderSummary.jsx, src/components/StaffDrawer.jsx, src/components/OrderPosDetail.jsx, src/components/PosProductPicker.jsx"
+    severity: media
+    priority: P2
+    description: >
+      Trovato il 30/10/2026 facendo l'inventario per la demo (REQ-FLOTTA-019):
+      68 punti dell'app aspettano con `await` la conferma del server di una
+      scrittura, e a rete spenta quella conferma non arriva mai. Quasi tutti
+      sono nel gestionale (magazzino, menù, fornitori, impostazioni), dove
+      si lavora con la rete. Ma alcuni stanno dove il local-first è la prima
+      regola, e lì la schermata resterebbe ferma col locale senza linea:
+      nella cassa, applicare un buono (applyVoucherDiscount), scrivere il
+      codice lotteria (setOrderLotteryCode) ed emettere la fattura
+      (createInvoice); nella creazione di un ordine di un cliente con
+      account, il gruppo-cliente (ensureCustomerGroup dentro creaOrdine);
+      il rimborso di un buono quando un conto cambia o si annulla
+      (refundVoucher); un gruppo nuovo dal riepilogo dell'ordine e dal
+      cassetto dello staff (createManualGroup); dal POS, la scheda di un
+      prodotto (saveDrinkFromForm), una categoria nuova e «non
+      disponibile» (PosProductPicker). Nella demo non succede: le scritture
+      si confermano dalla cache. Nei locali veri va sistemato un punto alla
+      volta, col modello dei test senza rete (tests/unit/giroInLocale.test.js),
+      e senza mascherare gli errori veri, che è il motivo per cui la
+      conferma locale della demo non va estesa ai locali veri.
+    status: todo
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, local-first, pagamenti]
+    test_cases: []
+  - id: BUG-124
+    title: "Nella ricetta di un drink, cambiando ingrediente l'unità passava a cl e la quantità restava"
+    area: "src/components/DrinkForm.jsx (onItemChange), src/lib/inventory.js (unitaDopoCambioIngrediente)"
+    severity: media
+    priority: P2
+    description: >
+      Flavio, 30/10/2026: «rendere indipendente la tendina Ingrediente da
+      quantità ed unità di misura, perché se cambio un ingrediente con un
+      altro mi cambia l'unità di misura da ml a cl senza cambiare la
+      quantità, quindi mi costringe a ricambiare l'unità». Scegliendo un
+      altro ingrediente la riga ripartiva sempre dalla prima unità del
+      nuovo articolo (cl per i liquidi), con la quantità di prima: «40 ml»
+      di gin diventava «40 cl» di vodka, dieci volte tanto. Ora ingrediente,
+      quantità e unità sono indipendenti: se l'unità della riga vale anche
+      per il nuovo articolo resta com'è, e con lei la quantità; cambia solo
+      quando non ha senso (da un liquido a un articolo a pezzi), e allora
+      parte da quella di inserimento.
+    status: fixed
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, menu, magazzino]
+    test_cases:
+      - tests/component/DrinkFormRicetta.test.jsx
+  - id: BUG-125
+    title: "La licenza di un locale la può riscrivere ogni bartender (sta in settings/), e senza licenza un locale ha tutto"
+    area: "firestore.rules (settings, licenza), src/lib/api.js (subscribeSettings), src/lib/licenza.js, src/lib/limiti.js, src/lib/aggiornamenti.js, src/components/DevTools.jsx, scripts/licenza-moduli.js"
+    severity: alta
+    priority: P1
+    description: >
+      Visto il 31/10/2026 lavorando agli aggiornamenti a scelta
+      (REQ-FLOTTA-020), e scritto nella tabella dei permessi per ruolo
+      (tests/contratto/permessi.js, REQ-FLOTTA-021). La regia scrive piano,
+      moduli, limiti, sospensione e aggiornamenti di un locale in
+      `settings/bar.licenza`. Ma le regole lasciano scrivere tutto
+      `settings/` a ogni bartender e al titolare, e i limiti dell'app
+      nascondono senza proteggere (REQ-LIC-003). Con un account del banco e
+      la console del browser, un locale col piano Free si scrive
+      `piano: 'pro'`, si toglie i limiti, si accende i moduli a pagamento,
+      si toglie una sospensione o si segna gli aggiornamenti come inclusi.
+      La Tana non è toccata: non ha una licenza scritta e ha tutto.
+      LA CORREZIONE, decisa il 31/10/2026: la licenza va in un documento
+      suo FUORI DA settings/, `licenza/attuale`, con la stessa forma di
+      oggi (lo stesso oggetto che oggi sta in `settings/bar.licenza`). Le
+      regole lo fanno leggere a tutti, come le impostazioni (il menù del
+      cliente dipende dai moduli), e scrivere a NESSUNO: la regia lo
+      scrive con le credenziali di servizio, che le regole non toccano.
+      E SENZA LICENZA NON SI HA PIÙ TUTTO (l'utente, 31/10/2026: «nn va
+      bene che senza licenza sia tutto acceso. Dobbiamo cambiare sta
+      cosa»). Deciso lo stesso giorno, fra due strade per ciascuna domanda:
+        - un locale senza `licenza/attuale` vede «Installazione non
+          attivata» al posto dell'app, come una sospesa, coi dati che
+          restano. Scartato il piano Free come ripiego: l'app avrebbe
+          dovuto sapere da sé i limiti del Free, una copia di quelli della
+          regia destinata ad andare fuori passo;
+        - la Tana, che non ha licenza e ha tutto, lo dice la BUILD: una
+          voce in `clienti/tana/venue.json`, decisa alla compilazione,
+          che dal browser non si cambia e non chiede scritture nel
+          database di produzione. Le build dei locali della regia e
+          l'immagine on premise non ce l'hanno. La demo non ha una regia
+          dietro e resta com'è (`__DEMO__`).
+      ATTENZIONE AL CARICAMENTO: «non attivata» si mostra solo quando il
+      server dice che il documento non c'è. Alla prima apertura senza rete
+      la cache non sa ancora niente, e scambiare «non lo so» per «non c'è»
+      bloccherebbe un locale in regola. Serve che la porta dei dati dica
+      se una risposta viene dal server o dalla cache (oggi il contratto
+      non lo dice: va aggiunto, coi suoi test di contratto).
+      L'ORDINE CONTA ANCORA DI PIÙ, perché un locale senza licenza ora si
+      ferma:
+        1. la regia scrive la licenza in tutti e due i posti, a ogni
+           cambio, e ci copia quelle dei locali che ci sono già;
+        2. solo dopo, il rilascio dell'app: legge `licenza/attuale` e
+           ignora `settings/bar.licenza`, senza ripiego (un ripiego
+           riaprirebbe il buco). Il resto dell'app non cambia: la licenza
+           arriva a chi la usa nello stesso posto di oggi (`licenza`
+           dentro le impostazioni lette). Con l'app: le regole del
+           documento nuovo, gli strumenti di sviluppo (DevTools) e
+           scripts/licenza-moduli.js, che oggi la scrivono in settings/;
+           nella tabella dei permessi una riga nuova, licenza: legge
+           tutti, scrive nessuno, e il commento sulla riga di settings
+           si toglie;
+        3. quando tutti i locali hanno quella versione, la regia smette
+           di scrivere `settings/bar.licenza` e lo cancella.
+      Il commento in api.js che annunciava un documento
+      `settings/licenza` per la «Fase 3» va corretto: dentro settings/
+      avrebbe lo stesso buco.
+      A CHE PUNTO È LA REGIA (31/10/2026): sulla regia di TEST il passo 1
+      è pronto (doppia scrittura, `limiti.comande`, `valida_fino`), e la
+      copia è fatta quando «Allinea tutte» dice «Tutti pronti». La regia
+      di PRODUZIONE non ha ancora nessun rilascio: tutto arriva col suo
+      primo, 0.3.0. QUINDI: la versione dell'app con questa correzione può
+      andare sul test appena la regia di test dice «Tutti pronti», ma in
+      produzione solo dopo che la regia di produzione ha la 0.3.0 e la
+      copia fatta. La Tana non è toccata (lo dice la build).
+      LA PARTE DELL'APP, 01/11/2026 (il passo 2 qui sopra).
+        - La licenza della build è un meccanismo UGUALE PER OGNI CLIENTE,
+          non una voce della Tana (l'utente: «basta che sia allineato con
+          l'app generica che viene deployata da regia e che non sia una
+          cosa speciale per la tana»): un file facoltativo
+          `clienti/<slug>/licenza.json`, con la stessa forma del documento,
+          iniettato dalla build in `__CLIENTE__`. Il codice non sa per chi
+          è compilato. Le cartelle che crea la regia non ce l'hanno.
+        - Una regola sola (lib/licenza.js, `licenzaEffettiva`): il
+          documento della regia, se c'è; se no la licenza della build; se
+          no «Installazione non attivata», ma solo quando il server ha
+          confermato che il documento non c'è. Finché non si sa vale
+          l'ultima licenza nota sul dispositivo, ricordata sotto una chiave
+          sua: quella vecchia di settings/bar, rimasta nelle impostazioni
+          ricordate, non si rilegge.
+        - La porta dei dati dice da dove viene una risposta:
+          `onSnapshot(ref, { includeMetadataChanges: true }, …)` e
+          `metadata.fromCache`, con due prove di contratto nuove.
+        - Le regole aprono `licenza/` in lettura a tutti e non la fanno
+          scrivere a nessuno; la tabella dei permessi ha la riga nuova.
+        - La colonna `incluso` della tabella dei moduli non c'è più, e con
+          lei il ripiego di BUG-122: una licenza comanda per intero, e il
+          silenzio è un no.
+        - La demo mette la sua licenza in `licenza/attuale` della sua
+          cache; gli strumenti di sviluppo la mostrano e non la scrivono;
+          scripts/licenza-moduli.js scrive il documento.
+      DA CONFERMARE PRIMA DEL RILASCIO: i moduli scritti in
+      `clienti/tana/licenza.json` sono ricostruiti, non letti dalla
+      produzione (la lettura non è stata possibile da qui). Tutti inclusi
+      tranne `fatture` (Fatture ai clienti): l'inventario e lo scadenzario
+      erano stati accesi a mano in produzione il 17/09/2026, i sette moduli
+      della 1.10.0 venivano dalla colonna `incluso`. Si confronta con
+      `node scripts/licenza-moduli.js --project tana-drink` sulla versione
+      di prima (legge settings/bar e non scrive niente).
+      ATTENZIONE ALL'ORDINE, che resta quello sopra: questa versione va sul
+      test solo quando la regia di test ha copiato le licenze («Allinea
+      tutte» dice «Tutti pronti»), e in produzione solo dopo la regia di
+      produzione 0.3.0 con la stessa copia.
+      DOPO (02/11/2026, REQ-LIC-009): la licenza della build è tolta. Senza
+      `licenza/attuale` l'installazione non è attivata per tutti, e la Tana
+      riceve il suo documento, una volta, prima delle regole nuove.
+    status: fixed
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, sicurezza, licenza, flotta]
+    test_cases:
+      - tests/unit/licenzaInstallazione.test.js
+      - tests/unit/licenza.test.js
+      - tests/unit/clienteBuild.test.js
+      - tests/unit/datiDemo.test.js
+      - tests/component/InstallazioneSospesa.test.jsx
+      - tests/regole/permessi.test.js
+      - tests/regole/contrattoDati.test.js
+
+  - id: BUG-126
+    title: "La copia della licenza in settings/bar la riscrive ancora il banco, e il ripristino da backup la riporta indietro"
+    area: "firestore.rules (settings, licenzaIntatta), src/lib/licenza.js (conLicenzaAttuale), src/lib/backup.js (importaDatabase), scripts/ripristina-db.js"
+    severity: media
+    priority: P1
+    description: >
+      Residuo di H2 dell'audit della regia (docs/audit-sicurezza-privacy.md
+      di drink-regia, 22/10/2026), rivisto il 02/11/2026. BUG-125 ha
+      spostato la licenza che conta in `licenza/attuale`, che dall'app non
+      scrive nessuno, e REQ-LIC-009 fa rispettare sospensione e scadenza
+      dalle regole. Ma fino al passo 3 di BUG-125 la regia continua a
+      scrivere la stessa licenza anche in `settings/bar.licenza`, dove la
+      cercano le versioni vecchie dell'app (una PWA rimasta in cache su un
+      tablet), e le regole lasciavano scrivere tutto `settings/` al banco e
+      al titolare: dalla console del browser un bartender si riscriveva lì
+      piano, moduli e stato, e quella versione vecchia gli credeva.
+      E IL RIPRISTINO. Quello del gestionale (lib/backup.js) riscrive i
+      documenti di `settings` interi, licenza compresa: un backup vecchio
+      riportava la licenza di quando era stato fatto. Quello da riga di
+      comando (scripts/ripristina-db.js), che gira con le credenziali di
+      servizio e le regole non lo fermano, rimetteva in più anche
+      `licenza/attuale` dal file: un ripristino toglieva una sospensione o
+      tornava a un piano scaduto.
+      LA CORREZIONE, senza cambiare né il posto né la forma della licenza
+      (sono il contratto con la regia):
+        - le regole di `settings/` vogliono il campo `licenza` intatto in
+          ogni scrittura dell'app: né aggiunto alla creazione, né cambiato,
+          né tolto (anche da una set senza merge che lo omette); un
+          documento che lo porta non si cancella. Il resto delle
+          impostazioni il banco e il titolare lo scrivono come prima
+          (updateSettings scrive con merge solo i campi che cambia, e
+          nessuna schermata ci mette `licenza`);
+        - i due ripristini rimettono le impostazioni del file con la
+          licenza che c'è ADESSO nel database (conLicenzaAttuale, una
+          regola sola per tutti e due), e non toccano mai la collezione
+          `licenza`; lo script, nel ripristino esatto, non cancella un
+          documento delle impostazioni che porta la licenza.
+      DA RIDISTRIBUIRE: sono regole nuove, quindi valgono su un'istanza
+      solo dopo il deploy delle regole a quell'istanza, col rilascio
+      normale dell'app.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, sicurezza, licenza, flotta]
+    test_cases:
+      - tests/regole/licenza.test.js
+      - tests/unit/backup.test.js
+      - tests/unit/licenza.test.js
+
+  - id: BUG-127
+    title: "Il tasto «Vista cliente» della coda apriva il menù per gli ordini, e dalla vista cliente vera si poteva ordinare"
+    area: "src/pages/BartenderPage.jsx (scheda «Oggi»), src/pages/MenuPage.jsx (canOrder), src/components/StaffDrawer.jsx"
+    severity: bassa
+    priority: P2
+    description: >
+      Visto dall'utente il 02/11/2026 sul test: «perché se vado in menù
+      senza la vista cliente il menù mi appare diverso?». Il menù ha due
+      facce: per chi lavora è lo strumento degli ordini al tavolo (tema
+      del gestionale, stile classico, ricerca, gruppi), per il cliente è
+      la vetrina col tema e lo stile del locale; `?vista=cliente` mostra la
+      seconda a chi lavora. Due difetti intorno: nella coda a elenco la
+      scheda «Oggi» aveva un tasto «✍️ Vista cliente» che apriva `/menu`
+      SENZA il parametro, cioè il menù dello staff; e la vista cliente
+      vera aveva «Aggiungi» e carrello, così un admin in anteprima
+      mandava un ordine come un cliente anonimo, senza `placed_by`.
+      LE DECISIONI DELL'UTENTE, lo stesso giorno: «la vista cliente deve
+      solo mostrare il menù come lo vede il cliente. Ordina dal menù esce
+      solo per lo staff o bartender o admin, ma la schermata principale
+      rimane la coda degli ordini». Quindi: nella vista cliente non si
+      ordina (il 03/11 tolta la frase «Da qui non si ordina» dalla riga
+      in alto: il cliente da quel menù ordina, e confondeva); il tasto
+      della coda si chiama
+      «📖 Ordina dal menù»; nel ☰ la voce «Ordina dal menù» c'è per tutto
+      il personale, e admin e bartender hanno in più «Nuovo ordine», la
+      cassa. Prima il banco al menù dello staff ci arrivava solo dalla
+      coda a elenco, non da quella a griglia che è la vista di partenza.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, navigazione, menu]
+    test_cases:
+      - tests/component/MenuPage.test.jsx
+      - tests/component/StaffDrawer.test.jsx
+  - id: BUG-128
+    title: "«📜 Movimenti» di un prodotto non si apriva: la finestra era montata solo con la scheda in modifica"
+    area: "src/components/InventoryManager.jsx (movimentiDi)"
+    severity: media
+    priority: P1
+    description: >
+      Flavio, 04/11/2026, sul test con la 1.10.12-beta: «i movimenti dei
+      prodotti, sempre la stessa cosa: ci clicchi sopra e non si apre».
+      Il tasto sta nelle azioni di una riga dell'elenco del Magazzino e
+      impostava `movimentiDi`, ma `<MovimentiProdotto>` era montato dentro
+      il ramo `if (editing)`, quello della scheda in modifica: dall'elenco
+      la finestra non c'era mai. Era cosi' dal primo giorno (REQ-MAG-048,
+      10/10/2026); la prova della finestra la montava da sola e non poteva
+      accorgersene. BUG-117 aveva cercato la causa nella lentezza della
+      cache, che c'era ma non era questa: quella correzione resta valida
+      per i tempi di lettura, una volta aperta la finestra.
+      LA CORREZIONE: la finestra sta nel ritorno principale, accanto
+      all'elenco da cui la si apre, e la prova del Magazzino la apre dal
+      tasto vero.
+    status: fixed
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, magazzino]
+    test_cases:
+      - tests/component/InventoryManager.test.jsx
+  - id: BUG-129
+    title: "Il backup del gestionale non salvava undici collezioni, fra cui il menù dei clienti e lo storico delle vendite"
+    area: "src/lib/backup.js (COLLEZIONI, SOLO_COPIA, FUORI_DAL_BACKUP, importaDatabase), src/components/BackupPanel.jsx"
+    severity: alta
+    priority: P1
+    description: >
+      Trovato il 05/11/2026 controllando cosa toccava la 1.10.14-beta (il
+      menù dei clienti, REQ-MENU-025). Il backup scarica un elenco di
+      collezioni scritto a mano, perché il client non può chiedere a
+      Firestore quali esistono; l'elenco era rimasto indietro, e un backup
+      fatto dall'app non conteneva: `carta_sezioni` e `carta_voci` (la
+      struttura del menù dei clienti), `supplier_prices` e
+      `supplier_price_history` (listini e storico prezzi dei fornitori),
+      `purchase_order_templates` (modelli d'ordine), `altre_spese`,
+      `minimi_extra`, e lo storico caricato dagli script
+      (`vendite_storiche`, `vendite_storiche_prodotti`, `mesi_storici`). In
+      più c'era `serate`, che non è una collezione ma il nome di una
+      schermata delle statistiche: la si leggeva, e le regole la
+      rifiutavano. Nessuno se ne accorgeva, perché il file si scarica
+      senza errori: un backup si scopre incompleto il giorno in cui serve.
+      LA CORREZIONE: tre elenchi espliciti. Le collezioni che si salvano e
+      si rimettono; quelle SOLO NELLA COPIA, lo storico degli script, che
+      le regole non fanno scrivere dall'app (`write: if false`) e che
+      quindi il ripristino dall'app salta e lo dice (si rimette con
+      scripts/ripristina-db.js: un documento rifiutato fermava il
+      ripristino a metà); e quelle FUORI apposta, ognuna col suo perché
+      (`licenza`, scritta solo dalla regia; `presenze`, stato del momento
+      scritto da ognuno per sé; `diagnostica_stampante`, registro tecnico).
+      Un test confronta gli elenchi con le collezioni di firestore.rules:
+      una collezione nuova senza un posto nel backup boccia la build.
+    status: fixed
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, backup]
+    test_cases:
+      - tests/unit/backup.test.js
+
+  - id: BUG-130
+    title: "Le schede delle categorie del menù, agganciate in alto, restavano attaccate al filo della barra"
+    area: "src/App.jsx (--barra-intera), src/index.css (.cat-nav, .g-sommario), src/lib/useIncollata.js"
+    severity: bassa
+    priority: P2
+    description: >
+      L'utente, 05/11/2026, sul test col telefono, con lo stile
+      «Meraviglie» e il menù personalizzato: «le categorie del menù sono
+      troppo attaccate sopra, è brutto». La fila delle schede si fermava a
+      64 px dall'alto, scritti a mano, ma la barra in alto è alta quanto il
+      suo contenuto (il tasto ☰ da 44 px, i margini, il filo, la fascia di
+      sistema) e cresce col testo ingrandito del telefono: almeno 69 px. Il
+      margine sopra le schede finiva dietro la barra, e le schede restavano
+      attaccate al suo filo. Lo stesso per il sommario di «Giornale», che
+      usava una seconda stima (68 px), e per il controllo che dà alla fila
+      il fondo pieno quando si appiccica, che guardava ancora i 64 px.
+      Con le schede grandi del menù personalizzato si vedeva di più.
+      LA CORREZIONE: App misura la barra (ResizeObserver) e scrive la sua
+      altezza vera in `--barra-intera`; le schede e il sommario si
+      appiccicano lì, con la stima di prima solo finché la misura non c'è;
+      useIncollata prende come linea il fondo della barra.
+    status: fixed
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, menu, ui]
+    test_cases:
+      - tests/unit/useIncollata.test.jsx
+      - tests/unit/css.test.js
+      - tests/component/AppHeader.test.jsx
+
+  - id: BUG-131
+    title: "Il vecchio indirizzo della Cassa (?tab=storico) passava dal modulo Inventario: senza, il collegamento portava alla coda"
+    area: "src/lib/sezioni.js (sezioneConsentita, VECCHI_INDIRIZZI), src/lib/licenza.js"
+    severity: media
+    priority: P1
+    description: >
+      Trovato dalla matrice dei moduli (REQ-DEV-017), 07/11/2026. `storico`
+      è due cose: il vecchio indirizzo della Cassa sulla lista ordini, che
+      sta nei collegamenti salvati, e la sottosezione «Storico inventari»
+      del magazzino, che è del modulo Inventario. Il controllo delle
+      sezioni guardava il nome e non dove porta: senza l'Inventario,
+      `?tab=storico` era «una funzione che il locale non ha», l'indirizzo
+      veniva ripulito e si finiva sulla coda.
+      LA CORREZIONE: il vecchio indirizzo si traduce prima del controllo,
+      e si controlla la sezione a cui porta (la Cassa, che è di base).
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, licenza, navigazione]
+    test_cases:
+      - tests/unit/sezioni.test.js
+      - tests/unit/matriceModuli.test.js
+
+  - id: BUG-132
+    title: "«Ordina dal menù» e «Vista cliente» dello staff restavano senza il Menù digitale e aprivano «il menù digitale non è attivo»"
+    area: "src/components/StaffDrawer.jsx, src/App.jsx (ActionSheet della vista cliente)"
+    severity: bassa
+    priority: P2
+    description: >
+      Trovato dalla matrice dei moduli (REQ-DEV-017), 07/11/2026. Senza il
+      modulo Menù digitale e tavoli, nel menu laterale dello staff
+      restavano «Ordina dal menù» e, sul telefono, la voce «Vista cliente»:
+      tutte e due portano a /menu, che senza il modulo mostra una pagina che
+      lo dice. DECISIONE DELL'UTENTE (07/11/2026): «segue il modulo». Senza
+      il Menù digitale le due voci non ci sono; per ordinare resta «Nuovo
+      ordine» della cassa.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, licenza, navigazione]
+    test_cases:
+      - tests/component/StaffDrawer.test.jsx
+
+  - id: BUG-133
+    title: "SumUp: l'interruttore del modulo non spegneva niente, e i gruppi di conti e il pagamento online del cliente non guardavano il modulo"
+    area: "src/lib/licenza.js (sumupAttivo), src/lib/payments.js, src/components/GroupView.jsx, src/components/PaymentScreen.jsx, src/pages/BartenderPage.jsx"
+    severity: alta
+    priority: P1
+    description: >
+      Trovato dalla matrice dei moduli (REQ-DEV-017), 07/11/2026. Tre buchi
+      dello stesso modulo. (1) L'interruttore «Pagamenti con lettore SumUp»
+      nelle impostazioni non lo leggeva nessuno: spento, il lettore restava
+      in cassa e in coda. (2) Nei gruppi di conti i tasti «💳 Online» e
+      «📟 Lettore» c'erano con qualsiasi licenza. (3) Il pagamento online
+      del cliente dipendeva solo da `payments_online_enabled`, che resta
+      scritto anche quando il modulo va via: con «pagamento obbligatorio»
+      acceso, gli ordini nascevano in attesa di un pagamento che non si
+      poteva fare e restavano fuori dalla coda.
+      LA CORREZIONE: una domanda sola, `sumupAttivo` (incluso, acceso, e
+      non sul profilo leggero), per tutti i posti dove si paga con SumUp.
+      Le impostazioni di SumUp si configurano finché il modulo è incluso.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, licenza, pagamenti]
+    test_cases:
+      - tests/unit/payments.test.js
+      - tests/component/GroupView.test.jsx
+
+  - id: BUG-134
+    title: "Le Cloud Functions non guardano la licenza: i pagamenti SumUp e le chiamate allo staff partono con qualsiasi piano"
+    area: "functions/index.js, functions/lib/"
+    severity: alta
+    priority: P1
+    description: >
+      Trovato dalla matrice dei moduli (REQ-DEV-017), 07/11/2026. Il
+      controllo vero dei moduli sta nelle regole di Firestore (REQ-LIC-008);
+      l'app nasconde. Le Functions girano con i permessi dell'amministratore
+      e le regole non le fermano, ma nessuna legge `licenza/attuale`: le
+      chiamate di SumUp (cassa, lettore, gruppi) partono anche dove il
+      modulo non c'è, chiamandole a mano. In produzione (1.9.3) le licenze
+      non ci sono ancora: il difetto è della 1.10.
+      LA CORREZIONE: functions/lib/licenza-core.js fa la stessa domanda di
+      `modulo()` delle regole (licenza scritta, non sospesa né chiusa, non
+      scaduta, il modulo nominato) leggendo `licenza/attuale`; i cinque
+      punti dove un pagamento PARTE (checkout online, associazione del
+      lettore, incasso sul lettore, checkout e lettore di un gruppo)
+      rispondono failed-precondition senza chiamare SumUp. Leggere l'esito,
+      fermare il lettore, dissociarlo e i webhook restano possibili: un
+      pagamento partito prima che il modulo andasse via si deve chiudere.
+      Le chiamate allo staff restano fuori: sono di base (BUG-136).
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, licenza, functions, sicurezza]
+    test_cases:
+      - tests/bdd/licenza-functions.test.js
+
+  - id: BUG-135
+    title: "Senza il modulo degli ordini dal telefono lo staff perdeva «Prodotto libero» nel menù, e il cliente leggeva «ordinazioni momentaneamente sospese»"
+    area: "src/pages/MenuPage.jsx"
+    severity: bassa
+    priority: P2
+    description: >
+      Trovato dalla matrice dei moduli (REQ-DEV-017), 07/11/2026. La
+      modalità «solo menù» valeva per tutti, staff compreso, anche quando
+      nasceva dal piano (il modulo Ordini dal telefono non incluso) e non
+      da una scelta del locale: lo staff, che dal menù ordina sempre,
+      perdeva il prodotto libero e la riga «Inserimento ordine da». E il
+      cliente leggeva «momentaneamente sospese», che non è vero: in quel
+      locale dal telefono non si ordina proprio.
+      LA CORREZIONE: il modulo che manca vale solo per il cliente; la
+      scelta del locale («solo menù») per tutti, come prima. Al cliente
+      il banner dice che il menù si consulta e che per ordinare c'è lo staff.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, licenza, menu]
+    test_cases:
+      - tests/component/MenuPage.test.jsx
+
+  - id: BUG-136
+    title: "La descrizione del modulo Personale prometteva le chiamate allo staff, che funzionano anche senza"
+    area: "src/lib/licenza.js (MODULI_PREMIUM.staff)"
+    severity: bassa
+    priority: P3
+    description: >
+      Trovato dalla matrice dei moduli (REQ-DEV-017), 07/11/2026. Il
+      cerca-persone e le timbrature restano fuori dal modulo apposta (si
+      usano a ogni accesso e dalla coda, COLLEZIONI_DEI_MODULI), ma la
+      descrizione mostrata nel Marketplace e nelle impostazioni diceva
+      «Ore e paghe del personale, chiamate allo staff». Chi lo compra per le
+      chiamate le aveva già. Ora dice solo quello che il modulo aggiunge.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, licenza, testi]
+    test_cases:
+      - tests/unit/matriceModuli.test.js
+
+  - id: BUG-137
+    title: "Su un dispositivo appena entrato, se la rete cade prima del primo conto, la griglia dei prodotti è vuota"
+    area: "src/lib/menuCache.js (precaricaMenu), src/App.jsx"
+    severity: grave
+    priority: P1
+    description: >
+      Trovato dal primo test di sistema del modello a V
+      (tests/sistema/serataSenzaRete.spec.js), 08/11/2026. Il catalogo dei
+      prodotti arrivava solo aprendo il primo conto: la sottoscrizione di
+      lib/menuCache.js partiva da useMenu, cioè dalla schermata del conto.
+      Un tablet nuovo, un telefono della sala appena entrato o un browser
+      con la cache svuotata, se la rete cadeva prima del primo conto,
+      aprivano il conto con «Nessun prodotto in questa categoria» e non
+      battevano niente finché la rete non tornava. I test di unità e di
+      integrazione non potevano vederlo: provano il conto con un catalogo
+      già in mano.
+      ORA il catalogo si precarica appena il ruolo del personale è noto
+      (precaricaMenu, in un effetto di App.jsx), da qualunque sezione si
+      entri; ai clienti non costa niente. Una prima versione lo faceva dalla
+      coda, ma chi entrava da un'altra sezione o dal «Nuovo ordine» del menu
+      laterale restava scoperto (giro di /simplify dell'08/11/2026).
+      Altri dati che il conto carica solo quando si apre (i gruppi aperti, i
+      buoni in pagamento, le scorte sulla striscia) hanno lo stesso rischio:
+      da vedere col prossimo test di sistema.
+    status: fixed
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, offline, pos]
+    requisiti: [REQ-OFFLINE-006]
+    test_cases:
+      - tests/sistema/serataSenzaRete.spec.js
+
+  - id: BUG-138
+    title: "Marginalità listino: sul PC le intestazioni non stanno sopra i loro numeri"
+    area: "src/index.css (.margin-tab th .inv-th), src/components/SortTh.jsx"
+    severity: lieve
+    priority: P2
+    description: >
+      Segnalato l'08/11/2026: «in MENU - MARGINALITA LISTINO i dati non sono
+      incolonnati alle voci in alto quando si visualizzano da pc».
+      L'intestazione che ordina (SortTh) è un pulsante nato per le tabelle a
+      griglia del magazzino, dove la cella è lui; dentro un <th> della
+      tabella dei margini restava largo quanto la sua etichetta e si
+      appoggiava a sinistra, mentre i numeri sotto stanno a destra. Sul
+      telefono le colonne sono strette e non si notava; sul PC la tabella si
+      allarga a tutta la pagina e «Costo» finiva mezza colonna lontano dal
+      suo numero. ORA il pulsante occupa tutta la cella e l'etichetta va a
+      destra come i numeri.
+    status: fixed
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, menu, ui]
+    requisiti: [REQ-MENU-002]
+    test_cases:
+      - tests/component/MarginList.test.jsx
+      - tests/sistema/marginalita.spec.js
+
+  - id: BUG-139
+    title: "Impostazioni: il riquadro «Il locale» non si apre da nessun gruppo"
+    area: "src/components/SettingsTab.jsx (GRUPPO_DI, GRUPPI)"
+    severity: media
+    priority: P1
+    description: >
+      Trovato il 09/11/2026 scrivendo i casi d'uso dell'amministrazione
+      (UC-IMP), leggendo il codice. Con la build per cliente (REQ-VENUE-001)
+      le impostazioni hanno un riquadro «Il locale» — nome, contatti,
+      intestazione dello scontrino, dati del titolare — ma la tabella che
+      assegna i riquadri ai gruppi del sottomenu non lo nominava, e un
+      riquadro senza gruppo non compare da nessuna parte. Quei dati, che il
+      registro dice «si correggono qui», non si potevano correggere. Nessun
+      test se ne accorgeva: quello dei gruppi elencava i riquadri attesi a
+      mano, e questo non c'era. ORA il riquadro ha il suo gruppo, «Il
+      locale», e il test dei gruppi lo cerca. Non è in produzione: il
+      riquadro è nato dopo la 1.9.3.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, impostazioni]
+    requisiti: [REQ-VENUE-001]
+    test_cases:
+      - tests/component/SettingsTab.test.jsx
+
+  - id: BUG-140
+    title: "La coverage di functions/lib cambia da un giro all'altro sullo stesso codice, e boccia le PR a caso"
+    area: "tests/unit/payment-core.test.js, tests/unit/push-comande.test.js, tests/bdd/licenza-functions.test.js"
+    severity: media
+    priority: P1
+    description: >
+      Visto il 10/11/2026 sulla PR #320: il primo giro della CI è caduto con
+      i rami di functions/lib al 71,07%, sotto la soglia del 74%; il giro
+      dopo, con le Functions identiche, era al 75,58%. Il rapporto della CI
+      mostrava un file solo diverso, payment-core.js (68 o 97 rami su 133),
+      e i conteggi per riga rimescolati, non coperti o scoperti. La causa:
+      payment-core.js e licenza-core.js li caricavano in due modi. I test
+      unitari li importavano passando da Vite, payment-service.js li prende
+      col require nativo di Node; V8 vede due versioni dello stesso file
+      con posizioni diverse, e la coverage le fonde in un ordine che
+      dipende da quale test finisce prima. Messi insieme, i test coprivano
+      MENO del test unitario da solo (66 rami contro 104). ORA quei test li
+      caricano col require nativo, come le Functions: la misura è la stessa
+      in ogni ordine (118 rami su 133) e nessuna PR cade più per un numero
+      che non dipende dal codice. Un test che importa un modulo di
+      functions/lib che un altro modulo carica con require deve fare lo
+      stesso.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, sviluppo, test]
+    requisiti: [REQ-DEV-005]
+    test_cases:
+      - tests/unit/payment-core.test.js
+      - tests/unit/push-comande.test.js
+      - tests/bdd/licenza-functions.test.js
+
+  - id: BUG-141
+    title: "Stile «Carte»: le carte sfarfallano quando si aprono a ventaglio al caricamento del menù"
+    area: "src/components/MenuCarte.jsx (useCaratteriPronti), src/lib/caratteriPronti.js, src/index.css (k-aspetta, k-dal-mazzo)"
+    severity: bassa
+    priority: P2
+    description: >
+      L'utente, 11/11/2026: «nell'animazione del tema delle carte, le carte
+      sfarfallano un po' quando si aprono a ventaglio quando si carica la
+      pagina». Registrato fotogramma per fotogramma il caricamento del menù
+      a carte del test: le carte comparivano e partivano subito, e il loro
+      carattere a macchina (IM Fell English) arrivava 100-400 ms dopo, a
+      metà volo. La scritta passava dal carattere di riserva a quello vero,
+      cambiava larghezza e andava a capo altrove, e il titolo del locale,
+      cambiando carattere, saliva di un paio di pixel portandosi dietro il
+      mazzo. In più le carte restavano trasparenti per tutto il volo, e
+      accavallate lasciavano leggere le scritte di quelle sotto. ORA il
+      tavolo aspetta i caratteri dei testi animati (titolo, carte, carta
+      aperta) con le animazioni ferme al loro inizio, a carte invisibili, e
+      parte quando sono arrivati, o comunque dopo 1,5 s; e la carta è piena
+      già al primo quinto del volo. Il movimento è quello di prima.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, menu, clienti]
+    requisiti: [REQ-MENU-029]
+    test_cases:
+      - tests/component/carteAspettanoICaratteri.test.jsx
+
+  - id: BUG-142
+    title: "Al primo caricamento il menù dei clienti dice per un attimo «Il menù digitale non è attivo»"
+    area: "src/App.jsx (menuNonIncluso), src/lib/licenza.js (licenzaNota), src/components/FunzioneNonInclusa.jsx"
+    severity: media
+    priority: P1
+    description: >
+      Visto l'11/11/2026 registrando il caricamento del menù dei clienti del
+      test da un browser senza cache: per circa un secondo la pagina mostra
+      «Il menù digitale non è attivo — Questa funzione non fa parte del
+      piano di questo locale», poi «Carico il menù…» e il menù. App.jsx
+      parte con le impostazioni di base (DEFAULT_SETTINGS), che non hanno
+      una licenza: finché la licenza vera non arriva, menuDigitaleAttivo
+      risponde «no» e la rotta /menu mostra la pagina della funzione non
+      inclusa. Un cliente al tavolo, col telefono appena connesso, legge che
+      il menù non c'è. ORA la rotta chiede prima se la licenza si sa già
+      (licenzaNota, src/lib/licenza.js): finché non è arrivata mostra
+      «Carico il menù…», la stessa attesa di MenuPage, e la pagina della
+      funzione non inclusa solo quando la licenza dice davvero di no.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, menu, clienti, licenza]
+    requisiti: [REQ-LIC-002]
+    test_cases:
+      - tests/component/menuAspettaLaLicenza.test.jsx
+
+  - id: BUG-143
+    title: "Stile «Carte»: all'apertura le carte arrivano dal nulla e troppo in fretta, e sembrano sfarfallare"
+    area: "src/index.css (k-dal-centro, k-si-gira, k-dorso-su, k-apertura), src/components/MenuCarte.jsx (FilaCarte, classiTavolo)"
+    severity: bassa
+    priority: P2
+    description: >
+      L'utente, 11/11/2026, dopo la correzione di BUG-141 sul test: «il
+      flickering c'è ancora ma credo di aver capito, è l'animazione delle
+      carte che vengono aperte a ventaglio che è troppo veloce e sembra che
+      le carte flickerano… in questo momento sembra che le carte arrivino
+      dal nulla e troppo velocemente. Fai come il croupier che apre le
+      carte a ventaglio dal mazzo a partire dal centro, si sposta verso
+      sinistra sugli schermi piccoli e poi si girano tutte le carte, sempre
+      con animazione». Le carte uscivano già scoperte dal capo di sinistra,
+      comparendo dal trasparente, in 0,6 s e sfalsate di 55 ms: otto carte
+      scritte in corsa una sull'altra. ORA il mazzo sta 0,3 s chiuso al
+      centro dello schermo, a carte coperte (le carte hanno un dorso, e le
+      girate partono con loro); si stende a ventaglio in 1 s, ogni carta
+      fino al suo posto, quindi sul telefono verso sinistra, dove la fila
+      comincia; poi le carte si girano una dopo l'altra (0,5 s l'una, 60
+      ms di scarto). La prima carta, che si apre da sola, aspetta che il
+      mazzo abbia quasi finito di girarsi; una carta scelta si apre subito
+      come prima. Guardato fotogramma per fotogramma sulla demo compilata,
+      a 390 e a 1100 px.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, menu, clienti]
+    requisiti: [REQ-MENU-029]
+    test_cases:
+      - tests/component/MenuCarte.test.jsx
+
+  - id: BUG-144
+    title: "Stile «Carte»: dopo aver scorso una sezione fino in fondo, la carta scelta dopo si apre dalla fine invece che dall'inizio"
+    area: "src/components/MenuCarte.jsx (scegli, tornaAllInizio, centraNelVentaglio)"
+    severity: media
+    priority: P1
+    description: >
+      Flavio, vocale dell'11/11/2026 (21:58), dal menù del test (1.10.37):
+      «quando tu vai sul menù e selezioni una carta, scorri, arrivi alla
+      fine. Quando selezioni un'altra carta, la carta ti parte dalla fine.
+      Invece dovrebbe partire dall'inizio. Sto su Gin… passo ai whisky: la
+      carta mi parte da giù. Io vedo l'ultimo whisky e devo risalire.
+      Andrebbe fatto che si riporta all'inizio della carta».
+      È il comportamento che REQ-MENU-029 promette dal 09/11 («scegliendo
+      una carta dal mazzo agganciato la pagina torna all'inizio della carta
+      nuova»), e che il test di sistema carteAgganciate.spec.js prova: ma lo
+      prova in Chromium. L'11/11 NON SI RIPRODUCE in Chrome senza finestra
+      sulla demo compilata, né a 390 né a 1100 px: la carta nuova parte
+      dall'inizio. Il difetto quindi è del dispositivo di Flavio, con ogni
+      probabilità Safari su iPhone, che non si è potuto provare.
+      DUE PUNTI FRAGILI nel codice, che la correzione toglie [ipotesi: non
+      provata sul dispositivo]:
+      1. dopo aver riportato la pagina all'inizio, per centrare la carta
+         toccata nella fila si chiamava `scrollIntoView` sulla carta, con
+         scorrimento morbido: quella chiamata riguarda TUTTI i contenitori
+         che scorrono, pagina compresa, e un browser che la calcola prima di
+         aver applicato il primo spostamento riporta la pagina dov'era;
+      2. la pagina tornava all'inizio solo se l'osservatore del browser
+         aveva già detto che il mazzo è agganciato (`incollato`): dove
+         l'osservatore tarda o non scatta, non si tornava affatto.
+      ORA la carta toccata si centra scorrendo solo la fila, di lato
+      (`centraNelVentaglio`); che la pagina sia scesa oltre il mazzo si
+      misura al momento del tocco; e il ritorno all'inizio si ripete a
+      carta nuova disegnata (non più tardi: un terzo giro dopo 80 ms
+      riportava in cima chi scorreva subito dopo il tocco, e il test di
+      sistema l'ha bocciato). In Chromium il
+      comportamento è quello di prima (test di sistema verdi). RESTA DA
+      PROVARE sul telefono di Flavio: è lui a dire se è corretto.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, menu, clienti]
+    requisiti: [REQ-MENU-029]
+    test_cases:
+      - tests/component/MenuCarte.test.jsx
+
+  - id: BUG-145
+    title: "I documenti promettono una CI che non c'è: test a ogni push e test di sistema su ogni pull request"
+    area: "CLAUDE.md, docs/gitflow.md, docs/modello-a-v.md, requirements/requirements.yaml (REQ-DEV-018, REQ-DEV-019), .github/workflows/test.yml (solo letto)"
+    severity: media
+    priority: P2
+    description: >
+      Trovato dal revisore il 12/11/2026, rileggendo REQ-DEV-021, e prima
+      ancora sulle PR #330 e #332 dell'11/11, dove i test di sistema
+      risultavano «saltati». I documenti dicono tre cose che la CI non fa:
+      1. CLAUDE.md, «Prima di una PR»: `test:sistema` «in CI gira comunque
+         su ogni pull request»; lo stesso in docs/modello-a-v.md e nelle
+         descrizioni di REQ-DEV-018 e REQ-DEV-019. In test.yml il lavoro
+         parte solo sulle pull request verso `develop` e `main`: su quelle
+         verso la release i test di sistema e delle regole non girano.
+      2. CLAUDE.md, «Come si lavora: GitFlow», e docs/gitflow.md, «Il
+         deploy»: «un push fa girare lint, test e build», «su qualunque
+         ramo». test.yml esclude i push sui rami `release/**`, che sono il
+         posto di lavoro di ogni giorno: lì un push non fa girare niente.
+      3. docs/gitflow.md non descrive i tag `-beta` su `develop`, che sono
+         il modo in cui ogni versione arriva sul test; e in «Il ramo di
+         rilascio» dice ancora che «ogni push lo pubblica su test».
+      Chi si fida dei documenti crede coperto dalla CI un lavoro che non lo
+      è: sulla #332 un test di sistema rotto è arrivato fino alla pull
+      request, e l'ha fermato solo un giro fatto a mano.
+      Daniele, 12/11/2026, alla domanda se correggere i documenti o la CI:
+      «no correggi, deve continuare a funzionare come è ora… cioè correggi i
+      documenti». LA CI NON SI TOCCA: si scrive com'è.
+      ORA CLAUDE.md, docs/gitflow.md e docs/modello-a-v.md dicono dove i
+      test girano da soli (push fuori dalla release; pull request verso
+      develop e main) e dove vanno lanciati a mano; gitflow.md descrive i
+      tag `vX.Y.Z-beta` su develop. Un test legge test.yml e controlla che
+      i documenti lo raccontino: se la CI cambia, dice di riscriverli.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, dev, documentazione]
+    requisiti: [REQ-DEV-018]
+    test_cases:
+      - tests/unit/ciComeScritta.test.js
+
+  - id: BUG-146
+    title: "Nelle Impostazioni, sulla scelta attiva il testo secondario è grigio sul colore del tasto e non si legge"
+    area: "src/index.css (.mode-option.active), src/components/ThemeSettings.jsx (Stile del menù), src/components/FormatoPrezziMenu.jsx"
+    severity: media
+    priority: P2
+    description: >
+      Daniele, 12/11/2026, con una foto di Impostazioni → Menù clienti sul
+      test, tema del gestionale «catppuccin»: «il testo grigio su sfondo
+      arancione non si legge. Bisogna cambiare quel colore». Sulla scelta
+      attiva il tasto prende il colore dei tasti (`--btn-bg`) e il testo
+      principale il suo inchiostro (`--btn-ink`); il testo secondario dentro
+      (l'esempio sotto «Numero», la descrizione dello stile «Carte») restava
+      invece `--muted`, un grigio pensato per il fondo della pagina e non
+      per quello del tasto.
+      ORA il testo secondario di una scelta attiva prende l'inchiostro del
+      tasto, appena più leggero: vale per ogni tema del gestionale e per
+      ogni gruppo di scelte, non solo per quei due.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, impostazioni, ui]
+    requisiti: [REQ-UI-005]
+    test_cases:
+      - tests/unit/css.test.js

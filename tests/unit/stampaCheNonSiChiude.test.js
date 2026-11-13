@@ -37,7 +37,7 @@ beforeEach(() => {
   // L'auto-stampa dello scontrino accesa e la stampante configurata, come
   // al banco.
   localStorage.setItem(
-    'tana_printer_v2',
+    'drink_printer_v2',
     JSON.stringify({ autoPrintScontrino: true, ip: '10.0.0.9', port: 8043 })
   )
   window.open = vi.fn(() => {
@@ -175,7 +175,7 @@ describe('una stampa che non si conclude non si tiene il conto', () => {
   beforeEach(() => {
     // La stampante finta risponde sempre: qui serve quella vera, che è il
     // solo modo di tenere un lavoro appeso senza inventarsi niente.
-    localStorage.setItem('tana_stampante_finta', 'false')
+    localStorage.setItem('drink_stampante_finta', 'false')
   })
 
   it('scaduto il tempo: la pretesa torna libera e il banco lo viene a sapere', async () => {

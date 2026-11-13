@@ -5,23 +5,35 @@
 // sera. I gruppi occupavano mezzo menu e spingevano fuori le ultime voci,
 // e non c'era modo di vedere a nome di chi si stava battendo.
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, act, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Routes, Route } from 'react-router-dom'
 import { MemoryRouter } from '../helpers/router.jsx'
 import '@testing-library/jest-dom/vitest'
+import { CON_LICENZA } from '../helpers/licenza.js'
+
+// La licenza delle prove: quella della Tana, o una che dice dov'è la regia.
+const filo = vi.hoisted(() => ({ licenza: null, getIdToken: null }))
 
 vi.mock('../../src/lib/firebaseClient.js', () => ({
-  auth: { currentUser: { uid: 'a1', email: 'capo@bar.it', displayName: 'Capo Bar' } },
+  auth: {
+    currentUser: {
+      uid: 'a1',
+      email: 'capo@bar.it',
+      displayName: 'Capo Bar',
+      getIdToken: (...a) => filo.getIdToken(...a),
+    },
+  },
 }))
 vi.mock('../../src/lib/logout.js', () => ({ logoutStaff: vi.fn() }))
 vi.mock('../../src/dev/devActions.js', () => ({ devToolsEnabled: false }))
+vi.mock('../../src/lib/toast.js', async (orig) => ({ ...(await orig()), toastError: vi.fn() }))
 vi.mock('../../src/lib/api.js', () => ({
   DEFAULT_SETTINGS: { groups_enabled: false, groups_in_drawer: false },
   settingsIniziali: () => ({ groups_enabled: false, groups_in_drawer: false }),
   subscribeSettings: vi.fn((cb) => {
-    cb({ groups_enabled: true, groups_in_drawer: true })
+    cb({ ...CON_LICENZA, ...(filo.licenza ? { licenza: filo.licenza } : {}), groups_enabled: true, groups_in_drawer: true })
     return () => {}
   }),
   subscribeOpenGroups: vi.fn((cb) => {
@@ -29,7 +41,15 @@ vi.mock('../../src/lib/api.js', () => ({
     return () => {}
   }),
   createManualGroup: vi.fn(),
+  chiamaIlBancone: (...a) => chiamaIlBancone(...a),
+  subscribeMieChiamateAlBancone: (uid, cb) => {
+    emettiMie = cb
+    cb([])
+    return () => {}
+  },
 }))
+const chiamaIlBancone = vi.fn(() => 'chiamata-1')
+let emettiMie = null
 
 import StaffDrawer from '../../src/components/StaffDrawer.jsx'
 import { Sottosezioni } from '../../src/lib/sottosezioni.js'
@@ -51,6 +71,8 @@ function apri(role = 'admin') {
 beforeEach(() => {
   vi.clearAllMocks()
   localStorage.clear()
+  filo.licenza = null
+  filo.getIdToken = vi.fn(async (rinnova) => (rinnova ? 'token-rinnovato' : 'token-vecchio'))
 })
 
 describe('menu laterale', () => {
@@ -98,11 +120,43 @@ describe('menu laterale', () => {
     expect(screen.getByText('Staff')).toBeInTheDocument() // il suo ruolo, in fondo
   })
 
-  it('per la sala «Nuovo ordine» apre il menù, non il POS', async () => {
+  // REQ-STAMPA-020: la sala si collega da sé alla stampante.
+  it('la sala ha la sua voce «Stampante»; il gestore la trova nelle impostazioni', () => {
+    apri('staff')
+    expect(screen.getByText('Stampante')).toBeInTheDocument()
+  })
+
+  // REQ-STAFF-019. Flavio, 30/10/2026: lo staff «può solo ricevere una
+  // chiamata dal bancone ma non può effettuarla».
+  it('la sala chiama il bancone, e finché non risponde è in attesa', async () => {
+    apri('staff')
+    await userEvent.click(screen.getByText('Chiama il bancone'))
+    expect(chiamaIlBancone).toHaveBeenCalledTimes(1)
+    expect(chiamaIlBancone).toHaveBeenCalledWith(
+      expect.objectContaining({ from_uid: 'a1', from_name: 'Capo Bar', from_email: 'capo@bar.it' })
+    )
+    expect(screen.getByText('In attesa del bancone…')).toBeInTheDocument()
+    // Un secondo tocco non manda un'altra chiamata.
+    await userEvent.click(screen.getByText('In attesa del bancone…'))
+    expect(chiamaIlBancone).toHaveBeenCalledTimes(1)
+    // Il bancone risponde: la voce torna a chiamare.
+    act(() => emettiMie([]))
+    expect(screen.getByText('Chiama il bancone')).toBeInTheDocument()
+  })
+
+  it('al banco la voce non c’è: il bancone è lui', () => {
+    apri('admin')
+    expect(screen.queryByText('Chiama il bancone')).toBeNull()
+    apri('bartender')
+    expect(screen.queryByText('Chiama il bancone')).toBeNull()
+  })
+
+  it('la sala ordina dal menù, e la cassa non la vede', async () => {
     // Il POS è lo strumento del banco: la sala ordina dal menù che sta
     // mostrando al tavolo, con la ricerca.
     apri('staff')
-    await userEvent.click(screen.getByText('Nuovo ordine dal menù'))
+    expect(screen.queryByText('Nuovo ordine')).toBeNull()
+    await userEvent.click(screen.getByText('Ordina dal menù'))
     expect(screen.getByText('PAGINA MENU')).toBeInTheDocument()
   })
 
@@ -127,6 +181,25 @@ describe('menu laterale', () => {
     apri('admin')
     await userEvent.click(screen.getByText('Nuovo ordine'))
     expect(screen.getByText('PAGINA POS')).toBeInTheDocument()
+  })
+
+  it('anche il banco ordina dal menù, se vuole (BUG-127)', async () => {
+    // L'utente, 02/11/2026: «Ordina dal menù» c'è per staff, bartender e
+    // admin. Prima il banco ci arrivava solo da un tasto della coda a
+    // elenco, chiamato per sbaglio «Vista cliente».
+    apri('bartender')
+    await userEvent.click(screen.getByText('Ordina dal menù'))
+    expect(screen.getByText('PAGINA MENU')).toBeInTheDocument()
+  })
+
+  // BUG-132: senza il modulo del menù digitale /menu dice che il menù non
+  // è attivo, e la voce portava lì. L'utente, 07/11/2026: «segue il
+  // modulo». Per ordinare resta «Nuovo ordine».
+  it('senza il menù digitale «Ordina dal menù» non c’è', async () => {
+    filo.licenza = { moduli: { ...CON_LICENZA.licenza.moduli, menu_tavoli: false } }
+    apri('admin')
+    expect(screen.queryByText('Ordina dal menù')).toBeNull()
+    expect(screen.getByText('Nuovo ordine')).toBeInTheDocument()
   })
 })
 
@@ -175,7 +248,7 @@ describe('il menu agganciato alla pagina', () => {
     expect(document.querySelector('.bar-sidebar.agganciata').style.width).toBe('278px')
     // Il testo cresce con la colonna.
     expect(parseFloat(document.querySelector('.bar-sidebar.agganciata').style.fontSize)).toBeGreaterThan(0.85)
-    expect(localStorage.getItem('tana:menu-largo')).toBe('278')
+    expect(localStorage.getItem('drink:menu-largo')).toBe('278')
   })
 
   it('non si può tirare oltre misura: mezza pagina di menu non serve a nessuno', () => {
@@ -188,7 +261,7 @@ describe('il menu agganciato alla pagina', () => {
   })
 
   it('doppio clic sulla maniglia: si torna alla misura di partenza', () => {
-    localStorage.setItem('tana:menu-largo', '300')
+    localStorage.setItem('drink:menu-largo', '300')
     conSezioni()
     expect(document.querySelector('.bar-sidebar.agganciata').style.width).toBe('300px')
     fireEvent.doubleClick(document.querySelector('.bar-sidebar-maniglia'))
@@ -207,7 +280,7 @@ describe('il menu agganciato alla pagina', () => {
   // SI APRE E SI CHIUDE COL ☰, come ovunque: non c'è un secondo tasto per
   // «agganciarlo». A chi lavora interessa che il menu ci sia o non ci sia;
   // che resti dentro la pagina invece di coprirla è come si presenta.
-  const tocca = () => act(() => { window.dispatchEvent(new Event('tana:toggle-drawer')) })
+  const tocca = () => act(() => { window.dispatchEvent(new Event('drink:toggle-drawer')) })
 
   it('il ☰ lo chiude e lo riapre, sempre dentro la pagina', () => {
     conSezioni()
@@ -265,5 +338,56 @@ describe('il ☰ flottante del menu laterale', () => {
     expect(document.querySelector('.bar-burger')).toBeNull()
     // il menu resta apribile dall'evento: è lo stesso tasto, altrove
     expect(document.querySelector('.bar-sidebar')).toBeTruthy()
+  })
+})
+
+// «AREA CLIENTI» (REQ-FLOTTA-030): il titolare passa alla sua area nella
+// regia già entrato. Il tasto c'è per l'admin quando la build conosce la
+// regia e la licenza dice dov'è; prima che la regia scriva la licenza della
+// Tana, non c'è.
+describe('«Area clienti», verso la regia', () => {
+  const LICENZA_DELLA_REGIA = { ...CON_LICENZA.licenza, regia_url: 'https://regia.example/area' }
+
+  beforeEach(() => vi.stubEnv('VITE_REGIA_PROGETTO', 'drink-regia-test'))
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.unstubAllGlobals()
+  })
+
+  it('senza la regia nella licenza non c’è', () => {
+    apri('admin')
+    expect(screen.queryByText('Area clienti')).toBeNull()
+  })
+
+  it('al bartender non c’è', () => {
+    filo.licenza = LICENZA_DELLA_REGIA
+    apri('bartender')
+    expect(screen.queryByText('Area clienti')).toBeNull()
+  })
+
+  it('al titolare manda il token rinnovato e apre l’area', async () => {
+    const user = userEvent.setup()
+    filo.licenza = LICENZA_DELLA_REGIA
+    const prendi = vi.fn(async () => ({ status: 200, json: async () => ({ url: 'https://regia.example/area?t=1' }) }))
+    vi.stubGlobal('fetch', prendi)
+    const vai = vi.spyOn(window.location, 'assign').mockImplementation(() => {})
+    apri('admin')
+    await user.click(screen.getByText('Area clienti'))
+    await vi.waitFor(() => expect(vai).toHaveBeenCalledWith('https://regia.example/area?t=1'))
+    expect(filo.getIdToken).toHaveBeenCalledWith(true)
+    const [url, opzioni] = prendi.mock.calls[0]
+    expect(url).toBe('https://europe-west1-drink-regia-test.cloudfunctions.net/passaggioVersoRegia')
+    expect(opzioni.headers.Authorization).toBe('Bearer token-rinnovato')
+    vai.mockRestore()
+  })
+
+  it('se la regia dice di no, lo dice in una riga e resta qui', async () => {
+    const user = userEvent.setup()
+    filo.licenza = LICENZA_DELLA_REGIA
+    vi.stubGlobal('fetch', vi.fn(async () => ({ status: 403, json: async () => null })))
+    const { toastError } = await import('../../src/lib/toast.js')
+    apri('admin')
+    await user.click(screen.getByText('Area clienti'))
+    await vi.waitFor(() => expect(toastError).toHaveBeenCalledWith('L’area clienti è riservata al titolare del locale, con la sua email.'))
   })
 })

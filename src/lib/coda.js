@@ -32,6 +32,7 @@ import {
 // La giornata commerciale di un conto: la regola del taglio delle 5 sta
 // tutta lì dentro, qui si sceglie solo QUALE data guardare.
 import { businessDayKey, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
+import { conEmoji, emojiDi } from './icone.js'
 
 // Smista gli ordini negli stati di lavorazione della COMANDA ATTIVA
 // (workflow_status; esclude gli annullati).
@@ -482,11 +483,11 @@ export function passaSottofiltroChiusi(o, sotto = 'tutti') {
 //   aggettivo — per la coda vuota: «Nessun ordine aperto.»
 const STATI_CODA = [
   { id: 'attivi', nome: 'Aperti', segno: '', colonna: 'In corso', aggettivo: 'aperto' },
-  { id: 'chiusi', nome: 'Chiusi', segno: '💶', colonna: null, aggettivo: 'chiuso' },
+  { id: 'chiusi', nome: 'Chiusi', segno: emojiDi('contanti'), colonna: null, aggettivo: 'chiuso' },
   // Gli annullati hanno un filtro loro: fra i chiusi facevano numero senza
   // essere incassi, e per ritrovarne uno da riaprire si cercava in mezzo a
   // quelli buoni.
-  { id: 'annullati', nome: 'Annullati', segno: '✖️', colonna: null, aggettivo: 'annullato' },
+  { id: 'annullati', nome: 'Annullati', segno: emojiDi('annullato'), colonna: null, aggettivo: 'annullato' },
 ]
 
 const etichettaStato = (s) => (s.segno ? `${s.segno} ${s.nome}` : s.nome)
@@ -684,9 +685,9 @@ export function voceCassa({
   if (!cassaAperta) {
     return {
       id: 'apri-cassa',
-      icon: '🟢',
+      icon: 'verde',
       label: 'Apri cassa',
-      hint: 'Senza cassa aperta non si battono ordini.',
+      hint: 'Senza cassa aperta gli ordini si battono ma non si incassano.',
       disabled: false,
     }
   }
@@ -718,7 +719,7 @@ export function voceCassa({
   if (daServire > 0) manca.push(quanteComande(daServire))
   return {
     id: 'chiudi-cassa',
-    icon: '🔒',
+    icon: 'licenza',
     label: 'Chiudi cassa',
     disabled: manca.length > 0,
     hint: manca.length > 0 ? `Chiudi ${manca.join(' e ')}` : 'Conta il contante e chiudi la serata.',
@@ -930,8 +931,8 @@ const corsieDelBanco = (ritiroEsiste) => {
     { id: 'al-banco', titolo: 'In preparazione', stato: ORDER_STATUSES.IN_PREPARAZIONE },
     { id: 'al-ritiro', titolo: nomi.daServire, stato: ORDER_STATUSES.PRONTO },
     { id: 'ritirati', titolo: nomi.serviti, stato: ORDER_STATUSES.RITIRATO },
-    { id: 'chiusi', titolo: '💶 Chiuse', stato: null },
-    { id: 'annullati', titolo: '✖️ Annullate', stato: null },
+    { id: 'chiusi', titolo: conEmoji('contanti', 'Chiuse'), stato: null },
+    { id: 'annullati', titolo: conEmoji('annullato', 'Annullate'), stato: null },
   ]
 }
 
@@ -1270,10 +1271,10 @@ export function raggruppaPerGiornata(lista, { giornataDi, oggi }) {
 // chiamata anche dalle viste che smistano tutto in una passata sola.
 export function intestazioneGiornata(filtro, data) {
   const stati = statiDaFiltro(filtro)
-  if (stati.length > 1) return `📅 ${data}`
-  if (stati[0] === 'chiusi') return `💶 Chiusi · ${data}`
-  if (stati[0] === 'annullati') return `✖️ Annullati · ${data}`
-  return `⏳ Da chiudere · ${data}`
+  if (stati.length > 1) return conEmoji('calendario', data)
+  if (stati[0] === 'chiusi') return conEmoji('contanti', `Chiusi · ${data}`)
+  if (stati[0] === 'annullati') return conEmoji('annullato', `Annullati · ${data}`)
+  return conEmoji('attesa', `Da chiudere · ${data}`)
 }
 
 // ── LA CODA VUOTA, DETTA COME È FILTRATA ─────────────────────────────

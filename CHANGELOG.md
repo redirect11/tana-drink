@@ -1,5 +1,1017 @@
 # Cosa è cambiato
 
+## 1.10.42 — 13 novembre 2026 (produzione)
+
+In produzione la linea 1.10, dopo la 1.9.3: tutto quello che c'è nelle
+versioni 1.10 qui sotto, fino alla 1.10.41-beta provata sul test.
+
+### Cosa cambia per la Tana
+
+- **La licenza della Tana sta in un documento suo** nel database, che il
+  rilascio crea con tutti i moduli e i temi del locale: nessuna funzione si
+  spegne.
+- **L'AI resta spenta** finché la regia di produzione non è pronta: i tasti
+  dell'AI e l'assistente non compaiono.
+
+## 1.10.41-beta — 13/11/2026 (test)
+
+### Gestionale
+
+- Menù dei clienti: un prodotto con «Il menù dei clienti segue le giacenze»
+  non è disponibile per il cliente quando un ingrediente della ricetta è
+  esaurito (o in esaurimento, a scelta). Al cliente non si dice cosa manca:
+  la voce resta con «Non disponibile» o sparisce, secondo Impostazioni →
+  Menù clienti → Voci non disponibili. Al banco resta sempre.
+- Menù dei clienti: ogni voce ha una categoria, scelta fra quelle della
+  cassa e del magazzino o scritta a mano (senza, vale quella del prodotto).
+  «Raggruppa per categoria» crea le sezioni che mancano e ci sposta le
+  voci, dopo aver detto cosa cambia. Un prodotto rimasto fuori dal menù si
+  mette nella sezione della sua categoria con un tocco.
+- Menù dei clienti: gli ingredienti di una voce sono etichette. Mentre si
+  scrive compaiono i suggerimenti (prima i prodotti della ricetta del
+  prodotto collegato e le loro categorie, poi il resto del magazzino e le
+  categorie della cassa); quello che non c’è si scrive libero. Le etichette
+  della ricetta che mancano si aggiungono con un tocco, e «come la ricetta»
+  le mette tutte. Gli ingredienti si possono nascondere al cliente.
+- Magazzino: nella scheda di un prodotto, «Il cliente può sceglierlo dal
+  menù». Segna i prodotti fra cui il cliente potrà scegliere nelle voci che
+  lo permettono (per esempio il gin del gin tonic). Spenta di partenza.
+- Magazzino: nella scheda di un prodotto, «Crea il prodotto della cassa»
+  apre nel Menù la scheda di un prodotto nuovo già collegato a quella
+  bottiglia (nome, categoria, ricetta); si scrivono la quantità della
+  ricetta e il prezzo. La descrizione la propone l’AI, dove c’è. Una riga
+  della ricetta senza quantità ora non si salva, e la scheda lo dice.
+- L’assistente AI: quando una conversazione non può continuare (chat
+  aggiornata, impostazioni cambiate, conversazione troppo lunga) si apre
+  una conversazione nuova e si legge il motivo.
+- L’assistente AI: dalla barra in alto (sul telefono dal ⋮) si apre un
+  pannello dove si chiede di giacenze, vendite e prodotti, si fanno
+  proporre le descrizioni del menù e (all’admin) leggere i documenti dei
+  fornitori. Le modifiche si confermano a schermo; la conversazione non si
+  conserva alla chiusura. Usa il credito AI del locale. Senza credito il
+  tasto resta, grigio con l’avviso, e ricorda di ricaricare; con l’AI
+  disattivata per il locale non compare. La stessa regola vale per
+  «Proponi una descrizione» e «Leggi con l’AI».
+- Fornitori, documenti: «Leggi con l’AI» legge la foto o il PDF di una
+  fattura e propone fornitore, numero, data, importo e righe abbinate ai
+  prodotti del magazzino, da rivedere prima di registrare. Il documento
+  letto si allega da sé; il carico a magazzino si accende a mano. Usa il
+  credito AI del locale.
+- Impostazioni → Licenza: il riquadro «Credito AI» mostra il credito
+  disponibile, quanto si è speso nel mese e il tetto, e perché le funzioni AI
+  sono ferme quando lo sono.
+- Menù dei clienti: su un ingrediente di una voce (un prodotto o una
+  categoria di magazzino) il tasto ⇄ «Il cliente sceglie» offre al cliente
+  i prodotti di quella categoria con «Il cliente può sceglierlo dal menù»;
+  per ciascuno si decide se offrirlo e il supplemento. Il supplemento di
+  partenza si imposta in Impostazioni → Menù clienti → Scelta degli
+  ingredienti.
+
+### Menù dei clienti
+
+- Sulle voci che lo prevedono, «Aggiungi» chiede la scelta dell'ingrediente:
+  la ricetta, oppure una delle alternative disponibili col suo supplemento.
+  Quelle esaurite non compaiono. Ogni scelta diversa è una riga a sé nel
+  carrello.
+- Al banco la scelta si legge nella nota della riga, sul conto e sulla
+  comanda, e il magazzino scala il prodotto scelto con la dose della ricetta.
+- Quando il banco cambia prezzo o ingredienti di un ordine arrivato dal
+  telefono, il cliente lo vede modificato, col totale di prima e quello
+  nuovo, e lo accetta o lo rifiuta; il rifiuto annulla l'ordine. Nel
+  frattempo in coda il conto è «In attesa del cliente», non avanza e la
+  comanda non si stampa. Allo scadere del tempo (Impostazioni → Menù
+  clienti → Modifiche da confermare, 10 minuti di partenza) l'ordine si
+  annulla. Se il cliente conferma a voce, nel conto c'è «Confermato dal
+  cliente».
+
+### Licenza
+
+- Piano Free: le funzioni AI non sono comprese. I tasti AI e il credito non
+  compaiono.
+- Locale sospeso, scaduto o chiuso: chi apre il menù legge solo che il menù
+  non è disponibile, e il personale che il locale è fermo. Il titolare
+  legge il motivo, trova «Riattiva il locale» (non sul locale chiuso) e
+  scarica i dati del locale con «Esporta tutto».
+
+## 1.10.40-beta — 12/11/2026 (test)
+
+### Licenza
+
+- Piano Free: la stampa non è compresa. Non escono comande, scontrini,
+  chiusure di cassa, fatture né ordini ai fornitori; i tasti di stampa e le
+  impostazioni della stampante non compaiono, e al loro posto si legge la
+  frase del piano. Incassi e chiusura della cassa funzionano come sempre.
+  Nei piani a pagamento non cambia niente.
+- Piano Free: la cassa è semplice. Non ci sono gli stati del servizio né la
+  coda di preparazione: si battono le righe e si incassa, e i conti aperti
+  si vedono come elenco da incassare. In Impostazioni, al posto della
+  gestione della preparazione, si legge la frase del piano.
+
+## 1.10.39-beta — 12/11/2026 (test)
+
+### Gestionale
+
+- Scheda del prodotto: «Proponi una descrizione con l'AI» scrive una proposta
+  di descrizione, da usare, scartare o richiedere di nuovo. Usa il credito AI
+  del locale, gestito dalla regia; senza credito il resto della scheda
+  funziona come sempre.
+- Scheda del prodotto: scelta una foto, si ritaglia prima di caricarla, in una
+  cornice quadrata. Si sposta trascinandola e si ingrandisce o rimpicciolisce
+  col cursore, con la rotella o con due dita, così tutte le foto del menù
+  hanno la stessa misura e la stessa inquadratura.
+- Impostazioni: sulla scelta attiva (lo stile del menù, il formato dei prezzi)
+  il testo secondario si legge anche coi temi dove il colore dei tasti è
+  chiaro.
+
+## 1.10.38-beta — 11/11/2026 (test)
+
+### Menù dei clienti
+
+- I prezzi nel menù dei clienti si leggono come numeri, senza il simbolo
+  dell'euro e senza decimali inutili: «8» e «3,5». Il formato si sceglie in
+  Impostazioni → Menù clienti, fra «Numero», «Numero con i centesimi» e
+  «Importo in euro». Carrello, ordine, conti e scontrini riportano sempre
+  l'importo in euro.
+
+### Correzioni
+
+- Stile «Carte»: scelta una carta dopo aver scorso fino in fondo quella di
+  prima, la sezione nuova si apre dall'inizio anche sui telefoni dove
+  restava in fondo.
+
+## 1.10.37-beta — 11/11/2026 (test)
+
+### Menù dei clienti
+
+- Le sezioni composte soltanto da drink speciali non compaiono più fra le
+  sezioni del menù: si aprono dal carosello e dal QR del menù Special.
+  L'opzione «Special anche fra le sezioni del menù», in Menù → Special,
+  le rimette fra le altre.
+- Stile «Carte»: dal carosello e dal QR si apre la stessa carta del menù,
+  con il suo titolo e i suoi testi.
+- Stile «Carte»: le voci con il disegno sono impaginate su due colonne; i
+  nomi non vanno più a capo per far posto al disegno.
+
+## 1.10.36-beta — 11/11/2026 (test)
+
+### Menù dei clienti
+
+- Gli ordini in corso del cliente non compaiono più in cima al menù:
+  stanno nella pagina «I miei ordini», raggiungibile dal tasto in alto, e
+  lì il loro stato si aggiorna da solo.
+- Stile «Carte»: il disegno o la foto compare accanto alla voce in ogni
+  carta, non solo nella pagina Special.
+- Stile «Carte»: il carosello degli Special ha l'aspetto di una carta da
+  gioco, come il resto del menù.
+- Stile «Carte»: le carte hanno l'aspetto di un mazzo vecchio. Il dorso è
+  disegnato come un'incisione, la carta è macchiata e consumata, e ogni
+  carta è rovinata in modo diverso dalle altre.
+
+## 1.10.35-beta — 11/11/2026 (test)
+
+### Menù dei clienti
+
+- Stile «Carte»: sul telefono, mentre si scorre una sezione, il mazzo in
+  alto si rimpicciolisce e lascia più schermo alle voci. In cima alla
+  pagina torna a carte intere.
+
+## 1.10.34-beta — 11/11/2026 (test)
+
+### Menù dei clienti
+
+- Alla prima apertura su un telefono il menù non mostra più per un istante
+  «Il menù digitale non è attivo»: finché le informazioni del locale non
+  sono arrivate si legge «Carico il menù…».
+- Stile «Carte»: all'apertura il mazzo parte chiuso al centro, a carte
+  coperte, si stende a ventaglio e poi le carte si girano una dopo
+  l'altra. L'apertura è più lenta di prima.
+
+## 1.10.33-beta — 11/11/2026 (test)
+
+### Menù dei clienti
+
+- Stile «Carte»: all'apertura della pagina le carte si aprono a ventaglio
+  senza sfarfallare. L'animazione parte quando i caratteri del mazzo sono
+  pronti, e le carte non sono più trasparenti mentre si accavallano.
+
+## 1.10.32-beta — 10/11/2026 (test)
+
+### Gestionale
+
+- Il menù dei clienti si compone in una vista compatta: le sezioni sono un
+  elenco che si apre una alla volta, ogni voce è una riga con nome, prezzo,
+  «Sposta in…» e i tasti per ordinarla, e i testi si aprono sotto la riga.
+  Più voci selezionate si spostano insieme in un'altra sezione, e una
+  ricerca trova le voci per nome.
+- Copiando il menù dalla cassa, i prodotti senza categoria finiscono nella
+  sezione «Non categorizzati».
+- Dal menù dei clienti si crea un prodotto che in cassa non c'è ancora:
+  «+ Nuovo prodotto della cassa» in una sezione apre la scheda del
+  prodotto, e salvato entra subito in quella sezione.
+
+## 1.10.31-beta — 10/11/2026 (test)
+
+### Prodotto
+
+- Un locale che non ha ancora scritto il suo nome si chiama «Lime -
+  SmartOrders» invece di «Il locale». Alla Tana non cambia niente: il nome
+  è nella sua build.
+
+### Gestionale
+
+- Nella ricetta di un drink, un ingrediente liquido aggiunto parte in
+  millilitri invece che in cl, come le righe già scritte. Il cl resta fra
+  le scelte.
+- In Impostazioni → Prezzo consigliato il ricarico si imposta anche come
+  drink cost, la percentuale del prezzo che va negli ingredienti: ×3 è il
+  33,3%, ×5 il 20%. I due campi sono lo stesso valore.
+- Nella ricetta, sia al POS sia nella scheda del drink, ogni ingrediente
+  mostra il suo costo accanto alla quantità: 60 ml di Jim Beam, 1,14 €.
+
+## 1.10.30-beta — 10/11/2026 (test)
+
+### Piano gratuito
+
+- Il prodotto ha il suo nome: la riga in fondo allo scontrino e al menù
+  digitale dei locali col piano gratuito dice «Creato con Lime -
+  SmartOrders» invece di «Creato con Drink». Alla Tana non compare: la sua
+  licenza non porta la firma.
+
+### Sicurezza
+
+- Dipendenze aggiornate entro le versioni già ammesse (`npm audit fix`),
+  nell'app e nelle Functions: nelle Functions spariscono l'avviso critico
+  e i quattro alti (proxy-addr, body-parser, busboy, form-data); Firebase
+  passa da 12.14 a 12.19. Restano gli avvisi che chiedono un salto di
+  versione maggiore: gli strumenti di sviluppo vanno con l'aggiornamento
+  coordinato di vite e vitest, a parte.
+- Strumenti di sviluppo: vite 5 → 7, vitest 2 → 4, con la coverage dello
+  stesso giro. Spariscono i tre avvisi critici (da 26 a 16, nessuno
+  critico). Con vitest 4 la coverage conta righe e rami in modo nuovo e
+  sullo stesso codice dà numeri più bassi: le quattro soglie che cadevano
+  sono state ritarate una volta, un punto sotto la misura nuova.
+
+### Menù dei clienti
+
+- Nello stile «Carte» il mazzo resta in alto mentre si scorre il menù, e
+  il tasto «Le carte ↑» non c'è più. Scegliendo un'altra carta si riparte
+  dall'inizio della sua sezione (REQ-MENU-029).
+
+### Metodo
+
+- Altri tre test di sistema: la chiusura di cassa con contanti, carta e un
+  conto impagato; il conto battuto in sala che compare al banco su un altro
+  dispositivo; quello che sala, bartender e cliente vedono del gestionale
+  (REQ-DEV-018).
+- Test di sistema per le richieste dal banco: la firma di chi ha battuto
+  ogni riga, vista da un altro terminale (REQ-ORD-023); le colonne della
+  Marginalità misurate in un browser alla larghezza di un PC, che senza la
+  correzione di BUG-138 fallisce, e il filtro per categoria (REQ-MENU-032);
+  gli aiuti sotto i campi accesi da Aspetto e ritrovati su un altro
+  terminale (REQ-UI-032); la stampa automatica scelta per banco o sala, con
+  l'avviso quando le comande della sala non le stamperebbe nessuno
+  (REQ-STAMPA-021).
+- La specifica del prodotto per casi d'uso: 63 obiettivi di chi usa
+  l'app — banco, sala, cliente, gestore, admin — coi passi, l'esito, le
+  varianti e il modo in cui si provano, in docs/specifica-prodotto.md
+  (generata da requirements/casi-uso.yaml). È una bozza da rivedere col
+  gestore; da lì nasceranno i test end-to-end, uno per caso d'uso
+  (REQ-DEV-019).
+- I test end-to-end dei casi d'uso: in locale sugli emulatori completi,
+  Functions comprese (`npm run test:e2e`), e a ogni tag su un ambiente
+  generato per il giro — un progetto Firebase di prova su cui si
+  pubblicano regole, Functions e app, si fanno girare i test e poi si
+  cancella tutto. Il sito di test resta al gestore, per validare. I primi
+  due: l'apertura della cassa dopo aver già battuto un conto e il conto al
+  banco con la comanda (REQ-DEV-019).
+- Gli interruttori delle impostazioni hanno un nome per i lettori di
+  schermo: prima venivano letti come «casella di controllo» e basta.
+
+### Impostazioni
+
+- Il riquadro «Il locale» (nome, contatti, intestazione dello scontrino,
+  dati del titolare) ha di nuovo la sua voce nel sottomenu: c'era, ma non
+  si apriva da nessuna parte (BUG-139).
+- Un test di sistema per la cassa chiusa: il conto si batte e arriva al
+  server, e riscuotere resta spento (REQ-CASSA-017).
+
+### Banco
+
+- Sul conto, il + e il − di una riga li usa solo chi l'ha caricata: chi ne
+  vuole un altro tocca il prodotto e fa una riga sua, così l'iniziale
+  accanto alla riga resta vera. Vale anche per l'admin; le righe senza
+  iniziale restano di tutti (REQ-ORD-024).
+- L'iniziale di chi ha caricato ogni riga si accende e si spegne dalle
+  impostazioni («Chi ha caricato la riga», accesa di partenza); con lei si
+  spegne anche la regola del + e del − (REQ-ORD-023).
+- Gli ordini si battono anche a cassa chiusa; riscuotere, acconto e
+  impagato restano spenti finché la cassa non è aperta, e lo si legge sopra
+  i tasti. Anche i tasti Contanti e Carta delle card sono spenti
+  (REQ-CASSA-017).
+- Accanto a ogni riga del conto c'è l'iniziale di chi l'ha battuta, nel suo
+  colore: lo stesso colore della persona sulla card, nella legenda e in
+  alto. Il quadratino di chi ha aperto il conto resta sulla card
+  (REQ-ORD-023).
+- Gli avvisi della campanella, dello storico e del fumetto disegnano la
+  loro icona nel tema scelto: niente più emoji colorate fra le icone
+  monocrome (REQ-UI-031).
+
+### Stampa
+
+- Stampa automatica: per la comanda e per lo scontrino si sceglie se
+  devono uscire per i gesti del banco, della sala o di tutti e due — per
+  esempio lo scontrino solo per le riscossioni del banco e la comanda solo
+  per gli ordini presi in sala (REQ-STAMPA-021).
+
+### Gestionale
+
+- Marginalità listino: le categorie a sinistra, per guardarne una sola; i
+  filtri contano dentro la categoria scelta (REQ-MENU-032). Sul PC le
+  intestazioni stanno sopra i loro numeri (BUG-138).
+- Gli aiuti sotto i campi delle schede sono nascosti di partenza e si
+  riaccendono da Impostazioni → Aspetto → «Aiuti sotto i campi»; i testi
+  sono riscritti in frasi piane (REQ-UI-032).
+
+## 1.10.29-beta — 08/11/2026 (test)
+
+### Metodo
+
+- Lo sviluppo segue il modello a V, una richiesta alla volta: ogni
+  requisito nuovo è collegato a un bisogno del locale, che dice anche come
+  si verifica al banco, e ogni test dichiara il livello a cui verifica
+  (unità, integrazione, sistema, accettazione). La specifica di sistema ha
+  i capitoli dei bisogni e dell'architettura (REQ-DEV-018).
+- I test di sistema: l'app compilata, in un browser vero, con il database
+  emulato. Il primo ripete il giro di una serata con la rete staccata e
+  gira su ogni pull request (REQ-DEV-018).
+
+### Senza rete
+
+- Su un tablet o un telefono appena entrato, se la rete cade prima di aprire
+  il primo conto, i prodotti ci sono: il catalogo si carica appena chi
+  lavora entra. Prima il conto si apriva vuoto (BUG-137).
+
+### Aspetto
+
+- Le icone del gestionale sono silhouette monocrome, tutte della stessa
+  misura, al posto delle emoji colorate: il menu laterale, le sezioni e le
+  sottosezioni, la barra in alto, i moduli del Marketplace, i tasti, i
+  titoli delle sezioni, gli stati dei conti, i metodi di pagamento nei
+  riepiloghi di cassa, le notifiche a comparsa, le conferme e gli avvisi.
+  Nei campi di ricerca la lente compare solo col tema Emoji.
+  In Impostazioni → Aspetto → «Le icone del gestionale» si possono
+  rimettere le emoji, a parte per navigazione, tasti e stati, segnali e
+  messaggi (REQ-UI-031).
+
+## 1.10.28-beta — 07/11/2026 (test)
+
+### Moduli
+
+- I pagamenti SumUp controllano la licenza anche sul server: senza il
+  modulo, un checkout, l'associazione del lettore o un incasso chiamati a
+  mano vengono rifiutati (BUG-134).
+
+## 1.10.27-beta — 07/11/2026 (test)
+
+### Moduli
+
+- Ogni modulo è provato da solo, in coppia con ogni altro, tutti e
+  nessuno, anche sulle regole del database (REQ-DEV-017). Le prove delle
+  regole girano su ogni pull request.
+- L'inventario richiede il magazzino e gli ordini dal telefono richiedono
+  il menù digitale: nel Marketplace un modulo senza la sua base dice quale
+  serve, nelle impostazioni dice perché non lavora, e la disdetta di una
+  base avvisa di cosa si spegne con lei (REQ-LIC-015).
+- Le fatture ai fornitori funzionano anche senza il magazzino: la sezione
+  Fornitori si apre con l'anagrafica e lo scadenzario (REQ-LIC-015).
+- Il vecchio indirizzo della Cassa (`?tab=storico`) si apre anche senza il
+  modulo Inventario (BUG-131).
+- Senza il menù digitale lo staff non vede più «Ordina dal menù» e «Vista
+  cliente», che portavano a una pagina spenta (BUG-132).
+- SumUp: l'interruttore del modulo spegne davvero il lettore e il
+  pagamento online, e i gruppi di conti mostrano «Online» e «Lettore» solo
+  col modulo (BUG-133).
+- Senza gli ordini dal telefono lo staff ordina dal menù come sempre, e il
+  cliente non legge più «ordinazioni momentaneamente sospese» (BUG-135).
+- La descrizione del modulo Personale non promette più le chiamate allo
+  staff, che sono di base (BUG-136).
+
+## 1.10.26-beta — 06/11/2026 (test)
+
+### Menù
+
+- Nel carosello degli Special le schede hanno uno spazio fra loro: mentre
+  si scorreva sembravano attaccate (REQ-MENU-018).
+
+## 1.10.25-beta — 06/11/2026 (test)
+
+### Menù
+
+- Nel tema «Carte» la carta scelta esce e si gira un po' più in fretta, e
+  quando si gira il titolo della sezione non salta più in alto
+  (REQ-MENU-029).
+
+## 1.10.24-beta — 06/11/2026 (test)
+
+### Menù
+
+- Nel tema «Carte» la carta scelta ora esce davvero dal ventaglio: parte
+  dalla carta toccata, scende crescendo, poi si gira e si popola, con più
+  calma di prima (REQ-MENU-029).
+
+## 1.10.23-beta — 06/11/2026 (test)
+
+### Menù
+
+- Nel tema «Carte» le carte del menù stanno in mezzo a un ventaglio di
+  carte girate, come nello schizzo di Flavio, con il logo del locale sulle
+  due ai capi. Toccando una carta, la carta esce girata, si gira e il menù
+  si scrive voce dopo voce (REQ-MENU-029).
+
+## 1.10.22-beta — 06/11/2026 (test)
+
+### Menù
+
+- Nel tema «Carte» i nomi lunghi delle sezioni, anche in maiuscolo
+  («AMERICANI», «DISTILLATI»), stanno interi sulla carta invece di andare
+  a capo a metà parola: la scritta si rimpicciolisce quanto basta
+  (REQ-MENU-029).
+
+## 1.10.21-beta — 06/11/2026 (test)
+
+### Menù
+
+- Un locale nuovo che non ha ancora il suo logo, o una sua icona, mostra
+  un logo neutro (un bicchiere su un tondo scuro), mai quello della Tana:
+  anche sul dorso del mazzo di «Carte» (REQ-VENUE-001).
+
+## 1.10.20-beta — 06/11/2026 (test)
+
+### Menù
+
+- Il tema «Carte» rifatto dopo la prima prova: carte intere e più grandi,
+  un mazzo coperto vero da cui escono all'apertura, la scrittura da libro
+  d'epoca alla Lewis Carroll, più grande, e i disegni dei drink che si
+  vedono bene sulle carte bianche. Sul dorso del mazzo coperto c'è il logo
+  del locale. Gli Special non sono più una carta del
+  mazzo (ripetevano Signature): sono il carosello in cima, come negli
+  altri temi (REQ-MENU-029).
+- Il menù Special si accende e si spegne dal suo pannello, con «Menù
+  Special attivo». Acceso, il carosello in cima al menù e la pagina sua;
+  spento, i drink speciali restano nelle loro sezioni (REQ-MENU-018).
+
+## 1.10.19-beta — 06/11/2026 (test)
+
+### Menù
+
+- Il tema «Carte», l'idea di Flavio per il menù della Tana: le sezioni
+  sono carte da gioco in fila, col seme del loro gruppo; la carta toccata
+  si alza e si apre, con le voci scritte sopra. Gli Special sono il Jolly
+  (REQ-MENU-029).
+
+## 1.10.18-beta — 06/11/2026 (test)
+
+### Menù
+
+- Le schede delle categorie del menù, quando restano agganciate in alto,
+  non sono più attaccate al filo della barra: si fermano alla sua altezza
+  vera, anche col testo del telefono ingrandito (BUG-130). Lo stesso per il
+  sommario dello stile «Giornale».
+- I temi fatti su misura per il locale arrivano con la licenza e si
+  trovano nel Marketplace, in «⭐ I tuoi temi»: si provano, si installano e
+  si usano come gli altri (REQ-MENU-030).
+- Un tema può dividere il menù dei clienti in pagine, una per sezione o
+  una per gruppo di sezioni: le schede in alto cambiano pagina.
+- Nel «Menù dei clienti» ogni sezione può stare in un gruppo (per esempio
+  «Cocktail», «Distillati»), che fa da macro categoria.
+- Stili del menù nuovi, pubblicati dalla regia: in «Stili del menù» del
+  Marketplace si provano, si installano e si usano come gli altri. Dodici
+  caratteri in più fra cui scegliere (REQ-MENU-031).
+
+## 1.10.17-beta — 05/11/2026 (test)
+
+### Menù
+
+- Gli stili che disegnano il menù a modo loro, come «Giornale», ricevono
+  dal menù tutti gli stessi dati e promettono le stesse cose: ogni voce col
+  suo prezzo, i tasti per ordinare di sempre, niente attese sulla rete
+  (REQ-MENU-028). È la base per gli stili nuovi; per chi ordina non cambia
+  niente.
+
+## 1.10.16-beta — 05/11/2026 (test)
+
+### Menù
+
+- **«Meraviglie», lo stile della Tana alla Lewis Carroll** (REQ-MENU-027).
+  Un libro illustrato dell'Ottocento su carta avorio: caratteri da stampa
+  d'epoca, le categorie come capitoli, i semi delle carte, cornici a
+  filetto doppio, il cartellino «Bevimi» sui disegni. Veste anche la home
+  e le altre pagine dei clienti, con titoli e frasi suoi («Benvenuti nel
+  Paese delle Meraviglie», «Il Bianconiglio è in viaggio verso il
+  bancone…»); i tasti e gli stati dell'ordine restano scritti come sempre.
+  Si sceglie dal marketplace, col tema «Meraviglie».
+- **La tavolozza resta libera anche con «Lavagna».** Il tema «Lavagna»
+  propone l'ardesia come tavolozza, che ora si può cambiare come le altre.
+  Chi aveva scelto lo stile Lavagna su un'altra tavolozza lo vede con
+  quei colori: per riavere l'ardesia, «Usa» sul tema «Lavagna».
+- **I disegni dei drink nel segno delle tavole di Tenniel**, le
+  illustrazioni originali di *Alice*: il tratteggio segue la forma del
+  bicchiere e il contorno ingrossa dal lato in ombra, con l'acquerello
+  steso sopra (REQ-MENU-026). Restano segnaposto finché non arrivano le
+  foto dei drink.
+
+## 1.10.15-beta — 05/11/2026 (test)
+
+### Regia e titolare
+
+- **Dalla regia all'app, e ritorno, con un clic** (REQ-FLOTTA-030). «Apri
+  la tua app» dall'area clienti della regia fa entrare il titolare nel suo
+  locale senza password; dal menù laterale, «Area clienti» lo porta nella
+  regia già entrato. Il tasto compare quando la licenza è della regia.
+- **Al banco si entra anche con Google.** Se l'accesso con Google non va
+  (finestra bloccata dal browser, Google non attivo), il personale e i
+  clienti leggono cosa fare, non un errore generico.
+- **Telefono, partita IVA, codice fiscale e sede legale** in Impostazioni →
+  Il locale: la regia li riempie dalla registrazione del titolare. La
+  partita IVA va sotto la ragione sociale sulle ricevute; i tre dati
+  fiscali sulla fattura di cortesia, stampata e nella mail; il telefono nei
+  contatti della pagina iniziale. Salvare le impostazioni della stampante
+  non blocca più l'intestazione dello scontrino a quella del momento.
+- Lo script del titolare dice se l'email dell'account è verificata, e con
+  `--verifica-email --applica` la segna verificata.
+
+### Backup
+
+- **Il backup salva tutto il database.** Mancavano undici collezioni: la
+  struttura del menù dei clienti, i listini e lo storico prezzi dei
+  fornitori, i modelli d'ordine, le spese extra, i minimi e lo storico
+  delle vendite importato. Lo storico importato è nel file, ma si
+  ripristina dallo script di manutenzione; il ripristino dall'app lo dice
+  (BUG-129).
+
+## 1.10.14-beta — 05/11/2026 (test)
+
+### Menù dei clienti
+
+- **Il menù dei clienti si personalizza liberamente**, da Menù → Menù dei
+  clienti (REQ-MENU-025).
+  - Finché non lo si tocca resta quello di sempre, diviso per le
+    categorie della cassa.
+  - «Prepopola con le voci della cassa» crea una sezione per categoria,
+    con dentro tutti i suoi prodotti; su un menù già personalizzato il
+    tasto diventa «Riparti dalle voci della cassa» e, dopo una conferma,
+    sostituisce tutto con una copia nuova. Da lì sezioni e voci si aggiungono,
+    si spostano, si rinominano e si nascondono; una sezione può essere
+    snella (nome e prezzo).
+  - Ogni voce è collegata a un prodotto della cassa (🔗), da cui prende
+    prezzo e disponibilità; lo stesso prodotto può stare in più sezioni.
+  - L'editor ha la forma del menù: i testi si scrivono direttamente nelle
+    card, e sopra ogni campo un'etichetta dice se il testo viene dalla
+    scheda prodotto o vale solo per quella sezione («↺» per tornare alla
+    scheda).
+  - I prodotti della cassa che non sono in nessuna sezione, per esempio
+    quelli aggiunti dopo, sono elencati in cima, con «Aggiungi a…»; sulla
+    scheda del prodotto si legge «non compare».
+  - Con la struttura personalizzata le sezioni stanno in schede grandi,
+    ferme in alto mentre si scorre. Il personale ordina sempre dal menù
+    della cassa, e il banco riceve il prodotto della cassa col nome letto
+    dal cliente nella nota.
+- Nella scheda prodotto, **«Nome nel menù dei clienti»**: il nome che
+  legge il cliente, quando quello del banco è diverso (REQ-MENU-025).
+
+## 1.10.13-beta — 04/11/2026 (test)
+
+### Magazzino
+
+- «📜 Movimenti» di un prodotto si apre di nuovo: il tasto non faceva
+  niente, perché la finestra compariva solo con la scheda del prodotto in
+  modifica (BUG-128).
+- **Reso al fornitore**: nella finestra del carico si sceglie «⬇ Reso al
+  fornitore» per la merce restituita. Esce dalla giacenza e si sottrae dagli
+  acquisti del periodo, al costo del prodotto, o dal deposito se nel periodo
+  non ci sono acquisti; non risulta consumata, come succedeva correggendo il
+  contenuto reale. Il contenuto reale resta com'era (REQ-MAG-053).
+
+## 1.10.12-beta — 04/11/2026 (test)
+
+### Nel menù dei clienti
+
+- **Senza drink speciali, il menù Special non si apre**: chi lo raggiunge,
+  anche da un QR stampato, arriva al menù completo dello stesso tavolo.
+- **Un bicchiere stilizzato al posto del logo** per i drink senza foto, in
+  tutti gli stili.
+- **I disegni dei drink sono della Tana**: si vedono nei locali che hanno
+  lo stile «Notte», in qualunque stile scelgano. Le foto dei drink si
+  caricano e si vedono ovunque.
+
+## 1.10.11-beta — 03/11/2026 (test)
+
+### Nel gestionale
+
+- **Vista cliente**: la riga in alto dice solo che si sta guardando il
+  menù come lo vede il cliente, senza più «Da qui non si ordina».
+
+## 1.10.10-beta — 03/11/2026 (test)
+
+### Nel gestionale
+
+- **«Vista cliente» mostra il menù e basta.** Si vede com'è per chi
+  ordina, ma senza «Aggiungi» né carrello: per ordinare c'è il menù dello
+  staff.
+- **«Ordina dal menù».** Nel ☰ c'è per tutto il personale; admin e
+  bartender hanno in più «Nuovo ordine», la cassa. Il tasto della coda a
+  elenco che si chiamava «Vista cliente» ma apriva il menù per gli ordini
+  ora si chiama «Ordina dal menù».
+
+## 1.10.9-beta — 02/11/2026 (test)
+
+### Nel gestionale
+
+- **Marketplace → Moduli, coi piani gestiti a mano.** Per un locale con il
+  piano pagato fuori dal pagamento online, «Aggiungi» e «Disdici» inviano
+  una richiesta all'assistenza, che attiva o spegne il modulo a pagamento
+  ricevuto; il messaggio lo dice, invece di dare il modulo per aggiunto.
+
+## 1.10.8-beta — 02/11/2026 (test)
+
+### Per chi gestisce l'installazione
+
+- **Il titolare entra nel suo locale con lo stesso account della regia.**
+  All'attivazione la regia crea l'account del titolare con la sua email e
+  il ruolo di amministratore, senza password: la si imposta dall'email che
+  arriva. Per le installazioni già attive c'è uno script che lo verifica e,
+  su richiesta, lo sistema.
+
+### Nel menù
+
+- **Lo stile «Giornale» è un giornale vero.** Il menù si apre su una
+  testata con la data dell'edizione e un sommario che resta in alto e
+  segue la lettura. Il primo Special è l'articolo di prima pagina, con un
+  titolo grande e la sua illustrazione; gli altri stanno «In breve». Ogni
+  categoria è una sezione, con le voci in colonne.
+- **Le illustrazioni del «Giornale» sono incisioni**: un solo inchiostro,
+  la cornice della lastra, il tratteggio al posto dei colori. Gli altri
+  stili avranno le loro.
+
+### Nel gestionale
+
+- **Il marketplace dei temi è una pagina sua**: la voce «🛍️ Marketplace»
+  del menu laterale, da sfogliare come un catalogo, con Temi, Stili del
+  menù e Installati. Ogni tema si vede su un pezzo del menù vero, si prova
+  sul proprio menù e si installa. In Impostazioni resta la scelta fra
+  quelli già installati.
+- **I moduli si aggiungono dal Marketplace.** Nella nuova sezione
+  «Moduli» ogni modulo mostra se è incluso nella licenza, in prova o non
+  incluso, con il prezzo mensile. Il titolare può provarlo gratis per i
+  giorni previsti, aggiungerlo con il pagamento sulla pagina sicura di
+  Stripe o disdirlo; il modulo compare da solo appena la licenza si
+  aggiorna. Gli altri ruoli vedono la sezione in sola lettura.
+
+### Privacy e sicurezza
+
+- **La copia della licenza nelle impostazioni non si può più modificare
+  dall'app**, nemmeno dalla console del browser: la scrive solo il
+  fornitore. Il resto delle impostazioni si modifica come prima.
+- **Il ripristino da un backup tiene la licenza attuale**: le impostazioni
+  tornano quelle del file, la licenza no. Vale anche per il ripristino da
+  riga di comando.
+
+## 1.10.7-beta — 02/11/2026 (test)
+
+### Nel gestionale
+
+- **Il marketplace dei temi, in Impostazioni → Aspetto.** Un tema è una
+  tavolozza di colori con uno stile del menù: si prova sul proprio menù, si
+  installa e si usa con un tasto. Per ora sono tutti gratis: Classico,
+  Lavagna, Grand Hotel, Riviera, Pastello, Gazzetta e Inchiostro. I temi
+  nuovi li pubblica il fornitore e compaiono da soli.
+
+## 1.10.6-beta — 02/11/2026 (test)
+
+### Nel menù
+
+- **Negli stili «Lavagna» e «Déco», sul telefono, i nomi dei drink non si
+  spezzano più a metà parola**: il prezzo va sotto il nome.
+
+## 1.10.5-beta — 02/11/2026 (test)
+
+### Nel menù
+
+- **Quattro stili del menù nuovi, gratis: «Lavagna», «Déco», «Riviera» e
+  «Giornale».** In Impostazioni → Menù clienti si installano con un tasto
+  e si provano sul proprio menù prima di sceglierli; i clienti continuano
+  a vedere lo stile scelto finché non lo si cambia.
+
+- **Lo stile «Notte» del menù è esclusivo della Tana.** Uno stile può
+  far parte della licenza: dove la licenza non lo comprende, non si può
+  scegliere e il menù resta nello stile classico. Impostazioni → Licenza
+  mostra gli stili inclusi.
+
+- **Negli Special dello stile «Notte» il disegno del drink è molto più
+  grande**: prende tutto lo spazio sopra il testo, e sugli schermi larghi
+  sta di fianco al testo.
+
+### Nel gestionale
+
+- **Alla Tana le fatture ai clienti sono incluse**: la sua licenza è
+  quella del piano Completo, con tutti i moduli.
+
+## 1.10.4-beta — 02/11/2026 (test)
+
+### Per i locali aggiornati dalla regia
+
+- **L'app si presenta alla regia** alla prima apertura di ogni versione
+  nuova, con qualcuno collegato: la regia sa quale versione gira, e se la
+  licenza manca la riscrive.
+
+### Nel menù
+
+- **I disegni dei drink nell'elenco sono più grandi e interi.** Prima
+  stavano nella piccola casella delle foto, ritagliati; ora si vedono per
+  intero, una volta e mezzo più grandi. Le foto restano come prima.
+
+### Privacy e sicurezza
+
+- **Senza una licenza valida l'app non lavora.** Senza licenza, con la
+  licenza sospesa, chiusa o scaduta, il database non accetta più
+  scritture, nemmeno dalla console del browser; i dati restano
+  consultabili. L'app si ferma e dice perché, anche senza rete.
+- **Una licenza che scade verso il Free** lascia lavorare col piano Free,
+  senza perdere niente.
+- **La cancellazione dei dati programmata si vede su ogni schermata** di
+  chi lavora: la data, il backup scaricabile dall'area clienti e cosa
+  fare per evitarla.
+- **La licenza non sta più nella build.** Ogni installazione, la Tana
+  compresa, ha la sua nel database.
+
+### Nel gestionale
+
+- **La licenza si legge in Impostazioni → Licenza.** Il titolare vede
+  piano, stato, validità, chi gestisce la licenza, quanti moduli premium
+  comprende e i limiti del piano. Si consulta soltanto: le modifiche
+  passano dalla regia, con il tasto «Gestisci la licenza» dove la
+  licenza lo prevede. Alla Tana compare la sua licenza, con i suoi
+  moduli.
+- **Il gruppo «Funzioni premium» di Impostazioni si chiama «Licenza»**:
+  contiene il riepilogo della licenza e, sotto, le funzioni premium come
+  prima.
+
+## 1.10.3-beta — 02/11/2026 (test)
+
+### Per i locali aggiornati dalla regia
+
+- **Aggiornamenti a scelta del titolare.** Quando la regia propone una
+  versione nuova, il titolare ne vede prima le novità e sceglie
+  «Aggiorna», «Salta questa versione» o «Più tardi». Una versione saltata
+  resta in Impostazioni → Informazioni, con il suo «Aggiorna». La scelta
+  arriva subito alla regia: con «Aggiorna» l'aggiornamento parte in pochi
+  minuti, e se la scelta non va a buon fine il box dice perché e lascia
+  riprovare.
+- **Quando il piano non comprende gli aggiornamenti**, Informazioni lo
+  dice e porta alla pagina dei piani.
+- **Gli avvisi sulle condizioni del servizio** compaiono al titolare una
+  volta sola e restano nelle notifiche.
+- **Nella Tana non cambia niente**: gli aggiornamenti arrivano come prima.
+
+### Privacy e sicurezza
+
+- **La licenza del locale non si cambia più dall'app.** Piano, moduli,
+  limiti e sospensione stavano nelle impostazioni del locale, che ogni
+  bartender può scrivere. Ora stanno in un documento a parte che dall'app
+  non scrive nessuno: lo scrive la regia.
+- **Senza licenza l'app non si apre.** Un'installazione che non ha una
+  licenza, né della regia né scritta nella sua build, mostra
+  «Installazione non attivata» al posto dell'app, coi dati che restano.
+  Lo dice solo quando il server lo ha confermato: aperta senza rete, l'app
+  lavora con l'ultima licenza che conosce.
+- **Nella Tana non cambia niente**: la sua licenza è scritta nella build,
+  con gli stessi moduli di prima.
+- **Il server fa rispettare la licenza.** Le funzioni che il piano non
+  include non si scrivono nemmeno passando dalla console del browser:
+  magazzino, inventario, scadenzario, fatture ai clienti, ore e paghe del
+  personale, bilancio, account dei clienti. Lo stesso vale per gli sconti,
+  dove il piano li esclude, e per gli ordini dal telefono del cliente. I
+  dati già scritti restano leggibili.
+- **Senza il modulo del magazzino le vendite non scalano le giacenze**, e
+  il ripristino di un backup salta le parti dei moduli non inclusi,
+  dicendolo.
+
+### Per chi sviluppa
+
+- **Il backend del locale si può scrivere in un file.** La regia può
+  pubblicare accanto all'app un `configurazione.json` con il progetto del
+  locale, e l'app lo segue al posto delle impostazioni della build. È il
+  primo passo per l'installazione nel locale, con un'immagine sola per
+  tutti. Senza il file l'app usa la build, come sempre. L'avvio non lo
+  aspetta mai. Il contratto è in `docs/porte-e-adattatori.md`.
+- **Firebase solo dietro le porte.** Un test impedisce a file nuovi di
+  importare Firebase direttamente. L'elenco dei file che lo fanno ancora
+  si può solo accorciare.
+- **La porta dei dati.** Tutto quello che l'app legge e scrive nel
+  database passa da `src/porte/dati.js`. Dietro c'è Firestore, come
+  prima. Una serie di prove scritte sulla porta, e la tabella di chi può
+  fare cosa per ruolo, girano sull'emulatore e gireranno uguali sul
+  backend dell'installazione nel locale.
+- **Nella Tana non cambia niente.**
+- **La licenza nella build.** Ogni cliente può avere un
+  `clienti/<slug>/licenza.json`, con la stessa forma del documento della
+  regia: vale dove quel documento non c'è. Gli strumenti di sviluppo la
+  licenza la mostrano e non la scrivono più: si cambia con
+  `scripts/licenza-moduli.js`.
+
+## 1.10.2-beta — 31 ottobre 2026, sul test
+
+### Per la demo pubblica
+
+- **La demo non usa più il database.** Il sito di prova che si apre dalla
+  pagina del prodotto lavora tutto nel browser di chi lo prova, con un
+  locale inventato: menù, magazzino, quattro settimane di serate e la
+  serata di oggi in corso. Quello che si fa resta in quel browser.
+- **Si entra scegliendo il ruolo**: titolare, bartender, sala o cliente.
+  Una fascia in cima dice che è una demo, con «Cambia ruolo» e
+  «Ricomincia da capo».
+- **Nei locali veri non cambia niente**: la demo la decide la build, e il
+  suo codice non entra nel pacchetto degli altri locali.
+
+### Per chi lavora in sala
+
+- **La stampante anche dal telefono della sala.** Nel menu c'è
+  «Stampante»: indirizzo, prova di stampa e certificato si sistemano da
+  sé, sul proprio telefono, senza chiedere al banco.
+- **Si chiama il bancone.** Nel menu c'è «Chiama il bancone»: al titolare
+  arriva la chiamata a tutto schermo, e finché non risponde il tasto dice
+  che si è in attesa.
+- **La sala corregge i conti.** Una riga di una comanda già mandata al
+  banco si toglie o si riduce anche dal telefono della sala, finché il
+  drink non è servito. Annullare un conto resta del banco.
+
+### Per chi amministra
+
+- **Cambiare ingrediente in una ricetta non cambia più l'unità.** Se la
+  riga era in ml resta in ml, con la sua quantità; l'unità cambia solo
+  passando a un articolo che non si misura così (da un liquido a uno a
+  pezzi).
+
+## 1.10.1-beta — 30 ottobre 2026, sul test
+
+### Per i clienti
+
+- **Uno stile «Notte» per il menù**, da scegliere. Una carta elegante al
+  buio: voci a riga senza riquadri, titoli sottili, l'oro solo sui prezzi.
+- **Gli Special a scorrimento.** Nello stile «Notte» il menù Special è una
+  sequenza di scene a tutto schermo, una per drink: il bicchiere entra
+  scorrendo, il nome arriva lettera per lettera e il fondo prende il colore
+  del drink.
+
+### Per chi amministra
+
+- **Stile del menù.** In Impostazioni ▸ Menù clienti si sceglie fra
+  «Classico», il menù di sempre e predefinito, e «Notte». I colori restano
+  quelli del tema scelto. Il personale vede sempre lo stile classico.
+
+### Privacy e sicurezza
+
+- **I caratteri non arrivano più da Google.** Stanno dentro l'app e si
+  scaricano dallo stesso indirizzo del menù: chi apre il menù non manda più
+  il suo indirizzo a Google. Vale anche per le pagine della privacy e dei
+  cookie.
+
+## 1.10.0 — 30 ottobre 2026
+
+### Cosa cambia per la Tana
+
+- **Al primo avvio l'app riscarica i suoi file, una volta.** Le copie
+  salvate sul dispositivo cambiano nome e si rifanno da capo: il primo
+  avvio dopo l'aggiornamento può metterci qualche secondo in più, i
+  successivi no. Conti, comande e incassi non c'entrano.
+- **Le preferenze restano dove sono.** IP della stampante, zoom, bozze dei
+  conti e preferenze del banco passano da sole ai nomi nuovi al primo
+  avvio: non va reimpostato niente.
+- **Impostazioni → Il locale.** Nome, nome corto, il locale nella frase
+  («alla Tana del Coniglio»), slogan, «chi siamo», città, email, ragione
+  sociale e intestazione dello scontrino, social: l'identità del locale si
+  scrive qui. Una casella vuota lascia il valore predefinito, mostrato in
+  grigio. Prima erano scritti nel codice; per la Tana non cambia niente.
+  I social nel piede di pagina vengono da qui: con la lista vuota il piede
+  non li mostra.
+
+### Per chi sta al banco
+
+- **Il resto in contanti.** Con «Calcolo del resto in contanti» acceso in
+  Impostazioni → Pagamenti, scegliendo «Contante» si indica quanto ha dato
+  il cliente, con i tagli più probabili già pronti o una cifra a mano, e
+  compare il resto da dare. Vale anche quando si incassano solo alcune
+  righe del conto, e l'importo incassato non cambia.
+- **Le maniglie del conto seguono il dito.** Trascinarle non fa più
+  ridisegnare tutta la schermata a ogni movimento: niente scatti sul
+  tablet, e sul telefono la maniglia del riepilogo non blocca più la
+  pagina. Tenendo premuto per afferrarle non si apre più il menu del
+  browser né la selezione del testo.
+
+### Per i clienti
+
+- **Gli Special della casa.** In cima al menù c'è il carosello dei drink
+  speciali: una slide alla volta, con il disegno del drink, il nome, la
+  descrizione e il prezzo; va avanti da sola, si sfoglia col dito e coi
+  pallini. Toccandone una si apre il menù Special, su quel drink e sullo
+  stesso tavolo. Il menù Special ha un suo indirizzo e un suo QR, da
+  stampare sul menù che si porta al tavolo, e mostra solo gli special nei
+  colori del menù, su due colonne sul telefono e tre sugli schermi larghi.
+- **I disegni dei drink.** Bicchieri diversi, col colore del drink e la
+  sua decorazione, disegnati col tratteggio delle incisioni originali di
+  Alice; le illustrazioni ad acquerello a tema Alice hanno il tratto
+  bianco sui temi scuri e scuro su quelli chiari.
+- **Il dettaglio di un drink.** Toccando un drink nel menù, o nel menù
+  Special, si apre la sua scheda: immagine grande, descrizione intera,
+  ingredienti e «Aggiungi». Nell'elenco la descrizione si ferma a tre
+  righe.
+- **Gli ingredienti nel menù, negli Special e nel carosello**, sotto la
+  descrizione. Dalla ricetta non si leggono il ghiaccio, il tempo di
+  lavorazione e i formati delle confezioni.
+- **Il menù in ordine con i nomi lunghi.** I nomi lunghi non escono dalla
+  card del carosello e non spingono fuori «Aggiungi»; la fila delle
+  categorie, ferma nella pagina, non ha più una fascia di colore sua.
+
+### Per chi amministra
+
+- **Menù → Special.** Una voce si segna come «Drink speciale» dalla sua
+  scheda, dove si compone anche il disegno (bicchiere, colore,
+  decorazione) con l'anteprima di come lo vedrà il cliente; resta
+  comunque nella sua categoria. Nella sezione Special si scrivono titolo e
+  sottotitolo del menù (per esempio «Alice nel Paese delle Meraviglie») e
+  si scarica il QR del menù Special.
+- **Ingredienti in carta.** Nella scheda del drink un campo nuovo,
+  separato da virgole, con quello che legge il cliente. Vuoto, gli
+  ingredienti si ricavano dalla ricetta.
+- **Marginalità del listino in tabella, divisa per categorie.** Nel menù,
+  la marginalità mostra Costo, Vendita, Consigliato, Moltiplicatore e
+  Utile in colonna, e si ordina toccando l'intestazione. Parte divisa per
+  categorie del menù, con moltiplicatore e utile medi di ogni categoria;
+  «Tutto insieme» mette in fila tutto il listino.
+- **Statistiche per periodo: l'utile per categoria.** Sotto «Incasso per
+  categoria» c'è la classifica delle categorie per utile: incassato, costo
+  del venduto ricavato dalle ricette, e utile, col totale in fondo. Le
+  categorie con voci senza ricetta o ingredienti senza costo sono segnate:
+  il loro utile è più alto del vero.
+- **Statistiche, periodo personalizzato: il calcolo parte con «Applica».**
+  Si scrivono inizio e fine e poi si tocca il tasto: prima ogni ritocco
+  alle date faceva ripartire il calcolo. Con la fine prima dell'inizio il
+  tasto resta spento.
+- **«Movimenti» di un prodotto si apre subito.** Prima, sul tablet, poteva
+  metterci secondi o sembrare non aprirsi: l'app scorreva tutti i
+  movimenti salvati sul dispositivo prima di chiedere quelli del prodotto.
+  Ora li chiede direttamente al server.
+- **Ghiaccio Hoshizaki nelle ricette: 0,8 delle dosi di prima.** Le dosi
+  di ghiaccio di tutte le voci di menù passano da due volte a 1,6 volte la
+  dose scritta in origine (200 g diventano 160). È un aggiornamento dei
+  dati, fatto con lo script del ghiaccio: sul test è già applicato, in
+  produzione si applica con il rilascio.
+- **Le voci fuori menu si leggono anche aperte, col tema chiaro.** Nella
+  gestione del menù, aprendo «Azioni» su una voce non disponibile, i tasti
+  erano scuri sul fondo grigio scuro e non si leggevano.
+- **Magazzino: tolta la scritta «Come stanno a scorta»** sopra i filtri
+  della scorta, nella tendina «Filtra i prodotti».
+
+### Solo sul test
+
+- **I Signature segnati come Special**, con una prima descrizione e un
+  disegno, e **ingredienti di prova** inventati dal nome e dalla
+  descrizione per vedere come escono. Sono dati del test, non le ricette
+  vere, e non vanno in produzione: le descrizioni sono da rivedere e gli
+  ingredienti veri si scrivono nella scheda.
+
+### Per chi sviluppa
+
+- **L'app si compila per un locale** (`CLIENTE=<slug>`, cartella
+  `clienti/<slug>/`); senza, è la Tana come sempre. `node
+  scripts/genera-cliente.mjs --slug <slug> --nome "<nome>"` crea la
+  cartella di un locale nuovo: è quello che lancia la regia. La CI compila
+  anche il cliente neutro `demo`. Un test-guardia conta le parole della
+  Tana rimaste nel codice e lascia solo accorciare la lista.
+- **I moduli del prodotto e la sospensione**: con una licenza scritta dalla
+  regia in `settings/bar.licenza`, menù digitale, ordini dal telefono,
+  clienti, magazzino, statistiche, personale e SumUp seguono il piano, e
+  un'installazione sospesa o chiusa lo dice con una schermata sua. La Tana
+  non ha una licenza scritta: ha tutto, come prima.
+- **Il piano Free.** Con `limiti` nella licenza l'app fa rispettare i
+  limiti del piano: prodotti del menù, conti aperti insieme, niente
+  sconti, storico degli ultimi giorni, il solo titolare, la riga «Creato
+  con Drink» in fondo a scontrino e menù digitale; ogni limite lo dice e
+  porta alla pagina dei piani. Col piano `free` l'app lavora anche senza
+  Functions né Storage (profilo leggero): niente SumUp, niente foto,
+  niente account dello staff. Senza `limiti`, come la Tana, non cambia
+  niente.
+- **Chiavi locali e cache col prefisso `drink`.** Le chiavi di
+  localStorage passano da `tana:`/`tana_` a `drink:`/`drink_`: al primo
+  avvio, prima di ogni altro modulo, le chiavi vecchie si copiano sulle
+  nuove (le vecchie restano, per un eventuale ritorno alla versione
+  prima). La cache del service worker passa da `tana-drink-v4` a
+  `drink-v5`, ed è per questo che il primo avvio riscarica i file. Il nome
+  del locale nelle descrizioni SumUp viene da `functions/.env.<progetto>`.
+- **La flotta sta nella regia** (drink-regia): attivazione, Terraform,
+  workflow e script delle istanze non sono più qui. I workflow di questo
+  repository pubblicano solo i due progetti della Tana.
+
 ## 1.9.3 — 21 ottobre 2026
 
 ### Per chi sta al banco

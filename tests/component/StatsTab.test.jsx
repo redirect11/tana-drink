@@ -93,6 +93,9 @@ vi.mock('../../src/lib/api.js', () => ({
     { id: 'd2', name: 'Amaro della casa', category: 'AMARI' },
   ]),
   fetchCashSessions: vi.fn(async () => sessioni),
+  // Senza prodotti di magazzino il costo del venduto non si conosce: le
+  // categorie dell'utile escono «parziali».
+  fetchInventoryItems: vi.fn(async () => []),
   subscribeSettings: (cb) => {
     // L'orario del locale (REQ-CASSA-015): da qui partono le fasce orarie.
     cb({ business_day_cutoff_hour: 5, orario_apertura: '19:00', orario_chiusura: '02:00' })
@@ -223,13 +226,20 @@ describe('Statistiche per serata: la lista delle chiusure', () => {
 })
 
 // Il periodo personalizzato si sceglie da «Personalizzato», con data e ora
-// (REQ-STAT-003): prima le date stavano sempre sotto le pastiglie.
+// (REQ-STAT-003): prima le date stavano sempre sotto le pastiglie. Le due
+// ore si scrivono e poi si tocca «Applica» (Flavio, 22/10/2026).
 async function personalizzato(dalle, alle) {
   fireEvent.click(await screen.findByRole('button', { name: 'Personalizzato' }))
   await act(async () => {
     fireEvent.change(screen.getByLabelText('Inizio'), { target: { value: dalle } })
     fireEvent.change(screen.getByLabelText('Fine'), { target: { value: alle } })
   })
+  const applica = screen.getByRole('button', { name: 'Applica' })
+  if (!applica.disabled) {
+    await act(async () => {
+      fireEvent.click(applica)
+    })
+  }
 }
 
 describe('Statistiche per periodo', () => {
@@ -359,6 +369,37 @@ describe('Statistiche per periodo', () => {
     await m.vai('periodo')
     await personalizzato('2026-08-09T05:00', '2026-08-08T05:00')
     expect(await screen.findByText(/L’ora di fine deve venire dopo quella di inizio/)).toBeTruthy()
+    // E un periodo così non si può nemmeno applicare.
+    expect(screen.getByRole('button', { name: 'Applica' })).toBeDisabled()
+    m.stop()
+  })
+
+  // IL CALCOLO PARTE SOLO CON «APPLICA». Flavio, vocale del 22/10/2026: «se
+  // io metto la data di inizio lui mi inizia a caricare la data di inizio
+  // fino ad oggi … con un tasto ok che mi avvia poi da lì il calcolo del
+  // periodo sarebbe meglio, così ragiona una sola volta quando lo dico io».
+  it('scrivere le ore non ricalcola niente: si ricalcola quando si tocca «Applica»', async () => {
+    const m = menu()
+    render(<StatsTab />)
+    await screen.findByText(/tocca una serata/i)
+    await m.vai('periodo')
+    fireEvent.click(await screen.findByRole('button', { name: '7 giorni' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Personalizzato' }))
+    const prima = screen.getByText(paragrafo(/^Dalle .* alle .*: \d+ giornat/)).textContent
+    // Senza niente di scritto non c'è niente da applicare.
+    expect(screen.getByRole('button', { name: 'Applica' })).toBeDisabled()
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Inizio'), { target: { value: '2026-08-01T05:00' } })
+    })
+    // La didascalia del periodo guardato non è cambiata: dice di applicare.
+    expect(screen.getByText(/Tocca «Applica» per calcolare il periodo scritto/)).toBeTruthy()
+    expect(screen.queryByText(prima)).toBeNull()
+    expect(screen.getByRole('button', { name: 'Applica' })).not.toBeDisabled()
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Applica' }))
+    })
+    expect(await screen.findByText(paragrafo(/^Dalle 05:00 di sabato 01\/08\/2026 alle/))).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Applica' })).toBeDisabled()
     m.stop()
   })
 
@@ -372,7 +413,7 @@ describe('Statistiche per periodo', () => {
     await screen.findByText(/tocca una serata/i)
     await m.vai('periodo')
     await personalizzato('2026-08-08T05:00', '2026-08-09T05:00')
-    const lista = (await screen.findByText('🏆 Classifica del venduto')).closest('.card')
+    const lista = (await screen.findByText('Classifica del venduto')).closest('.card')
     // Venti amari battono quindici negroni, a pezzi.
     expect(classifica(lista)).toEqual(['1 Amaro della casa 20 pz 20,00 €', '2 Negroni 15 pz 150,00 €'])
     m.stop()
@@ -388,7 +429,7 @@ describe('Statistiche per periodo', () => {
     await screen.findByText(/tocca una serata/i)
     await m.vai('periodo')
     await personalizzato('2026-08-08T05:00', '2026-08-09T05:00')
-    const lista = (await screen.findByText('🏆 Classifica del venduto')).closest('.card')
+    const lista = (await screen.findByText('Classifica del venduto')).closest('.card')
     await user.click(within(lista).getByRole('button', { name: 'Ordina per incasso' }))
     expect(classifica(lista)).toEqual(['1 Negroni 15 pz 150,00 €', '2 Amaro della casa 20 pz 20,00 €'])
     m.stop()
@@ -541,7 +582,7 @@ describe('i grafici per giornata', () => {
     render(<StatsTab />)
     await screen.findByText(/tocca una serata/i)
     await m.vai('periodo')
-    expect(await screen.findByText(/📈 Incasso per giornata/)).toBeInTheDocument()
+    expect(await screen.findByText('Incasso per giornata')).toBeInTheDocument()
     m.stop()
   })
 })
@@ -599,6 +640,40 @@ describe('Venduto nella fascia oraria: le categorie si aprono sui loro prodotti'
     expect(categorie[1].textContent).not.toMatch(/Negroni/)
     expect(categorie[0].textContent).toMatch(/Negroni/)
     expect(within(scheda).queryByText(/Prodotti venduti/)).toBeNull()
+    m.stop()
+  })
+})
+
+// L'UTILE PER CATEGORIA SOTTO L'INCASSO PER CATEGORIA (REQ-STAT-008).
+// Flavio, 29/10/2026: «sotto INCASSO PER CATEGORIA anche un'altra tabella
+// con la classifica degli UTILI PER CATEGORIA».
+describe('per periodo: l’utile per categoria', () => {
+  it('è una tabella sotto «Incasso per categoria», con incassato, costo del venduto e utile', async () => {
+    const m = menu()
+    render(<StatsTab />)
+    await screen.findByText(/tocca una serata/i)
+    await m.vai('periodo')
+    // Il periodo degli ordini di prova.
+    await personalizzato('2026-08-08T05:00', '2026-08-09T05:00')
+    const titolo = await screen.findByRole('heading', { name: /Utile per categoria/ })
+    const incasso = screen.getByText(/Incasso per categoria/)
+    // Viene dopo, nel documento.
+    expect(incasso.compareDocumentPosition(titolo) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    const tabella = titolo.closest('.card').querySelector('table')
+    expect([...tabella.querySelectorAll('thead th')].map((t) => t.textContent)).toEqual([
+      'Categoria',
+      'Incassato',
+      'Costo del venduto',
+      'Utile',
+    ])
+    expect(tabella.querySelector('tfoot').textContent).toMatch(/Totale/)
+    // Le categorie degli ordini di prova, in classifica per utile: senza
+    // costi conosciuti l'utile è l'incassato, e i Negroni incassano di più.
+    const righe = [...tabella.querySelectorAll('tbody th')].map((t) => t.textContent.replace(/\s+/g, ' ').trim())
+    expect(righe[0]).toMatch(/^1\s*COCKTAIL/)
+    expect(righe[1]).toMatch(/^2\s*AMARI/)
+    // Senza ricette valorizzate il costo è incompleto, e lo dice.
+    expect(screen.getByText(/Costo incompleto/)).toBeInTheDocument()
     m.stop()
   })
 })

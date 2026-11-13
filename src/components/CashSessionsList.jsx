@@ -19,12 +19,17 @@ import {
   RAGGRUPPAMENTI,
   ETICHETTA_RAGGRUPPAMENTO,
 } from '../lib/serate.js'
-import { formatPrice, cashMethodKeys, paymentMethodLabel } from '../lib/orderStatus.js'
+import { formatPrice, cashMethodKeys } from '../lib/orderStatus.js'
 import { printChiusuraCassa } from '../lib/printer.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
 import RendicontoSerata from './RendicontoSerata.jsx'
 import CalendarioServizio from './CalendarioServizio.jsx'
 import { giornateConServizio } from '../lib/giorniDiServizio.js'
+import { impostazioniRicordate } from '../lib/impostazioniLocali.js'
+import { visibiliNelloStorico, giorniDiStorico, MESSAGGI_PIANO, stampaConsentita } from '../lib/limiti.js'
+import AvvisoPiano from './AvvisoPiano.jsx'
+import Icona from './Icona.jsx'
+import MetodoPagamento from './MetodoPagamento.jsx'
 
 // STORICO DELLE CHIUSURE DI CASSA: una riga per serata, dall'apertura alla
 // chiusura. Aprendo una riga il riepilogo (incassi per metodo, sconti, contante
@@ -51,7 +56,7 @@ import { giornateConServizio } from '../lib/giorniDiServizio.js'
 // parla una riga. I conti li fa `raggruppaSerate` (`src/lib/serate.js`) sulle
 // sessioni GIÀ in mano: qui dentro si disegna e basta.
 
-const CHIAVE_RAGGRUPPAMENTO = 'tana:chiusure:raggruppamento'
+const CHIAVE_RAGGRUPPAMENTO = 'drink:chiusure:raggruppamento'
 
 export default function CashSessionsList() {
   const [sessions, setSessions] = useState([])
@@ -94,16 +99,30 @@ export default function CashSessionsList() {
     }
   }
 
+  // LO STORICO DEL PIANO FREE (REQ-LIC-003): le chiusure più vecchie di
+  // `storico_giorni` non si mostrano, e restano nel database. Le
+  // impostazioni sono quelle ricordate dall'ultimo ascolto: questa lista non
+  // ne apre uno suo per una regola che, senza limiti, non fa niente.
+  const [impostazioni] = useState(() => impostazioniRicordate({}))
+  const giorniStorico = giorniDiStorico(impostazioni)
+  const stampaOn = stampaConsentita(impostazioni)
+
   useEffect(() => {
     let vivo = true
     fetchCashSessions({ limit: 60 })
-      .then((list) => vivo && setSessions(list))
+      .then(
+        (list) =>
+          vivo &&
+          // La cassa ancora aperta resta: è la serata in corso.
+          setSessions(visibiliNelloStorico(impostazioni, list, { data: (s) => s.opened_at, aperta: (s) => !s.closed_at }))
+      )
       .catch((e) => vivo && setError(e.message))
       .finally(() => vivo && setLoading(false))
     return () => {
       vivo = false
     }
-  }, [])
+    // Le impostazioni ricordate non cambiano mentre la lista è aperta.
+  }, [impostazioni])
 
   // I bordi del campo data escono dalle sessioni già in mano: nessuna lettura
   // in più per sapere fin dove ha senso cercare.
@@ -281,14 +300,14 @@ export default function CashSessionsList() {
                 incassa con un metodo nuovo, compare da solo. */}
             {cashMethodKeys(snap.byMethod).map((k) => (
               <div className="row between muted small" key={k}>
-                <span>{paymentMethodLabel(k)}</span>
+                <span><MetodoPagamento metodo={k} /></span>
                 <span>{formatPrice(snap.byMethod?.[k] ?? 0)}</span>
               </div>
             ))}
             {/* Sempre in elenco, anche a zero: "quanto ho lasciato sul
                 tavolo stasera" è una domanda che si fa ogni sera. */}
             <div className="row between muted small">
-              <span>🎁 Sconti concessi</span>
+              <span><Icona nome="sconto" gruppo="tasti" /> Sconti concessi</span>
               <span>{(snap.sconti ?? 0) > 0 ? `−${formatPrice(snap.sconti)}` : formatPrice(0)}</span>
             </div>
             <div className="row between muted small">
@@ -332,12 +351,12 @@ export default function CashSessionsList() {
                     })
                   }
                 >
-                  📊 Apri il rendiconto — conti, prodotti e guadagno
+                  <Icona nome="statistiche" gruppo="tasti" /> Apri il rendiconto — conti, prodotti e guadagno
                 </button>
               </div>
             )}
 
-            {!aperta && (
+            {!aperta && stampaOn && (
               <button
                 className="btn ghost small block"
                 style={{ marginTop: 10 }}
@@ -350,7 +369,7 @@ export default function CashSessionsList() {
                     .catch((e) => toastError(`Stampa: ${e.message}`))
                 }
               >
-                🖨 Ristampa chiusura
+                <Icona nome="stampa" gruppo="tasti" /> Ristampa chiusura
               </button>
             )}
           </div>
@@ -376,6 +395,9 @@ export default function CashSessionsList() {
 
   return (
     <div>
+      {giorniStorico != null && (
+        <AvvisoPiano messaggio={MESSAGGI_PIANO.storico(giorniStorico)} impostazioni={impostazioni} compatto />
+      )}
       {error && <div className="banner">Errore: {error}</div>}
       {loading && <p className="muted small">Carico le chiusure…</p>}
       {!loading && sessions.length === 0 && (

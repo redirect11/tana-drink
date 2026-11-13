@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useTestoStile } from '../lib/testiStile.js'
 import {
   fetchOrder,
   subscribeOrder,
@@ -11,8 +12,11 @@ import {
   updateOrderStatus,
   markOrderPaid,
   cancelOrder,
+  rispondiAllaModifica,
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
+import ModificaDaConfermare from '../components/ModificaDaConfermare.jsx'
+import { inAttesa, ANNULLO_RIFIUTO, ANNULLO_SCADUTO } from '../lib/attesaCliente.js'
 import { getPushToken } from '../lib/push.js'
 import {
   ORDER_STATUSES,
@@ -37,6 +41,7 @@ import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import PaymentPanel from '../components/PaymentPanel.jsx'
 import OrderPosDetail from '../components/OrderPosDetail.jsx'
 import QRCode from 'qrcode'
+import { servizioAttivo } from '../lib/limiti.js'
 
 export default function OrderStatusPage() {
   const { id } = useParams()
@@ -49,6 +54,9 @@ export default function OrderStatusPage() {
   const [edits, setEdits] = useState(null) // copia editabile degli item (prima della preparazione)
   const [saving, setSaving] = useState(false)
   const navigate = useNavigate()
+  // Le frasi dello stile del locale (REQ-MENU-027): il titolo sopra il
+  // numero e una frase sotto lo stato, che resta scritto com'è.
+  const testo = useTestoStile()
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [ricerca] = useSearchParams()
   // Il conto aperto direttamente sul pagamento: è il tasto «Incassa» delle
@@ -64,6 +72,10 @@ export default function OrderStatusPage() {
   const [serviceStats, setServiceStats] = useState({})
   const [queue, setQueue] = useState([])
   const prevStatus = useRef(null)
+  // L'attesa del cliente che si conosceva (REQ-CLI-009): `undefined` finché
+  // l'ordine non è arrivato, così un'attesa già in corso all'apertura non
+  // suona come una novità.
+  const prevAttesa = useRef(undefined)
   // Chi sta guardando la pagina è staff? Il QR per agganciare l'ordine
   // va mostrato solo allo staff, non al cliente che lo ha già scansionato.
   const [viewerIsStaff, setViewerIsStaff] = useState(false)
@@ -114,6 +126,7 @@ export default function OrderStatusPage() {
         if (!active) return
         setOrder(o)
         prevStatus.current = o.workflow_status
+        prevAttesa.current = o.attesa_cliente?.dal ?? null
       })
       .catch((e) => active && setError(e.message))
 
@@ -176,6 +189,13 @@ export default function OrderStatusPage() {
             )
           }
         }
+        // IL BANCO HA MODIFICATO L'ORDINE (REQ-CLI-009): al cliente, che deve
+        // rispondere entro un tempo. A chi lavora no: è lui che l'ha fatto.
+        const attesaOra = updated.attesa_cliente?.dal ?? null
+        if (!viewerRoleRef.current && attesaOra && prevAttesa.current !== undefined && attesaOra !== prevAttesa.current) {
+          notify('Il tuo ordine è stato modificato', `Ordine #${updated.daily_number ?? '—'}: controlla le modifiche e rispondi.`)
+        }
+        prevAttesa.current = attesaOra
         prevStatus.current = updated.workflow_status
       },
       (e) => active && setError(e.message)
@@ -225,10 +245,11 @@ export default function OrderStatusPage() {
   // Coda attiva: serve per la posizione in coda.
   const orderActive =
     order && (order.workflow_status === ORDER_STATUSES.RICEVUTO || order.workflow_status === ORDER_STATUSES.IN_PREPARAZIONE)
+  const workflowOn = servizioAttivo(settings)
   useEffect(() => {
-    if (!settings.eta_enabled || settings.workflow_enabled === false || !orderActive) return
+    if (!settings.eta_enabled || !workflowOn || !orderActive) return
     return subscribeQueue(setQueue)
-  }, [settings.eta_enabled, settings.workflow_enabled, orderActive])
+  }, [settings.eta_enabled, workflowOn, orderActive])
 
   async function enableNotifications() {
     const ok = await ensureNotificationPermission()
@@ -296,6 +317,20 @@ export default function OrderStatusPage() {
     }
   }
 
+  // LA RISPOSTA ALLE MODIFICHE DEL BANCO (REQ-CLI-009). Il cliente è in
+  // rete (sta guardando questa pagina): si aspetta l'esito per dirlo.
+  async function rispondi(esito) {
+    setSaving(true)
+    setError(null)
+    try {
+      await rispondiAllaModifica(order.id, esito)
+    } catch (e) {
+      toastError(`Risposta non inviata: ${e.message}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   async function cancelMyOrder() {
     setConfirmCancel(false)
     setSaving(true)
@@ -333,9 +368,12 @@ export default function OrderStatusPage() {
   // ancora "ricevuta" (dopo le aggiunte del bartender non si tocca più).
   const singleReceived =
     (order.comande?.length ?? 1) === 1 && order.workflow_status === ORDER_STATUSES.RICEVUTO
-  const editable = singleReceived && !paymentLocked
+  // Con le modifiche del banco da accettare (REQ-CLI-009) si risponde e
+  // basta: «Rifiuta» è già l'annullo.
+  const attesa = inAttesa(order)
+  const editable = singleReceived && !paymentLocked && !attesa
   // Annullabile dal cliente finché ricevuto e non pagato.
-  const cancellable = singleReceived && order.payment_status !== 'pagato'
+  const cancellable = singleReceived && order.payment_status !== 'pagato' && !attesa
   // Pannello di pagamento online: in attesa o fallito, mai sugli annullati.
   const showPayment =
     order.payment_method === 'online' &&
@@ -344,7 +382,6 @@ export default function OrderStatusPage() {
 
   // Tempo stimato personalizzato: tiene conto degli ordini attivi davanti a
   // questo (la coda non viene mostrata, conta solo la posizione).
-  const workflowOn = settings.workflow_enabled !== false
   // CHI DEVE ALZARSI. Il ritiro al banco è l'unico caso in cui, quando il
   // drink è pronto, la palla passa al cliente: da qui in poi cambia cosa
   // gli si promette e cosa gli si dice.
@@ -388,6 +425,12 @@ export default function OrderStatusPage() {
                 </div>
               )}
             </div>
+          ) : order.cancel_kind === ANNULLO_RIFIUTO ? (
+            <div className="banner" style={{ marginTop: 12 }}>✖️ Hai rifiutato le modifiche: l’ordine è annullato.</div>
+          ) : order.cancel_kind === ANNULLO_SCADUTO ? (
+            <div className="banner" style={{ marginTop: 12 }}>
+              ✖️ Il tempo per accettare le modifiche è scaduto: l’ordine è annullato.
+            </div>
           ) : (
             <div className="banner" style={{ marginTop: 12 }}>✖️ Ordine annullato</div>
           )}
@@ -427,9 +470,12 @@ export default function OrderStatusPage() {
         </div>
       ) : (
         <div className="card" style={{ textAlign: 'center' }}>
-          <div className="muted">Il tuo numero</div>
+          <div className="muted">{testo('stato.numero', 'Il tuo numero')}</div>
           <div className="bignum">#{order.daily_number ?? '—'}</div>
           <div style={{ marginTop: 8 }}>{statoPill}</div>
+          {testo(`stato.frase.${order.workflow_status}`) && (
+            <p className="frase-stile">{testo(`stato.frase.${order.workflow_status}`)}</p>
+          )}
           {myEta != null && (
             <p className="muted" style={{ margin: '10px 0 0', fontSize: '0.9rem' }}>
               ⏱ {order.service_mode === 'tavolo' ? 'Ti serviamo in' : 'Pronto in'} ~{myEta} min
@@ -437,6 +483,8 @@ export default function OrderStatusPage() {
           )}
         </div>
       )}
+
+      {attesa && !viewerIsStaff && <ModificaDaConfermare order={order} onRispondi={rispondi} inCorso={saving} />}
 
       {/* Avanzamento della lavorazione: senza gestione della preparazione
           non c'è nessun percorso da mostrare al cliente. */}
@@ -539,6 +587,9 @@ export default function OrderStatusPage() {
               <div className="row between" key={i.id}>
                 <span>
                   {i.qty}× {i.name}
+                  {/* La nota della riga: la scelta dell'ingrediente
+                      (REQ-CLI-008), o quella del banco. */}
+                  {i.note && <span className="muted small"> · {i.note}</span>}
                 </span>
                 <span className="price">{formatPrice(i.qty * i.unit_price)}</span>
               </div>
@@ -684,7 +735,7 @@ export default function OrderStatusPage() {
               succede. */}
           {viewerIsStaff && (
             <>
-              {settings.workflow_enabled === false ? null : !showQr ? (
+              {!workflowOn ? null : !showQr ? (
                 <button className="btn secondary block" onClick={() => setShowQr(true)}>
                   📲 Mostra QR al cliente
                 </button>

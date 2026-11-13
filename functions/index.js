@@ -10,7 +10,8 @@
 //   firebase functions:secrets:set SUMUP_API_KEY
 
 const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https')
-const { onDocumentUpdated, onDocumentCreated } = require('firebase-functions/v2/firestore')
+const { onDocumentUpdated, onDocumentCreated, onDocumentWritten } = require('firebase-functions/v2/firestore')
+const disponibilita = require('./lib/disponibilita')
 const { defineSecret } = require('firebase-functions/params')
 const { initializeApp } = require('firebase-admin/app')
 const { getFirestore, FieldValue } = require('firebase-admin/firestore')
@@ -21,12 +22,14 @@ const { numeroDaRiassegnare } = require('./lib/numerazione')
 const {
   decideOrderPush,
   decideStaffCallPush,
+  destinatariChiamata,
   decideStaffServePush,
   decideNewOrderStaffPush,
   destinatariPush,
   terminaliDi,
 } = require('./lib/push-core')
 const { staffAdmin } = require('./lib/staff-service')
+const { richiestaAI: richiestaAIsvc } = require('./lib/ai-service')
 const {
   createCheckout,
   verifyCheckoutStatus,
@@ -62,6 +65,176 @@ exports.staffAdmin = onCall(OPTS, async (request) => {
     throw new HttpsError('internal', e?.message || 'Errore interno.')
   }
 })
+
+// ── LA VOCE NON DISPONIBILE NEL MENÙ DEI CLIENTI (REQ-MENU-017) ───────────────
+// Il segno `non_disponibile_cliente` sul prodotto della cassa: il cliente
+// non legge il magazzino, e gli arriva solo un sì o un no (Daniele,
+// 13/11/2026: al cliente non si dice mai cosa manca). Si scrive solo dove
+// cambia, e si ricalcola solo quando serve: un prodotto di magazzino che
+// attraversa la soglia, un prodotto della cassa che cambia ricetta o
+// opzione, la soglia che cambia. La logica è in lib/disponibilita.js.
+async function impostazioniDelBar() {
+  const s = await db.doc('settings/bar').get()
+  return s.exists ? s.data() : {}
+}
+
+// I prodotti di magazzino per id, letti a gruppi di cento (il tetto di
+// getAll che si tiene qui).
+async function leggiArticoli(ids) {
+  const perId = new Map()
+  for (let i = 0; i < ids.length; i += 100) {
+    const lette = await db.getAll(...ids.slice(i, i + 100).map((id) => db.doc(`inventory_items/${id}`)))
+    for (const s of lette) if (s.exists) perId.set(s.id, s.data())
+  }
+  return perId
+}
+
+// Scritture a lotti di quattrocento (il tetto di un batch è cinquecento).
+async function scriviALotti(elenco, scrivi) {
+  for (let i = 0; i < elenco.length; i += 400) {
+    const lotto = db.batch()
+    for (const x of elenco.slice(i, i + 400)) scrivi(lotto, x)
+    await lotto.commit()
+  }
+}
+
+async function ricalcolaDisponibilita(drinks, impostazioni) {
+  if (!drinks.length) return
+  const ids = [...new Set(drinks.flatMap((d) => (d.recipe_items || []).map((r) => r.inventory_item_id).filter(Boolean)))]
+  const cambi = disponibilita.cambiDiDisponibilita(drinks, await leggiArticoli(ids), impostazioni)
+  await scriviALotti(cambi, (lotto, c) => lotto.update(db.doc(`drinks/${c.id}`), { non_disponibile_cliente: c.valore }))
+}
+
+const drinksCheSeguono = async () =>
+  (await db.collection('drinks').where('segue_giacenze', '==', true).get()).docs.map((d) => ({ id: d.id, ...d.data() }))
+
+exports.disponibilitaDalMagazzino = onDocumentWritten({ ...OPTS, document: 'inventory_items/{itemId}' }, async (event) => {
+  const prima = event.data?.before?.exists ? event.data.before.data() : null
+  const dopo = event.data?.after?.exists ? event.data.after.data() : null
+  if (!disponibilita.contaPerIlMenu(prima, dopo)) return
+  const impostazioni = await impostazioniDelBar()
+  const itemId = event.params.itemId
+  // L'alternativa pubblica del cliente (REQ-MENU-042), se serve.
+  const alternativa = disponibilita.alternativaDopo(prima, dopo, impostazioni)
+  if (alternativa?.cancella) await db.doc(`alternative_cliente/${itemId}`).delete()
+  if (alternativa?.scrivi) await db.doc(`alternative_cliente/${itemId}`).set(alternativa.scrivi)
+  // Non a ogni vendita: solo quando la soglia si attraversa.
+  if (!disponibilita.haAttraversato(prima, dopo, impostazioni)) return
+  await ricalcolaDisponibilita((await drinksCheSeguono()).filter((d) => disponibilita.usaIlProdotto(d, itemId)), impostazioni)
+})
+
+async function riallineaScelteDelProdotto(drinkId, ricetta) {
+  const voci = await db.collection('carta_voci').where('drink_id', '==', drinkId).get()
+  const conScelta = voci.docs.filter((v) => (v.data().etichette || []).some((e) => e?.scelta))
+  if (!conScelta.length) return
+  const ids = [...new Set(ricetta.map((r) => r?.inventory_item_id).filter(Boolean))]
+  const articoli = await leggiArticoli(ids)
+  const categoriaDi = new Map([...articoli].map(([id, a]) => [id, a.category_id ?? null]))
+  const cambi = conScelta
+    .map((v) => ({ ref: v.ref, etichette: disponibilita.scelteRiallineate(v.data().etichette, ricetta, categoriaDi) }))
+    .filter((c) => c.etichette)
+  await scriviALotti(cambi, (lotto, c) => lotto.update(c.ref, { etichette: c.etichette }))
+}
+
+exports.disponibilitaDalProdotto = onDocumentWritten({ ...OPTS, document: 'drinks/{drinkId}' }, async (event) => {
+  if (!event.data?.after?.exists) return
+  const prima = event.data.before?.exists ? event.data.before.data() : {}
+  const dopo = event.data.after.data()
+  // La ricetta è cambiata: le scelte del cliente sulle voci collegate
+  // seguono (REQ-MENU-042, disponibilita.scelteRiallineate).
+  if (JSON.stringify(prima?.recipe_items || []) !== JSON.stringify(dopo?.recipe_items || [])) {
+    await riallineaScelteDelProdotto(event.params.drinkId, dopo.recipe_items || [])
+  }
+  // Solo se cambiano l'opzione o la ricetta: la scrittura del segno, fatta
+  // qui, non deve rimettere in moto il calcolo.
+  const pesa = (d) => JSON.stringify([d?.segue_giacenze === true, d?.recipe_items || []])
+  if (pesa(prima) === pesa(dopo)) return
+  await ricalcolaDisponibilita([{ id: event.params.drinkId, ...dopo }], await impostazioniDelBar())
+})
+
+exports.disponibilitaDalleImpostazioni = onDocumentUpdated({ ...OPTS, document: 'settings/bar' }, async (event) => {
+  const prima = event.data?.before?.data() || {}
+  const dopo = event.data?.after?.data() || {}
+  if (disponibilita.sogliaDi(prima) === disponibilita.sogliaDi(dopo)) return
+  await ricalcolaDisponibilita(await drinksCheSeguono(), dopo)
+  // E le alternative del cliente, con la soglia nuova.
+  // TUTTE, anche quelle che non cambiano: è anche la strada che rimette il
+  // documento ai prodotti spuntati prima che la Function ci fosse.
+  const scelte = await db.collection('inventory_items').where('scelta_cliente', '==', true).get()
+  const soglia = disponibilita.sogliaDi(dopo)
+  await scriviALotti(scelte.docs, (lotto, d) =>
+    lotto.set(db.doc(`alternative_cliente/${d.id}`), { disponibile: !disponibilita.manca(d.data(), soglia) })
+  )
+})
+
+// ── L'AI, attraverso la regia (REQ-AI-003) ───────────────────────────────────
+// Il locale si fa riconoscere dalla regia col gettone d'identità di Google
+// del suo account dedicato `ai-locale@<progetto>` (Daniele, 12/11/2026:
+// «niente chiave»; contratto in drink-regia, docs/handover.md §7). Niente
+// segreti: la Function gira con quell'account e chiede il gettone al server
+// dei metadati di Google. La logica è in lib/ai-service.js.
+//
+// QUALE REGIA: `REGIA_PROGETTO` in functions/.env.<progetto>, che la regia
+// scrive nei suoi locali (drink-regia, o drink-regia-test per i locali di
+// prova). SENZA, L'AI È SPENTA e la Function gira con l'account di sempre:
+// `serviceAccount` si chiede solo dove c'è REGIA_PROGETTO, perché nei
+// progetti senza l'account `ai-locale` (oggi tana-drink, tana-drink-test e
+// drinkpos-prova-e2e, che non nascono dal Terraform della regia) un account
+// che non esiste fermerebbe il deploy di tutte le Functions.
+// `'ai-locale@'`: firebase-functions lo completa col dominio del progetto.
+const REGIA_PROGETTO = process.env.REGIA_PROGETTO || ''
+// Quanto si aspetta la regia: per una fattura lunga ha fino a 300 secondi.
+// Oltre, la regia finisce comunque e il costo si paga: meglio aspettarla.
+const ATTESA_REGIA_MS = 290 * 1000
+
+// Il gettone d'identità dell'account con cui gira la Function, per quel
+// destinatario. Torna null se il server dei metadati non lo dà.
+async function gettoneDiGoogle(destinatario) {
+  const url =
+    'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity?audience=' +
+    encodeURIComponent(destinatario)
+  const res = await fetch(url, { headers: { 'Metadata-Flavor': 'Google' }, signal: AbortSignal.timeout(10 * 1000) })
+  if (!res.ok) return null
+  const gettone = (await res.text()).trim()
+  return gettone || null
+}
+
+exports.richiestaAI = onCall(
+  {
+    ...OPTS,
+    ...(REGIA_PROGETTO ? { serviceAccount: 'ai-locale@' } : {}),
+    // Una fattura in PDF arriva a 20 MB e la regia ha fino a 300 secondi per
+    // leggerla: tempo e memoria in più rispetto alle altre.
+    timeoutSeconds: 310,
+    memory: '512MiB',
+  },
+  async (request) => {
+    try {
+      return await richiestaAIsvc(
+        {
+          progettoRegia: () => REGIA_PROGETTO,
+          gettone: gettoneDiGoogle,
+          invia: async (url, opzioni) => {
+            const res = await fetch(url, { ...opzioni, signal: AbortSignal.timeout(ATTESA_REGIA_MS) })
+            const testo = await res.text()
+            let corpo = null
+            try {
+              corpo = testo ? JSON.parse(testo) : null
+            } catch {
+              corpo = null
+            }
+            return { status: res.status, corpo }
+          },
+        },
+        request.auth,
+        request.data
+      )
+    } catch (e) {
+      if (e?.code && e?.message) throw new HttpsError(e.code, e.message)
+      throw new HttpsError('internal', e?.message || 'Errore interno.')
+    }
+  }
+)
 
 // ── Notifiche push al cliente (FCM) ───────────────────────────────────────────
 // Quando un ordine passa a "pronto" (drink pronto) o ad "annullato" da parte
@@ -271,13 +444,23 @@ exports.notifyStaffCall = onDocumentCreated({ ...OPTS, document: 'staff_calls/{c
   // niente e la chiamata non partiva — il telefono di chi veniva cercato
   // non vibrava mai. E chi lavora ha spesso due terminali accesi: la
   // chiamata deve suonare su entrambi, perché non si sa quale ha in mano.
+  // CHI VA CHIAMATO: una persona, o — se la chiamata la fa la sala al
+  // bancone (REQ-STAFF-019) — chi è titolare, letto dai claim delle utenze.
+  let utenti = []
+  if (!call.to_uid && call.to_role === 'admin') {
+    let pagina
+    do {
+      const r = await getAuth().listUsers(1000, pagina)
+      utenti = utenti.concat(r.users)
+      pagina = r.pageToken
+    } while (pagina)
+  }
+  const destinatari = destinatariChiamata(call, utenti)
+  if (destinatari.length === 0) return
+
   const tokensSnap = await db.collection('staff_tokens').get()
-  const suoi = new Set(
-    terminaliDi(
-      tokensSnap.docs.map((d) => ({ id: d.id, uid: d.get('uid'), token: d.get('token') })),
-      call.to_uid
-    ).map((r) => r.token)
-  )
+  const righe = tokensSnap.docs.map((d) => ({ id: d.id, uid: d.get('uid'), token: d.get('token') }))
+  const suoi = new Set(destinatari.flatMap((uid) => terminaliDi(righe, uid)).map((r) => r.token))
   const docs = tokensSnap.docs.filter((d) => suoi.has(d.get('token')))
   if (docs.length === 0) return
 
@@ -319,7 +502,10 @@ const SUMUP_PAYMENTS_BASE = process.env.SUMUP_PAYMENTS_BASE || 'https://api.sumu
 // Affiliate key: obbligatoria per il checkout sul lettore (Cloud API).
 // Non è un segreto (identifica l'app, non autentica): vive in .env.
 const SUMUP_AFFILIATE_KEY = process.env.SUMUP_AFFILIATE_KEY || ''
-const SUMUP_AFFILIATE_APP_ID = process.env.SUMUP_AFFILIATE_APP_ID || 'it.latanadelconiglio.drink'
+const SUMUP_AFFILIATE_APP_ID = process.env.SUMUP_AFFILIATE_APP_ID || ''
+// IL NOME DEL LOCALE PER LE DESCRIZIONI DEI PAGAMENTI (REQ-VENUE-005): da
+// functions/.env.<progetto> (per la Tana: .env.tana-drink), non dal codice.
+const VENUE_NAME = process.env.VENUE_NAME || 'Il locale'
 
 function paymentDeps() {
   const apiKey = SUMUP_API_KEY.value() || ''
@@ -328,6 +514,7 @@ function paymentDeps() {
     isConfigured: () => Boolean(apiKey && SUMUP_MERCHANT_CODE),
     merchantCode: () => SUMUP_MERCHANT_CODE,
     now: () => new Date().toISOString(),
+    venueName: () => VENUE_NAME,
     webhookUrl: () =>
       `https://${OPTS.region}-${process.env.GCLOUD_PROJECT}.cloudfunctions.net/paymentWebhook`,
     affiliate: () =>

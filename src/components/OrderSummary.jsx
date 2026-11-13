@@ -3,13 +3,17 @@ import { ORDER_STATUSES, formatPrice } from '../lib/orderStatus.js'
 import { subscribeQueue, createManualGroup } from '../lib/api.js'
 import { auth } from '../lib/firebaseClient.js'
 import { queueEtaMinutes } from '../lib/eta.js'
+import { chiaveRiga, nomeLetto } from '../lib/cart.js'
 import { paymentOptions } from '../lib/payments.js'
 import { clienteSceglie, modoAllaNascita } from '../lib/consegna.js'
+import { useTestoStile } from '../lib/testiStile.js'
+import { servizioAttivo } from '../lib/limiti.js'
 
 // Riepilogo ordine in stile scontrino, mostrato prima della conferma.
 // Calcola coperto (per persona), costo di servizio (percentuale) o mancia
 // (importo libero) in base alle impostazioni del bar.
 export default function OrderSummary({ cart, settings, serviceStats = {}, tableLabel, staff, customerProfile, sending, groupsActive = false, groups = [], initialGroupId = '', onConfirm, onCancel }) {
+  const testo = useTestoStile()
   const [persons, setPersons] = useState(1)
   const [tip, setTip] = useState('')
   const [note, setNote] = useState('')
@@ -54,12 +58,13 @@ export default function OrderSummary({ cart, settings, serviceStats = {}, tableL
   // Coda attiva: il nuovo ordine andrà dopo tutti gli ordini in corso, quindi
   // la stima personale tiene conto di quanti ce ne sono davanti.
   const [queueLen, setQueueLen] = useState(0)
+  const servizio = servizioAttivo(settings)
   useEffect(() => {
-    if (!settings.eta_enabled || settings.workflow_enabled === false) return
+    if (!settings.eta_enabled || !servizio) return
     return subscribeQueue((q) => setQueueLen(q.length))
-  }, [settings.eta_enabled, settings.workflow_enabled])
+  }, [settings.eta_enabled, servizio])
 
-  const etaMinutes = settings.eta_enabled && settings.workflow_enabled !== false
+  const etaMinutes = settings.eta_enabled && servizio
     ? queueEtaMinutes({
         status: ORDER_STATUSES.RICEVUTO,
         position: queueLen,
@@ -141,7 +146,7 @@ export default function OrderSummary({ cart, settings, serviceStats = {}, tableL
       <div className="summary-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="summary-head">
           <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
-          <h2>Riepilogo ordine</h2>
+          <h2>{staff ? 'Riepilogo ordine' : testo('riepilogo.titolo', 'Riepilogo ordine')}</h2>
           {!staff && tableLabel && <p className="muted" style={{ margin: 0 }}>Tavolo {tableLabel}</p>}
         </div>
 
@@ -294,9 +299,9 @@ export default function OrderSummary({ cart, settings, serviceStats = {}, tableL
 
         <div className="summary-rows">
           {cart.items.map((i) => (
-            <div className="summary-row" key={i.drink_id}>
+            <div className="summary-row" key={chiaveRiga(i)}>
               <span>
-                {i.name} <span className="qty-x">× {i.qty}</span>
+                {nomeLetto(i)} <span className="qty-x">× {i.qty}</span>
               </span>
               <span>{formatPrice(i.qty * i.price)}</span>
             </div>

@@ -6,15 +6,21 @@
 // vede e tocca. Firebase/menu/stampante sono mockati.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor, within, fireEvent, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Routes, Route } from 'react-router-dom'
 import { MemoryRouter } from '../helpers/router.jsx'
 import '@testing-library/jest-dom/vitest'
+import { CON_LICENZA } from '../helpers/licenza.js'
 
 // ── Mock dei moduli con dipendenze Firebase/hardware ──
 const mockSettings = { payments_reader_enabled: false, sumup_reader_id: null }
 vi.mock('../../src/lib/api.js', () => ({
+  // La cassa della serata è aperta: il pagamento lo chiede (REQ-CASSA-017).
+  subscribeOpenCashSession: (cb) => {
+    cb({ id: 'cassa-test', status: 'open' })
+    return () => {}
+  },
   advanceComanda: vi.fn(() => Promise.resolve()),
   addComanda: vi.fn(() => Promise.resolve({ comande: [] })),
   chiudiCreazione: vi.fn(),
@@ -44,7 +50,7 @@ vi.mock('../../src/lib/api.js', () => ({
   setOrderServiceMode: vi.fn(() => Promise.resolve({})),
   preparazioneParziale: vi.fn(() => Promise.resolve()),
   subscribeSettings: vi.fn((cb) => {
-    cb(mockSettings)
+    cb({ ...CON_LICENZA, ...mockSettings })
     return () => {}
   }),
 }))
@@ -341,8 +347,8 @@ describe('aggiunte: la nuova comanda è gestita internamente', () => {
         ],
       })
     )
-    expect(screen.getByRole('button', { name: /🔗 Unisci/ })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /⑃ Separa/ })).toBeNull()
+    expect(screen.getByRole('button', { name: /Unisci/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Separa' })).toBeNull()
 
     // ANCHE NEL ⋯ LA VOCE È UNA SOLA, e dice la stessa cosa del tasto:
     // erano due righe di menu con una sempre spenta. Qui c'è da unire,
@@ -831,7 +837,7 @@ describe('tasti sempre presenti, spenti se non servono', () => {
 
   it('e si accende quando l’azione diventa possibile', async () => {
     await mount(baseOrder()) // 2 Mojito su una riga → si possono separare
-    expect(screen.getByRole('button', { name: /⑃ Separa/ })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Separa' })).toBeEnabled()
   })
 
   it('Comande c’è sempre: sul conto aperto è attivo', async () => {
@@ -1660,11 +1666,11 @@ describe('subtotale di riga', () => {
   })
 
   it('col calcolo acceso (scelta ricordata sul dispositivo) appare sotto la riga', async () => {
-    localStorage.setItem('tana:pos:calcoli', '1')
+    localStorage.setItem('drink:pos:calcoli', '1')
     await mount(ordineTriplo())
     expect(screen.getByText(/↳ 3 × 7,00/)).toBeInTheDocument()
     expect(screen.getAllByText('21,00 €').length).toBeGreaterThan(0)
-    localStorage.removeItem('tana:pos:calcoli')
+    localStorage.removeItem('drink:pos:calcoli')
   })
 
   it('i supplementi attivi si vedono uno per riga, sotto il Subtotale', async () => {
@@ -1687,7 +1693,7 @@ describe('subtotale di riga', () => {
   })
 
   it('con un pezzo solo il subtotale c’è comunque, il calcolo mai', async () => {
-    localStorage.setItem('tana:pos:calcoli', '1')
+    localStorage.setItem('drink:pos:calcoli', '1')
     await mount(
       baseOrder({
         total: 7,
@@ -1707,7 +1713,7 @@ describe('subtotale di riga', () => {
     // SENZA PREZZO: il subtotale ora c'è sempre.
     expect(document.querySelector('.posd-riga-tot')).not.toBeNull()
     expect(screen.queryByText(/↳ 1 × 7,00/)).toBeNull()
-    localStorage.removeItem('tana:pos:calcoli')
+    localStorage.removeItem('drink:pos:calcoli')
   })
 })
 
@@ -1947,7 +1953,7 @@ describe('la riga modificata a mano resta modificata', () => {
     const prezzo = await screen.findByLabelText(/Prezzo/)
     await user.clear(prezzo)
     await user.type(prezzo, '12')
-    await user.click(screen.getByRole('button', { name: /^Salva/ }))
+    await user.click(screen.getByRole('button', { name: /^Salva \d/ }))
     unmount()
 
     await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())
@@ -2115,7 +2121,7 @@ describe('preparazione parziale di una comanda', () => {
 // deve vedere cosa è al banco e cosa è già uscito.
 describe('le righe del conto dicono a che punto sono', () => {
   const titoli = () =>
-    [...document.querySelectorAll('.posd-gruppo')].map((n) => n.textContent)
+    [...document.querySelectorAll('.posd-gruppo')].map((n) => n.textContent.trim())
 
   it('con una comanda sola non c’è nessun titolo: sarebbe un titolo per dire una cosa sola', async () => {
     await mount(baseOrder())
@@ -2198,7 +2204,7 @@ describe('le righe del conto dicono a che punto sono', () => {
         })
       )
       // un titolo solo, quello dei pagati: nessun passo del servizio
-      expect(titoli()).toEqual(['💳 Pagati'])
+      expect(titoli()).toEqual(['Pagati'])
       // e sta in fondo: le righe ancora da pagare vengono prima
       const righe = [...document.querySelectorAll('.posd-gruppo, .draft-line')]
       expect(righe.at(-1).className).toContain('draft-line')
@@ -2223,7 +2229,7 @@ describe('le righe del conto dicono a che punto sono', () => {
         ],
       })
     )
-    expect(titoli()).toEqual(['🍹 In preparazione', '🔔 Pronto'])
+    expect(titoli()).toEqual(['In preparazione', 'Pronto'])
     // e le righe stanno sotto il titolo giusto, in ordine di lavorazione
     const righe = [...document.querySelectorAll('.posd-gruppo, .draft-line')].map((n) =>
       n.textContent.replace(/\s+/g, ' ').trim()
@@ -2255,7 +2261,7 @@ describe('le righe del conto dicono a che punto sono', () => {
         ],
       })
     )
-    expect(titoli()).toEqual(['🍹 In preparazione', '💳 Pagati'])
+    expect(titoli()).toEqual(['In preparazione', 'Pagati'])
   })
 })
 
@@ -2294,13 +2300,37 @@ describe('la sala e il conto', () => {
     expect(bartenderUpdateComanda).not.toHaveBeenCalled()
   })
 
-  // Il ruolo arriva dal token, cioè un battito dopo il primo disegno: fino a
-  // lì la schermata resta quella del banco, apposta (vedi ruoli.js).
-  it('le righe già mandate al banco non le toglie', async () => {
+  // LE RIGHE LE CORREGGE ANCHE LA SALA (REQ-STAFF-020). Qui prima si
+  // provava il contrario — «le righe già mandate al banco non le toglie» —
+  // ed era la regola di REQ-STAFF-014. Flavio, 30/10/2026, con la foto del
+  // conto #34: «lo staff non può togliere il Sipsmith più uno, lo posso
+  // fare solo io … devono avere la possibilità di modificare qualsiasi
+  // ordine». Ora la sala corregge come il banco, con i suoi stessi limiti.
+  it('le righe già mandate al banco le corregge, come il banco', async () => {
+    const user = userEvent.setup()
     await inSala()
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Riduci Mojito' })).toBeDisabled()
+    const meno = screen.getByRole('button', { name: 'Riduci Mojito' })
+    await waitFor(() => expect(meno).toBeEnabled())
+    await user.click(meno)
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())
+    const [orderId, comandaId, { items }] = bartenderUpdateComanda.mock.calls.at(-1)
+    expect(orderId).toBe('ord1')
+    expect(comandaId).toBe('c1')
+    expect(items.find((i) => i.drink_id === 'mojito').qty).toBe(1)
+  })
+
+  it('una riga già servita resta com’è, per la sala come per il banco', async () => {
+    await inSala(
+      baseOrder({
+        comande: [
+          {
+            id: 'c1', seq: 1, status: 'ritirato', status_times: {},
+            items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }],
+          },
+        ],
+      })
     )
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Riduci Mojito' })).toBeDisabled())
   })
 
   it('non prende in carico: «Segna “In preparazione”» non c’è', async () => {
@@ -2509,7 +2539,9 @@ describe('lo stato della lavorazione sta nella barra in alto', () => {
       expect(pastiglia().textContent).toMatch(/Da fare/)
       expect(document.querySelector('.posd-aperto')).toBeNull()
       const conto = barra().querySelector('.posd-conto-stato')
-      expect(conto.textContent.trim()).toBe('🟢')
+      // Il solo segno: il pallino verde, che resta colorato in ogni tema.
+      expect(conto.querySelector('.icona-pallino-verde')).not.toBeNull()
+      expect(conto.textContent.trim()).toBe('')
       expect(conto.getAttribute('title')).toBe('Stato del conto: Conto aperto')
     })
 
@@ -2573,5 +2605,185 @@ describe('il piede del conto: cosa cede e cosa resta', () => {
     const testa = document.querySelector('.posd-comanda .posd-testa')
     expect(testa, 'la testata della colonna non ha più la sua classe').toBeTruthy()
     expect(testa.getAttribute('style')).toBeNull()
+  })
+})
+
+// LE MANIGLIE DEL CONTO NON RIDISEGNANO LA SCHERMATA (BUG-118). L'utente,
+// 24/10/2026: «le maniglie nella schermata dell'ordine sono scattose» e sul
+// telefono «la maniglia del riepilogo dell'ordine blocca tutto». Mentre si
+// tira, la misura va nella variabile CSS dell'elemento; la colonna non si
+// anima dietro al dito; lasciando, resta.
+describe('le maniglie del conto mentre si trascinano', () => {
+  beforeEach(() => {
+    window.matchMedia = (query) => ({
+      matches: false,
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    })
+    vi.stubGlobal('requestAnimationFrame', (cb) => setTimeout(cb, 0))
+  })
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('la colonna del conto si allarga dal vivo, senza transizione, e la misura resta', async () => {
+    await mount(baseOrder())
+    const corpo = document.querySelector('.posd-body')
+    // La maniglia fra griglia e conto è quella subito prima del pannello:
+    // la prima del corpo è quella delle categorie.
+    const maniglia = document.querySelector('.posd-comanda').previousElementSibling
+    expect(maniglia.className, 'la maniglia fra griglia e conto non c’è').toBe('posd-resize-handle')
+    // Eventi del mouse con le coordinate: i PointerEvent di happy-dom le
+    // perdono, e React legge lo stesso `clientX` da uno o dall'altro.
+    const gesto = (tipo, x) => fireEvent(maniglia, new MouseEvent(tipo, { bubbles: true, clientX: x }))
+    const prima = parseFloat(corpo.style.getPropertyValue('--pos-comanda-w'))
+    gesto('pointerdown', 500)
+    expect(corpo.className).toMatch(/trascinando/)
+    gesto('pointermove', 450)
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 5))
+    })
+    // Verso sinistra di 50px: la colonna di destra cresce di 50.
+    const attesa = Math.min(700, prima + 50)
+    expect(parseFloat(corpo.style.getPropertyValue('--pos-comanda-w'))).toBe(attesa)
+    gesto('pointerup', 450)
+    expect(corpo.className).not.toMatch(/trascinando/)
+    expect(parseFloat(corpo.style.getPropertyValue('--pos-comanda-w'))).toBe(attesa)
+  })
+})
+
+// CHI HA BATTUTO OGNI RIGA (REQ-ORD-023). Richiesta dell'08/11/2026: accanto
+// a ogni riga l'iniziale di chi l'ha caricata, nel suo colore («F nel
+// quadrato rosa … A nel quadrato azzurro»); il quadratino di chi ha aperto
+// il conto resta sulla card della coda.
+describe('l’iniziale di chi ha battuto ogni riga', () => {
+  const FLAVIO = { name: 'Flavio', email: 'flavio@tana.it', role: 'admin' }
+  const ALEX = { name: 'Alex', email: 'alex@tana.it', role: 'staff' }
+  const autori = () =>
+    [...document.querySelectorAll('.riga-autore .order-by')].map((s) => [s.textContent, s.title, s.style.background])
+
+  it('ogni riga mostra l’iniziale e il colore di chi l’ha battuta', async () => {
+    await mount(
+      baseOrder({
+        comande: [
+          {
+            id: 'c1',
+            seq: 1,
+            status: 'ritirato',
+            status_times: {},
+            items: [
+              { drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1, added_by: FLAVIO },
+              { drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 1, added_by: ALEX },
+            ],
+          },
+        ],
+      })
+    )
+    const visti = autori()
+    expect(visti.map(([l, t]) => [l, t])).toEqual([
+      ['F', 'Aggiunto da Flavio'],
+      ['A', 'Aggiunto da Alex'],
+    ])
+    // Due persone, due colori: rosa e azzurro.
+    expect(visti[0][2]).not.toBe(visti[1][2])
+  })
+
+  it('una riga di prima, senza firma, non inventa nessuno', async () => {
+    await mount(baseOrder())
+    expect(autori()).toEqual([])
+  })
+
+  it('la riga che parte da questo conto porta la firma di chi lo sta usando', async () => {
+    const user = userEvent.setup()
+    await mount(
+      baseOrder({
+        comande: [
+          { id: 'c1', seq: 1, status: 'ritirato', status_times: {}, items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }] },
+        ],
+      })
+    )
+    await user.click(screen.getAllByText('Gin Tonic')[0])
+    await waitFor(() => expect(addComanda).toHaveBeenCalled())
+    const [, items] = addComanda.mock.calls.at(-1)
+    expect(items.find((i) => i.drink_id === 'gin').added_by).toEqual({
+      name: 'Chi lavora',
+      email: 'chi@tana.local',
+      role: 'bartender',
+    })
+  })
+
+  it('anche quando entra dritta in una comanda ancora da fare', async () => {
+    const user = userEvent.setup()
+    await mount(baseOrder())
+    await user.click(screen.getAllByText('Gin Tonic')[0])
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled(), { timeout: 3000 })
+    const [, , { items }] = bartenderUpdateComanda.mock.calls.at(-1)
+    expect(items.find((i) => i.drink_id === 'gin').added_by?.name).toBe('Chi lavora')
+    // La riga che c'era resta com'era: non la si firma a nome di chi corregge.
+    expect(items.find((i) => i.drink_id === 'mojito')).not.toHaveProperty('added_by')
+  })
+
+  // REQ-ORD-024, Flavio 09/11/2026: il «+» e il «−» li usa solo chi ha
+  // caricato la riga; gli altri battono il prodotto e fanno una riga loro.
+  it('sulla riga di un altro il + e il − sono spenti; sulla propria e su quella senza iniziale no', async () => {
+    const user = userEvent.setup()
+    const IO = { name: 'Chi lavora', email: 'chi@tana.local', role: 'bartender' }
+    await mount(
+      baseOrder({
+        comande: [
+          {
+            id: 'c1',
+            seq: 1,
+            status: 'ricevuto',
+            status_times: {},
+            items: [
+              { drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1, added_by: FLAVIO },
+              { drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 1, added_by: IO },
+              { drink_id: 'spritz', name: 'Spritz', unit_price: 6, qty: 1 },
+            ],
+          },
+        ],
+      })
+    )
+    const tasto = (azione, nome) => screen.getByRole('button', { name: `${azione} ${nome}` })
+    expect(tasto('Aumenta', 'Mojito')).toBeDisabled()
+    expect(tasto('Riduci', 'Mojito')).toBeDisabled()
+    expect(tasto('Aumenta', 'Mojito')).toHaveAttribute('title', 'Caricato da Flavio: per aggiungerne, toccare il prodotto')
+    for (const nome of ['Gin Tonic', 'Spritz']) {
+      expect(tasto('Aumenta', nome)).toBeEnabled()
+      expect(tasto('Riduci', nome)).toBeEnabled()
+    }
+    // Sulla propria il + aumenta quella riga, e la Mojito di Flavio resta sua.
+    await user.click(tasto('Aumenta', 'Gin Tonic'))
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled(), { timeout: 3000 })
+    const [, , { items }] = bartenderUpdateComanda.mock.calls.at(-1)
+    expect(items.find((i) => i.drink_id === 'gin').qty).toBe(2)
+    expect(items.find((i) => i.drink_id === 'mojito')).toMatchObject({ qty: 1, added_by: FLAVIO })
+  })
+
+  // L'utente, 09/11/2026: la regola vale solo con l'iniziale accesa nelle
+  // impostazioni. Spenta, nessuno vede di chi è una riga, e un tasto spento
+  // senza motivo a schermo sarebbe un tasto rotto.
+  it('con l’iniziale spenta nelle impostazioni: niente iniziali, e il + e il − sono di tutti', async () => {
+    mockSettings.firma_righe = false
+    try {
+      await mount(
+        baseOrder({
+          comande: [
+            {
+              id: 'c1',
+              seq: 1,
+              status: 'ricevuto',
+              status_times: {},
+              items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1, added_by: FLAVIO }],
+            },
+          ],
+        })
+      )
+      expect(autori()).toEqual([])
+      expect(screen.getByRole('button', { name: 'Aumenta Mojito' })).toBeEnabled()
+      expect(screen.getByRole('button', { name: 'Riduci Mojito' })).toBeEnabled()
+    } finally {
+      delete mockSettings.firma_righe
+    }
   })
 })

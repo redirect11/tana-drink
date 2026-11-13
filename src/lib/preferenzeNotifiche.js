@@ -66,7 +66,7 @@ export const idAvvisoScorta = (stato) => `scorta_${stato}`
 
 export const idAvvisoStato = (stato) => `stato_${stato}`
 
-const chiave = (uid) => `tana:avvisi:${uid || 'anonimo'}`
+const chiave = (uid) => `drink:avvisi:${uid || 'anonimo'}`
 
 // Di partenza sono tutti accesi: chi non li vuole li spegne, ma nessuno
 // deve scoprire di essersi perso un ordine perché "era spento di default".

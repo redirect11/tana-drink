@@ -22,6 +22,8 @@ import TestataInventario from './TestataInventario.jsx'
 import { perScaffale } from '../lib/scaffali.js'
 import Tendina from './Tendina.jsx'
 import FiltroAssortimento from './FiltroAssortimento.jsx'
+import Icona from './Icona.jsx'
+import { conEmoji } from '../lib/icone.js'
 
 // L'INVENTARIO periodico, come il foglio INV di Flavio: per ogni prodotto
 // DEP · ACQ · CONS · RIM, con CONS = DEP + ACQ − RIM. La RIM è quanto c'è
@@ -243,12 +245,12 @@ export default function StockCountPanel() {
       {!open ? (
         <>
           <button className="btn block" onClick={start} disabled={busy}>
-            ▶️ Apri l’inventario
+            <Icona nome="avvia" gruppo="tasti" /> Apri l’inventario
           </button>
           <p className="muted small" style={{ margin: '8px 0 0' }}>
             {riapreDaSola
               ? 'Da qui in poi c’è sempre un inventario in corso: quando lo chiudi scrivendo le rimanenze, ne parte subito un altro. Il consumo si legge fra una chiusura e l’altra.'
-              : 'Quando lo chiudi scrivendo le rimanenze, il prossimo lo apri tu da qui. Il consumo si legge fra l’apertura e la chiusura dello stesso inventario. (Si cambia in Impostazioni → Funzioni premium.)'}
+              : 'Quando lo chiudi scrivendo le rimanenze, il prossimo lo apri tu da qui. Il consumo si legge fra l’apertura e la chiusura dello stesso inventario. (Si cambia in Impostazioni → Licenza, tra le funzioni premium.)'}
           </p>
         </>
       ) : (
@@ -268,7 +270,7 @@ export default function StockCountPanel() {
             <Tendina
               etichetta="Filtra i prodotti"
               attivo={assortimenti.length > 0}
-              riassunto={`⚗️ ${riassuntoAssortimento(assortimenti)}`}
+              riassunto={conEmoji('filtra', riassuntoAssortimento(assortimenti))}
             >
               <FiltroAssortimento
                 items={articoliDellInventario}
@@ -317,14 +319,15 @@ export default function StockCountPanel() {
             Le rimanenze si salvano mentre le scrivi: si può smettere e riprendere più tardi.
           </p>
           <button className="btn block" onClick={chiediConferma} disabled={busy}>
-            ✅ Chiudi l’inventario
+            <Icona nome="fatto" gruppo="segnali" /> Chiudi l’inventario
           </button>
         </>
       )}
 
       {confirmClose && computed && (
         <ConfirmDialog
-          title="✅ Chiudere l’inventario?"
+          icona="fatto"
+          title="Chiudere l’inventario?"
           message={`Prodotti contati: ${computed.totals.counted}/${open.lines.length}.\nLe giacenze dei prodotti contati diventano il numero contato (differenza: ${formatPrice(computed.totals.diff_value)}).\nConsumo del periodo: ${formatPrice(computed.totals.cons_value)}.${riapreDaSola ? '\nNe parte subito uno nuovo, da oggi.' : ''}`}
           confirmLabel="Chiudi l’inventario"
           onCancel={() => setConfirmClose(false)}

@@ -20,7 +20,13 @@ const UTENTI = [
 vi.mock('../../src/lib/firebaseClient.js', () => ({
   auth: { currentUser: { uid: 'a1', email: 'capo@bar.it', displayName: 'Capo' } },
 }))
+const filo = vi.hoisted(() => ({ impostazioni: {} }))
 vi.mock('../../src/lib/api.js', () => ({
+  settingsIniziali: () => filo.impostazioni,
+  subscribeSettings: (cb) => {
+    cb(filo.impostazioni)
+    return () => {}
+  },
   createStaffCall: vi.fn(() => Promise.resolve()),
   subscribePendingCalls: vi.fn((cb) => {
     cb([])
@@ -40,7 +46,10 @@ vi.mock('../../src/lib/staffApi.js', () => ({
 import UtentiTab from '../../src/components/UtentiTab.jsx'
 import { setStaffRole, listStaff, listUtenti } from '../../src/lib/staffApi.js'
 
-beforeEach(() => vi.clearAllMocks())
+beforeEach(() => {
+  vi.clearAllMocks()
+  filo.impostazioni = {}
+})
 
 describe('pagina utenti — admin', () => {
   it('separa il personale dai clienti registrati', async () => {
@@ -55,7 +64,7 @@ describe('pagina utenti — admin', () => {
     await screen.findByText('Luigi Rossi')
     const rigaCliente = screen.getByText('Luigi Rossi').closest('.toggle-row')
     await userEvent.click(rigaCliente.querySelector('button[title="Cambia ruolo"]'))
-    await userEvent.click(await screen.findByRole('button', { name: /🫱 Staff/ }))
+    await userEvent.click(await screen.findByRole('button', { name: /Staff/ }))
     await userEvent.click(screen.getByRole('button', { name: 'Assegna' }))
     await waitFor(() => expect(setStaffRole).toHaveBeenCalledWith('c1', 'staff'))
   })
@@ -65,7 +74,7 @@ describe('pagina utenti — admin', () => {
     await screen.findByText('Sara')
     const riga = screen.getByText('Sara').closest('.toggle-row')
     await userEvent.click(riga.querySelector('button[title="Cambia ruolo"]'))
-    await userEvent.click(await screen.findByRole('button', { name: /👑 Admin/ }))
+    await userEvent.click(await screen.findByRole('button', { name: /Admin/ }))
     await userEvent.click(screen.getByRole('button', { name: 'Assegna' }))
     expect(setStaffRole).not.toHaveBeenCalled()
     await userEvent.click(await screen.findByRole('button', { name: 'Conferma' }))
@@ -108,5 +117,33 @@ describe('le sezioni di Utenti e ruoli', () => {
     render(<UtentiTab role="admin" sezioneIniziale="nuovo" />)
     expect(await screen.findByRole('button', { name: /Crea account/ })).toBeInTheDocument()
     expect(screen.queryByText(/Personale \(/)).toBeNull()
+  })
+})
+
+// UN UTENTE SOLO NEL PIANO FREE (REQ-LIC-003, `limiti.utenti_max: 1`): l'app
+// la usa il titolare, con l'account della registrazione. La pagina lo dice,
+// con la strada per cambiare piano, e non chiama `staffAdmin` — che sul
+// profilo leggero non c'è nemmeno.
+describe('il piano Free', () => {
+  it('non aggiunge staff: lo dice, e non chiede gli utenti alla Function', async () => {
+    filo.impostazioni = {
+      licenza: { piano: 'free', limiti: { utenti_max: 1 }, regia_url: 'https://regia.example/piani' },
+    }
+    render(<UtentiTab role="admin" />)
+    expect(
+      await screen.findByText(
+        'Nel piano Free l’app la usa solo il titolare. Per aggiungere lo staff passa a un piano a pagamento.'
+      )
+    ).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Vedi i piani' })).toHaveAttribute('href', 'https://regia.example/piani')
+    expect(screen.queryByLabelText('Email')).toBeNull()
+    expect(listUtenti).not.toHaveBeenCalled()
+    expect(listStaff).not.toHaveBeenCalled()
+  })
+
+  it('senza limiti nella licenza la pagina è quella di sempre', async () => {
+    render(<UtentiTab role="admin" />)
+    await waitFor(() => expect(listUtenti).toHaveBeenCalled())
+    expect(screen.queryByText(/Nel piano Free/)).toBeNull()
   })
 })

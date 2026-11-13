@@ -6,6 +6,7 @@ import { businessDayKey } from '../lib/businessDay.js'
 import { MESI_CORTI } from '../lib/periodo.js'
 import { etichettaTipo, riepilogoMovimenti } from '../lib/movimentiProdotto.js'
 import GruppoChip from './GruppoChip.jsx'
+import Icona from './Icona.jsx'
 
 // LA MOVIMENTAZIONE DI UN PRODOTTO (REQ-MAG-048), dalla sua scheda in
 // Magazzino: i totali per tipo nel periodo, il venduto mese per mese (app e
@@ -18,8 +19,11 @@ const PERIODI = [
   { id: null, label: 'Tutto' },
 ]
 const nomeMese = (k) => `${MESI_CORTI[Number(k.slice(5)) - 1]} ${k.slice(0, 4)}`
-const quando = (iso) =>
-  iso ? new Date(iso).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''
+// Un formatter solo, fatto una volta: toLocaleString con le opzioni ne
+// costruisce uno nuovo a ogni riga, e un ingrediente di un anno ne ha
+// migliaia (BUG-117).
+const DATA_ORA = new Intl.DateTimeFormat('it-IT', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
+const quando = (iso) => (iso ? DATA_ORA.format(new Date(iso)) : '')
 
 export default function MovimentiProdotto({ item, onClose }) {
   const [periodo, setPeriodo] = useState(90)
@@ -55,7 +59,7 @@ export default function MovimentiProdotto({ item, onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="row between" style={{ alignItems: 'center' }}>
-          <h3 style={{ margin: 0 }}>📜 {item.name}</h3>
+          <h3 style={{ margin: 0 }}><Icona nome="movimenti" gruppo="tasti" /> {item.name}</h3>
           <button type="button" className="btn ghost small" aria-label="Chiudi" onClick={onClose}>
             ✕
           </button>

@@ -27,7 +27,7 @@
 // `interpreta` riceve il testo grezzo; se non c'è niente scritto, o se la
 // memoria non risponde, torna `seNonSiSa` — quale sia lo decide la
 // preferenza, non questo aiuto.
-function leggi(chiave, interpreta, seNonSiSa) {
+export function leggi(chiave, interpreta, seNonSiSa) {
   try {
     const grezzo = localStorage.getItem(chiave)
     return grezzo == null ? seNonSiSa : interpreta(grezzo)
@@ -39,7 +39,7 @@ function leggi(chiave, interpreta, seNonSiSa) {
 
 // `null` cancella la preferenza. Quello che non è testo si serializza qui
 // dentro, dove un JSON impossibile finisce nello stesso catch.
-function scrivi(chiave, valore) {
+export function scrivi(chiave, valore) {
   try {
     if (valore == null) localStorage.removeItem(chiave)
     else localStorage.setItem(chiave, typeof valore === 'string' ? valore : JSON.stringify(valore))
@@ -70,19 +70,45 @@ function flagLocale(chiave, { seNonSiSa = false, scriviIlFalso = false } = {}) {
   ]
 }
 
-const CHIAVE = 'tana:impostazioni'
+const CHIAVE = 'drink:impostazioni'
+
+// LA LICENZA SI RICORDA A PARTE (BUG-125). Fino alla 1.10.x le impostazioni
+// ricordate portavano dentro `licenza` così com'era in settings/bar, che
+// ogni bartender può riscrivere. Ora la licenza che vale la decide
+// subscribeSettings, e si ricorda sotto una chiave sua: quella vecchia,
+// rimasta dentro le impostazioni di un dispositivo aggiornato, non si
+// rilegge mai. Una licenza non nota (`undefined`) non cancella quella
+// ricordata: è l'ultima verità che si ha.
+const CHIAVE_LICENZA = 'drink:licenza'
 
 export function ricordaImpostazioni(data) {
   if (!data || typeof data !== 'object') return
-  scrivi(CHIAVE, data)
+  const { licenza, ...resto } = data
+  scrivi(CHIAVE, resto)
+  ricordaLicenza(licenza)
+}
+
+// Solo la licenza: serve anche quando settings/bar non c'è ancora (un
+// locale appena installato), perché la stampa la legge da qui
+// (limiti.js, stampaNelPiano) e deve dire quello che dicono le schermate.
+export function ricordaLicenza(licenza) {
+  if (licenza !== undefined) scrivi(CHIAVE_LICENZA, licenza)
 }
 
 // I valori con cui disegnare la PRIMA volta: i default con sopra l'ultima
 // risposta del server, se la si ricorda.
 export function impostazioniRicordate(defaults = {}) {
   const salvate = leggi(CHIAVE, JSON.parse, null)
-  if (salvate && typeof salvate === 'object') return { ...defaults, ...salvate }
-  return { ...defaults }
+  const { licenza: _diSettings, ...resto } = salvate && typeof salvate === 'object' ? salvate : {}
+  const licenza = licenzaRicordata()
+  return { ...defaults, ...resto, ...(licenza ? { licenza } : {}) }
+}
+
+// Solo la licenza, per chi non ha bisogno del resto: non si rilegge tutto
+// il blocco delle impostazioni per una voce.
+export function licenzaRicordata() {
+  const licenza = leggi(CHIAVE_LICENZA, JSON.parse, null)
+  return licenza && typeof licenza === 'object' ? licenza : null
 }
 
 // ── LE CORSIE SPENTE SU QUESTO TERMINALE ─────────────────────────────
@@ -94,7 +120,7 @@ export function impostazioniRicordate(defaults = {}) {
 // impostazioni del bar vorrebbe dire che accendendo una colonna al banco
 // si spegne alla cassa.
 
-const CHIAVE_CORSIE = 'tana:corsie:nascoste'
+const CHIAVE_CORSIE = 'drink:corsie:nascoste'
 
 // Torna null quando su questo terminale non si è ancora scelto niente:
 // quali colonne convenga tenere spente all'inizio è una decisione del
@@ -119,7 +145,7 @@ export function ricordaCorsieNascoste(ids) {
 //
 // Torna null quando non si è scelto niente: decide il ruolo.
 
-const CHIAVE_VISTA = 'tana:corsie:vista'
+const CHIAVE_VISTA = 'drink:corsie:vista'
 
 export function vistaCorsie() {
   const v = leggi(CHIAVE_VISTA, (grezzo) => grezzo, null)
@@ -142,7 +168,7 @@ export function ricordaVistaCorsie(vista) {
 // banco e il telefono di chi gira in sala vogliono cose diverse.
 
 export const [azioniContoRidotte, ricordaAzioniContoRidotte] = flagLocale(
-  'tana:conto:azioni-ridotte'
+  'drink:conto:azioni-ridotte'
 )
 
 // ── IL PRONTO, UNITO O DIVISO, SU QUESTO TERMINALE ───────────────────
@@ -159,7 +185,7 @@ export const [azioniContoRidotte, ricordaAzioniContoRidotte] = flagLocale(
 // Qui lo '0' si scrive davvero (`scriviIlFalso`): «unite» è una scelta, non
 // un'assenza di scelta, e cancellare la chiave la renderebbe indistinguibile
 // dal terminale che non ha mai deciso.
-export const [prontoDiviso, ricordaProntoDiviso] = flagLocale('tana:corsie:pronto-diviso', {
+export const [prontoDiviso, ricordaProntoDiviso] = flagLocale('drink:corsie:pronto-diviso', {
   scriviIlFalso: true,
 })
 
@@ -176,4 +202,4 @@ export const [prontoDiviso, ricordaProntoDiviso] = flagLocale('tana:corsie:pront
 // banco tiene la fila aperta tutta la serata non deve riaprirla a ogni
 // ricarico, e chi non la usa non se la ritrova.
 
-export const [filtriAperti, ricordaFiltriAperti] = flagLocale('tana:coda:filtri-aperti')
+export const [filtriAperti, ricordaFiltriAperti] = flagLocale('drink:coda:filtri-aperti')

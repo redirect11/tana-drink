@@ -34,6 +34,9 @@ import '@testing-library/jest-dom/vitest'
 
 // Dove si va toccando una card: la spia dice se si apre il conto giusto.
 const navigateSpy = vi.fn()
+const CASSA_APERTA = { id: 'cassa-1', status: 'open', opened_at: '2026-08-16T18:00:00.000Z' }
+const mockCassa = { sessione: CASSA_APERTA, ascolta: null }
+
 vi.mock('react-router-dom', async (orig) => {
   const vera = await orig()
   return { ...vera, useNavigate: () => navigateSpy }
@@ -92,8 +95,11 @@ vi.mock('../../src/lib/api.js', () => ({
     cb(ordini)
     return () => {}
   },
+  // Aperta, salvo le prove della cassa chiusa (REQ-CASSA-017), che la
+  // chiudono con `cassaDiTurno`.
   subscribeOpenCashSession: (cb) => {
-    cb({ id: 'cassa-1', status: 'open', opened_at: '2026-08-16T18:00:00.000Z' })
+    mockCassa.ascolta = cb
+    cb(mockCassa.sessione)
     return () => {}
   },
   updateOrderStatus: vi.fn(() => Promise.resolve()),
@@ -149,10 +155,12 @@ vi.mock('../../src/lib/notify.js', () => ({
   notify: vi.fn(),
 }))
 vi.mock('../../src/lib/beep.js', () => ({ beep: vi.fn(), installAudioUnlock: vi.fn() }))
-vi.mock('../../src/lib/printer.js', () => ({
+vi.mock('../../src/lib/printer.js', async (originale) => ({
   printComanda: vi.fn(async () => {}),
   printScontrino: vi.fn(async () => {}),
   loadPrinterSettings: vi.fn(() => ({})),
+  // Logica pura: quella vera (REQ-STAMPA-021).
+  scontrinoAutomatico: (await originale()).scontrinoAutomatico,
   claimReceiptPrint: vi.fn(() => false),
   reclaimReceiptPrint: vi.fn(() => false),
   releaseReceiptPrint: vi.fn(),
@@ -359,7 +367,7 @@ describe('le corsie di chi guarda la serata (admin)', () => {
   it('sono le tre del conto: in corso, chiusi, annullati', async () => {
     montaCoda()
     await screen.findByText('In corso')
-    for (const titolo of ['In corso', '💶 Chiusi', '✖️ Annullati']) {
+    for (const titolo of ['In corso', 'Chiusi', 'Annullati']) {
       expect(screen.getByText(titolo)).toBeInTheDocument()
     }
     // niente passi del servizio, e niente comande: la card è il conto
@@ -547,7 +555,10 @@ describe('le corsie di chi guarda la serata (admin)', () => {
 
     await utente.click(screen.getByRole('button', { name: /Ordini/ }))
     await waitFor(() => expect(document.querySelector('.order-grid')).toBeTruthy())
-    expect(screen.queryByText('Da fare')).not.toBeInTheDocument()
+    // Le corsie non ci sono più. «Da fare» resta sui bollini di stato delle
+    // card, che dall'icona a tema (REQ-UI-031) si leggono senza emoji davanti:
+    // si guarda la testata della corsia, non la parola.
+    expect(document.querySelector('.corsia-testa')).toBe(null)
   })
 
   // È SALITO IN TESTATA, ED È DIVENTATO UN'ICONA. Era una pastiglia in
@@ -564,7 +575,8 @@ describe('le corsie di chi guarda la serata (admin)', () => {
     expect(tasto.closest('.board-actions')).toBeTruthy()
     // stessa famiglia di 📟 e ↕: quadrato piccolo, solo icona
     expect(tasto).toHaveClass('board-icona')
-    expect(tasto).toHaveTextContent('🍸')
+    // L'icona è un disegno del tema (REQ-UI-031): il bicchiere del menù.
+    expect(tasto.querySelector('svg.lucide-martini')).not.toBeNull()
     // il nome per esteso non si perde: sta nel title
     expect(tasto).toHaveAttribute('title', expect.stringContaining('comande'))
   })
@@ -578,7 +590,7 @@ describe('le corsie di chi guarda la serata (admin)', () => {
 
     await utente.click(screen.getByRole('button', { name: 'Comande' }))
     const tasto = await screen.findByRole('button', { name: 'Ordini' })
-    expect(tasto).toHaveTextContent('🧾')
+    expect(tasto.querySelector('svg.lucide-receipt-text')).not.toBeNull()
     expect(tasto).toHaveClass('board-icona')
   })
 
@@ -622,8 +634,8 @@ describe('le corsie di chi guarda la serata (admin)', () => {
     // I TRE STATI SI ESCLUDONO (REQ-CODA-009, sesta correzione):
     // accendere «Chiusi» spegne «Aperti» da solo, e #41 se ne va senza
     // che nessuno debba spegnere niente a mano.
-    await utente.click(screen.getByRole('button', { name: '💶 Chiusi' }))
-    expect(screen.getByRole('button', { name: '💶 Chiusi' })).toHaveClass('active')
+    await utente.click(screen.getByRole('button', { name: 'Chiusi' }))
+    expect(screen.getByRole('button', { name: 'Chiusi' })).toHaveClass('active')
     expect(screen.getByRole('button', { name: 'Aperti' })).not.toHaveClass('active')
     await waitFor(() => expect(screen.queryByText('#41')).not.toBeInTheDocument())
 
@@ -643,7 +655,7 @@ describe('le corsie di chi guarda la serata (admin)', () => {
     // Si cercano i nomi che SOLO le colonne del banco portano: «Da
     // servire/Ritirare» e «Serviti/Ritirati» qui ci sono, ma come porzioni
     // del tasto dei chiusi, che è un'altra cosa (si vede più sotto).
-    for (const nome of ['Da fare', 'In preparazione', '💶 Chiuse', '✖️ Annullate'])
+    for (const nome of ['Da fare', 'In preparazione', 'Chiuse', 'Annullate'])
       expect(within(riga).queryByRole('button', { name: nome })).not.toBeInTheDocument()
   })
 
@@ -808,7 +820,7 @@ describe('la fila dei filtri sta dietro il tastino ⚗️, nella riga sotto', ()
     await apriFiltri(utente)
     // Due filtri accesi insieme: lo stato dei chiusi e, dentro di lui, la
     // porzione da servire. Nel giro precedente facevano «2».
-    await utente.click(screen.getByRole('button', { name: '💶 Chiusi' }))
+    await utente.click(screen.getByRole('button', { name: 'Chiusi' }))
     await utente.click(screen.getByRole('button', { name: 'Da servire/Ritirare' }))
     await apriFiltri(utente) // richiudo: è lì che il badge compariva
 
@@ -832,7 +844,7 @@ describe('la fila dei filtri sta dietro il tastino ⚗️, nella riga sotto', ()
 
     const tasto = () => screen.getByRole('button', { name: 'Filtri' })
     await apriFiltri(utente)
-    await utente.click(screen.getByRole('button', { name: '💶 Chiusi' }))
+    await utente.click(screen.getByRole('button', { name: 'Chiusi' }))
     expect(tasto()).toHaveAttribute('title', 'Nascondi filtri')
     await apriFiltri(utente)
     expect(tasto()).toHaveAttribute('title', 'Mostra filtri')
@@ -847,7 +859,7 @@ describe('la fila dei filtri sta dietro il tastino ⚗️, nella riga sotto', ()
     await screen.findByText(/In servizio/)
 
     await apriFiltri(utente)
-    expect(localStorage.getItem('tana:coda:filtri-aperti')).toBe('1')
+    expect(localStorage.getItem('drink:coda:filtri-aperti')).toBe('1')
 
     vista.unmount()
     montaCoda()
@@ -928,8 +940,8 @@ describe('la fila dei filtri sta dietro il tastino ⚗️, nella riga sotto', ()
     await screen.findByText('Da fare')
 
     await apriFiltri(utente)
-    await utente.click(screen.getByRole('button', { name: '💶 Chiuse' }))
-    await utente.click(screen.getByRole('button', { name: '✖️ Annullate' }))
+    await utente.click(screen.getByRole('button', { name: 'Chiuse' }))
+    await utente.click(screen.getByRole('button', { name: 'Annullate' }))
     await apriFiltri(utente)
 
     expect(document.querySelectorAll('.corsia')).toHaveLength(6)
@@ -1020,8 +1032,8 @@ describe('la fila dei filtri sta dietro il tastino ⚗️, nella riga sotto', ()
       'In preparazione',
       'Da servire/Ritirare',
       'Serviti/Ritirati',
-      '💶 Chiuse',
-      '✖️ Annullate',
+      'Chiuse',
+      'Annullate',
     ])
       expect(within(riga).getByRole('button', { name: nome })).toBeInTheDocument()
     // e il tasto che le apriva non esiste più
@@ -1185,14 +1197,14 @@ describe('i filtri di stato della coda a griglia', () => {
     await screen.findByText('#41')
     await apriFiltri(utente)
 
-    await utente.click(screen.getByRole('button', { name: '💶 Chiusi' }))
+    await utente.click(screen.getByRole('button', { name: 'Chiusi' }))
     await waitFor(() => expect(inCoda()).toEqual(['36']))
     expect(screen.getByRole('button', { name: 'Aperti' })).not.toHaveClass('active')
-    expect(screen.getByRole('button', { name: '✖️ Annullati' })).not.toHaveClass('active')
+    expect(screen.getByRole('button', { name: 'Annullati' })).not.toHaveClass('active')
 
-    await utente.click(screen.getByRole('button', { name: '✖️ Annullati' }))
+    await utente.click(screen.getByRole('button', { name: 'Annullati' }))
     await waitFor(() => expect(inCoda()).toEqual(['30']))
-    expect(screen.getByRole('button', { name: '💶 Chiusi' })).not.toHaveClass('active')
+    expect(screen.getByRole('button', { name: 'Chiusi' })).not.toHaveClass('active')
 
     await utente.click(screen.getByRole('button', { name: 'Aperti' }))
     await waitFor(() => expect(inCoda()).toEqual(['41']))
@@ -1218,7 +1230,7 @@ describe('i filtri di stato della coda a griglia', () => {
     await screen.findByText('#41')
     await apriFiltri(utente)
 
-    await utente.click(screen.getByRole('button', { name: '💶 Chiusi' }))
+    await utente.click(screen.getByRole('button', { name: 'Chiusi' }))
     expect(await screen.findByText('Nessun ordine chiuso.')).toBeInTheDocument()
   })
 
@@ -1252,7 +1264,7 @@ describe('i filtri di stato della coda a griglia', () => {
     })
 
     const porzioni = () =>
-      [...document.querySelectorAll('.chip-gruppo .chip')].map((b) => b.textContent)
+      [...document.querySelectorAll('.chip-gruppo .chip')].map((b) => b.textContent.trim())
 
     it('da spento si vede solo «Chiusi»: le porzioni escono accendendolo', async () => {
       const utente = userEvent.setup()
@@ -1263,10 +1275,10 @@ describe('i filtri di stato della coda a griglia', () => {
       // Chiuso su sé stesso: nessuna porzione, e nessun chip a metà riga.
       expect(porzioni()).toEqual([])
 
-      await utente.click(screen.getByRole('button', { name: '💶 Chiusi' }))
+      await utente.click(screen.getByRole('button', { name: 'Chiusi' }))
       // UN TASTO SOLO, tre porzioni, nell'ordine del lavoro.
       await waitFor(() =>
-        expect(porzioni()).toEqual(['💶 Chiusi', 'Da servire/Ritirare', 'Serviti/Ritirati'])
+        expect(porzioni()).toEqual(['Chiusi', 'Da servire/Ritirare', 'Serviti/Ritirati'])
       )
     })
 
@@ -1275,7 +1287,7 @@ describe('i filtri di stato della coda a griglia', () => {
       montaCoda()
       await screen.findByText('#41')
       await apriFiltri(utente)
-      await utente.click(screen.getByRole('button', { name: '💶 Chiusi' }))
+      await utente.click(screen.getByRole('button', { name: 'Chiusi' }))
 
       await waitFor(() => expect(inCoda().slice().sort()).toEqual(['20', '21']))
       for (const nome of ['Da servire/Ritirare', 'Serviti/Ritirati']) {
@@ -1291,7 +1303,7 @@ describe('i filtri di stato della coda a griglia', () => {
       montaCoda()
       await screen.findByText('#41')
       await apriFiltri(utente)
-      await utente.click(screen.getByRole('button', { name: '💶 Chiusi' }))
+      await utente.click(screen.getByRole('button', { name: 'Chiusi' }))
 
       await utente.click(screen.getByRole('button', { name: 'Serviti/Ritirati' }))
       await waitFor(() => expect(inCoda()).toEqual(['20']))
@@ -1312,7 +1324,7 @@ describe('i filtri di stato della coda a griglia', () => {
       montaCoda()
       await screen.findByText('#41')
       await apriFiltri(utente)
-      await utente.click(screen.getByRole('button', { name: '💶 Chiusi' }))
+      await utente.click(screen.getByRole('button', { name: 'Chiusi' }))
 
       expect(screen.queryByRole('button', { name: /Da servire/ })).toBe(null)
       expect(screen.queryByRole('button', { name: /Serviti/ })).toBe(null)
@@ -1324,10 +1336,10 @@ describe('i filtri di stato della coda a griglia', () => {
       montaCoda()
       await screen.findByText('#41')
       await apriFiltri(utente)
-      await utente.click(screen.getByRole('button', { name: '💶 Chiusi' }))
+      await utente.click(screen.getByRole('button', { name: 'Chiusi' }))
 
       await waitFor(() =>
-        expect(porzioni()).toEqual(['💶 Chiusi', 'Da servire', 'Serviti'])
+        expect(porzioni()).toEqual(['Chiusi', 'Da servire', 'Serviti'])
       )
     })
   })
@@ -1361,7 +1373,7 @@ describe('chi ha aperto il conto: la tendina «Staff»', () => {
     await apriFiltri(utente)
 
     const tendina = screen.getByRole('button', { name: /Staff/ })
-    expect(tendina).toHaveTextContent('✍️ Staff')
+    expect(tendina).toHaveTextContent('Staff')
     expect(screen.getByText('#41')).toBeInTheDocument()
     expect(screen.getByText('#42')).toBeInTheDocument()
   })
@@ -1383,7 +1395,7 @@ describe('chi ha aperto il conto: la tendina «Staff»', () => {
     await waitFor(() => expect(screen.queryByText('#41')).not.toBeInTheDocument())
     expect(screen.getByText('#42')).toBeInTheDocument()
     // e la pastiglia lo dice senza doverla aprire
-    expect(document.querySelector('.tendina-tasto')).toHaveTextContent('✍️ Capo')
+    expect(document.querySelector('.tendina-tasto')).toHaveTextContent('Capo')
   })
 
   it('NON si chiude al primo tocco, ma si chiude toccando fuori', async () => {
@@ -1419,7 +1431,7 @@ describe('chi ha aperto il conto: la tendina «Staff»', () => {
     // Una coda vuota per forza è indistinguibile da un'app rotta.
     await waitFor(() => expect(screen.getByText('#41')).toBeInTheDocument())
     expect(screen.getByText('#42')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Staff/ })).toHaveTextContent('✍️ Staff')
+    expect(screen.getByRole('button', { name: /Staff/ })).toHaveTextContent('Staff')
   })
 
   it('si incrocia con gli stati: i chiusi di una persona sola', async () => {
@@ -1436,7 +1448,7 @@ describe('chi ha aperto il conto: la tendina «Staff»', () => {
     await apriFiltri(utente)
 
     // Un tocco solo: gli stati si escludono, e «Chiusi» spegne «Aperti».
-    await utente.click(screen.getByRole('button', { name: '💶 Chiusi' }))
+    await utente.click(screen.getByRole('button', { name: 'Chiusi' }))
     await utente.click(screen.getByRole('button', { name: /Staff/ }))
     const pannello = screen.getByRole('dialog', { name: /Chi ha aperto il conto/ })
     await utente.click(within(pannello).getByRole('button', { name: /Marta/ }))
@@ -2059,7 +2071,7 @@ describe('le corsie del banco: una card per comanda', () => {
 
     // Riaccendo una di serie spenta: a schermo c'è una colonna in più.
     await apriFiltri(utente)
-    await utente.click(screen.getByRole('button', { name: '💶 Chiuse', pressed: false }))
+    await utente.click(screen.getByRole('button', { name: 'Chiuse', pressed: false }))
     await apriFiltri(utente)
     expect(corsia('chiusi')).toBeTruthy()
     mutoEDiGrigio()
@@ -2083,7 +2095,7 @@ describe('le corsie del banco: una card per comanda', () => {
     // La memoria tiene anche le due spente di serie: il terminale aveva
     // nascosto al-ritiro e basta. Il fantasma va buttato.
     localStorage.setItem(
-      'tana:corsie:nascoste',
+      'drink:corsie:nascoste',
       JSON.stringify(['al-ritiro', 'chiusi', 'annullati', 'corsia-fantasma', 'da-incassare-vecchia'])
     )
     montaCoda()
@@ -2092,7 +2104,7 @@ describe('le corsie del banco: una card per comanda', () => {
     // resta la sola spenta vera — «al-ritiro» — e la memoria è ripulita
     // sul disco
     expect(corsia('al-ritiro')).toBeFalsy()
-    expect(JSON.parse(localStorage.getItem('tana:corsie:nascoste'))).toEqual([
+    expect(JSON.parse(localStorage.getItem('drink:corsie:nascoste'))).toEqual([
       'al-ritiro',
       'chiusi',
       'annullati',
@@ -2170,7 +2182,7 @@ describe('le corsie del banco: una card per comanda', () => {
     // dentro questo conto NON c'è: il drink è ancora da fare.
     expect(corsia('chiusi')).toBeFalsy()
     await apriColonne(utente)
-    await utente.click(screen.getByRole('button', { name: '💶 Chiuse', pressed: false }))
+    await utente.click(screen.getByRole('button', { name: 'Chiuse', pressed: false }))
     expect(within(corsia('chiusi')).queryByText('#45')).not.toBeInTheDocument()
   })
 
@@ -2227,7 +2239,7 @@ describe('le corsie del banco: una card per comanda', () => {
     await screen.findByText('Da fare')
 
     const daFare = corsia('da-fare')
-    expect(within(daFare).getByText('💳 Acconto')).toBeInTheDocument()
+    expect(within(daFare).getByText('Acconto')).toBeInTheDocument()
     expect(daFare.querySelector('.corsia-card')).toHaveClass('acconto')
   })
 
@@ -2257,7 +2269,7 @@ describe('le corsie del banco: una card per comanda', () => {
     expect(within(corsia('da-fare')).queryByText('#46')).not.toBeInTheDocument()
 
     await apriColonne(utente)
-    await utente.click(screen.getByRole('button', { name: '✖️ Annullate', pressed: false }))
+    await utente.click(screen.getByRole('button', { name: 'Annullate', pressed: false }))
     expect(within(corsia('annullati')).getByText('#46')).toBeInTheDocument()
   })
 
@@ -2266,7 +2278,7 @@ describe('le corsie del banco: una card per comanda', () => {
     montaCoda()
     await screen.findByText('In corso')
 
-    for (const titolo of ['In corso', '💶 Chiusi', '✖️ Annullati']) {
+    for (const titolo of ['In corso', 'Chiusi', 'Annullati']) {
       expect(screen.getByText(titolo)).toBeInTheDocument()
     }
     expect(screen.queryByText('Da fare')).not.toBeInTheDocument()
@@ -2301,13 +2313,13 @@ describe('le corsie del banco: una card per comanda', () => {
     // freccia — giù si scende verso i vecchi, su si sale verso gli ultimi.
     // Di suo la coda parte dal più vecchio, come nasce la serata.
     const tasto = screen.getByRole('button', { name: 'Prima i più vecchi' })
-    expect(tasto).toHaveTextContent('↑')
+    expect(tasto.querySelector('svg.lucide-arrow-up')).not.toBeNull()
     await user.click(tasto)
     await waitFor(() => expect(perCorsia()).not.toEqual(prima))
     expect(perCorsia()).toEqual(prima.map((col) => [...col].reverse()))
 
     const girato = screen.getByRole('button', { name: 'Prima i più recenti' })
-    expect(girato).toHaveTextContent('↓')
+    expect(girato.querySelector('svg.lucide-arrow-down')).not.toBeNull()
     // e non resta traccia della frase di prima, che l'utente ha bocciato
     expect(girato.getAttribute('title')).not.toMatch(/Adesso|tocca per/i)
   })
@@ -2617,7 +2629,7 @@ describe('la striscia della card può portare il colore del conto', () => {
       },
     ]
     montaCoda()
-    await screen.findByText('✖️ Annullati')
+    await screen.findByText('Annullati')
 
     const card = document.querySelector('.corsia-card')
     expect(card).not.toHaveClass('bordo-conto')
@@ -2860,14 +2872,43 @@ describe('il ☰ della coda', () => {
     const utente = userEvent.setup()
     const aperture = []
     const spia = () => aperture.push(1)
-    window.addEventListener('tana:toggle-drawer', spia)
+    window.addEventListener('drink:toggle-drawer', spia)
     try {
       montaCoda()
       await screen.findByText(/In servizio/)
       await utente.click(screen.getByRole('button', { name: 'Menu' }))
       expect(aperture).toHaveLength(1)
     } finally {
-      window.removeEventListener('tana:toggle-drawer', spia)
+      window.removeEventListener('drink:toggle-drawer', spia)
     }
+  })
+})
+
+// A CASSA CHIUSA SI BATTE, MA NON SI INCASSA (REQ-CASSA-017): anche i tasti
+// rapidi della card restano al loro posto, spenti, col perché nel titolo.
+describe('la chiusura rapida dalla card, a cassa chiusa', () => {
+  const cassaDiTurno = (sessione) => {
+    mockCassa.sessione = sessione
+    if (mockCassa.ascolta) act(() => mockCassa.ascolta(sessione))
+  }
+  afterEach(() => cassaDiTurno(CASSA_APERTA))
+
+  it('Contanti e Carta sono spenti, e dicono perché', async () => {
+    const utente = userEvent.setup()
+    ruolo = 'admin'
+    impostazioni = { ...impostazioni, queue_view: 'griglia' }
+    cassaDiTurno(null)
+    montaCoda()
+    await screen.findByText(/In servizio/)
+    cassaDiTurno(null)
+
+    const card = document.querySelector('.grid-card')
+    await utente.click(within(card).getByRole('button', { name: /Azioni|⋯/ }))
+    for (const nome of [/Contanti/, /Carta/]) {
+      const tasto = screen.getByRole('button', { name: nome })
+      expect(tasto).toBeDisabled()
+      expect(tasto).toHaveAttribute('title', 'Cassa chiusa: per incassare va aperta la cassa')
+    }
+    expect(markOrderPaid).not.toHaveBeenCalled()
   })
 })

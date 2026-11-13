@@ -19,13 +19,15 @@ import {
   onAuthStateChanged,
   signOut,
 } from 'firebase/auth'
-import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore'
-import { auth, db } from './firebaseClient.js'
+// Il database passa dalla porta dei dati (REQ-FLOTTA-021).
+import { db, doc, getDoc, setDoc, deleteDoc } from '../porte/dati.js'
+import { auth } from './firebaseClient.js'
 import { isPersonale } from './ruoli.js'
 import { getMyOrderIds } from './cart.js'
 import { fetchOrdersByCustomer } from './api.js'
 import { spegniPush } from './push.js'
 import { dimenticaTutto } from './notifyStore.js'
+import { ERRORI_GOOGLE } from './erroriAccesso.js'
 
 const customerDoc = (uid) => doc(db, 'customers', uid)
 
@@ -202,6 +204,7 @@ export function authError(code) {
     'auth/too-many-requests': 'Troppi tentativi: riprova tra qualche minuto.',
     'auth/network-request-failed': 'Errore di rete: controlla la connessione.',
     'auth/popup-closed-by-user': 'Accesso annullato.',
+    ...ERRORI_GOOGLE,
   }
   return map[code] || 'Errore di autenticazione. Riprova.'
 }

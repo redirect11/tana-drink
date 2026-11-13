@@ -43,12 +43,27 @@ iniettate in `index.js` e sostituite da mock nei test.
 | `SUMUP_PAYMENTS_BASE` | env | `https://api.sumup.com` | URL base dell'API pagamenti |
 | `SUMUP_AFFILIATE_KEY` | env | `''` | Chiave affiliazione per il lettore Solo |
 | `SUMUP_AFFILIATE_APP_ID` | env | `it.latanadelconiglio.drink` | Id applicativo per l'affiliazione |
+| `REGIA_PROGETTO` | env | — | Il progetto della regia a cui l'AI chiede (`drink-regia`, o `drink-regia-test` per i locali di prova). Lo scrive la regia nei suoi locali. Senza, l'AI è spenta e la Function non chiede l'account `ai-locale` (REQ-AI-003) |
 
 Il segreto si imposta così, e **non** finisce nel repo:
 
 ```bash
 firebase functions:secrets:set SUMUP_API_KEY
 ```
+
+**L'AI senza chiave** (REQ-AI-003): la Function `richiestaAI` gira con
+l'account `ai-locale@<progetto>` e si fa riconoscere dalla regia col suo
+gettone d'identità di Google. L'account lo crea il Terraform della regia nei
+locali della flotta, dove la regia scrive anche `REGIA_PROGETTO`. Nei
+progetti che non nascono dalla regia (`tana-drink`, `tana-drink-test`,
+`drinkpos-prova-e2e`) l'AI resta spenta finché il workflow della regia
+«Prepara l'AI di un locale esistente» non crea l'account e non dà all'account
+di deploy `roles/iam.serviceAccountUser` su di esso; solo dopo si aggiunge
+`REGIA_PROGETTO` al loro `functions/.env.<progetto>`. Aggiungere la riga prima
+fermerebbe il deploy di tutte le Functions. Al 12/11/2026 il passo è fatto su
+`tana-drink-test` (la riga c'è) e su `tana-drink`, dove però la riga manca
+apposta: la regia di produzione riconosce il gettone solo dal suo prossimo
+rilascio su `main`.
 
 I pagamenti sono **no-op** finché `SUMUP_API_KEY` e `SUMUP_MERCHANT_CODE` non
 ci sono entrambi: `isConfigured()` risponde `false` e non parte nessuna
@@ -110,6 +125,20 @@ stessi tre gesti quando a pagare è un gruppo di conti insieme.
   un ordine appena arrivato.
 - `notifyStaffCall` — trigger su `staff_calls/{callId}`: la chiamata al tavolo.
 
+## Il menù dei clienti — voci non disponibili (REQ-MENU-017)
+
+Il cliente non legge il magazzino: il segno `non_disponibile_cliente` sul
+prodotto della cassa lo scrivono tre trigger, con la logica in
+`lib/disponibilita.js`, solo per i prodotti con «Il menù dei clienti segue
+le giacenze» e solo dove il segno cambia:
+
+- `disponibilitaDalMagazzino` — `inventory_items/{itemId}`: quando la
+  giacenza attraversa la soglia (non a ogni vendita);
+- `disponibilitaDalProdotto` — `drinks/{drinkId}`: quando cambiano opzione o
+  ricetta (la sua stessa scrittura non lo rimette in moto);
+- `disponibilitaDalleImpostazioni` — `settings/bar`: quando cambia la soglia
+  (`menu_soglia_disponibilita`: esaurito / in esaurimento).
+
 ## Amministrazione
 
 - `staffAdmin` — callable (solo bartender): crea, elenca, modifica ed elimina
@@ -150,4 +179,4 @@ npm run test:coverage # con coverage su functions/lib
   con Firestore in-memory ([tests/helpers/fakeFirestore.js](../tests/helpers/fakeFirestore.js))
   e `fetch` SumUp mockato. Ogni test è tracciato da un ID `TC-*` referenziato nei requisiti.
 
-I test girano in CI tramite [test.yml](../.github/workflows/test.yml) su push e PR.
+I test girano in CI tramite [test.yml](../.github/workflows/test.yml): a ogni push tranne sui rami `release/**`, e sulle pull request verso `develop` e `main`.

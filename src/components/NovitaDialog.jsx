@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import Changelog from './Changelog.jsx'
 import { sezioneChangelog } from '../lib/novita.js'
+import Icona from './Icona.jsx'
 
 // ── COSA È CAMBIATO, subito dopo un aggiornamento ────────────────────
 // Si tocca «Nuova versione disponibile», la pagina si ricarica e ci si
@@ -36,7 +37,7 @@ export default function NovitaDialog({ onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="row between" style={{ alignItems: 'center' }}>
-          <h3 style={{ margin: 0 }}>🎉 Cosa è cambiato</h3>
+          <h3 style={{ margin: 0 }}><Icona nome="festa" gruppo="tasti" /> Cosa è cambiato</h3>
           <button className="btn ghost small" onClick={onClose} aria-label="Chiudi">✕</button>
         </div>
         <p className="muted small" style={{ margin: '6px 0 0' }}>

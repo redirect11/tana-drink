@@ -136,20 +136,24 @@ describe('l’elenco delle macro', () => {
 
   it('cancellandone una, si dice cosa succede a prodotti e voci, e sparisce subito', async () => {
     const user = userEvent.setup()
-    const conferma = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    // Con vitest 4 l'ambiente happy-dom non mette `confirm` sul globale:
+    // vi.spyOn non avrebbe niente da spiare, quindi lo si mette a mano.
+    const conferma = vi.fn(() => true)
+    vi.stubGlobal('confirm', conferma)
     monta()
-    await user.click(screen.getAllByRole('button', { name: '🗑' })[0])
+    await user.click(screen.getAllByRole('button', { name: 'Elimina' })[0])
     expect(conferma.mock.calls[0][0]).toMatch(/Prodotti e voci restano/)
     expect(screen.queryByRole('button', { name: /Distillati/ })).toBeNull()
     expect(stato.scritture).toEqual([{ tipo: 'delete', col: 'macro_categories', id: 'm1' }])
+    vi.unstubAllGlobals()
   })
 
   it('spostandone una, l’ordine cambia subito', async () => {
     const user = userEvent.setup()
     monta()
     await user.click(screen.getAllByRole('button', { name: '↓' })[0])
-    const nomi = [...document.querySelectorAll('.macro-apri strong')].map((n) => n.textContent)
-    expect(nomi).toEqual(['🗂️ Bibite', '🗂️ Distillati'])
+    const nomi = [...document.querySelectorAll('.macro-apri strong')].map((n) => n.textContent.trim())
+    expect(nomi).toEqual(['Bibite', 'Distillati'])
     expect(stato.scritture.map((s) => [s.id, s.patch])).toEqual([
       ['m1', { sort_order: 1 }],
       ['m2', { sort_order: 0 }],

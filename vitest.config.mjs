@@ -1,5 +1,13 @@
 import { defineConfig, configDefaults } from 'vitest/config'
 import react from '@vitejs/plugin-react'
+import { fileURLToPath } from 'node:url'
+import { leggiCliente, valoreCliente } from './clienti/pluginCliente.js'
+
+// Nei test l'app è compilata per la Tana (REQ-VENUE-001), come in
+// produzione: i test che leggono «La Tana del Coniglio» leggono la build.
+// La licenza no: da REQ-LIC-009 sta solo in `licenza/attuale`, e ogni test
+// che ne ha bisogno la scrive nelle impostazioni che usa.
+const tana = leggiCliente('tana', fileURLToPath(new URL('.', import.meta.url)))
 
 export default defineConfig({
   plugins: [react()],
@@ -11,6 +19,13 @@ export default defineConfig({
     __BUILD_ID__: JSON.stringify('test'),
     __GIT_BRANCH__: JSON.stringify('test'),
     __GIT_COMMIT__: JSON.stringify('0000000'),
+    __CLIENTE__: valoreCliente(tana),
+    // LA DEMO NEI TEST (REQ-FLOTTA-019). Nella build è un letterale; qui è
+    // un interruttore globale, spento: un test che vuole provare il ramo
+    // della demo lo accende con `accendiDemo()` (tests/helpers/demo.js, che
+    // spiega perché sono due) e ricarica i moduli (vi.resetModules). Tutti
+    // gli altri vedono la build della Tana.
+    __DEMO__: 'globalThis.__DEMO_TEST__',
   },
   test: {
     // Default: Node (functions e logica pura). I test COMPONENTE dichiarano
@@ -48,10 +63,23 @@ export default defineConfig({
       // passare un merge. Le pagine partono basse perché così stanno
       // (19,8% stmts): la soglia non certifica qualità, impedisce di
       // peggiorare — alzarla è REQ-DEV-005.
+      //
+      // IL METRO CAMBIATO (09/11/2026). Con vitest 4 la coverage v8 conta
+      // righe e rami sull'AST, e sullo stesso codice con gli stessi test i
+      // numeri scendono: functions/lib da 94,8 a 85,9% di istruzioni, i rami
+      // di src/components da 82,2 a 69,8%. Le quattro soglie che cadevano
+      // sono state ritarate una volta sola, un punto sotto la misura nuova
+      // (decisione dell'utente); non è una copertura peggiorata, e da qui il
+      // cricchetto riparte.
+      //
+      // I rami di functions/lib salgono a 79 il 10/11/2026 (BUG-140): erano
+      // misurati male, perché payment-core e licenza-core arrivavano in due
+      // versioni (da Vite e dal require nativo) e il numero oscillava fra 71
+      // e 76 sullo stesso codice. Misurati giusti sono all'80,25%.
       thresholds: {
-        'functions/lib/**/*.js': { statements: 92, branches: 76, functions: 88, lines: 92 },
+        'functions/lib/**/*.js': { statements: 84, branches: 79, functions: 88, lines: 90 },
         'src/lib/**': { statements: 64, branches: 74, functions: 62, lines: 64 },
-        'src/components/**': { statements: 40, branches: 72, functions: 43, lines: 40 },
+        'src/components/**': { statements: 40, branches: 68, functions: 43, lines: 40 },
         'src/pages/**': { statements: 17, branches: 52, functions: 16, lines: 17 },
         // src/ alla radice: App.jsx e main.jsx (misurato 72,8 / 65,9 / 31,6).
         'src/*.{js,jsx}': { statements: 70, branches: 63, functions: 28, lines: 70 },

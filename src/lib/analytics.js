@@ -1,16 +1,20 @@
+/* global __DEMO__ */
 // Google Analytics (Firebase) attivato SOLO dietro consenso esplicito
 // dell'utente (categoria "analytics" del banner cookie). Senza consenso
 // non viene inizializzato e non vengono impostati cookie di statistica.
 import { getAnalytics, setAnalyticsCollectionEnabled, isSupported } from 'firebase/analytics'
 import { app } from './firebaseClient.js'
+import { configurazione } from '../porte/configurazione.js'
 
-const measurementId = import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+const measurementId = configurazione().firebase.measurementId
 let instance = null
 
 // Attiva la raccolta (chiamata quando l'utente accetta la categoria
 // statistiche). No-op se manca il measurementId o il browser non supporta
 // Analytics (es. ambienti senza IndexedDB).
 export async function enableAnalytics() {
+  // Nella demo niente Analytics (REQ-FLOTTA-019).
+  if (__DEMO__) return
   if (!measurementId) return
   try {
     if (!(await isSupported())) return

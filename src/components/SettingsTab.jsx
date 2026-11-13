@@ -17,6 +17,7 @@ import {
 import { parseCarteCsv, decodeCsvBuffer } from '../lib/carteImport.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import ThemeSettings, { TemaMenuClienti } from './ThemeSettings.jsx'
+import IdentitaLocale from './IdentitaLocale.jsx'
 import PrinterSetup from './PrinterSetup.jsx'
 import StampaAutomatica from './StampaAutomatica.jsx'
 import ToggleRow from './ToggleRow.jsx'
@@ -26,11 +27,19 @@ import {
   moduliPremium,
   moduloAttivo,
   moduloIncluso,
+  basiMancanti,
+  fraseRichiede,
+  scadenzaProva,
+  sumupDisponibile,
 } from '../lib/licenza.js'
+import { MESSAGGI_PIANO, profiloLeggero, stampaConsentita, servizioAttivo, comandeConsentite } from '../lib/limiti.js'
+import AvvisoPiano from './AvvisoPiano.jsx'
 import CampiStampa, { LogoStampe } from './CampiStampa.jsx'
 
 import BackupPanel from './BackupPanel.jsx'
 import InfoTab from './InfoTab.jsx'
+import LicenzaPanel from './LicenzaPanel.jsx'
+import { isAdmin } from '../lib/ruoli.js'
 import { pairSumUpReader, unpairSumUpReader } from '../lib/paymentsApi.js'
 import { Link } from 'react-router-dom'
 import { devToolsEnabled } from '../dev/devActions.js'
@@ -38,9 +47,21 @@ import { Sottosezioni } from '../lib/sottosezioni.js'
 import { MODI_STRISCIA, MODO_STRISCIA_DEFAULT } from '../lib/strisce.js'
 import { usePaginaPiena } from '../lib/paginaPiena.js'
 import { cambioDentroOrario } from '../lib/orario.js'
+import { drinkCostDi, ricaricoDaDrinkCost } from '../lib/pricing.js'
+import Icona, { ConIcona } from './Icona.jsx'
+import { conEmoji } from '../lib/icone.js'
+import FormatoPrezziMenu from './FormatoPrezziMenu.jsx'
+import CreditoAI from './CreditoAI.jsx'
+import { aiRaggiungibile } from '../lib/aiApi.js'
+import { minutiAttesa } from '../lib/attesaCliente.js'
 
 // Impostazioni del bar (documento settings/bar). Ogni modifica viene salvata
 // subito; le pagine cliente le ricevono in tempo reale via subscribeSettings.
+// Le sezioni che hanno senso solo se il piano comprende la stampa
+// (REQ-LIC-016) o le comande (REQ-LIC-005).
+const SOLO_CON_STAMPA = new Set(['stampa-automatica', 'campi-scontrino', 'campi-comanda', 'campi-acconto', 'logo-stampe'])
+const SOLO_CON_COMANDE = new Set(['tempi', 'campi-comanda'])
+
 export default function SettingsTab({ role = null }) {
   // La schermata sta tutta nella finestra: scorre la sezione aperta, non la
   // pagina con dentro la testata.
@@ -58,7 +79,7 @@ export default function SettingsTab({ role = null }) {
     try {
       const chiesta = new URLSearchParams(window.location.search).get('sezione')
       if (chiesta) return chiesta
-      return localStorage.getItem('tana:impostazioni:sezione') || 'aspetto'
+      return localStorage.getItem('drink:impostazioni:sezione') || 'aspetto'
     } catch {
       return 'aspetto'
     }
@@ -66,7 +87,7 @@ export default function SettingsTab({ role = null }) {
   const scegliSezione = (id) => {
     setSezione(id)
     try {
-      localStorage.setItem('tana:impostazioni:sezione', id)
+      localStorage.setItem('drink:impostazioni:sezione', id)
     } catch {
       /* niente memoria: vale per questa volta */
     }
@@ -97,11 +118,38 @@ export default function SettingsTab({ role = null }) {
   // oltre pagamenti, gruppi, sconti e coperto, e quello che si cercava lo
   // si trovava a occhio. Con la barra a sinistra (la stessa di Inventario
   // e Menù) si va dritti dove serve, e la scelta resta per la volta dopo.
-  const sezioni = [
-    { id: 'aspetto', icona: '🎨', label: 'Aspetto', nodo: <ThemeSettings settings={settings} onSave={save} /> },
+  // Il piano (REQ-LIC-016, REQ-LIC-005): senza stampa le sezioni della
+  // carta non ci sono e al posto della stampante c'è la frase del piano;
+  // senza comande lo stesso per la preparazione, e se ne vanno tempi di
+  // servizio e campi della comanda.
+  const stampaOn = stampaConsentita(settings)
+  const comandeOn = comandeConsentite(settings)
+  const servizioOn = servizioAttivo(settings)
+  const tutteLeSezioni = [
+    { id: 'aspetto', icona: 'temi', label: 'Aspetto', nodo: <ThemeSettings settings={settings} onSave={save} /> },
+    // IL MARKETPLACE DEI TEMI (REQ-MENU-023) è una pagina sua, nel menu
+    // laterale: qui, accanto ai colori, solo la strada per arrivarci.
+    {
+      id: 'marketplace-temi',
+      icona: 'marketplace',
+      label: 'Marketplace dei temi',
+      nodo: (
+        <div className="card settings-section">
+          <h3>Marketplace dei temi</h3>
+          <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+            Il catalogo dei temi e degli stili del menù dei clienti: si provano sul proprio menù e si installano.
+          </p>
+          <Link className="btn small" to="/bar?tab=marketplace">
+            Apri il marketplace
+          </Link>
+        </div>
+      ),
+    },
+    // L'identità del locale (REQ-VENUE-001): vuota vale la build.
+    { id: 'locale', icona: 'categorie', label: 'Il locale', nodo: <IdentitaLocale settings={settings} onSave={save} /> },
     {
       id: 'vista-ordine',
-      icona: '🧾',
+      icona: 'coda',
       label: 'Vista ordine',
       nodo: (
             <div className="card settings-section">
@@ -119,8 +167,8 @@ export default function SettingsTab({ role = null }) {
               <SceltaModo
                 valore={!!settings.pos_add_top}
                 opzioni={[
-                  [false, '⬇ In fondo (scorre)'],
-                  [true, '⬆ In cima'],
+                  [false, conEmoji('giu', 'In fondo (scorre)')],
+                  [true, conEmoji('su', 'In cima')],
                 ]}
                 onScegli={(v) => save({ pos_add_top: v })}
               />
@@ -163,8 +211,8 @@ export default function SettingsTab({ role = null }) {
                 valore={settings.category_display || 'dot'}
                 opzioni={[
                   ['dot', '● Pallino + nome'],
-                  ['icon_text', '🍸 Icona + nome'],
-                  ['icon', '🍸 Solo icona (senza nome)'],
+                  ['icon_text', conEmoji('menu', 'Icona + nome')],
+                  ['icon', conEmoji('menu', 'Solo icona (senza nome)')],
                 ]}
                 onScegli={(v) => save({ category_display: v })}
               />
@@ -183,8 +231,8 @@ export default function SettingsTab({ role = null }) {
               <SceltaModo
                 valore={settings.pos_search || 'filtra'}
                 opzioni={[
-                  ['filtra', '🔍 Filtra la griglia'],
-                  ['evidenzia', '💡 Accendi il prodotto e portami lì'],
+                  ['filtra', conEmoji('cerca', 'Filtra la griglia')],
+                  ['evidenzia', conEmoji('evidenzia', 'Accendi il prodotto e portami lì')],
                 ]}
                 onScegli={(v) => save({ pos_search: v })}
               />
@@ -214,8 +262,8 @@ export default function SettingsTab({ role = null }) {
               <SceltaModo
                 valore={!!settings.stripe_ok_verde}
                 opzioni={[
-                  [false, '⚪ Grigio'],
-                  [true, '🟢 Verde'],
+                  [false, conEmoji('spento', 'Grigio')],
+                  [true, conEmoji('verde', 'Verde')],
                 ]}
                 onScegli={(v) => save({ stripe_ok_verde: v })}
               />
@@ -224,7 +272,7 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'consegna',
-      icona: '🛎',
+      icona: 'campanello',
       label: 'Consegna ordine',
       nodo: (
             <div className="card settings-section">
@@ -238,10 +286,10 @@ export default function SettingsTab({ role = null }) {
               <SceltaModo
                 valore={mondoConsegna(settings)}
                 opzioni={[
-                  ['tavolo', '🍸 Solo servizio', 'Si porta tutto al tavolo.'],
+                  ['tavolo', conEmoji('menu', 'Solo servizio'), 'Si porta tutto al tavolo.'],
                   [
                     'entrambi',
-                    '🤝 Ritiro e servizio',
+                    conEmoji('in-coppia', 'Ritiro e servizio'),
                     'Chi si siede si fa servire, chi ha fretta ritira al banco.',
                   ],
                 ]}
@@ -298,7 +346,7 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'pagamenti',
-      icona: '💳',
+      icona: 'carta',
       label: 'Pagamenti',
       nodo: (
             <div className="card settings-section">
@@ -307,12 +355,22 @@ export default function SettingsTab({ role = null }) {
                   incassa, e chi lo cerca apre Pagamenti — c'era finito
                   accanto a «Riscuoti e servi» per parentela di forma, e
                   l'utente non lo trovava. */}
+              {/* IL RESTO IN CONTANTI (REQ-PAG-015): sta coi tasti
+                  dell'incasso, perché compare dove si incassa. */}
               <ToggleRow
-                label="Un tasto per incassare senza stampare"
-                desc="Nella schermata di pagamento compare anche «Riscuoti (senza stampa)»: incassa e chiude senza far uscire lo scontrino, per chi non lo vuole."
-                checked={settings.riscuoti_senza_stampa === true}
-                onChange={(v) => save({ riscuoti_senza_stampa: v })}
+                label="Calcolo del resto in contanti"
+                desc="Nella schermata di pagamento, con «Contante», si indica quanto ha dato il cliente e compare il resto da dare. L'importo incassato non cambia."
+                checked={settings.resto_contanti === true}
+                onChange={(v) => save({ resto_contanti: v })}
               />
+              {stampaOn && (
+                <ToggleRow
+                  label="Un tasto per incassare senza stampare"
+                  desc="Nella schermata di pagamento compare anche «Riscuoti (senza stampa)»: incassa e chiude senza far uscire lo scontrino, per chi non lo vuole."
+                  checked={settings.riscuoti_senza_stampa === true}
+                  onChange={(v) => save({ riscuoti_senza_stampa: v })}
+                />
+              )}
               {/* E ADESSO ANCHE IL SUO GEMELLO, PER LO STESSO IDENTICO
                   MOTIVO. Stava in «Gestione preparazione» e l'utente non
                   l'ha trovato (21/08/2026) — già successo il 20/08 con
@@ -323,7 +381,7 @@ export default function SettingsTab({ role = null }) {
                   se si seguono i passi del servizio. Col servizio spento
                   il tasto non comparirebbe comunque, e un interruttore che
                   non fa niente è peggio di uno assente. */}
-              {settings.workflow_enabled !== false && (
+              {servizioOn && (
                 <ToggleRow
                   label="Un tasto per incassare e servire insieme"
                   desc="Nella schermata di pagamento compare anche «Riscuoti e servi»: chiude il conto in un colpo, per quando si consegna e si incassa nello stesso gesto."
@@ -337,53 +395,67 @@ export default function SettingsTab({ role = null }) {
                   stessa sezione, a uno scorrimento di distanza, quindi la
                   lezione di BUG-070 — gli interruttori dei tasti
                   dell'incasso si accendono dove si incassa — regge. */}
-              <ToggleRow
-                label="Pagamento online (SumUp)"
-                desc="Il cliente può pagare con carta dal suo telefono al momento dell'ordine."
-                checked={settings.payments_online_enabled}
-                onChange={(v) => save({ payments_online_enabled: v })}
-              />
-              {settings.payments_online_enabled && (
+              {/* SUMUP VUOLE LE FUNCTIONS (REQ-LIC-004): sul profilo leggero
+                  del piano Free non ci sono, e gli interruttori di SumUp
+                  lasciano il posto a una riga che lo dice. Su un piano a
+                  pagamento senza il modulo la riga dice quello, non «Free». */}
+              {!sumupDisponibile(settings) ? (
+                <AvvisoPiano
+                  messaggio={profiloLeggero(settings) ? MESSAGGI_PIANO.sumup : MESSAGGI_PIANO.sumup_modulo}
+                  impostazioni={settings}
+                  compatto
+                />
+              ) : (
                 <>
                   <ToggleRow
-                    label="Pagamento obbligatorio"
-                    desc="L'ordine entra in coda solo dopo il pagamento online."
-                    checked={settings.payments_online_required}
-                    onChange={(v) => save({ payments_online_required: v })}
+                    label="Pagamento online (SumUp)"
+                    desc="Il cliente può pagare con carta dal suo telefono al momento dell'ordine."
+                    checked={settings.payments_online_enabled}
+                    onChange={(v) => save({ payments_online_enabled: v })}
                   />
-                  {!settings.payments_online_required && (
-                    <ToggleRow
-                      label="Senza pagamento, ritiro al banco"
-                      desc={
-                        settings.service_mode === 'tavolo'
-                          ? 'Con servizio solo al tavolo non si applica: chi non paga online paga allo staff alla consegna.'
-                          : 'Chi sceglie di pagare al bancone deve ritirare al banco (niente servizio al tavolo).'
-                      }
-                      checked={settings.banco_required_if_unpaid}
-                      onChange={(v) => save({ banco_required_if_unpaid: v })}
-                    />
+                  {settings.payments_online_enabled && (
+                    <>
+                      <ToggleRow
+                        label="Pagamento obbligatorio"
+                        desc="L'ordine entra in coda solo dopo il pagamento online."
+                        checked={settings.payments_online_required}
+                        onChange={(v) => save({ payments_online_required: v })}
+                      />
+                      {!settings.payments_online_required && (
+                        <ToggleRow
+                          label="Senza pagamento, ritiro al banco"
+                          desc={
+                            settings.service_mode === 'tavolo'
+                              ? 'Con servizio solo al tavolo non si applica: chi non paga online paga allo staff alla consegna.'
+                              : 'Chi sceglie di pagare al bancone deve ritirare al banco (niente servizio al tavolo).'
+                          }
+                          checked={settings.banco_required_if_unpaid}
+                          onChange={(v) => save({ banco_required_if_unpaid: v })}
+                        />
+                      )}
+                    </>
                   )}
+                  <ToggleRow
+                    label="Lettore SumUp Solo"
+                    desc="Incasso col lettore di carte direttamente dalla coda ordini (Cloud API, lettore in Wi-Fi)."
+                    checked={settings.payments_reader_enabled}
+                    onChange={(v) => save({ payments_reader_enabled: v })}
+                  />
+                  {settings.payments_reader_enabled && <ReaderPairing settings={settings} />}
                 </>
               )}
-              <ToggleRow
-                label="Lettore SumUp Solo"
-                desc="Incasso col lettore di carte direttamente dalla coda ordini (Cloud API, lettore in Wi-Fi)."
-                checked={settings.payments_reader_enabled}
-                onChange={(v) => save({ payments_reader_enabled: v })}
-              />
-              {settings.payments_reader_enabled && <ReaderPairing settings={settings} />}
             </div>
       ),
     },
     {
       id: 'stampa-automatica',
-      icona: '🖨️',
+      icona: 'stampante',
       label: 'Stampa automatica',
       nodo: <StampaAutomatica settings={settings} save={save} />,
     },
     {
       id: 'gruppi',
-      icona: '👥',
+      icona: 'staff',
       label: 'Gruppi di ordini',
       nodo: (
             <div className="card settings-section">
@@ -412,7 +484,7 @@ export default function SettingsTab({ role = null }) {
                         e quanto resta da pagare.
                       </li>
                       <li>
-                        Da lì aggiungi un ordine col tasto ✍️: si apre il POS e l’ordine
+                        Da lì aggiungi un ordine col tasto <Icona nome="nuovo-ordine" gruppo="tasti" />: si apre il POS e l’ordine
                         nasce già dentro il gruppo.
                       </li>
                       <li>
@@ -420,7 +492,7 @@ export default function SettingsTab({ role = null }) {
                       </li>
                     </ol>
                     Gli ordini di un gruppo restano <strong>visibili nella coda</strong> come
-                    tutti gli altri, con l’etichetta 👥 del gruppo.
+                    tutti gli altri, con l’etichetta <Icona nome="staff" gruppo="tasti" /> del gruppo.
                     Un gruppo può contenere altri gruppi (es. “Compleanno” con
                     “Tavolo A” e “Tavolo B”): chi contiene sottogruppi non ha ordini
                     diretti, si ordina nei figli.
@@ -444,9 +516,11 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'preparazione',
-      icona: '🍸',
+      icona: 'menu',
       label: 'Gestione preparazione',
-      nodo: (
+      nodo: !comandeOn ? (
+        <AvvisoPiano messaggio={MESSAGGI_PIANO.comande} impostazioni={settings} />
+      ) : (
             <div className="card settings-section">
               <h3>Gestione preparazione</h3>
               <p className="muted small" style={{ margin: '0 0 8px' }}>
@@ -464,7 +538,7 @@ export default function SettingsTab({ role = null }) {
                   conto nuovo e le aggiunte a metà serata — perché il passo in
                   cui nasce una comanda si decide in un posto solo
                   (statoComandaNuova in lib/comande.js). */}
-              {settings.workflow_enabled !== false && (
+              {servizioOn && (
                 <ToggleRow
                   label="Le comande nascono già in preparazione"
                   desc="Spenta: una comanda nuova sta in «Da fare» finché qualcuno non tocca «Lo preparo io» — che dice anche chi. Accesa: nasce già al banco, per chi versa nell'istante in cui batte e non vuole un tocco in più a ogni comanda."
@@ -474,7 +548,7 @@ export default function SettingsTab({ role = null }) {
               )}
               {esitoReset != null && (
                 <div className="muted small" style={{ marginTop: 6 }}>
-                  ✅ {esitoReset === 0
+                  <Icona nome="fatto" gruppo="segnali" />{' '}{esitoReset === 0
                     ? 'Nessun conto aperto da riportare indietro.'
                     : `${esitoReset} conti aperti riportati a “ricevuto”.`}
                 </div>
@@ -484,7 +558,7 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'giornata',
-      icona: '📅',
+      icona: 'calendario',
       label: 'Giornata di lavoro',
       nodo: (
             <div className="card settings-section">
@@ -535,7 +609,7 @@ export default function SettingsTab({ role = null }) {
               </div>
               {cambioDentroOrario(settings.business_day_cutoff_hour, settings) && (
                 <p className="muted small" role="alert" style={{ margin: '8px 0 0' }}>
-                  ⚠️ Il cambio di giornata cade dentro l’orario di apertura: una
+                  <Icona nome="avviso" gruppo="segnali" /> Il cambio di giornata cade dentro l’orario di apertura: una
                   serata verrebbe divisa su due giornate.
                 </p>
               )}
@@ -544,7 +618,7 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'prezzo',
-      icona: '🏷',
+      icona: 'categorie',
       label: 'Prezzo consigliato',
       nodo: (
             <div className="card settings-section">
@@ -555,15 +629,30 @@ export default function SettingsTab({ role = null }) {
                 dettaglio degli ingredienti (dal listino di magazzino) e propone un{' '}
                 <strong>prezzo consigliato</strong> moltiplicandolo per il ricarico.
                 È solo un suggerimento: il prezzo resta sempre modificabile.
+                Il ricarico si imposta come moltiplicatore o come drink cost,
+                l’incidenza del costo sul prezzo di vendita: ×3 corrisponde al
+                33,3%, ×5 al 20%.
               </p>
               <div className="toggle-row">
                 <span>Ricarico sul costo (×)</span>
                 <AmountInput
+                  label="Ricarico sul costo"
                   value={settings.price_markup}
                   min={1}
                   max={20}
                   step={0.5}
                   onCommit={(v) => save({ price_markup: v })}
+                />
+              </div>
+              <div className="toggle-row">
+                <span>Drink cost (% sul prezzo)</span>
+                <AmountInput
+                  label="Drink cost"
+                  value={drinkCostDi(settings.price_markup)}
+                  min={5}
+                  max={100}
+                  step={0.1}
+                  onCommit={(v) => save({ price_markup: ricaricoDaDrinkCost(v) })}
                 />
               </div>
               <div className="toggle-row">
@@ -613,7 +702,7 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'tempi',
-      icona: '⏱',
+      icona: 'tempo',
       label: 'Tempi di servizio',
       nodo: (
             <div className="card settings-section">
@@ -641,7 +730,7 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'sconto',
-      icona: '✂️',
+      icona: 'dividi',
       label: 'Sconto e righe del conto',
       nodo: (
             <div className="card settings-section">
@@ -658,17 +747,17 @@ export default function SettingsTab({ role = null }) {
                 {[
                   [
                     'tetto',
-                    '🔒 Tetto al totale',
+                    conEmoji('licenza', 'Tetto al totale'),
                     'Lo sconto resta quello che hai scelto finché ci sta dentro. Se togliendo righe il conto scende sotto lo sconto, lo sconto si accorcia fino al totale e il conto diventa offerto: non va mai in negativo. Esempio: conto 20 €, sconto 5 € → togli 8 € di roba → conto 12 €, sconto ancora 5 €, da pagare 7 €. Togli altri 10 € → conto 2 €, lo sconto si accorcia a 2 € e non si paga nulla.',
                   ],
                   [
                     'proporzione',
-                    '⚖️ Mantieni la proporzione',
+                    conEmoji('bilancio', 'Mantieni la proporzione'),
                     'Lo sconto vale sempre la stessa quota del conto: togliendo righe cala insieme al conto, aggiungendone cresce. Esempio: conto 20 €, sconto 5 € (il 25%) → togli 8 € di roba → conto 12 €, sconto 3 €, da pagare 9 €. Da preferire se lo sconto è un "quanto gli faccio di sconto in percentuale" più che una cifra promessa.',
                   ],
                   [
                     'avviso',
-                    '⚠️ Avvisa e basta',
+                    conEmoji('avviso', 'Avvisa e basta'),
                     'L’app non tocca lo sconto che hai messo. Se supera il totale del conto lo segnala in rosso e blocca l’incasso finché non lo correggi a mano. Da scegliere se lo sconto è una cifra concordata col cliente e nessuno, a parte te, deve poterla cambiare.',
                   ],
                 ].map(([value, titolo, testo]) => (
@@ -688,7 +777,7 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'coperto',
-      icona: '🍽',
+      icona: 'tavolo',
       label: 'Coperto',
       nodo: (
             <div className="card settings-section">
@@ -715,7 +804,7 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'servizio-mancia',
-      icona: '🙌',
+      icona: 'ritiro-e-servizio',
       label: 'Servizio e mancia',
       nodo: (
             <div className="card settings-section">
@@ -761,7 +850,7 @@ export default function SettingsTab({ role = null }) {
       // capiva se parlasse del menù dei clienti o della schermata con cui
       // si modifica il listino.
       id: 'menu-clienti',
-      icona: '📖',
+      icona: 'ordina-dal-menu',
       label: 'Menù clienti',
       nodo: (
         <div className="card settings-section">
@@ -787,7 +876,93 @@ export default function SettingsTab({ role = null }) {
             checked={settings.show_serving_board}
             onChange={(v) => save({ show_serving_board: v })}
           />
+          <FormatoPrezziMenu settings={settings} onSave={save} />
           <TemaMenuClienti settings={settings} onSave={save} />
+        </div>
+      ),
+    },
+    {
+      id: 'scelta-ingredienti',
+      icona: 'ordina-dal-menu',
+      label: 'Scelta degli ingredienti',
+      nodo: (
+        <div className="card settings-section">
+          <h3>Scelta degli ingredienti</h3>
+          <p className="muted small" style={{ margin: '0 0 10px' }}>
+            Sulle voci del menù dei clienti dove il cliente sceglie un ingrediente (per esempio il gin), il supplemento
+            con cui parte ogni alternativa offerta. Sulla voce si cambia alternativa per alternativa.
+          </p>
+          <label htmlFor="supplemento-scelta">Supplemento predefinito (€)</label>
+          <input
+            id="supplemento-scelta"
+            type="number"
+            step="0.5"
+            min="0"
+            defaultValue={settings.supplemento_scelta_predefinito || ''}
+            placeholder="0"
+            onBlur={(e) => {
+              const v = Number(String(e.target.value).replace(',', '.'))
+              save({ supplemento_scelta_predefinito: Number.isFinite(v) && v > 0 ? Math.round(v * 100) / 100 : 0 })
+            }}
+          />
+        </div>
+      ),
+    },
+    {
+      // REQ-CLI-009: lib/attesaCliente.js.
+      id: 'conferma-cliente',
+      icona: 'ordina-dal-menu',
+      label: 'Modifiche da confermare',
+      nodo: (
+        <div className="card settings-section">
+          <h3>Modifiche da confermare</h3>
+          <p className="muted small" style={{ margin: '0 0 10px' }}>
+            Quando il banco cambia prezzo o ingredienti di un ordine arrivato dal telefono, il cliente riceve le
+            modifiche e le accetta o le rifiuta. Il rifiuto annulla l’ordine; allo scadere del tempo l’ordine si
+            annulla. Finché il cliente non risponde, l’ordine non avanza e la comanda non si stampa.
+          </p>
+          <label htmlFor="attesa-cliente-minuti">Tempo per rispondere (minuti)</label>
+          <input
+            id="attesa-cliente-minuti"
+            type="number"
+            step="1"
+            min="1"
+            max="120"
+            defaultValue={minutiAttesa(settings)}
+            onBlur={(e) => save({ attesa_cliente_minuti: minutiAttesa({ attesa_cliente_minuti: e.target.value }) })}
+          />
+        </div>
+      ),
+    },
+    {
+      id: 'non-disponibili',
+      icona: 'ordina-dal-menu',
+      label: 'Voci non disponibili',
+      nodo: (
+        <div className="card settings-section">
+          <h3>Voci non disponibili</h3>
+          <p className="muted small" style={{ margin: '0 0 10px' }}>
+            Per i prodotti che seguono le giacenze (opzione nella scheda del prodotto). Al cliente non si dice quale
+            ingrediente manca; al banco la voce resta sempre.
+          </p>
+          <h4 style={{ margin: '4px 0' }}>Nel menù dei clienti</h4>
+          <SceltaModo
+            valore={settings.menu_non_disponibili === 'nascondi' ? 'nascondi' : 'mostra'}
+            opzioni={[
+              ['mostra', 'Con la scritta «Non disponibile»', 'La voce resta al suo posto e non si può ordinare.'],
+              ['nascondi', 'Nascoste', 'La voce sparisce finché non torna disponibile.'],
+            ]}
+            onScegli={(v) => save({ menu_non_disponibili: v })}
+          />
+          <h4 style={{ margin: '12px 0 4px' }}>Quando</h4>
+          <SceltaModo
+            valore={settings.menu_soglia_disponibilita === 'esaurimento' ? 'esaurimento' : 'esaurito'}
+            opzioni={[
+              ['esaurito', 'Ingrediente esaurito', 'Giacenza a zero.'],
+              ['esaurimento', 'Ingrediente in esaurimento', 'Sotto la soglia di avviso del prodotto di magazzino.'],
+            ]}
+            onScegli={(v) => save({ menu_soglia_disponibilita: v })}
+          />
         </div>
       ),
     },
@@ -795,7 +970,7 @@ export default function SettingsTab({ role = null }) {
       // GESTIONE MENÙ: la schermata con cui si lavora il listino. Le sue
       // impostazioni non c'entrano niente con quello che vede il cliente.
       id: 'gestione-menu',
-      icona: '🍹',
+      icona: 'gestione-menu',
       label: 'Gestione menù',
       nodo: (
         <div className="card settings-section">
@@ -818,8 +993,8 @@ export default function SettingsTab({ role = null }) {
           <SceltaModo
             valore={!!settings.stripe_menu_ok_verde}
             opzioni={[
-              [false, '⚪ Grigio'],
-              [true, '🟢 Verde'],
+              [false, conEmoji('spento', 'Grigio')],
+              [true, conEmoji('verde', 'Verde')],
             ]}
             onScegli={(v) => save({ stripe_menu_ok_verde: v })}
           />
@@ -828,7 +1003,7 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'coda',
-      icona: '📋',
+      icona: 'elenco',
       label: 'Coda ordini',
       nodo: (
             <div className="card settings-section">
@@ -844,10 +1019,10 @@ export default function SettingsTab({ role = null }) {
               <SceltaModo
                 valore={settings.queue_view}
                 opzioni={[
-                  ['griglia', '🔲 Griglia (schermo intero)'],
-                  ['corsie', '🚦 Corsie di stato'],
-                  ['tabs', '🗂 Schede per stato'],
-                  ['lista', '📋 Lista unica'],
+                  ['griglia', conEmoji('griglia', 'Griglia (schermo intero)')],
+                  ['corsie', conEmoji('corsie', 'Corsie di stato')],
+                  ['tabs', conEmoji('raggruppa', 'Schede per stato')],
+                  ['lista', conEmoji('elenco', 'Lista unica')],
                 ]}
                 onScegli={(v) => save({ queue_view: v })}
               />
@@ -863,7 +1038,7 @@ export default function SettingsTab({ role = null }) {
               <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
                 Chi sta al banco non guarda i conti, guarda il lavoro: le{' '}
                 <strong>comande</strong>, una card per ticket, nel passo in cui stanno.
-                {settings.workflow_enabled !== false ? (
+                {servizioOn ? (
                   <> Si apre da sé a chi ha il ruolo bartender.</>
                 ) : (
                   <>
@@ -877,7 +1052,7 @@ export default function SettingsTab({ role = null }) {
               <SceltaModo
                 valore={settings.bartender_view || 'corsie'}
                 opzioni={[
-                  ['corsie', '🚦 Corsie di stato', undefined, settings.workflow_enabled === false],
+                  ['corsie', conEmoji('corsie', 'Corsie di stato'), undefined, !servizioOn],
                 ]}
                 onScegli={(v) => save({ bartender_view: v })}
               />
@@ -895,6 +1070,21 @@ export default function SettingsTab({ role = null }) {
                 onChange={(v) => save({ conti_colorati: v })}
               />
 
+              {/* CHI HA CARICATO LA RIGA (REQ-ORD-023, REQ-ORD-024). Le due
+                  cose vanno insieme: il blocco del «+» e del «−» si regge
+                  sull'iniziale, e senza l'iniziale a schermo nessuno
+                  capirebbe perché un tasto è spento (l'utente, 09/11/2026:
+                  «le regole funzionano solo se la firma è attiva»). Chi ha
+                  battuto la riga si registra comunque: riaccendendo, si vede
+                  anche sulle righe di quando era spento. */}
+              <h4>Chi ha caricato la riga</h4>
+              <ToggleRow
+                label="Iniziale di chi ha caricato ogni riga"
+                desc="Accanto a ogni riga del conto, l'iniziale di chi l'ha caricata, nel suo colore. Con l'iniziale accesa la quantità di una riga la cambia solo chi l'ha caricata: gli altri aggiungono dal prodotto, su una riga propria. Le righe senza iniziale (quelle dei clienti dal menù) restano modificabili da tutti."
+                checked={settings.firma_righe !== false}
+                onChange={(v) => save({ firma_righe: v })}
+              />
+
               <h4>La ricerca</h4>
               <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
                 Cercando un numero, un nome, un tavolo o un drink: si può{' '}
@@ -907,18 +1097,18 @@ export default function SettingsTab({ role = null }) {
               <SceltaModo
                 valore={settings.queue_search || 'filtra'}
                 opzioni={[
-                  ['filtra', '🔍 Filtra la coda'],
-                  ['evidenzia', '💡 Accendi il conto e portami lì'],
+                  ['filtra', conEmoji('cerca', 'Filtra la coda')],
+                  ['evidenzia', conEmoji('evidenzia', 'Accendi il conto e portami lì')],
                 ]}
                 onScegli={(v) => save({ queue_search: v })}
               />
             </div>
       ),
     },
-    { id: 'catalogo', icona: '📥', label: 'Catalogo prodotti', nodo: <CatalogImport /> },
+    { id: 'catalogo', icona: 'acquisti', label: 'Catalogo prodotti', nodo: <CatalogImport /> },
     {
       id: 'account-clienti',
-      icona: '🙋',
+      icona: 'clienti',
       label: 'Account clienti',
       nodo: (
             <div className="card settings-section">
@@ -934,7 +1124,7 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'posizione',
-      icona: '📍',
+      icona: 'posizione',
       label: 'Posizione locale',
       nodo: (
             <div className="card settings-section">
@@ -1001,11 +1191,11 @@ export default function SettingsTab({ role = null }) {
                       )
                     }}
                   >
-                    📍 Usa la mia posizione attuale
+                    <Icona nome="posizione" gruppo="tasti" /> Usa la mia posizione attuale
                   </button>
                   {settings.venue_lat == null && (
                     <p className="muted small" style={{ margin: '8px 0 0' }}>
-                      ⚠️ Senza coordinate il controllo non è attivo.
+                      <Icona nome="avviso" gruppo="segnali" /> Senza coordinate il controllo non è attivo.
                     </p>
                   )}
                 </>
@@ -1015,7 +1205,7 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'notifiche',
-      icona: '🔔',
+      icona: 'notifiche',
       label: 'Notifiche',
       // CARTELLO, non una seconda casa. Gli avvisi sono scelti per persona
       // e per dispositivo, quindi stanno nel profilo — dove ci arriva
@@ -1023,7 +1213,7 @@ export default function SettingsTab({ role = null }) {
       // l'indicazione, perché chi li cercava li cercava qui.
       nodo: (
         <div className="card settings-section">
-          <h3>🔔 Notifiche</h3>
+          <h3><Icona nome="notifiche" gruppo="tasti" /> Notifiche</h3>
           <p className="muted" style={{ margin: '0 0 12px', fontSize: '0.9rem' }}>
             Gli avvisi sono una scelta <strong>tua e di questo dispositivo</strong> —
             il tablet della cassa e il telefono in sala vogliono cose diverse,
@@ -1031,57 +1221,70 @@ export default function SettingsTab({ role = null }) {
             insieme allo storico di quelli arrivati qui.
           </p>
           <Link className="btn small" to="/profilo-staff">
-            👤 Vai al mio profilo
+            <Icona nome="profilo" gruppo="tasti" /> Vai al mio profilo
           </Link>
 
         </div>
       ),
     },
-    { id: 'stampante', icona: '🖨️', label: 'Stampante', nodo: <PrinterSetup /> },
+    {
+      id: 'stampante',
+      icona: 'stampante',
+      label: 'Stampante',
+      nodo: stampaOn ? <PrinterSetup /> : <AvvisoPiano messaggio={MESSAGGI_PIANO.stampa} impostazioni={settings} />,
+    },
     // I CAMPI DELLA CARTA STANNO COL RESTO DELLA STAMPANTE. Sono
     // impostazioni del LOCALE (settings/bar) e non del terminale, ma chi
     // le cerca le cerca dove sta la stampante: nella barra sono un gruppo
     // solo, e questi riquadri vengono sotto a quello della connessione.
     {
       id: 'campi-scontrino',
-      icona: '🧾',
+      icona: 'coda',
       label: 'Campi dello scontrino',
       nodo: <CampiStampa quale="scontrino" settings={settings} onSave={save} />,
     },
     {
       id: 'campi-comanda',
-      icona: '📝',
+      icona: 'note',
       label: 'Campi della comanda',
       nodo: <CampiStampa quale="comanda" settings={settings} onSave={save} />,
     },
     {
       id: 'campi-acconto',
-      icona: '🧾',
+      icona: 'coda',
       label: 'Campi dell’acconto',
       nodo: <CampiStampa quale="acconto" settings={settings} onSave={save} />,
     },
     {
       id: 'logo-stampe',
-      icona: '🖼',
+      icona: 'immagine',
       label: 'Logo sulle stampe',
       nodo: <LogoStampe settings={settings} onSave={save} role={role} />,
     },
-    { id: 'backup', icona: '💾', label: 'Backup e ripristino', nodo: <BackupPanel role={role} /> },
+    { id: 'backup', icona: 'salva', label: 'Backup e ripristino', nodo: <BackupPanel role={role} /> },
     {
       id: 'informazioni',
-      icona: 'ℹ️',
+      icona: 'informazioni',
       label: 'Informazioni',
-      nodo: <InfoTab />,
+      nodo: <InfoTab settings={settings} role={role} />,
     },
+    // La licenza la legge il titolare (REQ-LIC-007): è il suo contratto,
+    // e al banco non serve.
+    ...(isAdmin(role)
+      ? [{ id: 'licenza', icona: 'licenza', label: 'Licenza', nodo: <LicenzaPanel settings={settings} /> }]
+      : []),
     {
       id: 'funzioni-premium',
-      icona: '🔒',
+      icona: 'licenza',
       label: 'Funzioni premium',
       nodo: <FunzioniPremium settings={settings} onSave={save} />,
     },
+    // IL CREDITO AI (REQ-AI-003) sta con la licenza: è quello che il locale
+    // ha comprato. Solo dove l'AI arriva (non nel Free, REQ-LIC-017).
+    ...(aiRaggiungibile() ? [{ id: 'credito-ai', icona: 'licenza', label: 'Credito AI', nodo: <CreditoAI /> }] : []),
     {
       id: 'annullamenti',
-      icona: '✖️',
+      icona: 'chiudi',
       label: 'Annullamenti',
       nodo: (
             <div className="card settings-section">
@@ -1127,18 +1330,30 @@ export default function SettingsTab({ role = null }) {
       ),
     },
   ]
+  const sezioni = tutteLeSezioni.filter(
+    (s) => (stampaOn || !SOLO_CON_STAMPA.has(s.id)) && (comandeOn || !SOLO_CON_COMANDE.has(s.id))
+  )
 
   // LE VOCI DEL SOTTOMENU SONO DIECI, NON VENTITRÉ. Ogni riquadro resta
   // com'è, ma appartiene a un GRUPPO — accorpati per «a cosa afferisce»
   // l'impostazione, non per la storia di come è nata: con ventitré voci
   // l'elenco era più lungo delle impostazioni.
   const GRUPPO_DI = {
+    // Il riquadro c'era dalla build per cliente (REQ-VENUE-001), ma qui non
+    // aveva un gruppo: un riquadro senza gruppo non compare da nessuna
+    // parte, e nome, contatti e intestazione dello scontrino non si
+    // potevano correggere (BUG-139). Il test dei gruppi ora lo cerca.
+    locale: 'locale',
     aspetto: 'aspetto',
+    'marketplace-temi': 'aspetto',
     // Tre cose diverse, tre voci: quello che vedono i clienti, la
     // schermata con cui si lavora il listino, e l'importazione del
     // catalogo. Messe insieme, davanti a un interruttore non si capiva a
     // quale delle tre appartenesse.
     'menu-clienti': 'menu-clienti',
+    'non-disponibili': 'menu-clienti',
+    'scelta-ingredienti': 'menu-clienti',
+    'conferma-cliente': 'menu-clienti',
     'gestione-menu': 'gestione-menu',
     catalogo: 'catalogo',
     coda: 'banco',
@@ -1167,20 +1382,23 @@ export default function SettingsTab({ role = null }) {
     'logo-stampe': 'stampante',
     backup: 'sistema',
     informazioni: 'sistema',
+    licenza: 'premium',
     'funzioni-premium': 'premium',
+    'credito-ai': 'premium',
   }
   const GRUPPI = [
-    { id: 'aspetto', icona: '🎨', label: 'Aspetto' },
-    { id: 'menu-clienti', icona: '📖', label: 'Menù clienti' },
-    { id: 'gestione-menu', icona: '🍹', label: 'Gestione menù' },
-    { id: 'catalogo', icona: '📥', label: 'Catalogo prodotti' },
-    { id: 'banco', icona: '🧾', label: 'Banco: coda e ordine' },
-    { id: 'servizio', icona: '🛎', label: 'Servizio' },
-    { id: 'cassa', icona: '💳', label: 'Cassa e giornata' },
-    { id: 'prezzi', icona: '🏷️', label: 'Prezzi e supplementi' },
-    { id: 'gruppi', icona: '👥', label: 'Gruppi di ordini' },
-    { id: 'clienti', icona: '🙋', label: 'Clienti' },
-    { id: 'stampante', icona: '🖨️', label: 'Stampante' },
+    { id: 'aspetto', icona: 'temi', label: 'Aspetto' },
+    { id: 'locale', icona: 'categorie', label: 'Il locale' },
+    { id: 'menu-clienti', icona: 'ordina-dal-menu', label: 'Menù clienti' },
+    { id: 'gestione-menu', icona: 'gestione-menu', label: 'Gestione menù' },
+    { id: 'catalogo', icona: 'acquisti', label: 'Catalogo prodotti' },
+    { id: 'banco', icona: 'coda', label: 'Banco: coda e ordine' },
+    { id: 'servizio', icona: 'campanello', label: 'Servizio' },
+    { id: 'cassa', icona: 'cassa', label: 'Cassa e giornata' },
+    { id: 'prezzi', icona: 'categorie', label: 'Prezzi e supplementi' },
+    { id: 'gruppi', icona: 'staff', label: 'Gruppi di ordini' },
+    { id: 'clienti', icona: 'clienti', label: 'Clienti' },
+    { id: 'stampante', icona: 'stampante', label: 'Stampante' },
     // UN GRUPPO SUO, e non una voce infilata nei gruppi delle schermate che
     // le funzioni accendono. La regola del momento d'uso (REQ-UI-025) dice
     // di raggruppare per «quando lo cerco»: qui il momento è «cosa ha questo
@@ -1192,8 +1410,11 @@ export default function SettingsTab({ role = null }) {
     // elenca cinque pacchetti): un gruppo che cresce è meglio di cinque voci
     // sparse. E non sta in «Sistema», che parla di questa installazione
     // (backup, versione): la licenza è del locale, non della macchina.
-    { id: 'premium', icona: '🔒', label: 'Funzioni premium' },
-    { id: 'sistema', icona: '💾', label: 'Sistema' },
+    // «Licenza», da quando il gruppo ne mostra anche il riepilogo
+    // (REQ-LIC-007): le funzioni premium sono quello che la licenza
+    // comprende, e chi cerca cosa ha comprato cerca la licenza.
+    { id: 'premium', icona: 'licenza', label: 'Licenza' },
+    { id: 'sistema', icona: 'salva', label: 'Sistema' },
   ]
   // Compat coi collegamenti vecchi (?sezione=coperto): l'id di un riquadro
   // porta al gruppo che lo contiene.
@@ -1322,7 +1543,8 @@ function CatalogImport() {
 
       {parsed && (
         <ConfirmDialog
-          title="📦 Importare il catalogo?"
+          icona="magazzino"
+          title="Importare il catalogo?"
           message={
             `${parsed.products.length} prodotti in ${parsed.categories.length} categorie:\n` +
             parsed.categories.join(', ') +
@@ -1384,7 +1606,7 @@ function ReaderPairing({ settings }) {
       {settings.sumup_reader_id ? (
         <div className="toggle-row">
           <div>
-            <div>📟 {settings.sumup_reader_name || 'Lettore SumUp'}</div>
+            <div><Icona nome="lettore" gruppo="tasti" /> {settings.sumup_reader_name || 'Lettore SumUp'}</div>
             <div className="desc">Lettore associato e pronto all&apos;incasso.</div>
           </div>
           <button className="btn ghost small" disabled={busy} onClick={() => setConfirmUnpair(true)}>
@@ -1408,7 +1630,7 @@ function ReaderPairing({ settings }) {
                 )
               }
             >
-              🧪 Usa un lettore SIMULATO (solo test): l&apos;esito arriva da solo dopo 2,5s
+              <Icona nome="prova" gruppo="tasti" />{' '}Usa un lettore SIMULATO (solo test): l&apos;esito arriva da solo dopo 2,5s
             </button>
           )}
           <div className="row" style={{ gap: 8 }}>
@@ -1425,7 +1647,7 @@ function ReaderPairing({ settings }) {
               onClick={associa}
               style={{ flexShrink: 0 }}
             >
-              {busy ? 'Associo…' : '🔗 Associa'}
+              {busy ? 'Associo…' : <><Icona nome="unisci" gruppo="tasti" /> Associa</>}
             </button>
           </div>
         </>
@@ -1470,7 +1692,7 @@ function SceltaModo({ valore, opzioni, onScegli, colonne }) {
           title={spiegazione}
           onClick={() => onScegli(id)}
         >
-          {etichetta}
+          <ConIcona testo={etichetta} />
         </button>
       ))}
     </div>
@@ -1479,7 +1701,7 @@ function SceltaModo({ valore, opzioni, onScegli, colonne }) {
 
 // Input numerico che salva solo al blur/invio, per non scrivere su Firestore
 // ad ogni tasto premuto.
-function AmountInput({ value, min, max, step, onCommit }) {
+function AmountInput({ value, min, max, step, onCommit, label }) {
   const [val, setVal] = useState(String(value ?? ''))
 
   useEffect(() => {
@@ -1500,6 +1722,7 @@ function AmountInput({ value, min, max, step, onCommit }) {
       className="setting-amount"
       type="number"
       inputMode="decimal"
+      aria-label={label}
       min={min}
       max={max}
       step={step}
@@ -1555,17 +1778,26 @@ function FunzioniPremium({ settings, onSave }) {
       </p>
       {moduliPremium().map((m) => {
         const incluso = moduloIncluso(settings, m.id)
+        // IN PROVA (licenza.prove, scritta dalla regia): la data in cui la
+        // prova finisce, perché alla scadenza il modulo si spegne da solo.
+        const prova = incluso ? scadenzaProva(settings, m.id) : null
+        // INCLUSO MA SENZA LA SUA BASE (REQ-LIC-015): l'inventario senza il
+        // magazzino non lavora. L'interruttore lo dice invece di accendersi
+        // per finta.
+        const richiede = incluso ? fraseRichiede(basiMancanti(settings, m.id)) : ''
         return (
           <ToggleRow
             key={m.id}
             label={m.label}
             desc={`${m.descrizione} ${
-              incluso
+              prova
+                ? `In prova fino al ${prova.toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}.`
+                : incluso
                 ? 'Funzione premium, inclusa in questa installazione.'
                 : 'Funzione premium: non inclusa.'
-            }`}
+            }${richiede ? ` ${richiede}` : ''}`}
             checked={moduloAttivo(settings, m.id)}
-            motivo={incluso ? undefined : MOTIVO_PREMIUM}
+            motivo={!incluso ? MOTIVO_PREMIUM : richiede ? `${richiede} Si attiva quando è attivo anche quello.` : undefined}
             onChange={(v) => onSave({ [chiaveModulo(m.id)]: v })}
           />
         )

@@ -13,6 +13,7 @@ import {
   svuotaRegistro,
 } from '../lib/registroStampe.js'
 import { savePrinterConfig } from '../lib/api.js'
+import Icona from './Icona.jsx'
 
 // Salva le impostazioni stampante sia in locale (uso immediato/offline) sia
 // su server (così l'IP non si perde quando iPad/Safari svuota il localStorage).
@@ -31,13 +32,20 @@ const CAMPI = [
   'businessCity',
   'businessFooter',
 ]
-function persistPrinter(form) {
-  const patch = Object.fromEntries(CAMPI.map((k) => [k, form[k]]))
+// Lo staff della sala (REQ-STAMPA-020) salva solo il collegamento, e solo
+// sul suo telefono: la configurazione condivisa del locale (settings/printer)
+// la scrivono i gestori, come dicono le regole del database. Un telefono
+// che non trova la stampante si sistema da sé, senza spostare quella del
+// banco.
+const CAMPI_COLLEGAMENTO = ['ip', 'port', 'https']
+function persistPrinter(form, gestore) {
+  const campi = gestore ? CAMPI : CAMPI_COLLEGAMENTO
+  const patch = Object.fromEntries(campi.map((k) => [k, form[k]]))
   savePrinterSettings(patch)
-  savePrinterConfig(patch)
+  if (gestore) savePrinterConfig(patch)
 }
 
-export default function PrinterSetup() {
+export default function PrinterSetup({ gestore = true }) {
   const [form, setForm] = useState(() => loadPrinterSettings())
   const [saved, setSaved] = useState(false)
   const [testing, setTesting] = useState(false)
@@ -65,14 +73,14 @@ export default function PrinterSetup() {
 
   function handleSave(e) {
     e.preventDefault()
-    persistPrinter(form)
+    persistPrinter(form, gestore)
     disconnectPrinter() // forza riconnessione con nuovi parametri
     setSaved(true)
     setTimeout(() => setSaved(false), 2500)
   }
 
   async function handleTest() {
-    persistPrinter(form)
+    persistPrinter(form, gestore)
     disconnectPrinter()
     setTesting(true)
     setTestResult(null)
@@ -152,13 +160,21 @@ export default function PrinterSetup() {
           location.protocol === 'https:' &&
           Number(form.port) === 8008 && (
             <div className="banner" style={{ marginTop: 8 }}>
-              ⚠️ L'app è in HTTPS: con la porta <strong>8008</strong> il browser
+              <Icona nome="avviso" gruppo="segnali" /> L'app è in HTTPS: con la porta <strong>8008</strong> il browser
               blocca la connessione e la stampa va in timeout. Usa la{' '}
               <strong>8043</strong> con SSL/TLS abilitato sulla stampante.
             </div>
           )}
       </fieldset>
 
+      {!gestore && (
+        <p className="muted" style={{ fontSize: '0.85rem', margin: '0 0 12px' }}>
+          L’indirizzo vale per questo telefono: serve a stampare le comande prese in sala. Le altre impostazioni
+          della stampante sono del banco.
+        </p>
+      )}
+      {gestore && (
+        <>
       {/* LA STAMPA AUTOMATICA NON È PIÙ QUI (REQ-UI-025). «Le impostazioni
           di stampa automatica riguardano la cassa» (l'utente, 22/08/2026):
           qui c'è la MACCHINA — indirizzo, prova di stampa, i dati che
@@ -205,6 +221,8 @@ export default function PrinterSetup() {
       </fieldset>
 
       <RegistroStampe />
+        </>
+      )}
 
       {testResult && (
         <div
@@ -243,7 +261,7 @@ export default function PrinterSetup() {
           onClick={handleTest}
           disabled={testing || !form.ip}
         >
-          {testing ? 'Test…' : '🖨 Test stampa'}
+          {testing ? 'Test…' : <><Icona nome="stampa" gruppo="tasti" /> Test stampa</>}
         </button>
         <button type="submit" className="btn">
           {saved ? '✓ Salvato' : 'Salva'}

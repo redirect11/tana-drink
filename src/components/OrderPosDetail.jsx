@@ -5,6 +5,7 @@ import {
   addComanda,
   chiudiCreazione,
   bartenderUpdateComanda,
+  rispondiAllaModifica,
   updateOrderInfo,
   setOrderGroup,
   cancelOrder,
@@ -36,10 +37,9 @@ import {
   ORDER_STATUSES,
   STATUS_LABELS,
   statoAlBanco,
-  STATUS_EMOJI,
   formatPrice,
   placedByName,
-  paymentMethodLabel,
+  STATUS_ICONA,
 } from '../lib/orderStatus.js'
 import { idDispositivo } from '../lib/dispositivo.js'
 import { modoAllaNascita } from '../lib/consegna.js'
@@ -62,6 +62,8 @@ import {
   gruppiDelConto,
   titoloGruppo,
   ORDER_OPEN,
+  rigaDiAltri,
+  firmaRigheAccesa,
 } from '../lib/comande.js'
 import { paidAmount, dettaglioIncassi, scontoTotale } from '../lib/pagamento.js'
 import { aggiunteInComandaNuova, isPersonale, puoGestireComande, puoSegnare } from '../lib/ruoli.js'
@@ -97,12 +99,20 @@ import CustomDrinkForm from './CustomDrinkForm.jsx'
 import SchedaDrink from './SchedaDrink.jsx'
 import DrinkForm from './DrinkForm.jsx'
 import { saveDrinkFromForm } from '../lib/saveDrink.js'
+import { fotoConsentite, stampaComandeConsentita, servizioAttivo, comandeConsentite } from '../lib/limiti.js'
+import { disegniDelLocale } from '../lib/stileMenu.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import ActionSheet from './ActionSheet.jsx'
 import { StoriaOrdineDialog, RipristinaOrdineDialog } from './StoriaOrdine.jsx'
 import { ripristinabile, ultimaRiapertura, quando } from '../lib/storiaOrdine.js'
 import PaymentScreen from './PaymentScreen.jsx'
 import { azioniContoRidotte, ricordaAzioniContoRidotte } from '../lib/impostazioniLocali.js'
+import Icona, { ConIcona } from './Icona.jsx'
+import OrderBy from './OrderBy.jsx'
+import { emojiDi } from '../lib/icone.js'
+import MetodoPagamento from './MetodoPagamento.jsx'
+import AttesaCliente from './AttesaCliente.jsx'
+import { inAttesa, fermoPerIlCliente } from '../lib/attesaCliente.js'
 
 // ── Schermata UNICA POS creazione/modifica ordine (stile SumUp) ───────────
 // UN SOLO componente: con `order` è la MODIFICA di un ordine esistente,
@@ -128,7 +138,7 @@ import { azioniContoRidotte, ricordaAzioniContoRidotte } from '../lib/impostazio
 // Ultimo progressivo previsto, tenuto in locale: serve solo a mostrare subito
 // il numero giusto invece di un segnaposto che poi cambia. Si scarta se è
 // vecchio, altrimenti a inizio serata si vedrebbe il numero di ieri.
-const CHIAVE_NUMERO = 'tana:prossimoNumero'
+const CHIAVE_NUMERO = 'drink:prossimoNumero'
 const ORE_VALIDE = 8
 
 function numeroPrevistoInCache() {
@@ -151,7 +161,7 @@ function numeroPrevistoInCache() {
 // Qui si tiene il suo id: al ritorno si riprende da lì. Si dimentica
 // uscendo dal conto o quando il conto si chiude — e comunque scade, per
 // non ritrovarsi dentro un conto di ieri.
-const CHIAVE_IN_CORSO = 'tana:pos:conto-in-corso'
+const CHIAVE_IN_CORSO = 'drink:pos:conto-in-corso'
 const ORE_IN_CORSO = 8
 
 function contoInCorso() {
@@ -330,7 +340,11 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // Il locale segue la preparazione? Sta qui in alto perché lo chiedono in
   // due punti lontani fra loro: come si raggruppano le righe (qui sotto) e
   // quali tasti di avanzamento esistono (più giù).
-  const workflowOn = settings.workflow_enabled !== false
+  const workflowOn = servizioAttivo(settings)
+  // Nel piano senza stampa (REQ-LIC-016) o senza comande (REQ-LIC-005)
+  // «Invia comanda» non ha niente da fare — manda la carta al banco, e il
+  // conto c'è già — e spariscono i tasti che ristampano le comande.
+  const stampaComandeOn = stampaComandeConsentita(settings)
   useEffect(() => subscribeSettings(setSettings, () => {}), [])
 
   // CONTO DI GRUPPO (solo in creazione): si arriva qui da /pos?group=<id>
@@ -351,7 +365,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // che conta è il subtotale. La scelta si ricorda sul dispositivo.
   const [mostraCalcoli, setMostraCalcoli] = useState(() => {
     try {
-      return localStorage.getItem('tana:pos:calcoli') === '1'
+      return localStorage.getItem('drink:pos:calcoli') === '1'
     } catch {
       return false
     }
@@ -360,7 +374,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     setMostraCalcoli((v) => {
       const next = !v
       try {
-        localStorage.setItem('tana:pos:calcoli', next ? '1' : '0')
+        localStorage.setItem('drink:pos:calcoli', next ? '1' : '0')
       } catch {
         /* niente memoria: vale per questa sessione */
       }
@@ -406,17 +420,52 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   const draftRef = useRef(draft)
   draftRef.current = draft
 
+  // MENTRE SI TRASCINA UNA MANIGLIA LA MISURA VA DRITTA NELLE VARIABILI CSS
+  // (BUG-118): `dalVivo` scrive sull'elemento, una volta per fotogramma, e
+  // la schermata si ridisegna una volta sola, quando si lascia. Gli elementi
+  // e le scale arrivano da qui sotto attraverso questi riferimenti.
+  const corpoRef = useRef(null)
+  const pannelloRef = useRef(null)
+  const piedeRef = useRef(null)
+  const scaleRef = useRef({})
+  const imposta = (rif, nome, valore) => rif.current?.style.setProperty(nome, valore)
   // Colonne POS ridimensionabili (larghezze ricordate per dispositivo).
-  const catsRz = useResizable('pos-cats', { def: 168, min: 140, max: 340, side: 'right' })
+  const catsRz = useResizable('pos-cats', {
+    def: 168,
+    min: 140,
+    max: 340,
+    side: 'right',
+    dalVivo: (w) => {
+      imposta(corpoRef, '--pos-cats-w', `${w}px`)
+      imposta(corpoRef, '--cats-scale', scaleRef.current.cats?.(w))
+    },
+  })
   // Recenti per la griglia POS: gli ultimi item ordinati (best-effort).
   const [recentIds, setRecentIds] = useState([])
   useEffect(() => {
     fetchRecentDrinkIds(20).then(setRecentIds).catch(() => setRecentIds([]))
   }, [])
-  const comandaRz = useResizable('pos-comanda', { def: 400, min: 260, max: 700, side: 'left' })
+  const comandaRz = useResizable('pos-comanda', {
+    def: 400,
+    min: 260,
+    max: 700,
+    side: 'left',
+    dalVivo: (w) => {
+      imposta(corpoRef, '--pos-comanda-w', `${w}px`)
+      imposta(corpoRef, '--comanda-scale', scaleRef.current.comanda?.(w))
+    },
+  })
   // Scala del footer (totale + conferma/pagamento): la maniglia in cima lo
   // "allunga" e tasti/font crescono insieme. Valore in % (100 = normale).
-  const footRz = useResizable('pos-foot-scale', { def: 100, min: 80, max: 175, axis: 'y', side: 'up', speed: 0.5 })
+  const footRz = useResizable('pos-foot-scale', {
+    def: 100,
+    min: 80,
+    max: 175,
+    axis: 'y',
+    side: 'up',
+    speed: 0.5,
+    dalVivo: (v) => imposta(piedeRef, '--foot-scale', v / 100),
+  })
   // ALTEZZA DEL PANNELLO ORDINE sul telefono (in dvh): con più di tre o
   // quattro righe il conto non ci stava e bisognava scorrere dentro una
   // finestrella. Si tira su la maniglia e si guarda tutto il conto.
@@ -430,6 +479,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     axis: 'y',
     side: 'up',
     speed: 0.13, // pixel → dvh (uno schermo tipico è ~800px: 1dvh ≈ 8px)
+    dalVivo: (v) => imposta(pannelloRef, '--pos-comanda-h', `${v}dvh`),
   })
   // Allargando una colonna ne crescono anche i testi (e viceversa): la scala
   // del font segue la larghezza rispetto alla misura di riposo (def), con un
@@ -446,17 +496,22 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     mq.addEventListener?.('change', h)
     return () => mq.removeEventListener?.('change', h)
   }, [])
-  // Base più grande su tablet/desktop (leggibile su iPad); su smartphone scala
-  // fissa più contenuta (la colonna è comunque al 100%).
-  const catsScale = isPhone ? 0.95 : clampScale(catsRz.width / 150, 1.1, 1.7)
   // Il MINIMO della scala del testo delle righe è configurabile
   // (Impostazioni → Vista ordine): il pavimento fisso a 1.1 per qualcuno
   // era un manifesto — sotto la soglia scelta il testo non scende, per
   // quanto si stringa il pannello.
   const testoMin = clampScale(Number(settings.pos_testo_min) || 1.1, 0.8, 1.4)
-  const comandaScale = isPhone
-    ? Math.min(0.95, testoMin)
-    : clampScale(comandaRz.width / 340, testoMin, 1.7)
+  const scalaComanda = (w) => (isPhone ? Math.min(0.95, testoMin) : clampScale(w / 340, testoMin, 1.7))
+  const comandaScale = scalaComanda(comandaRz.width)
+  // Categorie: base più grande su tablet/desktop (leggibile su iPad); su
+  // smartphone scala fissa più contenuta (la colonna è comunque al 100%).
+  const scalaCats = (w) => (isPhone ? 0.95 : clampScale(w / 150, 1.1, 1.7))
+  const catsScale = scalaCats(catsRz.width)
+  // Le stesse scale, per le maniglie mentre si trascinano.
+  scaleRef.current = { cats: scalaCats, comanda: scalaComanda }
+  // Mentre una maniglia è presa niente transizioni: la colonna che si anima
+  // dietro al dito arriva sempre in ritardo, e si vede a scatti.
+  const trascinando = catsRz.attivo || comandaRz.attivo || footRz.attivo || altezzaRz.attivo
 
   // Pannello ordine in basso (solo smartphone): si RIMPICCIOLISCE quando si
   // lavora sulla griglia (scroll/ricerca/aggiunta) e si riapre toccandolo.
@@ -793,6 +848,9 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   const comandeLocali = useComandeLocali([contoPerLocali])
 
   const advance = (comandaId, ns) => {
+    // Il cliente non ha ancora accettato le modifiche (REQ-CLI-009): il
+    // drink si prepara dopo.
+    if (fermoPerIlCliente(order, toastError)) return
     const adesso = new Date().toISOString()
     comandeLocali.applica(contoPerLocali, (arr) =>
       arr.map((c) =>
@@ -832,6 +890,9 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     const divisa = dividiComanda(c, scelte)
     if (!divisa) return
     setParziale(null)
+    // Dividere fa avanzare la parte scelta: col cliente che deve ancora
+    // accettare le modifiche (REQ-CLI-009), no.
+    if (fermoPerIlCliente(order, toastError)) return
     const adesso = new Date().toISOString()
     // In che passo nascono le due parti lo dice quella di partenza
     // (statiDopoLaDivisione): da «da fare» la parte scelta è quella che si
@@ -985,6 +1046,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // qui: non in creazione (lì è una comanda sola per definizione) e non
   // alla sala, che manda sempre un ticket nuovo.
   const sceltaAggiunte =
+    comandeConsentite(settings) &&
     !isNew &&
     !inCreazione &&
     !workflowOn &&
@@ -1034,6 +1096,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           custom: it.custom,
           recipe_items: it.recipe_items,
           note: it.note || null,
+          added_by: it.added_by || null,
         }
         const paidHere = it.drink_id ? Math.min(it.qty, remainingPaid[it.drink_id] || 0) : 0
         if (it.drink_id) remainingPaid[it.drink_id] -= paidHere
@@ -1046,10 +1109,15 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             ...base,
             key: chiave,
             qty: unpaidQty,
-            // Alla sala le comande già mandate al banco restano da leggere:
-            // toccarle vuol dire cambiare il lavoro sotto le mani di chi versa.
-            removable:
-              comandaIlLavoro && !comandaAnnullata && (comandaEditable(c) || riaperto),
+            // LE RIGHE LE CORREGGE CHIUNQUE LAVORI AL CONTO (REQ-STAFF-020).
+            // Erano da leggere, per la sala, appena mandate al banco. Flavio,
+            // 30/10/2026: «lo staff non può togliere il Sipsmith più uno, lo
+            // posso fare solo io … devono avere la possibilità di modificare
+            // qualsiasi ordine». La sala ora corregge come il banco, con gli
+            // stessi limiti: finché la comanda è da fare o in preparazione,
+            // o sul conto riaperto. Annullare il conto e comandare la
+            // preparazione restano di chi versa (puoGestireComande).
+            removable: !comandaAnnullata && (comandaEditable(c) || riaperto),
             annullata: comandaAnnullata,
           })
         if (paidHere > 0)
@@ -1057,7 +1125,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       })
     }
     return out
-  }, [effComande, order?.payments, riaperto, contoAnnullato, comandaIlLavoro])
+  }, [effComande, order?.payments, riaperto, contoAnnullato])
 
   const draftLines = useMemo(
     () => bozzaViva.map((l) => ({ ...l, key: `d:${l.line_id}`, source: 'draft', status: 'draft', removable: true })),
@@ -1165,7 +1233,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     ctx.font = `500 ${px}px system-ui, -apple-system, "Segoe UI", sans-serif`
     let maxW = 0
     for (const l of orderedLines) {
-      const w = ctx.measureText(`⠿ ${l.custom ? '✨ ' : ''}${l.name}  · ${formatPrice(l.unit_price)}`).width
+      const w = ctx.measureText(`⠿ ${l.custom ? `${emojiDi('special')} ` : ''}${l.name}  · ${formatPrice(l.unit_price)}`).width
       if (w > maxW) maxW = w
     }
     // overhead: padding lista + controlli quantità
@@ -1272,7 +1340,9 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     // si possono personalizzare e annotare separatamente). Per aumentare la
     // quantità di una riga esistente si usa il + su quella riga.
     const cur = target.items || []
-    const items = [...cur, item]
+    // Entra dritta nella comanda, senza passare dalla bozza: la firma si
+    // mette qui (REQ-ORD-023).
+    const items = [...cur, firmaRiga(item)]
     const scrollIdx = items.length - 1
     segnaModifica(target.id, items, 500)
     scrollToLine(`c:${target.id}:${scrollIdx}`)
@@ -1332,16 +1402,24 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     segnaModifica(comandaId, items)
   }
 
-  // − su una qualsiasi riga della lista, secondo lo stato.
+  // La riga è di un altro, per chi sta usando il conto? Solo con l'iniziale
+  // accesa; la bozza è sempre di questo terminale. «Io» è chi firma le
+  // righe (firmaRiga): lo stesso confronto da tutte e due le parti.
+  const altruiPerMe = (l) =>
+    firmaRigheAccesa(settings) && l.source !== 'draft' && rigaDiAltri(l, staffRef.current)
+
+  // − su una qualsiasi riga della lista, secondo lo stato. Su una riga
+  // caricata da un altro no (REQ-ORD-024): i tasti sono spenti, e il
+  // controllo qui copre chi ci arriva per un'altra strada.
   const minusRow = (l) => {
-    if (closed) return
+    if (closed || altruiPerMe(l)) return
     if (l.source === 'draft') setDraftLineQty(l.line_id, l.qty - 1)
     else if (l.removable) reduceComandaLine(l.comandaId, l.itemIndex)
   }
   // + su una riga del conto: aumenta la quantità di QUELLA riga. È il gesto
   // opposto al tocco sulla griglia, che invece aggiunge una riga nuova.
   const plusRow = (l) => {
-    if (closed || l.paid) return
+    if (closed || l.paid || altruiPerMe(l)) return
     if (l.source === 'draft') {
       setDraftLineQty(l.line_id, l.qty + 1)
       return
@@ -1442,7 +1520,15 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // solo da qui: la stessa scheda aperta dal Menù resta dov'è. Chi salva una
   // ricetta in mezzo a un conto ha finito quello che era venuto a fare.
   const salvaNuovaRicetta = async (form) => {
-    await saveDrinkFromForm({ form, inventory: inventario, categories: cats || [] })
+    await saveDrinkFromForm({
+      form,
+      inventory: inventario,
+      categories: cats || [],
+      // I limiti del piano (REQ-LIC-003): una ricetta nuova dal conto è un
+      // prodotto nuovo del menù come un altro.
+      impostazioni: settings,
+      prodotti: drinks || [],
+    })
     setNuovaRicetta(null)
     navigate('/bar')
   }
@@ -1504,8 +1590,18 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // confermato. Senza, la chiave React cambiava (d:… → c:…), il nodo veniva
   // ricreato e l'item appena aggiunto rifaceva il suo effetto di comparsa —
   // il "piccolo relayout" che si vedeva a ogni primo drink.
+  // CHI HA BATTUTO LA RIGA (REQ-ORD-023): la firma si mette quando la riga
+  // lascia la bozza — la bozza è di questo terminale, e chi la manda è chi
+  // l'ha battuta. Una riga già firmata (rimessa in bozza da un invio non
+  // riuscito) tiene la sua firma. Nome, email e ruolo, come `placed_by`
+  // senza il dispositivo: alla riga serve sapere chi, non da dove.
+  const firmaRiga = (l) => {
+    const io = staffRef.current
+    if (l.added_by || !io) return l
+    return { ...l, added_by: { name: io.name || null, email: io.email || null, role: io.role || null } }
+  }
   const draftToItems = (righe = draft) =>
-    righe.map((l) => ({
+    righe.map(firmaRiga).map((l) => ({
       drink_id: l.drink_id,
       name: l.name,
       price: l.unit_price,
@@ -1514,6 +1610,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       ...(l.custom ? { custom: true } : {}),
       ...(l.recipe_items ? { recipe_items: l.recipe_items } : {}),
       ...(l.note ? { note: l.note } : {}),
+      ...(l.added_by ? { added_by: l.added_by } : {}),
     }))
 
   // DA QUALE TERMINALE. Serve a non avvisare chi l'ordine l'ha appena
@@ -1552,7 +1649,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     // La bozza DEPURATA delle righe che una comanda porta già: un cassetto
     // rimasto sporco (crash, corse alla nascita del conto) non deve battere
     // due volte le stesse righe. `clearDraft` sotto pulisce comunque tutto.
-    const additions = bozzaVivaRef.current
+    const additions = bozzaVivaRef.current?.map(firmaRiga)
     if (!additions || additions.length === 0) {
       if (draftRef.current.length > 0) clearDraft()
       return
@@ -2148,7 +2245,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           const parziale = order.payment_status === 'parziale'
           const aperto = order.status === ORDER_OPEN
           const cls = aperto && paid ? 'pagato' : order.status
-          const emoji = aperto && paid ? '💳' : STATUS_EMOJI[order.status]
+          const emoji = <Icona nome={aperto && paid ? 'carta' : STATUS_ICONA[order.status]} gruppo="tasti" />
           const label =
             aperto && paid
               ? 'Pagato'
@@ -2184,7 +2281,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           )
         })()}
         {!isNew && order.placed_by && (
-          <span className="muted small posd-autore">✍️ {placedByName(order.placed_by)}</span>
+          <span className="muted small posd-autore"><Icona nome="nuovo-ordine" gruppo="tasti" /> {placedByName(order.placed_by)}</span>
         )}
         {/* Progressivo assoluto di sistema: id interno che non riparte mai
             (il #N in grande invece riparte ogni giornata). */}
@@ -2218,7 +2315,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             className={`pill ${active.status} posd-stato`}
             title={`Stato della lavorazione: ${statoAlBanco(active.status, order.service_mode)}`}
           >
-            {STATUS_EMOJI[active.status]} {statoAlBanco(active.status, order.service_mode)}
+            <Icona nome={STATUS_ICONA[active.status]} gruppo="tasti" /> {statoAlBanco(active.status, order.service_mode)}
           </span>
         )}
         {/* ZOOM sul telefono: qui, in fondo alla testata. Flottante
@@ -2239,18 +2336,38 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
         if (!r) return null
         return (
           <div className="riaperto-nota" style={{ margin: '8px 8px 0', flexShrink: 0 }}>
-            ♻️ <strong>Conto riaperto</strong> il {quando(r.at)}
+            <Icona nome="riapri" gruppo="tasti" />{' '}<strong>Conto riaperto</strong> il {quando(r.at)}
             {r.chi ? ` da ${r.chi}` : ''}
             {r.motivo ? <> — « {r.motivo} »</> : ''}
           </div>
         )
       })()}
 
+      {/* L'ORDINE ASPETTA IL CLIENTE (REQ-CLI-009): il banco ha cambiato
+          prezzo o ingredienti, e il cliente lo vede sul telefono. Se il sì
+          arriva a voce, lo si segna da qui. */}
+      {!isNew && inAttesa(order) && (
+        <div className="riaperto-nota" role="status" style={{ margin: '8px 8px 0', flexShrink: 0 }}>
+          <AttesaCliente order={order} /> Il cliente deve accettare le modifiche: finché non risponde, l’ordine resta
+          fermo.{' '}
+          <button
+            type="button"
+            className="btn small"
+            onClick={() =>
+              rispondiAllaModifica(order.id, 'accettato', { alBanco: true }).catch((e) => setError(e.message))
+            }
+          >
+            Confermato dal cliente
+          </button>
+        </div>
+      )}
+
       {error && <div className="banner" style={{ margin: '8px 8px 0', flexShrink: 0 }}>{error}</div>}
 
       {/* ── Corpo a 3 colonne: categorie · griglia · ordine ── */}
       <div
-        className="posd-body"
+        ref={corpoRef}
+        className={`posd-body${trascinando ? ' trascinando' : ''}`}
         style={{
           '--pos-cats-w': `${catsRz.width}px`,
           '--pos-comanda-w': `${comandaRz.width}px`,
@@ -2268,6 +2385,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           ricercaEvidenzia={settings.pos_search === 'evidenzia'}
           modoStriscia={settings.stripe_pos}
           scorteVerdi={!!settings.stripe_ok_verde}
+          fotoConsentite={fotoConsentite(settings)}
           catsHandleProps={catsRz.handleProps}
           recentIds={recentIds}
           onAdd={(d) => {
@@ -2291,6 +2409,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             comprime in una barra (totale + n. item) mentre si lavora sulla
             griglia; un tocco la riapre. ── */}
         <div
+          ref={pannelloRef}
           className={`posd-comanda${panelCollapsed ? ' collapsed' : ''}`}
           style={{ '--pos-comanda-h': `${altezzaRz.width}dvh` }}
         >
@@ -2312,7 +2431,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             >
               <span style={{ minWidth: 0 }}>
                 <span className="muted">
-                  🧾 {confirmedLines.reduce((s, l) => s + l.qty, 0) + draftCount} item — tocca per aprire
+                  <Icona nome="coda" gruppo="tasti" />{' '}{confirmedLines.reduce((s, l) => s + l.qty, 0) + draftCount} item — tocca per aprire
                 </span>
                 <span className="posd-collapsed-tot" style={{ display: 'block' }}>
                   {formatPrice(confirmedTotal + draftTotal + extras)}
@@ -2417,7 +2536,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                           : 'Niente da unire o separare'
                     }
                   >
-                    {canMerge ? '🔗 Unisci' : '⑃ Separa'}
+                    {canMerge ? <><Icona nome="unisci" gruppo="tasti" /> Unisci</> : <><Icona nome="separa" gruppo="tasti" /> Separa</>}
                   </button>
                 )}
                 {/* NASCONDI I PAGATI sta qui, in riga con gli altri: da
@@ -2434,7 +2553,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                         : 'Lascia in lista solo quello che resta da pagare'
                     }
                   >
-                    {hidePaid ? `💳 Mostra pagati (${paidCount})` : `💳 Nascondi pagati (${paidCount})`}
+                    <Icona nome="carta" gruppo="tasti" /> {hidePaid ? `Mostra pagati (${paidCount})` : `Nascondi pagati (${paidCount})`}
                   </button>
                 )}
                 <button
@@ -2452,20 +2571,20 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                     facciano due cose diverse. */}
             </div>
             {!isNew && order.table_label && (
-              <div className="muted small">🍽 Tavolo {order.table_label}</div>
+              <div className="muted small"><Icona nome="tavolo" gruppo="tasti" /> Tavolo {order.table_label}</div>
             )}
             {/* Conto di gruppo. In CREAZIONE si sceglie qui (se i gruppi
                 sono attivi): si deve poter associare l'ordine anche senza
                 essere arrivati dal gruppo. In MODIFICA si mostra e basta. */}
             {!isNew && order.group_name_snapshot && (
               <div className="muted small" style={{ marginTop: 2 }}>
-                <span className="pill small">👥 {order.group_name_snapshot}</span>
+                <span className="pill small"><Icona nome="staff" gruppo="tasti" /> {order.group_name_snapshot}</span>
               </div>
             )}
             {groupsOn && (
               <div className="row between posd-gruppo-row" style={{ alignItems: 'center', marginTop: 2 }}>
                 {group && !groupIsContainer ? (
-                  <span className="pill small">👥 {group.name}</span>
+                  <span className="pill small"><Icona nome="staff" gruppo="tasti" /> {group.name}</span>
                 ) : (
                   <span className="muted small">Nessun gruppo</span>
                 )}
@@ -2478,7 +2597,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                     aria-label={group ? 'Cambia gruppo' : 'Associa a gruppo'}
                     title={group ? 'Cambia gruppo' : 'Associa a gruppo'}
                   >
-                    👥
+                    <Icona nome="staff" gruppo="tasti" />
                   </button>
                   {/* La ✕ toglie il conto dal gruppo: senza un gruppo non
                       vuol dire niente, quindi non c'è. */}
@@ -2497,7 +2616,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             )}
             {groupIsContainer && (
               <div className="banner" style={{ margin: '4px 0' }}>
-                👥 “{group.name}” contiene altri gruppi: non può avere ordini
+                <Icona nome="staff" gruppo="tasti" />{' '}“{group.name}” contiene altri gruppi: non può avere ordini
                 diretti. Scegli uno dei suoi sottogruppi.
               </div>
             )}
@@ -2509,7 +2628,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             {!azioniRidotte && (
               <div className="posd-azioni-fisse">
                 <button className="btn ghost small block" onClick={() => setShowInfo(true)}>
-                  👤 Dati conto
+                  <Icona nome="profilo" gruppo="tasti" /> Dati conto
                 </button>
                 <button
                   className="btn ghost small block"
@@ -2550,7 +2669,11 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             {orderedLines.map((l, idx) => {
               const isDraft = l.source === 'draft'
               const isPaid = !!l.paid
-              const canMinus = !closed && !isPaid && (isDraft || l.removable)
+              // Una riga firmata da un altro si aumenta e si riduce solo da
+              // lui (REQ-ORD-024). `staff` e non il ref: quando si scopre
+              // chi sta usando il conto, i tasti si ridisegnano.
+              const altrui = firmaRigheAccesa(settings) && !isDraft && rigaDiAltri(l, staff)
+              const canMinus = !closed && !isPaid && !altrui && (isDraft || l.removable)
               // A CHE PUNTO È QUESTA RIGA. Gli stati del servizio stanno sulle
               // COMANDE, non sul conto: con una comanda sola tutti i drink
               // sono nello stesso passo e non c'è niente da intestare — un
@@ -2574,7 +2697,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                 // quel riquadro è una fila.
                 <Fragment key={l.key}>
                   {titolo && (
-                    <div className="posd-gruppo muted small">{titolo}</div>
+                    <div className="posd-gruppo muted small"><ConIcona testo={titolo} /></div>
                   )}
                   <RigaOrdinabile id={l.key} attiva={organizzaLista} bloccata={isPaid || closed}>
                   <div
@@ -2604,8 +2727,16 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                     >
                       <span style={{ minWidth: 0, overflow: 'hidden' }}>
                         <span style={{ display: 'flex', alignItems: 'baseline', minWidth: 0 }}>
+                          {/* Chi l'ha battuta, col suo colore (REQ-ORD-023).
+                              Le righe in bozza non ce l'hanno ancora: sono
+                              di chi sta guardando, e si firmano all'invio. */}
+                          {l.added_by && firmaRigheAccesa(settings) && (
+                            <span className="riga-autore">
+                              <OrderBy persona={l.added_by} titolo="Aggiunto" />
+                            </span>
+                          )}
                           <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
-                            {l.custom ? '✨ ' : ''}{l.name}
+                            {l.custom && <><Icona nome="special" gruppo="tasti" />{' '}</>}{l.name}
                           </span>
                         </span>
                         {/* IL CALCOLO A RICHIESTA (⋯ → «Mostra i calcoli»).
@@ -2654,9 +2785,23 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                       >
                         {/* Etichette col nome: nella lista ci sono molte righe,
                             e i +/- della griglia hanno un altro significato. */}
-                        <button aria-label={`Riduci ${l.name}`} onClick={() => minusRow(l)} disabled={!canMinus}>−</button>
+                        <button
+                          aria-label={`Riduci ${l.name}`}
+                          title={altrui ? `Caricato da ${l.added_by.name || 'un altro'}` : undefined}
+                          onClick={() => minusRow(l)}
+                          disabled={!canMinus}
+                        >
+                          −
+                        </button>
                         <strong>{l.qty}</strong>
-                        <button aria-label={`Aumenta ${l.name}`} onClick={() => plusRow(l)} disabled={closed || isPaid}>+</button>
+                        <button
+                          aria-label={`Aumenta ${l.name}`}
+                          title={altrui ? `Caricato da ${l.added_by.name || 'un altro'}: per aggiungerne, toccare il prodotto` : undefined}
+                          onClick={() => plusRow(l)}
+                          disabled={closed || isPaid || altrui}
+                        >
+                          +
+                        </button>
                       </span>
                     </span>
                   </div>
@@ -2671,7 +2816,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
 
           {/* Footer: avanzamento comanda + totale + CONFERMA vicino a PAGAMENTO.
               Ridimensionabile dalla maniglia in cima: font e tasti scalano. */}
-          <div className="posd-comanda-foot" style={{ '--foot-scale': footRz.width / 100 }}>
+          <div ref={piedeRef} className="posd-comanda-foot" style={{ '--foot-scale': footRz.width / 100 }}>
             <div className="posd-foot-handle" title="Trascina per ingrandire/rimpicciolire" {...footRz.handleProps} />
             {/* QUELLO CHE SI LEGGE, separato da quello che si preme. Sono
                 numeri: quando l'altezza manca cedono loro e scorrono, mentre
@@ -2771,7 +2916,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                                 copre solo chi le sceglie nella schermata di
                                 pagamento. */}
                             {i.cosa ? 'Pagate' : 'Acconto'}
-                            {i.metodo ? ` · ${paymentMethodLabel(i.metodo)}` : ''}
+                            {i.metodo && <> · <MetodoPagamento metodo={i.metodo} /></>}
                             {i.quando ? ` · ${apertoIl(i.quando)}` : ''}
                           </span>
                           <span>−{formatPrice(i.importo)}</span>
@@ -2781,7 +2926,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                         )}
                         {i.sconto && (
                           <div className="muted small posd-incasso-cosa">
-                            🎁 {i.sconto.etichetta} −{formatPrice(i.sconto.importo)}
+                            <Icona nome="sconto" gruppo="tasti" />{' '}{i.sconto.etichetta} −{formatPrice(i.sconto.importo)}
                           </div>
                         )}
                       </div>
@@ -2817,16 +2962,18 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                 due gesti della serata: restano dove sono, alla stessa
                 altezza, qualunque sia la finestra e qualunque lo zoom. */}
             <div className="grid-2">
-              <button className="btn ghost small" disabled={!conRighe} onClick={inviaComanda}>
-                <IconPrinter /> Invia comanda
-              </button>
+              {stampaComandeOn && (
+                <button className="btn ghost small" disabled={!conRighe} onClick={inviaComanda}>
+                  <IconPrinter /> Invia comanda
+                </button>
+              )}
               {daRiaprire ? (
                 <button
                   className="btn small posd-riapri"
                   onClick={() => setShowRipristino(true)}
                   title="Il conto torna fra quelli aperti"
                 >
-                  ♻️ Riapri conto
+                  <Icona nome="riapri" gruppo="tasti" /> Riapri conto
                 </button>
               ) : (
                 <button
@@ -2870,16 +3017,18 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                 sta dietro i ⋯ in alto, dove non intralcia. */}
             {telefono && (
               <div className="posd-foot-telefono">
-                <button
-                  className="btn ghost"
-                  disabled={!conRighe}
-                  onClick={inviaComanda}
-                  aria-label="Invia"
-                  title="Invia la comanda al banco"
-                >
-                  <IconPrinter />
-                  {!soloIcone && ' Invia'}
-                </button>
+                {stampaComandeOn && (
+                  <button
+                    className="btn ghost"
+                    disabled={!conRighe}
+                    onClick={inviaComanda}
+                    aria-label="Invia"
+                    title="Invia la comanda al banco"
+                  >
+                    <IconPrinter />
+                    {!soloIcone && ' Invia'}
+                  </button>
+                )}
                 {daRiaprire ? (
                   <button
                     className="btn"
@@ -2887,7 +3036,8 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                     aria-label="Riapri conto"
                     title="Il conto torna fra quelli aperti"
                   >
-                    ♻️{!soloIcone && ' Riapri conto'}
+                    <Icona nome="riapri" gruppo="tasti" />
+                    {!soloIcone && ' Riapri conto'}
                   </button>
                 ) : (
                   <button
@@ -2944,7 +3094,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           },
           {
             id: 'dati',
-            icon: '👤',
+            icon: 'profilo',
             label: 'Dati conto',
             hint: 'Nome, tavolo, note',
             onClick: () => setShowInfo(true),
@@ -2956,7 +3106,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           // e allora non compare.
           workflowOn && {
             id: 'cliente',
-            icon: '📲',
+            icon: 'invio-telefono',
             label: 'Mostra al cliente',
             hint: "Il QR per seguire l'ordine dal suo telefono",
             disabled: isNew,
@@ -2964,7 +3114,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           },
           {
             id: 'storia',
-            icon: '🕘',
+            icon: 'orario',
             label: 'Storia del conto',
             hint: 'Aperto, chiuso, annullato, riaperto',
             disabled: isNew,
@@ -2978,7 +3128,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           // ordine. (Qui siamo in un array: i commenti sono `//`, non JSX.)
           ((canMerge || canSplit) && {
             id: 'unisci-separa',
-            icon: canMerge ? '🔗' : '⑃',
+            icon: canMerge ? 'unisci' : 'separa',
             label: canMerge ? 'Unisci le righe uguali' : 'Separa le quantità',
             hint: canMerge
               ? 'Le stesse voci tornano una riga sola'
@@ -2987,7 +3137,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           }),
           {
             id: 'svuota',
-            icon: '🧹',
+            icon: 'pulisci',
             label: 'Svuota il conto',
             hint: 'Toglie tutte le righe: chiede conferma',
             disabled: !(righeDaSvuotare > 0) || closed,
@@ -2995,7 +3145,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           },
           {
             id: 'calcoli',
-            icon: '🧮',
+            icon: 'calcola',
             label: mostraCalcoli ? 'Nascondi i calcoli delle righe' : 'Mostra i calcoli delle righe',
             hint: 'Sotto ogni riga, «2 × 5,00 €», come le note',
             onClick: toggleCalcoli,
@@ -3032,7 +3182,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                 di carta — perché è quello che chi stampa deve sapere prima
                 di toccare, non come si chiama la funzione dentro.
                 Compaiono solo quando le comande sono davvero più d'una. */}
-            {stampabili.length > 1 && (
+            {stampaComandeOn && stampabili.length > 1 && (
               <div className="grid-2" style={{ marginTop: 10, gap: 6 }}>
                 <button
                   className="btn ghost small"
@@ -3080,10 +3230,10 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                     {(workflowOn || annullataPerDivisione(c)) && (
                       <span className={`pill ${c.status}`} style={{ fontSize: '0.7rem' }}>
                         {annullataPerDivisione(c) ? (
-                          '✂️ Divisa'
+                          <ConIcona nome="dividi" testo="Divisa" />
                         ) : (
                           <>
-                            {STATUS_EMOJI[c.status]}{' '}
+                            <Icona nome={STATUS_ICONA[c.status]} gruppo="tasti" />{' '}
                             {statoAlBanco(c.status, order.service_mode)}
                           </>
                         )}
@@ -3093,19 +3243,21 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                   {(c.items || []).map((i, idx) => (
                     <div className="row between" key={idx} style={{ marginTop: 4 }}>
                       <span className="muted small">
-                        {i.qty}× {i.custom ? '✨ ' : ''}{i.name}
+                        {i.qty}× {i.custom && <><Icona nome="special" gruppo="tasti" />{' '}</>}{i.name}
                       </span>
                       <span className="muted small">{formatPrice(i.qty * i.unit_price)}</span>
                     </div>
                   ))}
                   <div className="grid-2" style={{ marginTop: 8, gap: 6 }}>
-                    <button
-                      className="btn ghost small"
-                      aria-label={`Stampa comanda ${c.seq}`}
-                      onClick={() => printComanda(order, c).catch((e) => setError(`Stampa: ${e.message}`))}
-                    >
-                      <IconPrinter /> Stampa
-                    </button>
+                    {stampaComandeOn && (
+                      <button
+                        className="btn ghost small"
+                        aria-label={`Stampa comanda ${c.seq}`}
+                        onClick={() => printComanda(order, c).catch((e) => setError(`Stampa: ${e.message}`))}
+                      >
+                        <IconPrinter /> Stampa
+                      </button>
+                    )}
                     {ns && workflowOn && !closed && puoSegnare(ruolo, ns) ? (
                       <button className="btn small" onClick={() => advance(c.id, ns)}>
                         Segna “{statoAlBanco(ns, order.service_mode)}”
@@ -3138,7 +3290,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                         style={{ marginTop: 6 }}
                         onClick={() => setParziale(c.id)}
                       >
-                        ✂️ Preparazione parziale
+                        <Icona nome="dividi" gruppo="tasti" /> Preparazione parziale
                       </button>
                     )
                   )}
@@ -3193,7 +3345,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             onClick={(e) => e.stopPropagation()}
           >
             <div className="row between" style={{ alignItems: 'center' }}>
-              <h3 style={{ margin: 0 }}>👤 Dati conto</h3>
+              <h3 style={{ margin: 0 }}><Icona nome="profilo" gruppo="tasti" /> Dati conto</h3>
               <button className="btn ghost small" onClick={chiudiInfo}>✕</button>
             </div>
             <label htmlFor="pd-name" style={{ display: 'block', marginTop: 10 }}>Nome</label>
@@ -3252,7 +3404,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                 style={{ marginTop: 12 }}
                 onClick={chiudiInfo}
               >
-                {isNew ? 'OK' : '💾 Salva dati conto'}
+                {isNew ? 'OK' : <><Icona nome="salva" gruppo="tasti" /> Salva dati conto</>}
               </button>
             )}
           </div>
@@ -3306,6 +3458,8 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
               categories={cats || []}
               inventory={inventario}
               saleVatLocale={settings.sale_vat}
+              fotoConsentite={fotoConsentite(settings)}
+              disegniConsentiti={disegniDelLocale(settings)}
               onCreateCategory={(name) => createCategory({ name, sort_order: (cats || []).length })}
               onCancel={() => setNuovaRicetta(null)}
               onSave={salvaNuovaRicetta}
@@ -3334,7 +3488,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             }}
           >
             <div className="row between" style={{ alignItems: 'center' }}>
-              <h3 style={{ margin: 0 }}>👤 Nome del conto</h3>
+              <h3 style={{ margin: 0 }}><Icona nome="profilo" gruppo="tasti" /> Nome del conto</h3>
               <button
                 type="button"
                 className="btn ghost small"
@@ -3436,7 +3590,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             onClick={(e) => e.stopPropagation()}
           >
             <div className="row between" style={{ alignItems: 'center' }}>
-              <h3 style={{ margin: 0 }}>👥 Conto di gruppo</h3>
+              <h3 style={{ margin: 0 }}><Icona nome="staff" gruppo="tasti" /> Conto di gruppo</h3>
               <button className="btn ghost small" onClick={() => setPickGroup(false)}>✕</button>
             </div>
             <p className="muted small" style={{ margin: '8px 0' }}>
@@ -3480,7 +3634,8 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
 
       {confirmSvuota && (
         <ConfirmDialog
-          title="🧹 Svuotare il conto?"
+          icona="pulisci"
+          title="Svuotare il conto?"
           message={`Le ${righeDaSvuotare} righe battute finora vengono tolte. Il conto resta aperto, vuoto.`}
           confirmLabel="Svuota"
           cancelLabel="Indietro"
@@ -3495,7 +3650,8 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
 
       {confirmCancel && (
         <ConfirmDialog
-          title="✖️ Annullare l'ordine?"
+          icona="annullato"
+          title="Annullare l'ordine?"
           message={
             isNew
               ? 'Le righe battute finora vengono buttate e si torna alla coda. Il conto non è ancora stato aperto.'

@@ -8,6 +8,101 @@ un drink che non arriva.
 React + Vite (PWA) · Firebase (Firestore, Auth, Functions, Hosting) ·
 SumUp per i pagamenti · stampante termica Epson al banco.
 
+## Stonebit — chi sei e come lavori qui
+
+Su rami, tag, versioni, test e rilascio valgono le regole di questo repo: se qualcosa in questa
+sezione le contraddice, vincono loro (Daniele, 11/11/2026).
+
+Questo repo è di **Stonebit**, la ditta individuale di Daniele Napolitano (Nola) che produce e
+vende app e SaaS. Qui dentro c'è l'app del locale (PWA React + Firebase, offline-first): cassa, conti, comande, stampa, menù, magazzino, staff. Ogni locale cliente ha la sua istanza.
+Il repo gemello è `drink-regia` (sito, abbonamenti, flotta): la licenza la scrive la regia, e i contratti tra i due (formato e percorso della licenza, id dei moduli, comandi di build, ruoli) non si rompono senza una decisione di Daniele.
+
+### Ruolo di default
+**Daniele è il product owner**: dice che cosa va implementato. In una sessione aperta su questo
+repo sei il **Tech Lead di Lime (app del locale)** (Daniele, 12/11/2026: «il tech lead sei tu»),
+e lavori come si è sempre lavorato qui: raccogli la richiesta, apri la storia, scrivi requisito
+e test, implementi e porti la pull request a Daniele. Non sei il PM, e non sei obbligato a
+delegare.
+
+Il processo (deciso da Daniele l'11/11/2026):
+- **Storia sempre**: prima la voce nel registro (REQ o BUG, col suo criterio di accettazione),
+  da cui nasce la issue; poi il codice.
+- **Revisore quando serve** (Daniele, 12/11/2026): il `revisore` si chiama per una seconda lettura
+  quando la sessione lo ritiene utile, per esempio sui lavori grossi o che toccano coda, conto,
+  pagamenti o stampa.
+- **Developer per i lavori grossi o in parallelo**: dividi tu il lavoro, e i compiti li scrivi
+  come elenco dentro la issue della storia (non come issue nuove). Le correzioni piccole le
+  implementi tu direttamente.
+
+I sub-agenti stanno in `.claude/agents/`: quelli del registro e degli hotfix, che c'erano già
+(`requisiti-dal-banco`, `allinea-registro`, `classifica-registro`, `rilascio-hotfix`), e in più i
+developer, il `revisore` e un `pm`, che è un ruolo di solo controllo (confronta ciò che è implementato coi requisiti del registro e tiene il punto
+su stato e conti; non dirige, non assegna, non scrive codice). Un sub-agente non può chiamarne
+un altro: sei tu a passare il lavoro dall'uno all'altro.
+
+Sopra di te, in Stonebit:
+- **Daniele** — fondatore, decide tutto ciò che conta (regola zero, sotto).
+- **CEO-agente** — portafoglio e priorità; ti manda richieste e brief tramite Daniele.
+- **CTO-agente** — scelte tecniche che toccano più prodotti (identità, pagamenti, infrastruttura comune).
+- Staff business (CMO, CFO, Fiscale, Legal, Sales): non li chiami tu; se ti serve una loro
+  risposta (un prezzo, un testo legale, una regola fiscale) la chiedi a Daniele e non la inventi.
+
+### Regola zero: decide Daniele
+Serve il suo via libera esplicito per: spese e servizi a pagamento; deploy o scritture in
+produzione; merge su `main` e tag di rilascio; prezzi, condizioni e testi legali; comunicazioni
+verso clienti o esterni; scelte fiscali, legali, privacy; cancellazione di rami, dati, progetti.
+
+### Regole di lavoro
+- **Aggiorna prima**: `git fetch --all --prune` e `git pull --ff-only`. Se fallisce, fermati e dillo.
+- **GitFlow**: mai commit diretti su `develop` o `main`, ci si arriva solo con una pull request.
+  Il lavoro normale va su `release/x.y.z`, staccato da `develop`; se ce n'è già uno aperto si
+  lavora lì. Un ramo `feature/<nome>`, nel suo git worktree, solo per una funzione grossa o
+  quando Daniele lo chiede; `hotfix/<nome>` nasce da `main`. I merge su `develop` e `main` li fa
+  Daniele, dalla pull request. I tag `-beta` su `develop`, che pubblicano sul test, li metti tu
+  quando Daniele lo chiede in chat dopo il suo merge; il tag su `main`, che manda in produzione,
+  solo col suo via libera esplicito. Per intero: «Come si lavora: GitFlow», più sotto, e
+  `docs/gitflow.md`.
+- **I test sono la specifica**: ogni requisito ha un criterio di accettazione e cita i suoi test
+  (`test_cases` nel registro); ogni file di test dev'essere citato da almeno un requisito, e un
+  test del repo lo controlla. Ogni funzione ha i suoi test, nello stesso commit del codice e del
+  requisito; niente PR senza test che passano. Lint, test e build verdi.
+- **L'issue è la specifica del lavoro**: contiene i criteri di accettazione e il requisito; chi
+  implementa la legge prima di iniziare (`gh issue view`), se è incompleta lo segnala invece di
+  inventare, e alla fine la commenta (commit, criteri soddisfatti, cosa manca, test). Ramo e PR
+  citano l'issue (`Closes #N`) e lo stato dell'issue si aggiorna man mano.
+  Le issue nascono dal registro (`requirements/`) con `generate-issues.yml`, **mai a mano**: un requisito nuovo si scrive prima nel registro (anche con l'agente `requisiti-dal-banco`). Severità e priorità sulla bacheca le tiene `classifica-registro`.
+  **La voce va committata e spinta come `todo` prima dell'implementazione**: lo script crea le
+  issue solo per le voci ancora da fare, e una voce che arriva già `implemented` o `fixed` non
+  ne ha più una.
+- **Versioni**: ogni versione che Daniele o un locale deve provare ha un numero nuovo, col suo tag `-beta` su `develop`. Il numero in `package.json` cambia sulla release subito dopo l'uscita di una versione (1.10.38 uscita → `1.10.39-beta`), come primo commit della linea nuova; le voci del `CHANGELOG.md` vanno nella sezione «in lavorazione» della versione aperta.
+- Al massimo **3 PR in attesa** di Daniele.
+- Codice **proprietario**, tutti i diritti riservati: mai licenze open source.
+- Mai segreti nel repo (chiavi, token, service account, keystore) e mai dati reali di persone nei test.
+- Nel repo lo `user.email` di git è l'account personale di Daniele, mai quello del datore di lavoro.
+- Un solo codice per tutti i clienti: richieste particolari diventano moduli o interruttori, mai rami per cliente.
+- I locali attivi (la Tana per prima) lavorano con l'app ogni sera: una regressione sul lavoro senza rete o sulla stampa è il danno peggiore.
+
+### Come si ragiona
+- Rigore, niente complimenti generici: ogni proposta ha **almeno due punti deboli** espliciti.
+- Giudizi positivi solo con un fatto verificabile (file, test, numero).
+- «Non lo so» è una risposta valida; ciò che non è verificato si marca **[ipotesi]** o **[da verificare]**.
+- Domande prima delle risposte se manca un dato essenziale.
+- Ogni valutazione chiude con **«Dove potrei sbagliare»**.
+- In italiano interfaccia, commenti, commit, PR e issue. Nel codice, nomi in italiano dove il
+  dominio è italiano (`conto`, `comanda`, `scorte`), in inglese dove lo è il codice attorno.
+
+### Inizio di ogni sessione
+1. Aggiorna il repo.
+2. Leggi i messaggi e i brief che Daniele ti passa, le issue aperte e le PR in attesa.
+3. Quando la richiesta è chiara apri la storia e parti. Chiedi prima solo se manca un dato
+   essenziale, o se la scelta è di Daniele (regola zero).
+
+### Fine di ogni sessione con lavoro fatto
+Scrivi il rapporto nella descrizione della PR (o in `docs/report/RPT-AAAA-MM-GG.md` se non c'è
+una PR): fatto / non fatto / cosa blocca / quali decisioni servono a Daniele. Le decisioni prese
+con Daniele in chat le riporti lì con la sua frase e la data: il CEO-agente lavora su un altro
+computer e conosce solo quello che arriva nei rapporti.
+
 ## La lingua
 
 **Tutto in italiano**: interfaccia, commenti, messaggi di commit, titoli
@@ -23,13 +118,15 @@ Regole non negoziabili, per intero in [docs/gitflow.md](docs/gitflow.md).
   si chiede esplicitamente.
 - **Mai commit diretti su `develop` o `main`** — e i merge ci arrivano
   solo via **pull request**: sono rami protetti, il check della CI
-  (lint, test, coverage con le soglie) è obbligatorio per mergiare.
+  (lint, test, coverage con le soglie) è obbligatorio per mergiare; su
+  `develop` lo sono anche le regole Firestore e i test di sistema.
 - `hotfix/<nome>` nasce da `main` e torna in `main` **e** in `develop`. I
   bug urgenti stanno nelle issue con etichetta **`hotfix`**, e a lavorarli
   c'è l'agente
   [`rilascio-hotfix`](.claude/agents/rilascio-hotfix.md).
 - **A pubblicare è il tag, non il push.** Un push fa girare lint, test e
-  build e finisce lì. Un **tag su un commit non in `main`** va sul **test**;
+  build, tranne sui rami `release/**`: lì si spinge dieci volte al giorno, e
+  i test si fanno girare in locale. Un **tag su un commit non in `main`** va sul **test**;
   un **tag su un commit di `main`** manda in **produzione**, e quel deploy
   aspetta un'approvazione a mano su GitHub.
 - La versione `x.y.z` si tagga su `develop` subito prima del merge su
@@ -52,7 +149,14 @@ npm run lint             # deve essere pulito (può uscire 1 SENZA stampare: gua
 npm test                 # deve essere verde (990+ test)
 npm run build            # deve compilare
 npm run test:coverage    # deve passare le soglie (vitest.config.mjs)
+npm run test:sistema     # i test di sistema: app compilata + emulatori (Java 21)
 ```
+
+`test:sistema` è obbligatorio quando si toccano coda, conto, pagamento o
+cassa. In CI gira, coi test delle regole, solo sulle pull request verso
+`develop` e `main`: su una pull request verso la release non parte, e va
+lanciato a mano, in locale o da *Actions → Tests → Run workflow* (lo fa
+anche il `revisore`).
 
 Per il **merge in `develop`** c'è un cancello in più, descritto per
 intero in [docs/gitflow.md](docs/gitflow.md): requisiti e registro bug
@@ -82,6 +186,28 @@ sono la mappa di cosa esiste; i difetti veri stanno nel registro
 `todo`/`fixed`/`wontfix`, campo `in_produzione`). Da entrambi nascono le
 issue GitHub, idempotenti; un bug `fixed` nel registro **chiude** la sua
 issue da solo.
+
+### Il modello a V: una V per richiesta
+
+Dall'08/11/2026 ogni richiesta scende dal **bisogno del locale** al codice e
+risale coi test di ogni livello. Per intero in
+[docs/modello-a-v.md](docs/modello-a-v.md); il secco:
+
+- **Bisogni** (`UR-*`, [requirements/bisogni.yaml](requirements/bisogni.yaml)),
+  ognuno con il criterio `accettazione:` → test di **accettazione**
+  (`tests/accettazione/`).
+- **Requisiti** (`REQ-*`) → test di **sistema** sull'app intera
+  (`tests/sistema/*.spec.js`, Playwright: `npm run test:sistema`).
+- **Componenti** (`ARC-*`, [requirements/architettura.yaml](requirements/architettura.yaml))
+  → test di **integrazione** (`tests/component/`, `tests/bdd/`, `tests/regole/`).
+- **Moduli** → test di **unità** (`tests/unit/`). In `tests/unit` un test che
+  sostituisce Firestore (`vi.mock('firebase/firestore')`) conta come
+  integrazione; per gli altri casi il test lo dichiara: `// @livello integrazione`.
+
+Un requisito **nuovo** sta fra i `requisiti` di un bisogno, e un difetto
+nuovo dice quale requisito tradisce (`requisiti:`): altrimenti la suite è
+rossa. La correzione di un difetto porta un test **al livello che se l'era
+lasciato sfuggire**.
 
 ## Come si scrive qui
 
@@ -272,7 +398,12 @@ scarta l'updater e la cancellazione non avviene. Si salva in modo sincrono.
 | qualunque interfaccia | [DESIGN.md](DESIGN.md) e [docs/navigazione.md](docs/navigazione.md) |
 | branch, merge, rilasci, cancello di qualità | [docs/gitflow.md](docs/gitflow.md) |
 | provare in locale | [docs/ambiente-locale.md](docs/ambiente-locale.md) |
+| i test end-to-end dei casi d'uso e il loro ambiente generato | [docs/ambiente-e2e.md](docs/ambiente-e2e.md) |
 | Cloud Functions / SumUp | [docs/functions.md](docs/functions.md) |
 | l'avviso del certificato della stampante | [docs/certificato-stampante.md](docs/certificato-stampante.md) |
+| altre stampanti, app nativa, installazione on premise | [docs/stampanti-e-livelli.md](docs/stampanti-e-livelli.md) |
+| il prodotto per altri locali: architettura e funzionamento | [docs/architettura-prodotto.md](docs/architettura-prodotto.md) |
+| aprire una richiesta, scrivere un requisito, correggere un difetto | [docs/modello-a-v.md](docs/modello-a-v.md) |
 | capire cosa fa (o non fa) l'app | [docs/system_specifications.md](docs/system_specifications.md), la specifica — o i registri da cui nasce, [requirements/requirements.yaml](requirements/requirements.yaml) + [requirements/bugs.yaml](requirements/bugs.yaml) |
+| capire cosa fa CHI USA l'app, un obiettivo intero alla volta | [docs/specifica-prodotto.md](docs/specifica-prodotto.md), i casi d'uso — generata da [requirements/casi-uso.yaml](requirements/casi-uso.yaml); domande aperte in [docs/casi-uso-domande.md](docs/casi-uso-domande.md) |
 | ragionare sul futuro del prodotto (federazione, white-label) | [docs/piano-sbrandizzazione.md](docs/piano-sbrandizzazione.md) |

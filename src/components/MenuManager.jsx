@@ -9,9 +9,12 @@ import {
   updateCategory,
   deleteCategory,
   fetchInventoryItems,
+  fetchInventoryCategories,
   subscribePosPrefs,
   savePosColors,
   subscribeSettings,
+  subscribeCarta,
+  creaVoceCarta,
   DEFAULT_SETTINGS,
   settingsIniziali,
 } from '../lib/api.js'
@@ -21,9 +24,19 @@ import { formatPrice } from '../lib/orderStatus.js'
 import { deleteDrinkImageByUrl } from '../lib/storage.js'
 import { formatQty, stockStatus } from '../lib/inventory.js'
 import MarginList from './MarginList.jsx'
+import SpecialManager from './SpecialManager.jsx'
+import StrutturaMenu, { InStruttura } from './StrutturaMenu.jsx'
+import { inFondo, categoriaDellaSezione } from '../lib/strutturaMenu.js'
+import { drinkSpeciali } from '../lib/speciali.js'
 import DrinkForm from './DrinkForm.jsx'
 import { saveDrinkFromForm } from '../lib/saveDrink.js'
 import CategoryRail from './CategoryRail.jsx'
+import AvvisoPiano from './AvvisoPiano.jsx'
+import { puoCreareProdotto, maxProdotti, MESSAGGI_PIANO, fotoConsentite } from '../lib/limiti.js'
+import { disegniDelLocale } from '../lib/stileMenu.js'
+import Icona from './Icona.jsx'
+import { useTestoConIcona } from '../lib/temaIcone.js'
+import { prendiProdottoInArrivo, ascoltaProdottoInArrivo } from '../lib/prodottoDaMagazzino.js'
 import {
   CATEGORY_ICONS,
   catColor,
@@ -46,20 +59,44 @@ const EMPTY = {
 }
 
 export default function MenuManager() {
+  const testoConIcona = useTestoConIcona()
   // Cosa dice la striscia delle schede: lo sceglie il locale, in
   // Impostazioni → Vista ordine (vedi lib/strisce.js).
   const [settings, setSettings] = useState(settingsIniziali)
   useEffect(() => subscribeSettings(setSettings, () => {}), [])
+  // La struttura del menù dei clienti (REQ-MENU-025): la sua sottosezione,
+  // e su ogni voce del catalogo le sezioni in cui compare.
+  const [carta, setCarta] = useState({ sezioni: [], voci: [] })
+  useEffect(() => subscribeCarta(setCarta, () => {}), [])
   const [sezione, setSezione] = useState('catalogo') // catalogo | categorie | margini
   const modoStriscia = settings.stripe_menu || 'scorte'
   const scorteVerdi = !!settings.stripe_menu_ok_verde
   const [drinks, setDrinks] = useState([])
   const [categories, setCategories] = useState([])
   const [inventory, setInventory] = useState([])
+  const [categorieMagazzino, setCategorieMagazzino] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [editing, setEditing] = useState(null) // null | 'new' | drink object
   const [copiaDa, setCopiaDa] = useState(null) // il drink duplicato, prima di salvarlo
+  // LA SCHEDA NATA DA UNA BOTTIGLIA DEL MAGAZZINO (REQ-AI-002): si apre come
+  // il duplicato, una volta sola.
+  useEffect(() => {
+    const apri = () => {
+      const inArrivo = prendiProdottoInArrivo()
+      if (inArrivo) {
+        setCopiaDa(inArrivo)
+        setEditing('new')
+      }
+    }
+    apri()
+    return ascoltaProdottoInArrivo(apri)
+  }, [])
+  // UN PRODOTTO NUOVO DAL MENÙ DEI CLIENTI (REQ-MENU-036): la sezione in cui
+  // entrerà come voce appena salvato. E la sezione da riaprire tornando
+  // all'editor, che chiudendosi per la scheda le dimenticava tutte.
+  const [nuovoIn, setNuovoIn] = useState(null) // { sezioneId, category_id }
+  const [riapri, setRiapri] = useState(null)
   // Filtri della lista (catalogo grande: ricerca + categoria + disponibilità).
   const [search, setSearch] = useState('')
   const [catFilter, setCatFilter] = useState('all') // 'all' | 'none' | categoryId
@@ -94,12 +131,16 @@ export default function MenuManager() {
   async function load() {
     setLoading(true)
     try {
-      const [d, inv] = await Promise.all([
+      const [d, inv, catMag] = await Promise.all([
         fetchDrinks(),
         fetchInventoryItems().catch(() => []), // l'inventario richiede auth: in caso fallisca, lista vuota
+        // Le categorie di magazzino servono alle etichette degli ingredienti
+        // nel menù dei clienti (REQ-MENU-040).
+        fetchInventoryCategories().catch(() => []),
       ])
       setDrinks(d)
       setInventory(inv)
+      setCategorieMagazzino(catMag)
     } catch (e) {
       setError(e.message)
     } finally {
@@ -129,12 +170,20 @@ export default function MenuManager() {
   async function handleSave(form) {
     setError(null)
     try {
-      await saveDrinkFromForm({
+      const salvato = await saveDrinkFromForm({
         form,
         existing: editing && editing !== 'new' ? editing : null,
         inventory,
         categories,
+        impostazioni: settings,
+        prodotti: drinks,
       })
+      // Nato dal menù dei clienti: entra come voce in fondo alla sezione
+      // da cui lo si è chiesto, senza passare dall'elenco dei prodotti
+      // rimasti fuori.
+      if (nuovoIn && editing === 'new' && salvato?.id) {
+        creaVoceCarta({ sezione_id: nuovoIn.sezioneId, drink_id: salvato.id, ordine: inFondo(carta, nuovoIn.sezioneId) })
+      }
       chiudiForm()
       await load()
     } catch (e) {
@@ -182,6 +231,15 @@ export default function MenuManager() {
   function chiudiForm() {
     setEditing(null)
     setCopiaDa(null)
+    setNuovoIn(null)
+  }
+
+  // Dal menù dei clienti: la scheda vuota, con la categoria che porta il
+  // nome della sezione se ce n'è una («Gin» → la categoria Gin).
+  function nuovoProdottoIn(s) {
+    setNuovoIn({ sezioneId: s.id, category_id: categoriaDellaSezione(s, categories)?.id || '' })
+    setRiapri(s.id)
+    setEditing('new')
   }
 
   async function handleDelete(d) {
@@ -304,10 +362,12 @@ export default function MenuManager() {
   if (editing) {
     return (
       <DrinkForm
-        initial={editing === 'new' ? copiaDa || EMPTY : editing}
+        initial={editing === 'new' ? copiaDa || (nuovoIn ? { ...EMPTY, category_id: nuovoIn.category_id } : EMPTY) : editing}
         categories={categories}
         inventory={inventory}
         saleVatLocale={settings.sale_vat}
+        fotoConsentite={fotoConsentite(settings)}
+        disegniConsentiti={disegniDelLocale(settings)}
         onCreateCategory={handleCreateCategory}
         onCancel={chiudiForm}
         onSave={handleSave}
@@ -316,6 +376,8 @@ export default function MenuManager() {
   }
 
   const searching = search.trim().length > 0
+  // Senza limiti nella licenza si aggiunge sempre, come prima.
+  const puoAggiungere = puoCreareProdotto(settings, drinks.length)
   const availCount = drinks.filter((d) => d.available).length
 
   // LE SOTTOSEZIONI, nel menu laterale come nelle altre pagine. Categorie
@@ -323,10 +385,50 @@ export default function MenuManager() {
   // aprivano spingendo giù la griglia, e chi voleva solo guardare i
   // margini si portava dietro tutto il listino sotto.
   const sezioni = [
-    { id: 'catalogo', icona: '🍸', label: 'Modifica menù' },
-    { id: 'categorie', icona: '🏷️', label: `Categorie (${categories.length})` },
-    { id: 'margini', icona: '📈', label: 'Marginalità listino' },
+    { id: 'catalogo', icona: 'menu', label: 'Modifica menù' },
+    { id: 'categorie', icona: 'categorie', label: `Categorie (${categories.length})` },
+    { id: 'margini', icona: 'andamento', label: 'Marginalità listino' },
+    { id: 'special', icona: 'special', label: `Special (${drinkSpeciali(drinks).length})` },
+    { id: 'carta', icona: 'ordina-dal-menu', label: 'Menù dei clienti' },
   ]
+
+  if (sezione === 'carta') {
+    return (
+      <div>
+        <Sottosezioni voci={sezioni} attiva={sezione} scegli={setSezione} />
+        {/* La scheda aperta da qui torna qui: la sottosezione resta. */}
+        <StrutturaMenu
+          carta={carta}
+          drinks={drinks}
+          categories={categories}
+          inventory={inventory}
+          categorieMagazzino={categorieMagazzino}
+          supplementoPredefinito={Number(settings?.supplemento_scelta_predefinito) || 0}
+          riapri={riapri}
+          onApriScheda={(drink, sezioneId) => {
+            setRiapri(sezioneId)
+            setEditing(drink)
+          }}
+          onNuovoProdotto={nuovoProdottoIn}
+        />
+      </div>
+    )
+  }
+
+  if (sezione === 'special') {
+    return (
+      <div>
+        <Sottosezioni voci={sezioni} attiva={sezione} scegli={setSezione} />
+        <SpecialManager
+          drinks={drinks}
+          onEdit={(id) => {
+            setSezione('catalogo')
+            setEditing(drinks.find((d) => d.id === id) || null)
+          }}
+        />
+      </div>
+    )
+  }
 
   if (sezione === 'categorie') {
     return (
@@ -347,6 +449,7 @@ export default function MenuManager() {
         <MarginList
           drinks={drinks}
           inventory={inventory}
+          categories={categories}
           onEdit={(id) => {
             setSezione('catalogo')
             setEditing(drinks.find((d) => d.id === id) || null)
@@ -362,6 +465,7 @@ export default function MenuManager() {
 
       <button
         className="btn block"
+        disabled={!puoAggiungere}
         onClick={() => {
           // Da capo: un drink nuovo non eredita la copia rimasta in giro.
           setCopiaDa(null)
@@ -370,6 +474,9 @@ export default function MenuManager() {
       >
         + Aggiungi prodotto
       </button>
+      {/* IL MENÙ PIENO DEL PIANO FREE (REQ-LIC-003): i prodotti che ci sono
+          restano, se ne modificano quanti se ne vuole; non se ne aggiungono. */}
+      {!puoAggiungere && <AvvisoPiano messaggio={MESSAGGI_PIANO.prodotti(maxProdotti(settings))} impostazioni={settings} />}
 
       {error && <div className="banner">Errore: {error}</div>}
       {loading && <div className="empty">Carico il menù…</div>}
@@ -379,7 +486,7 @@ export default function MenuManager() {
           <input
             type="search"
             className="menu-search"
-            placeholder="🔍 Cerca drink, ingrediente, categoria…"
+            placeholder={testoConIcona('cerca', 'Cerca drink, ingrediente, categoria…')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             style={{ marginTop: 10 }}
@@ -523,15 +630,17 @@ export default function MenuManager() {
                               {d.recipe_items.map((r) => `${r.name} ${formatQty(r.qty, r.unit)}`).join(' · ')}
                             </p>
                           )}
+                          <InStruttura drink={d} carta={carta} />
                           <button className="btn secondary small block" onClick={() => setEditing(d)}>
-                            ✏️ Modifica
+                            <Icona nome="modifica" gruppo="tasti" /> Modifica
                           </button>
                           <button
                             className="btn ghost small block"
                             style={{ marginTop: 6 }}
+                            disabled={!puoAggiungere}
                             onClick={() => duplica(d)}
                           >
-                            📋 Duplica
+                            <Icona nome="elenco" gruppo="tasti" /> Duplica
                           </button>
                           <button
                             className="btn ghost small block"
@@ -545,7 +654,7 @@ export default function MenuManager() {
                             style={{ marginTop: 6 }}
                             onClick={() => handleDelete(d)}
                           >
-                            🗑 Elimina
+                            <Icona nome="elimina" gruppo="tasti" /> Elimina
                           </button>
                         </div>
                       )}
@@ -640,8 +749,8 @@ function CategoryManager({ categories }) {
             <span className="row" style={{ gap: 4 }}>
               <button className="btn ghost small" onClick={() => move(idx, -1)} disabled={idx === 0}>↑</button>
               <button className="btn ghost small" onClick={() => move(idx, 1)} disabled={idx === categories.length - 1}>↓</button>
-              <button className="btn ghost small" onClick={() => rename(c)}>✏️</button>
-              <button className="btn ghost small" onClick={() => remove(c)}>🗑</button>
+              <button className="btn ghost small" onClick={() => rename(c)} aria-label="Rinomina" title="Rinomina"><Icona nome="modifica" gruppo="tasti" /></button>
+              <button className="btn ghost small" onClick={() => remove(c)} aria-label="Elimina" title="Elimina"><Icona nome="elimina" gruppo="tasti" /></button>
             </span>
           </div>
           {/* Icona (set di emoji) + colore per la categoria */}

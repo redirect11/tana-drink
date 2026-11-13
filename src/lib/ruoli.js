@@ -1,3 +1,5 @@
+import { conEmoji } from './icone.js'
+
 // ── RUOLI ────────────────────────────────────────────────────────────
 // Il ruolo vive nei custom claims di Firebase Auth (`token.claims.role`),
 // non in Firestore: così le regole del database possono fidarsene senza
@@ -22,10 +24,10 @@ export const RUOLI = ['admin', 'bartender', 'staff']
 export const RUOLI_ASSEGNABILI = [...RUOLI, 'cliente']
 
 export const RUOLO_ETICHETTA = {
-  admin: '👑 Admin',
-  bartender: '🍸 Bartender',
-  staff: '🫱 Staff',
-  cliente: '🙋 Cliente',
+  admin: conEmoji('premium', 'Admin'),
+  bartender: conEmoji('menu', 'Bartender'),
+  staff: conEmoji('servizio', 'Staff'),
+  cliente: conEmoji('clienti', 'Cliente'),
 }
 
 export const RUOLO_DESCRIZIONE = {
@@ -93,9 +95,12 @@ export function puoSegnare(role, passo) {
   return isSala(role) ? passo === SERVITO : true
 }
 
-// Tornare indietro di un passo, dividere una comanda in due, annullarla,
-// riscrivere una comanda già mandata: si rimette mano al lavoro di chi sta
-// allo shaker, e lo fa lui.
+// Tornare indietro di un passo, dividere una comanda in due, annullarla:
+// si rimette mano al lavoro di chi sta allo shaker, e lo fa lui.
+// CORREGGERE LE RIGHE NON È PIÙ QUI (REQ-STAFF-020, 30/10/2026): togliere un
+// drink o cambiarne la quantità in una comanda già mandata lo fa anche la
+// sala, coi limiti del banco — Flavio: «devono avere la possibilità di
+// modificare qualsiasi ordine».
 export function puoGestireComande(role) {
   return !isSala(role)
 }

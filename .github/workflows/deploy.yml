@@ -16,6 +16,11 @@ on:
         description: 'Progetto Firebase di destinazione'
         required: true
         type: string
+      cliente:
+        description: "Per chi si compila: la cartella clienti/<slug>/ (REQ-VENUE-001). `tana` per i progetti della Tana"
+        required: false
+        type: string
+        default: tana
       versione:
         description: 'Etichetta della versione pubblicata (il tag)'
         required: false
@@ -86,11 +91,17 @@ jobs:
         env:
           # Su Firebase Hosting il sito è servito dalla radice.
           BASE_PATH: /
+          # Il locale per cui si compila (clienti/<slug>/venue.json).
+          CLIENTE: ${{ inputs.cliente }}
           # Ambiente: abilita DevTools + nastro "TEST" fuori dalla produzione.
           VITE_APP_ENV: ${{ inputs.ambiente == 'production' && 'production' || 'test' }}
           # Google Analytics measurement ID per ambiente (pubblico, non segreto).
           # Attivato in app solo dietro consenso cookie (categoria statistiche).
           VITE_FIREBASE_MEASUREMENT_ID: ${{ inputs.ambiente == 'production' && 'G-3Y4TH7G346' || 'G-FX9GGRW06Y' }}
+          # La regia a cui l'app si presenta (REQ-FLOTTA-026): quella di
+          # produzione per la produzione, quella di test per il test. L'app
+          # accetta solo questi due nomi.
+          VITE_REGIA_PROGETTO: ${{ inputs.ambiente == 'production' && 'drink-regia' || 'drink-regia-test' }}
           VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
           VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
           VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
@@ -103,6 +114,11 @@ jobs:
           VITE_RECAPTCHA_SITE_KEY: ${{ secrets.VITE_RECAPTCHA_SITE_KEY }}
         run: npm run build
 
+      # Prima di pubblicare: nel pacchetto del locale non c'è la demo
+      # (REQ-FLOTTA-019). Se ci fosse, il deploy si ferma qui.
+      - name: La build non contiene la demo
+        run: node scripts/controlla-build-senza-demo.mjs dist
+
       # Deploy delle Functions (richiede la Cloud Build API, attiva col piano Blaze).
       - name: Deploy Firebase Functions
         env:
@@ -112,6 +128,23 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json \
             npx firebase-tools deploy --only functions \
             --project "$TARGET_PROJECT" --force
+          rm /tmp/sa.json
+
+      # LA LICENZA PRIMA DELLE REGOLE (REQ-LIC-009). Con le regole che non
+      # partono senza licenza valida, senza `licenza/attuale` un locale non
+      # scrive niente. Il ponte per la Tana finché la regia di produzione
+      # non la prende in carico: se il documento manca lo si
+      # crea da clienti/<cliente>/licenza-iniziale.json, se c'è non si
+      # tocca. Se non riesce il deploy si ferma QUI, prima delle regole che
+      # fermerebbero il locale. Serve roles/datastore.user sul service
+      # account (scripts/licenza-iniziale.mjs).
+      - name: Licenza dell'installazione, solo se manca
+        env:
+          SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          echo "$SA_JSON" > /tmp/sa.json
+          GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json \
+            node scripts/licenza-iniziale.mjs --project "$TARGET_PROJECT" --cliente "${{ inputs.cliente }}"
           rm /tmp/sa.json
 
       # Deploy di regole Firestore (+ indici da firestore.indexes.json) e

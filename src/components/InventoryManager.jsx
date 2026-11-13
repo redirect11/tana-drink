@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
+import { prodottoDaMagazzino, mettiProdottoInArrivo } from '../lib/prodottoDaMagazzino.js'
 import {
   fetchInventoryItems,
   fetchDrinks,
+  fetchCategories,
   createInventoryItem,
   updateInventoryItem,
   deleteInventoryItem,
   loadStock,
+  resoAlFornitore,
   adjustStock,
   travasaMagazzinoAPezzi,
   fetchStockMovements,
@@ -75,7 +78,8 @@ import {
 } from '../lib/inventory.js'
 import { cambioAMano, cambioDaAvvisare } from '../lib/statoAssortimento.js'
 import { formatPrice } from '../lib/orderStatus.js'
-import { parseSupplierList } from '../lib/warehouse.js'
+import { parseSupplierList, qtyValue } from '../lib/warehouse.js'
+import GruppoChip from './GruppoChip.jsx'
 import MacroCategoryManager from './MacroCategoryManager.jsx'
 import { useChiudiConIndietro } from '../lib/schermate.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
@@ -94,12 +98,17 @@ import { ASSORTIMENTO_NOME, toggleVoce } from '../lib/assortimento.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import { useSottosezioni } from '../lib/sottosezioni.js'
 import { usePaginaPiena } from '../lib/paginaPiena.js'
+import Icona, { ConIcona } from './Icona.jsx'
+import { useTestoConIcona } from '../lib/temaIcone.js'
+import { conEmoji } from '../lib/icone.js'
+import AiutoCampo from './AiutoCampo.jsx'
+import { servizioAttivo } from '../lib/limiti.js'
 
 const STATUS_ITEM = [
   { value: 'assortimento', label: 'In assortimento' },
-  { value: 'linea', label: '🍾 In linea' },
-  { value: 'premium', label: '👑 Premium' },
-  { value: 'out', label: '🚫 Fuori assortimento' },
+  { value: 'linea', label: 'In linea', icona: 'in-linea' },
+  { value: 'premium', label: 'Premium', icona: 'premium' },
+  { value: 'out', label: 'Fuori assortimento', icona: 'vietato' },
 ]
 
 const STATUS_LABEL = { ok: '', low: 'in esaurimento', empty: 'esaurito' }
@@ -120,16 +129,16 @@ const GESTIONE_LABEL = { pz: 'pezzi', g: 'peso', ml: 'liquidi', U: 'unità gener
 // scorrendo la lista, senza doverlo aprire.
 function SegnoSchedaDaCompletare({ item }) {
   if (!item?.scheda_da_completare) return null
-  return <span className="badge-segno" title="Scheda da completare">✏️</span>
+  return <span className="badge-segno" title="Scheda da completare"><Icona nome="modifica" gruppo="tasti" /></span>
 }
 
 function SegnoAssortimento({ item }) {
   const a = assortimentoDi(item)
   if (a === 'out') return <span className="badge-empty">OUT</span>
-  if (a === 'premium') return <span className="badge-segno" title="Premium">👑</span>
+  if (a === 'premium') return <span className="badge-segno" title="Premium"><Icona nome="premium" gruppo="tasti" /></span>
   // La bottiglia: ora è libera, perché la colonna scorte non la usa più per
   // contare le bottiglie rimaste (scrive "3 bott.").
-  if (a === 'linea') return <span className="badge-segno" title="In linea">🍾</span>
+  if (a === 'linea') return <span className="badge-segno" title="In linea"><Icona nome="in-linea" gruppo="tasti" /></span>
   return null
 }
 
@@ -187,19 +196,19 @@ function UnitPrice({ item, markup }) {
 // ma si vede solo dove il modulo lavora. L'elenco non si sdoppia apposta —
 // l'ordine delle sezioni è uno solo.
 const INV_VIEWS = [
-  ['prodotti', '📦', 'Prodotti'],
+  ['prodotti', 'magazzino', 'Prodotti'],
   // «Inventario», non «Conta»: Daniele, 17/09/2026, «conta è fuorviante».
   // L'id resta `conta` perché è la chiave del modulo sui documenti veri.
-  ['conta', '📋', 'Inventario'],
+  ['conta', 'elenco', 'Inventario'],
   // Gli inventari chiusi (REQ-MAG-052): si accende con l'inventario
   // (lib/licenza.js, `sezioni`).
-  ['storico', '🗄️', 'Storico inventari'],
-  ['categorie', '🏷️', 'Categorie'],
-  ['macro', '🗂️', 'Macro-categorie'],
-  ['movimenti', '📜', 'Movimenti'],
+  ['storico', 'archivio', 'Storico inventari'],
+  ['categorie', 'categorie', 'Categorie'],
+  ['macro', 'raggruppa', 'Macro-categorie'],
+  ['movimenti', 'movimenti', 'Movimenti'],
   // La pagina di prova (REQ-MAG-050): solo fuori dalla produzione e solo
   // se accesa, vedi lib/prova.js.
-  ['controllo', '🧪', 'Controllo (prova)'],
+  ['controllo', 'prova', 'Controllo (prova)'],
 ]
 
 // LE SEZIONI DEL MAGAZZINO STANNO NELLA BARRA IN ALTO. Le ho provate in due
@@ -207,7 +216,9 @@ const INV_VIEWS = [
 // delle categorie), in orizzontale una riga. Sono una scelta che si fa ogni
 // tanto e non merita spazio fisso: ora è il TITOLO della pagina a diventare
 // il comando, e sul telefono si apre il foglio dal basso.
-export default function InventoryManager() {
+// `onApriMenu`: come si va al Menù, lo decide la pagina (REQ-AI-002, «Crea
+// il prodotto della cassa»). Senza, il tasto non c'è.
+export default function InventoryManager({ onApriMenu = null }) {
   const [sezione, setSezione] = useState('prodotti')
   usePaginaPiena()
   // ALCUNE SEZIONI SONO FUNZIONI PREMIUM (lib/licenza.js): l'inventario e il
@@ -237,7 +248,7 @@ export default function InventoryManager() {
   )
   return (
     <div className="pagina-inventario">
-      {view === 'prodotti' && <ProductsPanel />}
+      {view === 'prodotti' && <ProductsPanel onApriMenu={onApriMenu} />}
       {view === 'conta' && <StockCountPanel />}
       {view === 'storico' && <StoricoInventari />}
       {view === 'categorie' && <CategoriePanel />}
@@ -311,7 +322,7 @@ function MovimentiPanel() {
       {movements.map((m) => (
         <div className="row between" key={m.id}>
           <span className="muted small">
-            {m.type === 'load' ? '⬆' : '⬇'} {m.item_name} · {m.reason}
+            <Icona nome={m.type === 'load' ? 'su' : 'giu'} gruppo="tasti" /> {m.item_name} · {m.reason}
           </span>
           <span className="muted small">
             {m.type === 'load' ? '+' : '−'}
@@ -328,7 +339,7 @@ function MovimentiPanel() {
 // ci resta `SupplierManager`, che è il modulo vero e non ha altri clienti:
 // spostare seicento righe per una voce di menu avrebbe reso illeggibile il
 // diff di un trasloco che di suo è una riga.
-export function FornitoriPanel() {
+export function FornitoriPanel({ conListino = true }) {
   const [suppliers, setSuppliers] = useState([])
   // IL LISTINO È IL DETTAGLIO DELLA RIGA, non una sottosezione in più
   // (docs/navigazione.md): si apre da un fornitore, si chiude e si torna
@@ -344,7 +355,7 @@ export function FornitoriPanel() {
     return <ListinoFornitore fornitore={aperto} onIndietro={() => setListinoPer(null)} />
   }
   return (
-    <SupplierManager suppliers={suppliers} onChange={ricarica} onListino={setListinoPer} />
+    <SupplierManager suppliers={suppliers} onChange={ricarica} onListino={conListino ? setListinoPer : null} />
   )
 }
 
@@ -390,7 +401,8 @@ function PrevisioneCard({ item, impegnato }) {
   )
 }
 
-function ProductsPanel() {
+function ProductsPanel({ onApriMenu = null }) {
+  const testoConIcona = useTestoConIcona()
   const [items, setItems] = useState([])
   const [categories, setCategories] = useState([])
   const [suppliers, setSuppliers] = useState([])
@@ -401,6 +413,14 @@ function ProductsPanel() {
   const [error, setError] = useState(null)
 
   const [editing, setEditing] = useState(null) // null | 'new' | item
+  // REQ-AI-002: la scheda del prodotto della cassa, già collegata a questa
+  // bottiglia, si apre nel Menù. Le categorie della cassa si leggono qui:
+  // è un gesto del gestionale, non del banco.
+  async function creaProdottoCassa(item) {
+    const categorieCassa = await fetchCategories().catch(() => [])
+    mettiProdottoInArrivo(prodottoDaMagazzino(item, { categorieMagazzino: categories, categorieCassa }))
+    onApriMenu()
+  }
   // Lo stato cambiato a mano su un prodotto che sta in un ordine aperto:
   // { payload, scelte, ordini } finché non si risponde alla domanda.
   const [avvisaOrdine, setAvvisaOrdine] = useState(null)
@@ -441,7 +461,7 @@ function ProductsPanel() {
   // Con gli stati del servizio un conto pagato ma non servito è ancora
   // aperto, e i suoi ingredienti sono ancora in ballo; senza, il pagamento
   // chiude e il magazzino è già stato scalato.
-  const [workflowOn, setWorkflowOn] = useState(DEFAULT_SETTINGS.workflow_enabled !== false)
+  const [workflowOn, setWorkflowOn] = useState(servizioAttivo(DEFAULT_SETTINGS))
   const [ordiniVivi, setOrdiniVivi] = useState([])
   const [drinksById, setDrinksById] = useState({})
   useEffect(() => subscribeActiveOrders(setOrdiniVivi, () => {}), [])
@@ -473,7 +493,7 @@ function ProductsPanel() {
   useEffect(
     () =>
       subscribeSettings((s) => {
-        setWorkflowOn(s.workflow_enabled !== false)
+        setWorkflowOn(servizioAttivo(s))
         setMarkup(s.price_markup)
         setPurchaseVat(s.purchase_vat ?? DEFAULT_SETTINGS.purchase_vat)
       }, () => {}),
@@ -584,7 +604,7 @@ function ProductsPanel() {
           dire annullato (DESIGN.md). */}
       {it.scheda_da_completare && (
         <p className="badge-low" style={{ display: 'block', margin: '0 0 8px' }}>
-          ✏️ Scheda da completare: manca {mancaNellaScheda(it).join(', ')}.
+          <Icona nome="modifica" gruppo="segnali" /> Scheda da completare: manca {mancaNellaScheda(it).join(', ')}.
           {!it.category_id &&
             ' Finché manca la categoria, quello che si spende per questo prodotto resta fuori dai conti degli acquisti.'}
         </p>
@@ -660,7 +680,7 @@ function ProductsPanel() {
         {it.cost != null && (
           <>
             <div className="inv-info-row">
-              <dt>💶 Costo</dt>
+              <dt><Icona nome="contanti" gruppo="tasti" /> Costo</dt>
               <dd>
                 {formatPrice(it.cost)}/pz <span className="muted">(+IVA {formatPrice(costWithVat(it.cost, it.vat))})</span>
                 {' · valore '}<strong>{formatPrice(stockValue(it))}</strong>
@@ -688,13 +708,13 @@ function ProductsPanel() {
           {bloccato ? (
             <p className="muted small" style={{ margin: '8px 0 0' }}>
               {daSistemare.has(it.id)
-                ? '✏️ Questo prodotto va sistemato: aprilo e scrivi a quanto corrisponde un pezzo.'
-                : '🔒 Carico e conta tornano appena il magazzino è aggiornato.'}
+                ? <ConIcona nome="modifica" testo="Questo prodotto va sistemato: aprilo e scrivi a quanto corrisponde un pezzo." gruppo="segnali" />
+                : <ConIcona nome="licenza" testo="Carico e conta tornano appena il magazzino è aggiornato." gruppo="segnali" />}
             </p>
           ) : (
             <>
               <button className="btn small block" style={{ marginTop: 8 }} onClick={() => setCaricoFor(it.id)}>
-                ⬆ Carico
+                <Icona nome="importa" gruppo="tasti" /> Carico
               </button>
               <button
                 className="btn secondary small block"
@@ -715,12 +735,12 @@ function ProductsPanel() {
           {/* LA MOVIMENTAZIONE DEL PRODOTTO (REQ-MAG-048): si guarda, non si
               tocca niente — anche col magazzino bloccato. */}
           <button className="btn ghost small block" style={{ marginTop: 6 }} onClick={() => setMovimentiDi(it)}>
-            📜 Movimenti
+            <Icona nome="movimenti" gruppo="tasti" /> Movimenti
           </button>
           <div className="inv-azioni" style={{ marginTop: 6 }}>
-            <button className="btn ghost small" disabled={!modificabile(it)} onClick={() => setEditing(it)}>✏️ Modifica</button>
+            <button className="btn ghost small" disabled={!modificabile(it)} onClick={() => setEditing(it)}><Icona nome="modifica" gruppo="tasti" /> Modifica</button>
             <button className="btn ghost small" disabled={bloccato} onClick={() => duplica(it)}>⧉ Duplica</button>
-            <button className="btn ghost small" disabled={bloccato} onClick={() => remove(it)}>🗑 Elimina</button>
+            <button className="btn ghost small" disabled={bloccato} onClick={() => remove(it)}><Icona nome="elimina" gruppo="tasti" /> Elimina</button>
           </div>
         </>
       )}
@@ -876,14 +896,16 @@ function ProductsPanel() {
   // ripremeva, e ogni pressione accodava un carico. Adesso la giacenza si
   // compone in memoria, la riga si aggiorna sul posto e la finestrella si
   // chiude nell'istante del tocco: niente `await`, niente rilettura.
-  function doCarico(item, { count, unit, newCost }) {
+  function doCarico(item, { count, unit, newCost, reso = false }) {
     setError(null)
     try {
       // Quello che si scrive è nell'unità che si ha in mano; in giacenza va
       // in pezzi, con lo stesso conto che fa lo scarico. Gli articoli
       // arrivano qui sempre nella forma nuova (REQ-MAG-018, la lettura
       // tollerante sta in api.js), quindi non c'è nessun altro caso.
-      let dopo = count > 0 ? loadStock(item, qtyInStockUnit(count, unit, item)) : item
+      // Il reso (REQ-MAG-053) è lo stesso gesto nel verso opposto.
+      const muovi = reso ? resoAlFornitore : loadStock
+      let dopo = count > 0 ? muovi(item, qtyInStockUnit(count, unit, item)) : item
       if (newCost != null) {
         dopo = { ...dopo, cost: newCost }
         // Prezzo aggiornato al carico (il fornitore ha cambiato tariffa). Non
@@ -961,7 +983,6 @@ function ProductsPanel() {
             }}
           />
         )}
-        {movimentiDi && <MovimentiProdotto item={movimentiDi} onClose={() => setMovimentiDi(null)} />}
         <ItemForm
           initial={editing === 'new' ? null : editing}
           categories={categories}
@@ -971,6 +992,7 @@ function ProductsPanel() {
           onCancel={() => setEditing(null)}
           onSave={handleSave}
           onCreateSupplier={creaFornitoreAlVolo}
+          onCreaProdottoCassa={onApriMenu ? creaProdottoCassa : null}
         />
       </>
     )
@@ -988,10 +1010,10 @@ function ProductsPanel() {
     .filter(Boolean)
   const riassuntoFiltri =
     sceltiOra.length === 0
-      ? '⚗️ Filtra'
+      ? conEmoji('filtra', 'Filtra')
       : sceltiOra.length === 1
-        ? `⚗️ ${sceltiOra[0]}`
-        : `⚗️ ${sceltiOra.length} filtri`
+        ? conEmoji('filtra', sceltiOra[0])
+        : conEmoji('filtra', `${sceltiOra.length} filtri`)
 
   return (
     <div className="inv-panel">
@@ -1016,7 +1038,7 @@ function ProductsPanel() {
         type="search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="🔍 Cerca prodotto…"
+        placeholder={testoConIcona('cerca', 'Cerca prodotto…')}
       />
 
       <div className="inv-testa">
@@ -1025,7 +1047,9 @@ function ProductsPanel() {
           attivo={statusFilter !== 'all' || assortimenti.length > 0}
           riassunto={riassuntoFiltri}
         >
-          <div className="tendina-titolo">Come stanno a scorta</div>
+          {/* Niente titolo sopra le voci della scorta: «Tutti, In scorta, In
+              esaurimento, Esauriti» si spiegano da sole, e la scritta che
+              c'era andava tolta (l'utente, 29/10/2026). */}
           {[
             ['all', 'Tutti', summary.total],
             // «In scorta» prima delle altre due: è la domanda che ci si fa
@@ -1066,8 +1090,8 @@ function ProductsPanel() {
             attivo={supplierFilter !== 'all'}
             riassunto={
               supplierFilter === 'all'
-                ? '🏭 Fornitore'
-                : `🏭 ${suppliers.find((x) => x.id === supplierFilter)?.name || 'Fornitore'}`
+                ? conEmoji('fornitori', 'Fornitore')
+                : conEmoji('fornitori', suppliers.find((x) => x.id === supplierFilter)?.name || 'Fornitore')
             }
           >
             {(chiudi) => (
@@ -1103,7 +1127,7 @@ function ProductsPanel() {
         {/* Un numero senza nome non vuol dire niente: si legge «6.823,82 €»
             e ci si chiede di cosa. */}
         <span className="inv-valore" title="Somma del costo di tutto quello che c'è in magazzino">
-          💶 <span className="inv-valore-eti">Valore magazzino</span>{' '}
+          <Icona nome="contanti" gruppo="tasti" /> <span className="inv-valore-eti">Valore magazzino</span>{' '}
           <strong>{formatPrice(totalValue)}</strong>
         </span>
 
@@ -1113,8 +1137,8 @@ function ProductsPanel() {
             È una scelta che si fa una volta e resta. */}
         <div className="inv-vista" role="group" aria-label="Come mostrare i prodotti">
           {[
-            ['card', '▦', 'A card'],
-            ['lista', '☰', 'A lista'],
+            ['card', 'griglia', 'A card'],
+            ['lista', 'lista', 'A lista'],
           ].map(([k, icona, titolo]) => (
             <button
               key={k}
@@ -1125,7 +1149,7 @@ function ProductsPanel() {
               aria-label={titolo}
               aria-pressed={invView === k}
             >
-              {icona}
+              <Icona nome={icona} gruppo="tasti" />
             </button>
           ))}
         </div>
@@ -1329,6 +1353,12 @@ function ProductsPanel() {
 
       </CategoryRail>
 
+      {/* QUI, accanto all'elenco da cui la si apre (BUG-128). Stava nel ramo
+          della scheda in modifica, che col tasto «📜 Movimenti» delle azioni
+          di una riga non è mai aperta: il tasto cambiava lo stato e la
+          finestra non c'era. */}
+      {movimentiDi && <MovimentiProdotto item={movimentiDi} onClose={() => setMovimentiDi(null)} />}
+
     </div>
   )
 }
@@ -1388,8 +1418,8 @@ function InvCategoryManager({ categories, onChange }) {
           <span className="row" style={{ gap: 4 }}>
             <button className="btn ghost small" onClick={() => move(idx, -1)} disabled={idx === 0}>↑</button>
             <button className="btn ghost small" onClick={() => move(idx, 1)} disabled={idx === categories.length - 1}>↓</button>
-            <button className="btn ghost small" onClick={() => rename(c)}>✏️</button>
-            <button className="btn ghost small" onClick={() => remove(c)}>🗑</button>
+            <button className="btn ghost small" onClick={() => rename(c)} aria-label="Rinomina" title="Rinomina"><Icona nome="modifica" gruppo="tasti" /></button>
+            <button className="btn ghost small" onClick={() => remove(c)} aria-label="Elimina" title="Elimina"><Icona nome="elimina" gruppo="tasti" /></button>
           </span>
         </div>
       ))}
@@ -1507,7 +1537,7 @@ function SupplierManager({ suppliers, onChange, onListino = null }) {
         style={{ marginTop: 8 }}
         onClick={() => setShowImport((v) => !v)}
       >
-        📥 Importa elenco (incolla, uno per riga)
+        <Icona nome="acquisti" gruppo="tasti" /> Importa elenco (incolla, uno per riga)
       </button>
       {showImport && (
         <div style={{ marginTop: 6 }}>
@@ -1547,12 +1577,12 @@ function SupplierManager({ suppliers, onChange, onListino = null }) {
                   aria-label={`Listino di ${s.name}`}
                   onClick={() => onListino(s.id)}
                 >
-                  📋 Listino
+                  <Icona nome="elenco" gruppo="tasti" /> Listino
                 </button>
               )}
-              <button className="btn ghost small" title="Email per gli ordini" onClick={() => setEmail(s)}>📧</button>
-              <button className="btn ghost small" onClick={() => rename(s)}>✏️</button>
-              <button className="btn ghost small" onClick={() => remove(s)}>🗑</button>
+              <button className="btn ghost small" title="Email per gli ordini" onClick={() => setEmail(s)}><Icona nome="email" gruppo="tasti" /></button>
+              <button className="btn ghost small" onClick={() => rename(s)} aria-label="Rinomina" title="Rinomina"><Icona nome="modifica" gruppo="tasti" /></button>
+              <button className="btn ghost small" onClick={() => remove(s)} aria-label="Elimina" title="Elimina"><Icona nome="elimina" gruppo="tasti" /></button>
             </span>
           </div>
           {tavolozzaPer === s.id && (
@@ -1678,7 +1708,7 @@ function PannelloTravaso({ travaso, passo, avanzamento, esito, onProva, onChiudi
           {daSistemare.length > 0 ? (
             <>
               <h4 style={{ margin: '14px 0 2px' }}>
-                ⚠️ Da sistemare prima ({daSistemare.length})
+                <Icona nome="avviso" gruppo="segnali" /> Da sistemare prima ({daSistemare.length})
               </h4>
               <p className="small" style={{ margin: '0 0 6px' }}>
                 Di questi non si sa a quanto corrisponde un pezzo, e nessuno
@@ -1696,7 +1726,7 @@ function PannelloTravaso({ travaso, passo, avanzamento, esito, onProva, onChiudi
           ) : (
             <>
               <h4 style={{ margin: '14px 0 2px' }}>
-                ✅ Si aggiornano {daMigrare.length} prodotti
+                <Icona nome="fatto" gruppo="segnali" /> Si aggiornano {daMigrare.length} prodotti
               </h4>
               <p className="small" style={{ margin: '0 0 6px' }}>
                 Le giacenze passano a pezzi: quello che oggi si legge sullo
@@ -1760,7 +1790,7 @@ function PannelloTravaso({ travaso, passo, avanzamento, esito, onProva, onChiudi
 
       {passo === 'fatto' && (
         <RiquadroTravaso titolo="Aggiornamento del magazzino">
-          <h3 style={{ marginTop: 0 }}>✅ Magazzino aggiornato</h3>
+          <h3 style={{ marginTop: 0 }}><Icona nome="fatto" gruppo="segnali" /> Magazzino aggiornato</h3>
           <p className="small" style={{ margin: 0 }}>
             {esito?.travasati ?? avanzamento.totale} prodotti si contano a
             pezzi. Carico, conta e prodotti nuovi sono di nuovo a posto.
@@ -1861,10 +1891,10 @@ function RettificaForm({ item, onCancel, onConfirm }) {
           <span className="chip" style={{ cursor: 'default' }}>{unit}</span>
         )}
       </div>
-      <p className="muted small" style={{ margin: '4px 0 0' }}>
-        Giacenza effettiva rilevata: sostituisce quella registrata, e la
-        differenza viene registrata come rettifica.
-      </p>
+      <AiutoCampo style={{ margin: '4px 0 0' }}>
+        Giacenza effettiva rilevata. Sostituisce quella a sistema; la
+        differenza è contabilizzata come rettifica.
+      </AiutoCampo>
       <div className="grid-2" style={{ marginTop: 10 }}>
         <button className="btn ghost small" onClick={onCancel}>Annulla</button>
         <button className="btn small" onClick={confirm}>Salva contenuto</button>
@@ -1896,6 +1926,13 @@ function CaricoForm({ item, onCancel, onConfirm }) {
   const [colloTot, setColloTot] = useState('')
   // Quanti cartoni si stanno caricando: i pezzi li riempie lui.
   const [cartoni, setCartoni] = useState('')
+  // IL RESO AL FORNITORE (REQ-MAG-053): il carico in negativo, chiesto da
+  // Flavio il 04/11/2026 per la bottiglia che il fornitore si è ripreso.
+  // Sta qui e non in un tasto suo perché è lo stesso gesto rovesciato —
+  // quanti pezzi, di che prodotto — e il magazzino ha già due tasti per riga.
+  // Col reso spariscono colli e prezzo: si rende quello che c'è, al costo
+  // che ha.
+  const [reso, setReso] = useState(false)
   // IL COLLO E' UN'ECCEZIONE, NON LA REGOLA. Chi carica due bottiglie prese
   // dal fornitore sotto casa non ha nessun cartone da dichiarare, e si
   // trovava tre campi in piu' da capire. Sta dietro un interruttore: da
@@ -1905,7 +1942,7 @@ function CaricoForm({ item, onCancel, onConfirm }) {
   // A COLLI LA QUANTITÀ NON È UNO STATO: è cartoni × pezzi per collo, e basta.
   // Quando la si teneva scritta a parte bisognava ricordarsi di rifarla a ogni
   // campo toccato — e chi si dimenticava caricava il numero di prima.
-  const quantita = aColli ? String(num(cartoni) * num(perCollo) || '') : count
+  const quantita = aColli && !reso ? String(num(cartoni) * num(perCollo) || '') : count
 
   const onUnit = (v) => {
     setUnitCost(v)
@@ -1930,46 +1967,73 @@ function CaricoForm({ item, onCancel, onConfirm }) {
   // A colli si contano PEZZI, sempre: un cartone ha dentro pezzi, non
   // centilitri. Cambiare unità mentre il conto lo fa il collo darebbe una
   // quantità che non torna con quello che è arrivato.
-  const unitEffettiva = aColli ? 'pz' : unit
+  const unitEffettiva = aColli && !reso ? 'pz' : unit
   const etichettaUnita = UNIT_LABEL[String(unitEffettiva).toLowerCase()] || unitEffettiva
 
   function confirm() {
     const n = num(quantita)
+    if (reso) {
+      if (n > 0) onConfirm({ count: n, unit: unitEffettiva, newCost: null, reso: true })
+      return
+    }
     const newCost = unitCost !== '' && unitN >= 0 && r2(unitN) !== Number(item.cost) ? r2(unitN) : null
     if (!(n > 0) && newCost == null) return
     onConfirm({ count: n, unit: unitEffettiva, newCost })
   }
 
+  // Quanto vale quello che esce col reso: è quanto si toglie dagli acquisti.
+  const pezziResi = reso && num(quantita) > 0 ? qtyInStockUnit(num(quantita), unitEffettiva, item) : 0
+
   return (
     <div style={{ marginTop: 8 }}>
-      {/* IL COLLO STA SOPRA, perché è da lì che si parte: si guarda il
-          cartone, si scrive quanti pezzi ha e quanti ne sono arrivati, e la
-          quantità si riempie da sé. Prima i suoi campi stavano in fondo,
-          dentro il riquadro del prezzo, e i pezzi andavano scritti a mano
-          sperando che il conto tornasse. */}
-      <label className="row between" style={{ alignItems: 'center', gap: 8 }}>
-        <span>
-          Carico a colli
-          <span className="muted small"> — cartoni o casse da più pezzi</span>
-        </span>
-        <input
-          type="checkbox"
-          className="toggle"
-          checked={aColli}
-          onChange={(e) => {
-            setAColli(e.target.checked)
-            // Tornando a mano il numero calcolato RESTA scritto, e diventa
-            // modificabile: farlo sparire sotto le dita vorrebbe dire
-            // ricontare i pezzi già contati.
-            if (!e.target.checked) {
-              setCount(quantita)
-              setCartoni('')
-            }
-          }}
-        />
-      </label>
+      <GruppoChip
+        etichetta="Verso del movimento"
+        opzioni={[
+          { id: false, label: conEmoji('su', 'Carico') },
+          { id: true, label: conEmoji('giu', 'Reso al fornitore') },
+        ]}
+        valore={reso}
+        scegli={setReso}
+        style={{ marginBottom: 8 }}
+      />
+      {reso && (
+        <p className="muted small" style={{ margin: '0 0 8px' }}>
+          Merce restituita al fornitore: esce dalla giacenza e si sottrae dagli acquisti del periodo, al costo del
+          prodotto. Non viene conteggiata come consumo.
+        </p>
+      )}
+      {!reso && (
+        <>
+          {/* IL COLLO STA SOPRA, perché è da lì che si parte: si guarda il
+              cartone, si scrive quanti pezzi ha e quanti ne sono arrivati, e la
+              quantità si riempie da sé. Prima i suoi campi stavano in fondo,
+              dentro il riquadro del prezzo, e i pezzi andavano scritti a mano
+              sperando che il conto tornasse. */}
+          <label className="row between" style={{ alignItems: 'center', gap: 8 }}>
+            <span>
+              Carico a colli
+              <span className="muted small"> — cartoni o casse da più pezzi</span>
+            </span>
+            <input
+              type="checkbox"
+              className="toggle"
+              checked={aColli}
+              onChange={(e) => {
+                setAColli(e.target.checked)
+                // Tornando a mano il numero calcolato RESTA scritto, e diventa
+                // modificabile: farlo sparire sotto le dita vorrebbe dire
+                // ricontare i pezzi già contati.
+                if (!e.target.checked) {
+                  setCount(quantita)
+                  setCartoni('')
+                }
+              }}
+            />
+          </label>
+        </>
+      )}
 
-      {aColli && (
+      {aColli && !reso && (
         <div className="card" style={{ marginTop: 8, padding: 10 }}>
           <div className="grid-2">
             <div>
@@ -2018,7 +2082,7 @@ function CaricoForm({ item, onCancel, onConfirm }) {
       {/* A colli la quantità la fa il conto: si legge, non si scrive.
           Cambiarla a mano vorrebbe dire caricare un numero che non torna
           con quello che è arrivato. */}
-      <label htmlFor="cf-pezzi" style={{ marginTop: 8 }}>Quantità caricata</label>
+      <label htmlFor="cf-pezzi" style={{ marginTop: 8 }}>{reso ? 'Quantità resa' : 'Quantità caricata'}</label>
       <div className="row" style={{ gap: 6 }}>
         <input
           id="cf-pezzi"
@@ -2028,11 +2092,11 @@ function CaricoForm({ item, onCancel, onConfirm }) {
           className="grow"
           value={quantita}
           onChange={(e) => setCount(e.target.value)}
-          readOnly={aColli}
-          aria-readonly={aColli}
+          readOnly={aColli && !reso}
+          aria-readonly={aColli && !reso}
           autoFocus={!aColli}
         />
-        {unita.length > 1 && !aColli ? (
+        {unita.length > 1 && !(aColli && !reso) ? (
           <select
             value={unit}
             onChange={(e) => setUnit(e.target.value)}
@@ -2050,7 +2114,18 @@ function CaricoForm({ item, onCancel, onConfirm }) {
       {/* Quanto entra davvero in giacenza, quando non si carica a pezzi:
           la merce a peso si conta in pezzi per stima, e il numero va visto
           PRIMA di confermare. */}
-      {unitEffettiva !== 'pz' && num(quantita) > 0 && (
+      {reso && pezziResi > 0 && (
+        <div className="muted small" style={{ marginTop: 4 }}>
+          Escono <strong>{formatPezzi(pezziResi)} pz</strong>
+          {item.cost != null && (
+            <>
+              {' · acquisti −'}
+              <strong>{formatPrice(qtyValue(pezziResi, item, { gross: false }))}</strong> netti
+            </>
+          )}
+        </div>
+      )}
+      {!reso && unitEffettiva !== 'pz' && num(quantita) > 0 && (
         <div className="muted small" style={{ marginTop: 4 }}>
           In magazzino entrano{' '}
           <strong>{formatPezzi(qtyInStockUnit(num(quantita), unitEffettiva, item))} pz</strong>
@@ -2059,21 +2134,23 @@ function CaricoForm({ item, onCancel, onConfirm }) {
       )}
 
       {/* Prezzo: unitario ↔ totale collo (per confrontare col fornitore) */}
-      <div className="card" style={{ marginTop: 10, padding: 10 }}>
-        <div className="muted small">💶 Prezzo d’acquisto — da aggiornare solo se il listino è variato</div>
-        <label htmlFor="cf-unit" style={{ marginTop: 6 }}>Costo unitario (€, netto)</label>
-        <input id="cf-unit" type="number" step="any" min="0" value={unitCost} onChange={(e) => onUnit(e.target.value)} />
-        {unitN > 0 && (
-          <div className="muted small" style={{ marginTop: 4 }}>
-            Unitario +IVA {formatPrice(costWithVat(unitN, item.vat))}
-            {aColli && perN > 0 && ` · Totale collo +IVA ${formatPrice(costWithVat(unitN * perN, item.vat))}`}
-          </div>
-        )}
-      </div>
+      {!reso && (
+        <div className="card" style={{ marginTop: 10, padding: 10 }}>
+          <div className="muted small"><Icona nome="contanti" gruppo="tasti" /> Prezzo d’acquisto — da aggiornare solo se il listino è variato</div>
+          <label htmlFor="cf-unit" style={{ marginTop: 6 }}>Costo unitario (€, netto)</label>
+          <input id="cf-unit" type="number" step="any" min="0" value={unitCost} onChange={(e) => onUnit(e.target.value)} />
+          {unitN > 0 && (
+            <div className="muted small" style={{ marginTop: 4 }}>
+              Unitario +IVA {formatPrice(costWithVat(unitN, item.vat))}
+              {aColli && perN > 0 && ` · Totale collo +IVA ${formatPrice(costWithVat(unitN * perN, item.vat))}`}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid-2" style={{ marginTop: 10 }}>
         <button className="btn ghost small" onClick={onCancel}>Annulla</button>
-        <button className="btn small" onClick={confirm}>Conferma carico</button>
+        <button className="btn small" onClick={confirm}>{reso ? 'Conferma reso' : 'Conferma carico'}</button>
       </div>
     </div>
   )
@@ -2211,7 +2288,8 @@ function AiutoPezzo({ onClose }) {
   )
 }
 
-function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 22, onCancel, onSave, onCreateSupplier }) {
+function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 22, onCancel, onSave, onCreateSupplier, onCreaProdottoCassa = null }) {
+  const testoConIcona = useTestoConIcona()
   const isEdit = !!initial
   // L'articolo arriva SEMPRE nella forma nuova, anche quando sul database è
   // ancora scritto a litri o a «U»: a rimetterlo in riga è la lettura
@@ -2263,6 +2341,7 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
     cost: initial?.cost ?? '',
     vat: initial?.vat ?? defaultVat,
     status: initial?.status ?? 'assortimento',
+    scelta_cliente: initial?.scelta_cliente === true,
     content_size: packIniziale > 0 ? String(fromBaseQty(packIniziale, contUnita)) : '',
     content_unit: contUnita,
     // La soglia si è sempre scritta in quello che si compra: adesso quello
@@ -2346,6 +2425,7 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
         resa_unit: null,
         // La soglia si scrive in pezzi, come la giacenza.
         low_threshold: num(form.low_threshold),
+        scelta_cliente: Boolean(form.scelta_cliente),
       }
       // Il fornitore viaggia a parte perché non è più un campo del
       // prodotto: chi salva ne fa una riga di listino (REQ-MAG-029).
@@ -2419,10 +2499,10 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
       </select>
 
       <label htmlFor="isup">Fornitore</label>
-      <p className="muted small" style={{ marginTop: 0 }}>
-        Il prezzo indicato aggiorna il listino di questo fornitore. I listini
-        degli altri fornitori del prodotto restano invariati.
-      </p>
+      <AiutoCampo style={{ margin: '0 0 4px' }}>
+        Il prezzo indicato aggiorna il listino di questo fornitore; i listini
+        degli altri fornitori restano invariati.
+      </AiutoCampo>
       {nuovoFornitore != null ? (
         <div className="row" style={{ gap: 8 }}>
           <input
@@ -2464,14 +2544,14 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
           {(suppliers || []).map((s) => (
             <option key={s.id} value={s.id}>{s.name}</option>
           ))}
-          {onCreateSupplier && <option value="__new__">➕ Nuovo fornitore…</option>}
+          {onCreateSupplier && <option value="__new__">+ Nuovo fornitore…</option>}
         </select>
       )}
 
       <label htmlFor="istatus">Stato</label>
       <select id="istatus" value={form.status} onChange={set('status')}>
         {STATUS_ITEM.map((s) => (
-          <option key={s.value} value={s.value}>{s.label}</option>
+          <option key={s.value} value={s.value}>{s.icona ? testoConIcona(s.icona, s.label) : s.label}</option>
         ))}
       </select>
 
@@ -2533,16 +2613,16 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
           ))}
         </select>
       </div>
-      <p className="muted small" style={{ margin: '2px 0 8px' }}>
+      <AiutoCampo style={{ margin: '2px 0 8px' }}>
         {contenutoPezzo > 0
-          ? 'Base del costo per unità di contenuto e dello scarico frazionato: 4 cl da un pezzo da 70 cl scaricano 0,057 pz.'
+          ? 'Base del costo per unità di contenuto e dello scarico frazionato (4 cl da un pezzo da 70 cl scaricano 0,057 pz).'
           : 'Senza contenuto il prodotto si dosa solo a pezzi interi e non ha un costo per unità di contenuto.'}
-      </p>
+      </AiutoCampo>
       {/* L'AVVERTENZA ONESTA: chi legge «47 pz» di limoni deve sapere che
           nessuno li ha contati uno per uno. */}
       {aPeso && (
         <p className="muted small" style={{ margin: '-4px 0 8px' }}>
-          ⚖️ Acquistato a peso: la giacenza in pezzi è una <strong>stima</strong>,
+          <Icona nome="bilancio" gruppo="tasti" /> Acquistato a peso: la giacenza in pezzi è una <strong>stima</strong>,
           perché il peso unitario non è costante. Il dato di riferimento resta il
           peso.
         </p>
@@ -2554,7 +2634,7 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
           prima di salvarlo per sempre. */}
       {motivoDaSistemare && (
         <div className="banner" style={{ marginTop: 8 }}>
-          ⚠️ Questo prodotto <strong>blocca l&apos;aggiornamento</strong> del
+          <Icona nome="avviso" gruppo="segnali" /> Questo prodotto <strong>blocca l&apos;aggiornamento</strong> del
           magazzino: {motivoDaSistemare}.
           {daConvertire && (
             <>
@@ -2611,10 +2691,25 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
         onChange={set('low_threshold')}
         placeholder="Scorta minima in pezzi"
       />
-      <p className="muted small" style={{ margin: '2px 0 8px' }}>
-        Scorta minima: al di sotto il prodotto risulta in esaurimento e
-        rientra nel riordino suggerito.
-      </p>
+      <AiutoCampo style={{ margin: '2px 0 8px' }}>
+        Sotto questa soglia il prodotto risulta in esaurimento e rientra nel
+        riordino suggerito.
+      </AiutoCampo>
+
+      {/* REQ-MAG-055 (Daniele, 13/11/2026): il gin o la vodka che il
+          cliente si sceglie da solo, dove la voce del menù lo permette. */}
+      <label className="row" style={{ gap: 8, alignItems: 'center', marginTop: 8 }}>
+        <input
+          type="checkbox"
+          checked={form.scelta_cliente}
+          onChange={(e) => setForm((f) => ({ ...f, scelta_cliente: e.target.checked }))}
+        />
+        <span>Il cliente può sceglierlo dal menù</span>
+      </label>
+      <AiutoCampo style={{ margin: '2px 0 8px' }}>
+        Compare fra le alternative delle voci del menù dei clienti che offrono
+        la scelta della sua categoria, finché c’è giacenza.
+      </AiutoCampo>
 
       {avviso && (
         <div className="banner" role="alert" style={{ marginTop: 8 }}>
@@ -2626,6 +2721,13 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
         <button type="button" className="btn ghost" onClick={onCancel} disabled={saving}>Annulla</button>
         <button type="submit" className="btn" disabled={saving}>{saving ? 'Salvataggio…' : 'Salva'}</button>
       </div>
+      {/* IL PRODOTTO DELLA CASSA DA QUESTA BOTTIGLIA (REQ-AI-002): solo per
+          un prodotto già salvato, perché la ricetta lo collega per id. */}
+      {initial?.id && onCreaProdottoCassa && (
+        <button type="button" className="btn ghost block" style={{ marginTop: 8 }} onClick={() => onCreaProdottoCassa(initial)} disabled={saving}>
+          Crea il prodotto della cassa
+        </button>
+      )}
     </form>
   )
 }

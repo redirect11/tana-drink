@@ -29,7 +29,10 @@ import { impostaContestoDiagnostica, segnala, TIPO } from './diagnosticaStampant
 import { impagatoAperto, numeroComanda, pezziDellaComanda, righeDellaComanda } from './comande.js'
 import { aCapo } from './impagato.js'
 import { battutoDaQui } from './dispositivo.js'
+import { isGestore } from './ruoli.js'
 import { impostazioniRicordate } from './impostazioniLocali.js'
+import { intestazioneScontrino, venueDi, venuePredefinito, righeFiscali, partitaIva } from './venue.js'
+import { rigaMarchio, stampaNelPiano, comandeNelPiano, stampaComandeNelPiano, MESSAGGI_PIANO } from './limiti.js'
 import {
   configStampa,
   immagineCaricata,
@@ -49,6 +52,17 @@ import {
   scontiDelConto,
   scontoTotale,
 } from './pagamento.js'
+import { inAttesa } from './attesaCliente.js'
+
+// LA FIRMA DEL PRODOTTO IN FONDO ALLO SCONTRINO (REQ-LIC-003,
+// `limiti.marchio`): solo se la licenza la chiede, cioè il piano Free. Non
+// è un campo di stampa da spegnere: è una condizione del piano. Senza
+// limiti nella licenza non si stampa niente, e lo scontrino della Tana
+// resta quello di sempre.
+function stampaMarchio(prn, impostazioni) {
+  const riga = rigaMarchio(impostazioni)
+  if (riga) prn.addText(`${riga}\n`)
+}
 
 // ── COSA C'È SULLA CARTA LO DECIDE IL LOCALE ─────────────────────────
 //
@@ -65,6 +79,30 @@ import {
 // niente da aspettare.
 const impostazioniDelLocale = () => impostazioniRicordate({})
 
+// ── IL PIANO SENZA STAMPA (REQ-LIC-016) ─────────────────────────────
+// Con `stampa: false` nei limiti della licenza non esce niente. Il cancello
+// vero è in `lavoroDiStampa`, da cui passa ogni foglio: un tasto
+// dimenticato in una schermata, o un chiamante scritto domani, non stampa
+// lo stesso. Le schermate usano la stessa domanda per nascondere i tasti,
+// e gli automatismi (scontrino dopo l'incasso, comande al banco) la fanno
+// prima di decidere, così non nasce un errore a ogni conto.
+// La domanda sta in lib/limiti.js, con le altre del piano.
+
+// I DATI FISCALI SI LEGGONO DAL LOCALE AL MOMENTO DELLA STAMPA, non dalle
+// impostazioni della stampante: quelle, una volta salvate su un
+// dispositivo, si tengono anche l'intestazione di allora, e una partita IVA
+// scritta dopo (dalla regia, o in Impostazioni → Il locale) non
+// arriverebbe mai sulla carta (REQ-FLOTTA-030).
+export const datiFiscaliDelLocale = () => righeFiscali(venueDi(impostazioniDelLocale()))
+
+// La coda di scontrino e ricevuta d'acconto: la ragione sociale e, sotto,
+// la partita IVA del locale, se c'è.
+function stampaRagioneSociale(prn, s, impostazioni) {
+  prn.addText(`${s.businessFooter}\n`)
+  const piva = partitaIva(venueDi(impostazioni))
+  if (piva) prn.addText(`P.IVA ${piva}\n`)
+}
+
 // Larghezza colonne stamante 80 mm (TM-m30II / TM-m30III): 48 chars std.
 const COL = 48
 
@@ -76,9 +114,9 @@ const COL = 48
 // no. Di chi ci lavora, perché sullo stesso tablet si alternano persone
 // diverse, e la stampa automatica delle comande la vuole accesa chi sta al
 // banco, non chi passa di lì a battere due conti.
-const SETTINGS_KEY = 'tana_printer_v2'
-const UTENTE_KEY = 'tana_printer_utente'
-const PERSONA_KEY = 'tana_printer_persona'
+const SETTINGS_KEY = 'drink_printer_v2'
+const UTENTE_KEY = 'drink_printer_utente'
+const PERSONA_KEY = 'drink_printer_persona'
 
 // L'ultimo utente lo si ricorda: le impostazioni si leggono anche prima che
 // Firebase abbia finito di riconoscere chi è collegato, e senza memoria per
@@ -136,23 +174,27 @@ export const DEFAULT_PRINTER_SETTINGS = {
   port: 8043,       // 8043 = HTTPS (WSS), 8008 = HTTP (WS)
   https: true,      // false → HTTP, solo se l'app è servita in HTTP
   autoPrintComanda: false,  // stampa automatica comanda all'arrivo dell'ordine
-  autoPrintScontrino: false, // stampa automatica scontrino al "pronto"
+  autoPrintScontrino: false, // stampa automatica scontrino alla riscossione
+  // DA DOVE deve venire il gesto perché la stampa automatica parta
+  // (REQ-STAMPA-021): 'tutti', 'banco' o 'sala'. Vedi stampaDa più sotto.
+  autoPrintComandaDa: 'tutti',
+  autoPrintScontrinoDa: 'tutti',
   // CHI STAMPA LE COMANDE PRESE IN SALA: 'ip' = il telefono della sala parla
   // da sé con la stampante (ha l'IP: la configurazione arriva dal server);
   // 'rimbalzo' = la sala non stampa e la comanda esce al banco, che deve
   // avere la coda aperta e la stampa automatica accesa. Lo decide il locale,
   // una volta, dal terminale del banco.
   stampaSala: 'ip',
-  businessName: 'La Tana del Coniglio',
-  businessAddress: 'Corso Tommaso Vitale 87/89',
-  businessCity: '80035 Nola - Italy',
-  businessFooter: 'EFFEVI - SRLS',
+  // L'intestazione dello scontrino dal locale della build (REQ-VENUE-003):
+  // le impostazioni del locale, se ci sono, la rimpiazzano in
+  // loadPrinterSettings. Chi l'ha già salvata non cambia niente.
+  ...intestazioneScontrino(venuePredefinito()),
 }
 
 // Scontrino automatico UNA SOLA VOLTA per conto: la chiusura può passare da
 // più strade (schermata pagamento, coda, incasso di gruppo) e senza questa
 // guardia lo stesso scontrino uscirebbe due volte.
-const PRINTED_KEY = 'tana_printed_receipts'
+const PRINTED_KEY = 'drink_printed_receipts'
 export function claimReceiptPrint(orderId) {
   if (!orderId) return true
   try {
@@ -226,7 +268,7 @@ export function reclaimReceiptPrint(orderId) {
 // aveva già stampato sarebbe rimasto zitto per sempre — e il segno sul dato
 // azzerato da un ALTRO terminale non avrebbe potuto liberargliela. Legata
 // alle righe, invece, la comanda cambiata è un lavoro nuovo e la carta esce.
-const COMANDE_KEY = 'tana_printed_comande'
+const COMANDE_KEY = 'drink_printed_comande'
 
 // Le righe come sono adesso, in poche lettere: cambia una quantità o
 // arriva un drink, cambia la firma.
@@ -344,19 +386,57 @@ export function lavoroAnnullato(order, comanda = null) {
   )
 }
 
+// ── DAL BANCO O DALLA SALA (REQ-STAMPA-021) ─────────────────────────
+//
+// Richiesta dell'08/11/2026: «differenziare se le operazioni provengono da
+// cassa o da sala (esempio: stampa solo riscossione da banco e stampa in
+// automatico la comanda se presa da sala)». Al banco la comanda di quello
+// che si prepara da sé non serve — il bartender ce l'ha davanti —, quella
+// presa al tavolo sì; lo scontrino lo vuole chi incassa alla cassa, non il
+// telefono che chiude un conto in sala.
+//
+// L'ORIGINE È IL RUOLO DI CHI HA FATTO IL GESTO: banco = chi gestisce
+// (admin, bartender), sala = la sala e i clienti dal loro telefono. Per una
+// comanda è chi ne ha battuto le righe (la firma della riga, REQ-ORD-023),
+// e per le comande di prima chi ha aperto il conto; per lo scontrino è chi
+// sta incassando.
+export const ORIGINI_STAMPA = Object.freeze([
+  { id: 'tutti', label: 'Banco e sala' },
+  { id: 'banco', label: 'Solo dal banco' },
+  { id: 'sala', label: 'Solo dalla sala' },
+])
+export const origineDelRuolo = (role) => (isGestore(role) ? 'banco' : 'sala')
+export function stampaDa(da, role) {
+  return !da || da === 'tutti' || da === origineDelRuolo(role)
+}
+export function ruoloDellaComanda(order, comanda) {
+  const firmata = (comanda?.items || []).find((i) => i?.added_by?.role)
+  return firmata ? firmata.added_by.role : (order?.placed_by?.role ?? null)
+}
+// Lo scontrino automatico di una riscossione fatta da `role`.
+export function scontrinoAutomatico(role, impostazioni = loadPrinterSettings()) {
+  return stampaNelPiano() && impostazioni?.autoPrintScontrino === true && stampaDa(impostazioni.autoPrintScontrinoDa, role)
+}
+
 export function comandeDaStampare(order, opzioni = {}) {
-  if (!order || lavoroAnnullato(order)) return []
+  if (!order || lavoroAnnullato(order) || !stampaComandeNelPiano()) return []
   if (!stampaQuestoTerminale(order, opzioni)) return []
+  const da = (opzioni.impostazioni || loadPrinterSettings()).autoPrintComandaDa
   // IL CONTO SI STA ANCORA COMPONENDO: niente carta. È il facsimile col
   // LIMONCELLO da solo visto al banco — stampato a metà battuta, mentre chi
   // stava al POS aveva ancora il vassoio da riempire. Il ticket esce quando
   // chi lo sta battendo esce dalla creazione (`in_creazione` si azzera lì).
   if (order.in_creazione) return []
+  // IL CLIENTE NON HA ANCORA DETTO SÌ (REQ-CLI-009): il banco ha cambiato
+  // prezzo o ingredienti, e finché lui non accetta il drink non si prepara.
+  // La comanda (già azzerata dalla modifica) esce alla risposta.
+  if (inAttesa(order)) return []
   return (order.comande || []).filter((c) => {
     if (!c || lavoroAnnullato(order, c)) return false
     // Da stampare è la comanda ancora al banco: già pronta o uscita vuol
     // dire che qualcuno l'ha lavorata senza carta, e stamparla ora è tardi.
     if (c.status !== 'ricevuto' && c.status !== 'in_preparazione') return false
+    if (!stampaDa(da, ruoloDellaComanda(order, c))) return false
     return !c.auto_print_at
   })
 }
@@ -405,30 +485,45 @@ impostaContestoDiagnostica(() => {
   }
 })
 
-export function loadPrinterSettings() {
+// Quello che è stato salvato su questo dispositivo: di questa persona, o —
+// PRIMA VOLTA DI QUESTA PERSONA SU QUESTO DISPOSITIVO — quello del
+// dispositivo. Senza, il giorno del passaggio a impostazioni per utente
+// ogni tablet del locale avrebbe perso l'indirizzo della stampante — e la
+// comanda non esce.
+function salvateQui() {
   try {
-    const mie = JSON.parse(localStorage.getItem(chiaveImpostazioni()) || 'null')
-    if (mie) return { ...DEFAULT_PRINTER_SETTINGS, ...mie }
-    // PRIMA VOLTA DI QUESTA PERSONA SU QUESTO DISPOSITIVO: eredita quelle
-    // del dispositivo. Senza, il giorno del passaggio a impostazioni per
-    // utente ogni tablet del locale avrebbe perso l'indirizzo della
-    // stampante — e la comanda non esce.
-    const delDispositivo = JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null')
-    return { ...DEFAULT_PRINTER_SETTINGS, ...(delDispositivo || {}) }
+    return (
+      JSON.parse(localStorage.getItem(chiaveImpostazioni()) || 'null') ||
+      JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null') ||
+      {}
+    )
   } catch {
-    return { ...DEFAULT_PRINTER_SETTINGS }
+    return {}
   }
 }
 
+export function loadPrinterSettings() {
+  // I default: quelli fissi più l'intestazione del locale (REQ-VENUE-003),
+  // dalle impostazioni in cache se il locale l'ha scritta, se no dalla build.
+  const base = { ...DEFAULT_PRINTER_SETTINGS, ...intestazioneScontrino(venueDi(impostazioniDelLocale())) }
+  return { ...base, ...salvateQui() }
+}
+
+// SI SALVA SOLO QUELLO CHE SI È SCELTO, non i default e l'intestazione
+// presa dal locale. Salvando tutto, il primo salvataggio qualunque (l'IP
+// della stampante, la stampa automatica) congelava sul dispositivo anche
+// nome, indirizzo e ragione sociale di quel momento, e una correzione in
+// Impostazioni → Il locale non arrivava più sulla carta (REQ-FLOTTA-030:
+// la regia scrive i dati del titolare dopo). I dispositivi che li hanno già
+// congelati li tengono finché qualcuno non li cambia in «Dati del locale».
 export function savePrinterSettings(patch) {
-  const current = loadPrinterSettings()
-  const next = { ...current, ...patch }
+  const next = { ...salvateQui(), ...patch }
   try {
     localStorage.setItem(chiaveImpostazioni(), JSON.stringify(next))
   } catch {
     /* storage pieno o negato: si continua con quelle in memoria */
   }
-  return next
+  return loadPrinterSettings()
 }
 
 // ── Connessione ───────────────────────────────────────────────────────────────
@@ -960,6 +1055,8 @@ function avviaBattito() {
 // Se il certificato non è più accettato, l'errore esce ADESSO — quando c'è
 // tempo per sistemarlo — invece che al primo scontrino della serata.
 export async function preparaStampante() {
+  // Senza stampa nel piano non si cerca nessuna stampante.
+  if (!stampaNelPiano()) return { ok: false, motivo: MESSAGGI_PIANO.stampa }
   // Con la stampante finta non c'è niente da scaldare: risponde sempre.
   if (stampanteFintaAttiva()) return { ok: true }
   const s = loadPrinterSettings()
@@ -1001,7 +1098,7 @@ async function getPrinter() {
   // collega a quella vera, ed è il posto dove provarla davvero.
   if (stampanteFintaAttiva()) {
     if (!_printer) {
-      const finta = creaStampanteFinta('La Tana del Coniglio')
+      const finta = creaStampanteFinta(venuePredefinito().venue_name)
       // ANCHE LA FINTA RISPONDE. La catena della diagnostica (BUG-098) —
       // risposta, registro, avviso — si deve poter provare senza andare al
       // banco: la finta risponde come quella vera e sa fingere un guasto.
@@ -1271,6 +1368,9 @@ const etichettaConto = (che, order) =>
 // un gesto. La risposta, se e quando arriva, aggiorna la voce nel registro
 // per conto suo (vedi «la risposta della stampante è diagnostica»).
 function lavoroDiStampa(componi, che = 'Stampa') {
+  // Fuori dal piano non si apre nemmeno un lavoro nel registro: non è una
+  // stampa non riuscita, è una stampa che non c'è.
+  if (!stampaNelPiano()) return Promise.reject(new Error(MESSAGGI_PIANO.stampa))
   const idLavoro = lavoroInCoda(che)
   let scaduto = false
   const mio = _codaStampa.then(async () => {
@@ -1424,6 +1524,9 @@ export function printComanda(order, comanda = null) {
   // (BUG-052). Un conto annullato non ha carta da far uscire, nemmeno dal
   // tasto a mano, nemmeno da un chiamante scritto domani.
   if (lavoroAnnullato(order, comandaDelTicket(order, comanda))) return Promise.resolve()
+  // Nel piano senza comande (REQ-LIC-005) la comanda non si stampa, anche
+  // se lo scontrino sì. La stampa in sé la controlla lavoroDiStampa.
+  if (!comandeNelPiano()) return Promise.reject(new Error(MESSAGGI_PIANO.comande))
   return lavoroDiStampa(async (prn) => {
     const cfg = configStampa(impostazioniDelLocale(), 'comanda')
     const now = new Date()
@@ -1873,9 +1976,10 @@ export function printScontrino(order, opts = {}) {
       const shortId = (order.id || '').substring(0, 36)
       prn.addText(`${shortId}\n`)
     }
-    if (cfg.mostra('ragione_sociale')) prn.addText(`${s.businessFooter}\n`)
+    if (cfg.mostra('ragione_sociale')) stampaRagioneSociale(prn, s, impostazioni)
     const saluto = cfg.parole('riga_cortesia')
     if (saluto) prn.addText(`${saluto}\n`)
+    stampaMarchio(prn, impostazioni)
 
     prn.addFeedLine(4)
     prn.addCut(prn.CUT_FEED)
@@ -1916,7 +2020,8 @@ export function printScontrino(order, opts = {}) {
 export function printScontrinoAcconto(order, incasso = {}) {
   return lavoroDiStampa(async (prn) => {
     const s = loadPrinterSettings()
-    const cfg = configStampa(impostazioniDelLocale(), 'acconto')
+    const impostazioni = impostazioniDelLocale()
+    const cfg = configStampa(impostazioni, 'acconto')
     const dopo = contoDopoIncasso(order, incasso)
     const { date, time } = italianDateTime(incasso?.at || new Date().toISOString())
     const versato = round2(incasso?.amount)
@@ -2032,9 +2137,10 @@ export function printScontrinoAcconto(order, incasso = {}) {
     prn.addText('\n')
 
     if (cfg.mostra('codice_conto')) prn.addText(`${(order.id || '').substring(0, 36)}\n`)
-    if (cfg.mostra('ragione_sociale')) prn.addText(`${s.businessFooter}\n`)
+    if (cfg.mostra('ragione_sociale')) stampaRagioneSociale(prn, s, impostazioni)
     const saluto = cfg.parole('riga_cortesia')
     if (saluto) prn.addText(`${saluto}\n`)
+    stampaMarchio(prn, impostazioni)
 
     prn.addFeedLine(4)
     prn.addCut(prn.CUT_FEED)
@@ -2066,7 +2172,10 @@ export function printFattura(invoice) {
     prn.addTextSize(1, 1)
     prn.addTextStyle(false, false, false, prn.COLOR_1)
     prn.addText(`${s.businessAddress}\n`)
-    prn.addText(`${s.businessCity}\n\n`)
+    prn.addText(`${s.businessCity}\n`)
+    // Chi emette: su una fattura, anche di cortesia, ci vogliono.
+    for (const riga of datiFiscaliDelLocale()) prn.addText(`${riga}\n`)
+    prn.addText('\n')
     prn.addTextSize(1, 2)
     prn.addTextStyle(false, false, true, prn.COLOR_1)
     prn.addText(`FATTURA DI CORTESIA n. ${invoice.number}\n`)

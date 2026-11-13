@@ -1,3 +1,4 @@
+/* global __DEMO__ */
 // ── LA STAMPANTE FINTA, SOLO IN LOCALE ───────────────────────────────
 //
 // Al banco la stampante è un apparecchio sulla rete del locale: da un
@@ -29,7 +30,7 @@ const COL = 48 // colonne della testina 80 mm, come la stampante vera
 // impostazioni. La sezione Dev esiste solo in locale e sul test
 // (devToolsEnabled), quindi in produzione questo interruttore non ha una
 // leva da nessuna parte.
-const CHIAVE_FINTA = 'tana_stampante_finta'
+const CHIAVE_FINTA = 'drink_stampante_finta'
 export function stampanteFintaForzata() {
   try {
     return localStorage.getItem(CHIAVE_FINTA)
@@ -62,7 +63,7 @@ export function forzaStampanteFinta(attiva) {
 // NON PUÒ CAPITARE PER SBAGLIO IN PRODUZIONE: lo legge solo la stampante
 // FINTA, che in produzione non si accende, e la leva sta nel pannello Dev,
 // che esiste solo in locale e sul test (devToolsEnabled).
-const CHIAVE_GUASTO = 'tana_stampante_finta_guasto'
+const CHIAVE_GUASTO = 'drink_stampante_finta_guasto'
 export const GUASTI_FINTI = ['carta', 'muta']
 
 export function guastoFinto() {
@@ -89,6 +90,8 @@ export function stampanteFintaAttiva(env = import.meta.env) {
   const forzata = stampanteFintaForzata()
   if (forzata === 'true') return true
   if (forzata === 'false') return false
+  // Nella demo non c'è una stampante vera da raggiungere (REQ-FLOTTA-019).
+  if (__DEMO__) return true
   if (env?.VITE_STAMPANTE_FINTA === 'false') return false
   // Forzabile a mano, per provarla dove serve.
   if (env?.VITE_STAMPANTE_FINTA === 'true') return true

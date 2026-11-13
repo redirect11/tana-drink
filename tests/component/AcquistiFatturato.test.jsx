@@ -70,7 +70,7 @@ async function riga(titolo, etichetta) {
 describe('Acquisti × Fatturato', () => {
   it('ha le righe del foglio, nel suo ordine', async () => {
     render(<AcquistiFatturato />)
-    const card = await blocco('🗂️ Distillati')
+    const card = await blocco('Distillati')
     const righe = [...card.querySelectorAll('tbody th')].map((th) => th.textContent)
     expect(righe).toEqual(['Acquisti', 'Fatturato', 'Utile', 'Fat/Acq', 'Incidenza'])
   })
@@ -79,15 +79,15 @@ describe('Acquisti × Fatturato', () => {
   it('si apre al lordo, e il netto è a un tocco', async () => {
     const user = userEvent.setup()
     render(<AcquistiFatturato />)
-    const acq = await riga('🗂️ Distillati', 'Acquisti')
+    const acq = await riga('Distillati', 'Acquisti')
     expect(within(acq).getAllByText('12 €').length).toBeGreaterThan(0)
-    const fat = await riga('🗂️ Distillati', 'Fatturato')
+    const fat = await riga('Distillati', 'Fatturato')
     expect(within(fat).getAllByText('22 €').length).toBeGreaterThan(0)
 
     await user.click(screen.getByRole('button', { name: 'Netto IVA' }))
-    expect(within(await riga('🗂️ Distillati', 'Acquisti')).getAllByText('10 €').length).toBeGreaterThan(0)
+    expect(within(await riga('Distillati', 'Acquisti')).getAllByText('10 €').length).toBeGreaterThan(0)
     // 22 € scorporati al 10%.
-    expect(within(await riga('🗂️ Distillati', 'Fatturato')).getAllByText('20 €').length).toBeGreaterThan(0)
+    expect(within(await riga('Distillati', 'Fatturato')).getAllByText('20 €').length).toBeGreaterThan(0)
     expect(screen.getByText(/al netto dell’IVA/)).toBeInTheDocument()
   })
 
@@ -101,7 +101,7 @@ describe('Acquisti × Fatturato', () => {
   it('si guarda per anno, mese, settimana o giorno', async () => {
     const user = userEvent.setup()
     render(<AcquistiFatturato />)
-    await blocco('🗂️ Distillati')
+    await blocco('Distillati')
 
     await user.click(screen.getByRole('button', { name: 'Mese' }))
     expect(await screen.findAllByText('I SETT')).not.toHaveLength(0)
@@ -119,7 +119,7 @@ describe('Acquisti × Fatturato', () => {
   it('legge conti e carichi del solo periodo mostrato, una volta sola', async () => {
     const user = userEvent.setup()
     render(<AcquistiFatturato />)
-    await blocco('🗂️ Distillati')
+    await blocco('Distillati')
     expect(api.fetchOrdersBetween).toHaveBeenLastCalledWith(`${ANNO}-01-01`, `${ANNO}-12-31`, 5)
     expect(api.fetchCarichiBetween).toHaveBeenLastCalledWith(`${ANNO}-01-01`, `${ANNO}-12-31`)
 
@@ -128,7 +128,7 @@ describe('Acquisti × Fatturato', () => {
     expect(api.fetchOrdersBetween).toHaveBeenLastCalledWith(`${ANNO - 1}-01-01`, `${ANNO - 1}-12-31`, 5)
 
     await user.click(screen.getByRole('button', { name: 'Periodo successivo' }))
-    await blocco('🗂️ Distillati')
+    await blocco('Distillati')
     expect(api.fetchOrdersBetween).toHaveBeenCalledTimes(2)
   })
 
@@ -150,7 +150,7 @@ describe('Acquisti × Fatturato', () => {
     ])
     render(<AcquistiFatturato />)
     // 22 € dell'app a luglio + 18 € di Tiller a marzo = 40 € nell'anno.
-    const fat = await riga('🗂️ Distillati', 'Fatturato')
+    const fat = await riga('Distillati', 'Fatturato')
     expect(within(fat).getAllByText('40 €').length).toBeGreaterThan(0)
   })
 
@@ -158,7 +158,7 @@ describe('Acquisti × Fatturato', () => {
   // Incassato» e l'avvertenza sugli anni di Tiller senza acquisti.
   it('in cima, a scomparsa, dice cosa misura e da dove vengono i numeri', async () => {
     render(<AcquistiFatturato />)
-    await blocco('🗂️ Distillati')
+    await blocco('Distillati')
     expect(screen.getByText(/Cosa misura questa tabella/).closest('details')).not.toHaveAttribute('open')
     expect(screen.getByText(/Differenza con «Venduto × Incassato»/)).toBeInTheDocument()
     expect(screen.getByText(/al lordo dell’IVA/)).toBeInTheDocument()

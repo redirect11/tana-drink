@@ -1,6 +1,13 @@
 import { useMemo, useState } from 'react'
-import { entryUnits } from '../lib/inventory.js'
+import { entryUnits, unitaDopoCambioIngrediente } from '../lib/inventory.js'
 import PriceSuggestion from './PriceSuggestion.jsx'
+import CostoRiga from './CostoRiga.jsx'
+import { BICCHIERI, COLORI, DECORAZIONI, urlDrink, sceltaIllustrazione } from '../lib/illustrazioneDrink.js'
+import { useFondoChiaro } from '../lib/useFondoChiaro.js'
+import { MESSAGGI_PIANO } from '../lib/limiti.js'
+import AiutoCampo from './AiutoCampo.jsx'
+import RitaglioFoto from './RitaglioFoto.jsx'
+import DescrizioneAI from './DescrizioneAI.jsx'
 
 // Scheda prodotto del MENÙ: nome, foto, categoria, prezzo, descrizione,
 // ricetta/ingredienti e disponibilità. Estratta da MenuManager perché la usa
@@ -17,6 +24,13 @@ export default function DrinkForm({
   // quale aliquota si userà lasciando il campo vuoto. Dove non si sa (il
   // POS non legge le impostazioni) si dice «quella del locale» e basta.
   saleVatLocale = null,
+  // Sul profilo leggero (piano Free) Storage non c'è: la foto non si carica,
+  // e il campo lo dice invece di fallire al salvataggio (REQ-LIC-004).
+  fotoConsentite = true,
+  // I disegni dei drink sono del locale che ha «Notte» (REQ-LIC-013,
+  // disegniDelLocale): agli altri la composizione non si offre, perché in
+  // carta non comparirebbe. La foto invece si carica sempre.
+  disegniConsentiti = false,
 }) {
   const itemsById = useMemo(
     () => Object.fromEntries((inventory || []).map((i) => [i.id, i])),
@@ -37,6 +51,20 @@ export default function DrinkForm({
     })),
   }))
   const [preview, setPreview] = useState(initial.image_url || null)
+  // Le illustrazioni nella versione che si legge sul tema del gestionale.
+  const fondoChiaro = useFondoChiaro()
+  // Il disegno composto della voce (null se non c'è, o se è uno dei
+  // soggetti fissi della prima versione: cambiandolo diventa composto).
+  const disegno =
+    form.illustrazione && typeof form.illustrazione === 'object' ? sceltaIllustrazione(form.illustrazione) : null
+  const scegliDisegno = (cambio) =>
+    setForm((f) => ({
+      ...f,
+      illustrazione: {
+        ...(sceltaIllustrazione(f.illustrazione) || { bicchiere: 'coppa', colore: 'rosa', decorazione: 'nessuna' }),
+        ...cambio,
+      },
+    }))
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState(null)
   const [newCat, setNewCat] = useState('')
@@ -48,9 +76,25 @@ export default function DrinkForm({
       [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value,
     }))
 
+  // IL RITAGLIO (REQ-MENU-039): scelta una foto, prima si ritaglia, poi
+  // diventa la foto della scheda. Si carica solo salvando il prodotto, come
+  // prima. La foto scelta resta da parte (`originale`), perché «Ritaglia di
+  // nuovo» riparta da lei e non da quella già tagliata.
+  const [daRitagliare, setDaRitagliare] = useState(null)
+  const [originale, setOriginale] = useState(null)
+
   function onPickFile(e) {
     const file = e.target.files && e.target.files[0]
+    // Si svuota il campo: scegliendo di nuovo la stessa foto, il ritaglio
+    // si deve riaprire.
+    if (e.target) e.target.value = ''
     if (!file) return
+    setDaRitagliare(file)
+  }
+
+  function usaFoto(file) {
+    setOriginale((o) => (daRitagliare && daRitagliare !== o ? daRitagliare : o))
+    setDaRitagliare(null)
     setForm((f) => ({ ...f, _file: file }))
     setPreview(URL.createObjectURL(file))
   }
@@ -58,6 +102,7 @@ export default function DrinkForm({
   function removePhoto() {
     setForm((f) => ({ ...f, _file: null, image_url: null }))
     setPreview(null)
+    setOriginale(null)
   }
 
   // --- categoria ---
@@ -92,16 +137,32 @@ export default function DrinkForm({
   function removeRow(idx) {
     setForm((f) => ({ ...f, recipe_rows: f.recipe_rows.filter((_, i) => i !== idx) }))
   }
+  // CAMBIARE INGREDIENTE NON TOCCA QUANTITÀ E UNITÀ (BUG-124): l'unità
+  // resta quella della riga se vale anche per il nuovo articolo; cambia
+  // solo quando non ha senso (vedi unitaDopoCambioIngrediente).
   function onItemChange(idx, itemId) {
     const inv = inventory.find((i) => i.id === itemId)
-    // unità di inserimento di default per l'item scelto (cl per i volumi, ecc.)
-    const unit = inv ? (entryUnits(inv)[0] ?? inv.unit) : ''
-    setRow(idx, { inventory_item_id: itemId, unit })
+    setForm((f) => ({
+      ...f,
+      recipe_rows: f.recipe_rows.map((r, i) =>
+        i === idx ? { ...r, inventory_item_id: itemId, unit: unitaDopoCambioIngrediente(inv, r.unit) } : r
+      ),
+    }))
   }
 
   async function submit(e) {
     e.preventDefault()
     if (!(form.name || '').trim()) return
+    // UNA RIGA DELLA RICETTA SENZA QUANTITÀ NON SI BUTTA IN SILENZIO: è la
+    // dose che si scala a ogni vendita. Con la scheda nata dal magazzino
+    // (REQ-AI-002) la quantità parte vuota apposta, e salvarla vuota
+    // vorrebbe dire un prodotto senza ricetta.
+    const senzaDose = form.recipe_rows.find((r) => r.inventory_item_id && !(Number(String(r.qty ?? '').replace(',', '.')) > 0))
+    if (senzaDose) {
+      const nome = itemsById[senzaDose.inventory_item_id]?.name || senzaDose.name || 'un ingrediente'
+      setSaveError(`Manca la quantità di «${nome}» nella ricetta: è la dose che si scala a ogni vendita.`)
+      return
+    }
     setSaving(true)
     setSaveError(null)
     try {
@@ -129,9 +190,19 @@ export default function DrinkForm({
           <button type="button" className="btn ghost small" onClick={removePhoto}>
             Rimuovi foto
           </button>
+          {originale && form._file && (
+            <button type="button" className="btn ghost small" onClick={() => setDaRitagliare(originale)}>
+              Ritaglia di nuovo
+            </button>
+          )}
         </div>
       )}
-      <input id="photo" type="file" accept="image/*" onChange={onPickFile} />
+      {daRitagliare && <RitaglioFoto file={daRitagliare} onConferma={usaFoto} onAnnulla={() => setDaRitagliare(null)} />}
+      {fotoConsentite ? (
+        <input id="photo" type="file" accept="image/*" onChange={onPickFile} />
+      ) : (
+        <p className="muted small" style={{ margin: '0 0 8px' }}>{MESSAGGI_PIANO.foto}</p>
+      )}
 
       <label htmlFor="category">Categoria</label>
       {addingCat ? (
@@ -151,7 +222,7 @@ export default function DrinkForm({
           {categories.map((c) => (
             <option key={c.id} value={c.id}>{c.name}</option>
           ))}
-          <option value="__new__">➕ Nuova categoria…</option>
+          <option value="__new__">+ Nuova categoria…</option>
         </select>
       )}
 
@@ -187,12 +258,11 @@ export default function DrinkForm({
           />
         </div>
       </div>
-      <p className="muted small" style={{ margin: '2px 0 0' }}>
-        Lasciala vuota e vale quella del locale
-        {saleVatLocale != null ? ` (${saleVatLocale}%)` : ''}. Si compila solo
-        dove fa eccezione — una bottiglia intera non si rivende come un drink
-        al banco.
-      </p>
+      <AiutoCampo>
+        Se vuota si applica l’IVA del locale
+        {saleVatLocale != null ? ` (${saleVatLocale}%)` : ''}. Va indicata solo
+        per le eccezioni, come le bottiglie vendute intere.
+      </AiutoCampo>
 
       {/* Costo reale della ricetta, prezzo consigliato e guadagno: si
           aggiorna man mano che si compongono gli ingredienti qui sotto. */}
@@ -203,11 +273,63 @@ export default function DrinkForm({
         onUse={(v) => setForm((f) => ({ ...f, price: String(v) }))}
       />
 
+      {/* IL NOME PER IL CLIENTE (REQ-MENU-025). Il gestionale chiama le cose
+          come servono al banco — il gin tonic col solo nome del gin, le
+          voci-prezzo «SOUR 7» —, il cliente legge questo. L'ordine porta
+          comunque il nome del banco. */}
+      <label htmlFor="nome_cliente">Nome nel menù dei clienti</label>
+      <input
+        id="nome_cliente"
+        value={form.nome_cliente || ''}
+        onChange={set('nome_cliente')}
+        placeholder={form.name || ''}
+      />
+      <AiutoCampo>
+        Nome della voce nel menù dei clienti. Se vuoto si usa il nome della
+        voce; comande e scontrini riportano sempre il nome della voce.
+      </AiutoCampo>
+
       <label htmlFor="description">Descrizione</label>
       <input id="description" value={form.description} onChange={set('description')} />
-      <p className="muted small" style={{ margin: '2px 0 0' }}>
-        Quello che legge il cliente sul menù.
-      </p>
+      <AiutoCampo>Testo mostrato al cliente nel menù.</AiutoCampo>
+      <DescrizioneAI
+        subito={Boolean(initial.da_magazzino)}
+        nome={form.name || ''}
+        categoria={categories.find((c) => c.id === form.category_id)?.name}
+        attuale={form.description}
+        onUsa={(testo) => setForm((f) => ({ ...f, description: testo }))}
+      />
+
+      {/* GLI INGREDIENTI IN CARTA (REQ-MENU-019). La ricetta qui sotto è di
+          magazzino — «Ghiaccio Hoshizaki», «Lime Succo Homemade 1kg - 50cl»
+          — e i Signature non ne hanno: per il cliente si scrivono qui. */}
+      {/* REQ-MENU-017: spenta di partenza, perché lime, sciroppi e ghiaccio
+          spesso non hanno una giacenza tenuta bene. */}
+      <label className="row" style={{ gap: 8, alignItems: 'center', margin: '8px 0 0' }}>
+        <input
+          type="checkbox"
+          checked={form.segue_giacenze === true}
+          onChange={(e) => setForm((f) => ({ ...f, segue_giacenze: e.target.checked }))}
+        />
+        <span>Il menù dei clienti segue le giacenze</span>
+      </label>
+      <AiutoCampo style={{ margin: '2px 0 8px' }}>
+        Quando un ingrediente della ricetta è esaurito (o in esaurimento, secondo
+        Impostazioni → Menù clienti) la voce non è disponibile per il cliente.
+        Al banco resta sempre.
+      </AiutoCampo>
+
+      <label htmlFor="ingredienti">Ingredienti in carta</label>
+      <input
+        id="ingredienti"
+        value={form.ingredienti || ''}
+        onChange={set('ingredienti')}
+        placeholder="Gin, basilico, lime, zucchero"
+      />
+      <AiutoCampo>
+        Elenco mostrato al cliente nel menù, separato da virgole. Se vuoto si
+        ricava dalla ricetta, esclusi ghiaccio, lavorazioni e confezioni.
+      </AiutoCampo>
 
       {/* COME SI PREPARA, a parole. La ricetta strutturata qui sotto dice
           COSA ci va e quanto — serve al magazzino — ma non dice il gesto:
@@ -224,9 +346,7 @@ export default function DrinkForm({
         onChange={set('recipe')}
         placeholder="Es. Shakerare con ghiaccio, filtrare in coppetta, scorza di limone."
       />
-      <p className="muted small" style={{ margin: '2px 0 0' }}>
-        Lo legge chi sta al banco, dalla ⓘ sulla scheda del prodotto.
-      </p>
+      <AiutoCampo>Consultabile al banco dal tasto ⓘ della scheda del prodotto.</AiutoCampo>
 
       {/* Ricetta strutturata: ingredienti collegati all'inventario (usata per
           lo scarico automatico e per mostrare gli ingredienti nel menù). */}
@@ -241,7 +361,7 @@ export default function DrinkForm({
         const inv = inventory.find((i) => i.id === r.inventory_item_id)
         const units = inv ? entryUnits(inv) : []
         return (
-          <div className="row" style={{ gap: 6, marginTop: 6 }} key={idx}>
+          <div className="row" style={{ gap: 6, marginTop: 6, alignItems: 'center' }} key={idx}>
             <select
               value={r.inventory_item_id}
               onChange={(e) => onItemChange(idx, e.target.value)}
@@ -270,6 +390,7 @@ export default function DrinkForm({
                 <option key={u} value={u}>{u}</option>
               ))}
             </select>
+            <CostoRiga row={r} item={inv} name={inv?.name} />
             <button type="button" className="btn ghost small" onClick={() => removeRow(idx)}>✕</button>
           </div>
         )
@@ -293,6 +414,94 @@ export default function DrinkForm({
         />
         <span>Disponibile nel menù</span>
       </label>
+
+      {/* GLI SPECIAL DELLA CASA (REQ-MENU-018): la voce resta nella sua
+          categoria e in più compare negli Special. */}
+      <label className="row" style={{ marginTop: 8 }}>
+        <input
+          type="checkbox"
+          style={{ width: 'auto' }}
+          checked={!!form.speciale}
+          onChange={set('speciale')}
+        />
+        <span>Drink speciale</span>
+      </label>
+      <AiutoCampo>
+        Compare nel menù Special e nel carosello in cima al menù del cliente,
+        oltre che nella sua categoria.
+      </AiutoCampo>
+      {/* IL DISEGNO DEL DRINK (REQ-MENU-018): bicchiere, colore e
+          decorazione, nel segno delle incisioni del libro. L'anteprima è
+          quella che vedrà il cliente. */}
+      {form.speciale && disegniConsentiti && (
+        <div className="illustrazioni" role="group" aria-label="Disegno del drink">
+          <span className="muted small">Disegno del drink, usato quando manca la foto</span>
+          {!disegno ? (
+            <button type="button" className="btn ghost small block" style={{ marginTop: 4 }} onClick={() => scegliDisegno({})}>
+              Componi un disegno
+            </button>
+          ) : (
+            <>
+              <img className="illustrazione-anteprima" src={urlDrink(disegno, { chiaro: fondoChiaro })} alt="Anteprima del disegno" />
+              <span className="muted small">Bicchiere</span>
+              <div className="illustrazioni-griglia" role="group" aria-label="Bicchiere">
+                {BICCHIERI.map((b) => (
+                  <button
+                    key={b.id}
+                    type="button"
+                    className={`illustrazione-voce${disegno.bicchiere === b.id ? ' scelta' : ''}`}
+                    aria-pressed={disegno.bicchiere === b.id}
+                    aria-label={b.nome}
+                    title={b.nome}
+                    onClick={() => scegliDisegno({ bicchiere: b.id })}
+                  >
+                    <img src={urlDrink({ ...disegno, bicchiere: b.id, decorazione: 'nessuna' }, { chiaro: fondoChiaro })} alt="" />
+                  </button>
+                ))}
+              </div>
+              <span className="muted small">Colore</span>
+              <div className="colori-drink" role="group" aria-label="Colore">
+                {COLORI.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    className={`colore-drink${disegno.colore === c.id ? ' scelta' : ''}`}
+                    style={{ background: c.hex }}
+                    aria-pressed={disegno.colore === c.id}
+                    aria-label={c.nome}
+                    title={c.nome}
+                    onClick={() => scegliDisegno({ colore: c.id })}
+                  />
+                ))}
+              </div>
+              <span className="muted small">Decorazione</span>
+              <div className="illustrazioni-griglia" role="group" aria-label="Decorazione">
+                {DECORAZIONI.map((x) => (
+                  <button
+                    key={x.id}
+                    type="button"
+                    className={`illustrazione-voce${disegno.decorazione === x.id ? ' scelta' : ''}`}
+                    aria-pressed={disegno.decorazione === x.id}
+                    aria-label={x.nome}
+                    title={x.nome}
+                    onClick={() => scegliDisegno({ decorazione: x.id })}
+                  >
+                    <img src={urlDrink({ ...disegno, decorazione: x.id }, { chiaro: fondoChiaro })} alt="" />
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                className="btn ghost small"
+                style={{ marginTop: 8 }}
+                onClick={() => setForm((f) => ({ ...f, illustrazione: null }))}
+              >
+                Togli il disegno
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       {saveError && (
         <div className="banner" style={{ marginTop: 12 }}>Errore: {saveError}</div>

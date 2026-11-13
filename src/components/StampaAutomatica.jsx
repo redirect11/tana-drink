@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { loadPrinterSettings, savePrinterSettings } from '../lib/printer.js'
+import { loadPrinterSettings, savePrinterSettings, ORIGINI_STAMPA } from '../lib/printer.js'
 import { savePrinterConfig } from '../lib/api.js'
 import {
   CHIAVE_ACCONTO_SEMPRE,
@@ -8,6 +8,9 @@ import {
   tastoAcconto,
 } from '../lib/scontrinoAcconto.js'
 import ToggleRow from './ToggleRow.jsx'
+import { comandeConsentite } from '../lib/limiti.js'
+import GruppoChip from './GruppoChip.jsx'
+import Icona from './Icona.jsx'
 
 // ── QUANDO PARTE LA CARTA DA SÉ (REQ-UI-025) ─────────────────────────
 //
@@ -33,6 +36,8 @@ import ToggleRow from './ToggleRow.jsx'
 // una cosa al banco e stupirsi che in sala non sia cambiato niente.
 export default function StampaAutomatica({ settings, save }) {
   const [prn, setPrn] = useState(() => loadPrinterSettings())
+  // Nel piano senza comande (REQ-LIC-005) resta solo lo scontrino.
+  const comandeOn = comandeConsentite(settings)
 
   // LOCAL-FIRST, come ogni altra cosa qui: si scrive subito nella memoria
   // del terminale (che è chi legge queste impostazioni al momento di
@@ -62,12 +67,29 @@ export default function StampaAutomatica({ settings, save }) {
         passa a battere due conti.
       </p>
 
-      <ToggleRow
-        label="Stampa la comanda all’arrivo dell’ordine"
-        desc="Appena un ordine entra in coda il ticket esce al banco, senza premere «Comanda»."
-        checked={prn.autoPrintComanda === true}
-        onChange={(v) => cambia({ autoPrintComanda: v })}
-      />
+      {comandeOn && (
+        <>
+          <ToggleRow
+            label="Stampa la comanda all’arrivo dell’ordine"
+            desc="Appena un ordine entra in coda il ticket esce al banco, senza premere «Comanda»."
+            checked={prn.autoPrintComanda === true}
+            onChange={(v) => cambia({ autoPrintComanda: v })}
+          />
+          {/* DA DOVE (REQ-STAMPA-021): sotto l'interruttore che riguarda, e solo
+              se è acceso — una scelta su una stampa spenta non decide niente. */}
+          {prn.autoPrintComanda === true && (
+            <div className="stampa-da">
+              <span className="muted small">Comande prese</span>
+              <GruppoChip
+                etichetta="Comande prese"
+                opzioni={ORIGINI_STAMPA}
+                valore={prn.autoPrintComandaDa || 'tutti'}
+                scegli={(v) => cambia({ autoPrintComandaDa: v })}
+              />
+            </div>
+          )}
+        </>
+      )}
 
       {/* Diceva «quando l'ordine è pronto», ma la stampa da tempo parte alla
           CHIUSURA: l'etichetta descriveva il comportamento di due versioni fa. */}
@@ -77,48 +99,73 @@ export default function StampaAutomatica({ settings, save }) {
         checked={prn.autoPrintScontrino === true}
         onChange={(v) => cambia({ autoPrintScontrino: v })}
       />
+      {prn.autoPrintScontrino === true && (
+        <div className="stampa-da">
+          <span className="muted small">Riscossioni fatte</span>
+          <GruppoChip
+            etichetta="Riscossioni fatte"
+            opzioni={ORIGINI_STAMPA}
+            valore={prn.autoPrintScontrinoDa || 'tutti'}
+            scegli={(v) => cambia({ autoPrintScontrinoDa: v })}
+          />
+        </div>
+      )}
+      <p className="muted" style={{ margin: '0 0 8px', fontSize: '0.8rem' }}>
+        Banco: admin e bartender. Sala: il personale di sala e gli ordini dal
+        menù dei clienti.
+      </p>
 
       {/* CHI STAMPA LE COMANDE PRESE IN SALA sta qui e non fra le cose della
           macchina: è la stessa domanda degli interruttori qui sopra — la
           comanda esce da sé, e da dove — e l'avviso qui sotto guarda proprio
           l'interruttore della comanda. Separarli vorrebbe dire un avviso che
           parla di un interruttore che non è in pagina. */}
-      <div style={{ marginTop: 14 }}>
-        <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>Comande prese in sala</div>
-        {/* La sala l'IP ce l'ha (la configurazione arriva a tutti i dispositivi
-            dal server): quello che si decide qui è se i telefoni parlino con la
-            stampante o se la comanda esca al banco. */}
-        <div className="mode-choice" style={{ marginTop: 6 }}>
-          <button
-            type="button"
-            className={`mode-option${prn.stampaSala !== 'rimbalzo' ? ' active' : ''}`}
-            onClick={() => cambia({ stampaSala: 'ip' })}
-          >
-            📱 La stampa il telefono
-          </button>
-          <button
-            type="button"
-            className={`mode-option${prn.stampaSala === 'rimbalzo' ? ' active' : ''}`}
-            onClick={() => cambia({ stampaSala: 'rimbalzo' })}
-          >
-            🖨️ La stampa il banco
-          </button>
-        </div>
-        <p className="muted" style={{ fontSize: '0.8rem', margin: '8px 0 0' }}>
-          {prn.stampaSala === 'rimbalzo'
-            ? 'La comanda esce al banco appena arriva l’ordine. Serve che al banco un terminale tenga aperta la coda ordini con la stampa automatica accesa.'
-            : 'Chi prende l’ordine al tavolo stampa la comanda dal suo telefono. La prima volta, su ogni telefono, va accettato l’avviso di sicurezza della stampante: il pallino nella coda ordini dice se funziona.'}
-        </p>
-
-        {/* Scegliere "la stampa il banco" e lasciare spenta la stampa
-            automatica vuol dire: non stampa nessuno. È successo. */}
-        {prn.stampaSala === 'rimbalzo' && !prn.autoPrintComanda && (
-          <div className="banner" style={{ marginTop: 8 }}>
-            ⚠️ La stampa automatica della comanda è <strong>spenta</strong>: così
-            le comande della sala non le stampa nessuno. Accendila qui sopra.
+      {comandeOn && (
+        <div style={{ marginTop: 14 }}>
+          <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>Comande prese in sala</div>
+          {/* La sala l'IP ce l'ha (la configurazione arriva a tutti i dispositivi
+              dal server): quello che si decide qui è se i telefoni parlino con la
+              stampante o se la comanda esca al banco. */}
+          <div className="mode-choice" style={{ marginTop: 6 }}>
+            <button
+              type="button"
+              className={`mode-option${prn.stampaSala !== 'rimbalzo' ? ' active' : ''}`}
+              onClick={() => cambia({ stampaSala: 'ip' })}
+            >
+              <Icona nome="telefono" gruppo="tasti" /> La stampa il telefono
+            </button>
+            <button
+              type="button"
+              className={`mode-option${prn.stampaSala === 'rimbalzo' ? ' active' : ''}`}
+              onClick={() => cambia({ stampaSala: 'rimbalzo' })}
+            >
+              <Icona nome="stampante" gruppo="tasti" /> La stampa il banco
+            </button>
           </div>
-        )}
-      </div>
+          <p className="muted" style={{ fontSize: '0.8rem', margin: '8px 0 0' }}>
+            {prn.stampaSala === 'rimbalzo'
+              ? 'La comanda esce al banco appena arriva l’ordine. Serve che al banco un terminale tenga aperta la coda ordini con la stampa automatica accesa.'
+              : 'Chi prende l’ordine al tavolo stampa la comanda dal suo telefono. La prima volta, su ogni telefono, va accettato l’avviso di sicurezza della stampante: il pallino nella coda ordini dice se funziona.'}
+          </p>
+
+          {/* Scegliere "la stampa il banco" e lasciare spenta la stampa
+              automatica vuol dire: non stampa nessuno. È successo. */}
+          {prn.stampaSala === 'rimbalzo' && !prn.autoPrintComanda && (
+            <div className="banner" style={{ marginTop: 8 }}>
+              <Icona nome="avviso" gruppo="segnali" /> La stampa automatica della comanda è <strong>spenta</strong>: così
+              le comande della sala non le stampa nessuno. Accendila qui sopra.
+            </div>
+          )}
+          {/* Lo stesso buco per un'altra strada: la stampa è accesa, ma solo
+              per le comande del banco (REQ-STAMPA-021). */}
+          {prn.stampaSala === 'rimbalzo' && prn.autoPrintComanda && prn.autoPrintComandaDa === 'banco' && (
+            <div className="banner" style={{ marginTop: 8 }}>
+              <Icona nome="avviso" gruppo="segnali" /> La comanda automatica è impostata <strong>solo dal banco</strong>: così
+              le comande della sala non le stampa nessuno.
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Quello che vale per tutti ── */}
       <h4 style={{ margin: '22px 0 2px' }}>Per tutto il locale</h4>

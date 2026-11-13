@@ -10,6 +10,7 @@ import {
   TastoCorsia,
 } from './Corsia.jsx'
 import { coloreCardConto } from '../lib/coloriConto.js'
+import AttesaCliente from './AttesaCliente.jsx'
 
 // ── LA VISTA A CORSIE DEI CONTI ───────────────────────────────────────
 //
@@ -93,7 +94,7 @@ export default function CorsieStato({
                       {destinazioneConto(o) && (
                         <span className="corsia-chi"> {destinazioneConto(o)}</span>
                       )}{' '}
-                      <OrderBy order={o} />
+                      <OrderBy order={o} /> <AttesaCliente order={o} />
                     </span>
                     <BolloAcconto order={o} />
                     <span className="muted small corsia-quando">

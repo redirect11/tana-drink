@@ -62,6 +62,25 @@ jobs:
       - name: Build
         run: npm run build
 
+      # LA DEMO NON ENTRA NEI LOCALI VERI (REQ-FLOTTA-019): il suo codice
+      # (dati di prova, accesso senza password) sta dietro la costante
+      # `__DEMO__`, e nella build della Tana deve sparire tutto. Si cerca
+      # nel pacchetto appena compilato, prima che la build della demo lo
+      # sovrascriva.
+      - name: La build della Tana non contiene la demo
+        run: node scripts/controlla-build-senza-demo.mjs dist
+
+      # L'APP È UNA PER TUTTI I LOCALI (REQ-FLOTTA-001): si compila anche il
+      # cliente neutro `demo`, così una modifica pensata per la Tana che
+      # rompe la build degli altri si vede qui, prima del rilascio, e non
+      # quando la regia la porta ai locali.
+      - name: Build del cliente demo
+        run: npm run build
+        env:
+          CLIENTE: demo
+          # Come la pubblica la regia: la demo è sempre leggera.
+          VITE_PROFILO: leggero
+
       # La copertura solo sulle pull request: in mezzo al lavoro sarebbe
       # tempo in più a ogni push.
       - name: Run tests with coverage
@@ -74,4 +93,133 @@ jobs:
         with:
           name: coverage-report
           path: coverage/
+          retention-days: 14
+
+  # LE REGOLE DI FIRESTORE, SULL'EMULATORE (REQ-DEV-017). Sono l'unica
+  # barriera vera fra i dati del locale e chi apre la console del browser:
+  # i moduli della licenza, i ruoli, i campi che il cliente non tocca. Le
+  # prove c'erano (tests/regole/) ma vogliono l'emulatore, e fino al
+  # 07/11/2026 non giravano qui: un errore nelle regole passava il cancello.
+  # Ora girano su ogni pull request, con la matrice dei moduli dentro.
+  # Un job a parte: ha bisogno di Java e dell'emulatore, e non rallenta
+  # lint, test e build.
+  regole:
+    name: Regole Firestore (emulatore)
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      # L'emulatore di Firestore gira su Java (21, come in locale:
+      # docs/ambiente-locale.md).
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # La stessa versione di firebase-tools che si usa in locale, fissata:
+      # un emulatore nuovo che cambia comportamento non deve far diventare
+      # rossa una PR che non c'entra.
+      - name: Prove delle regole
+        run: >
+          npx --yes firebase-tools@15.26.0 emulators:exec
+          --project demo-tana-drink --only firestore --config firebase.collaudo.json
+          "npm run test:regole"
+
+  # I TEST DI SISTEMA (REQ-DEV-018, fase 2 del modello a V): l'app
+  # COMPILATA in un Chromium vero, con Auth e Firestore emulati e le regole
+  # vere. Provano i requisiti sull'app intera — il primo è il giro di una
+  # serata con la rete staccata, che al primo giro ha trovato BUG-137, un
+  # difetto che i test di unità e di integrazione non potevano vedere.
+  # Un job a parte, come le regole: vuole Java, l'emulatore e un browser.
+  sistema:
+    name: Sistema (Playwright)
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Il browser e i jar degli emulatori non cambiano da una PR all'altra:
+      # si tengono, invece di riscaricarli ogni volta. La chiave segue le
+      # versioni (package-lock per Playwright, firebase-tools fissato in
+      # package.json per gli emulatori).
+      - name: Cache del browser e degli emulatori
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/ms-playwright
+            ~/.cache/firebase/emulators
+          key: sistema-${{ runner.os }}-${{ hashFiles('package-lock.json', 'package.json') }}
+
+      # In locale si usa il Chrome installato; qui il Chromium di Playwright,
+      # della stessa versione del pacchetto.
+      # LE LIBRERIE DI SISTEMA SI INSTALLANO SOLO SE IL BROWSER NON PARTE.
+      # Prima c'era `--with-deps`, che a ogni giro chiede ad apt una decina
+      # di pacchetti (quasi tutti caratteri): l'11/11/2026 i server di
+      # Ubuntu non si risolvevano dalle macchine di GitHub («Temporary
+      # failure resolving 'security.ubuntu.com'») e il job è fallito tre
+      # volte di fila dopo dieci minuti di tentativi, senza che un solo test
+      # fosse partito. Le macchine `ubuntu-latest` hanno già Chrome, quindi
+      # le librerie che servono a Chromium: si prova ad avviarlo, e apt si
+      # chiama solo se non parte.
+      - name: Browser
+        run: |
+          npx playwright install chromium
+          node -e "import('@playwright/test').then(async ({ chromium }) => (await chromium.launch()).close())" \
+            || npx playwright install-deps chromium
+
+      - name: Test di sistema
+        run: npm run test:sistema
+
+      # I TEST END-TO-END DEI CASI D'USO (REQ-DEV-019), sugli emulatori
+      # completi: le Functions comprese, che vogliono le loro dipendenze.
+      # Lo stesso job e lo stesso nome, perché il controllo del merge lo
+      # cerca per nome; sull'ambiente generato girano poi a ogni tag
+      # (e2e.yml).
+      - name: Dipendenze delle Functions
+        run: npm ci --prefix functions
+
+      - name: Test end-to-end, sugli emulatori completi
+        run: npm run test:e2e
+
+      # Quando un test fallisce, la traccia dice cosa ha visto il browser
+      # passo per passo: senza, un rosso in CI si indovina.
+      - name: Rapporto dei test di sistema
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rapporto-sistema
+          path: |
+            playwright-report/
+            rapporto-e2e/
+            test-results/
           retention-days: 14

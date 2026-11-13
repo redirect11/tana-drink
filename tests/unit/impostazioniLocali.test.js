@@ -10,6 +10,8 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import {
   ricordaImpostazioni,
+  ricordaLicenza,
+  licenzaRicordata,
   impostazioniRicordate,
   corsieNascoste,
   ricordaCorsieNascoste,
@@ -45,7 +47,7 @@ describe('le impostazioni ricordate', () => {
   })
 
   it('roba illeggibile non fa saltare la schermata', () => {
-    localStorage.setItem('tana:impostazioni', '{rotto')
+    localStorage.setItem('drink:impostazioni', '{rotto')
     expect(impostazioniRicordate(DEFAULTS)).toEqual(DEFAULTS)
   })
 
@@ -98,21 +100,38 @@ describe('le preferenze di questo terminale', () => {
     expect(vistaCorsie()).toBe(null)
     expect(azioniContoRidotte()).toBe(false)
     expect(filtriAperti()).toBe(false)
-    expect(localStorage.getItem('tana:coda:filtri-aperti')).toBe(null)
+    expect(localStorage.getItem('drink:coda:filtri-aperti')).toBe(null)
   })
 
   it('«unite» resta scritto: è una scelta, non un silenzio', () => {
     // Il pronto diviso è l'unica che scrive anche il «no»: serve a
     // distinguere chi ha deciso di tenerle unite da chi non ha deciso.
     ricordaProntoDiviso(false)
-    expect(localStorage.getItem('tana:corsie:pronto-diviso')).toBe('0')
+    expect(localStorage.getItem('drink:corsie:pronto-diviso')).toBe('0')
     expect(prontoDiviso()).toBe(false)
   })
 
   it('roba illeggibile non fa saltare niente: decide il default', () => {
-    localStorage.setItem('tana:corsie:nascoste', '{rotto')
-    localStorage.setItem('tana:corsie:vista', 'boh')
+    localStorage.setItem('drink:corsie:nascoste', '{rotto')
+    localStorage.setItem('drink:corsie:vista', 'boh')
     expect(corsieNascoste()).toBe(null)
     expect(vistaCorsie()).toBe(null)
+  })
+})
+
+// LA LICENZA DA SOLA (REQ-LIC-016). Su un locale appena installato
+// settings/bar non c'è, ma la licenza vale: si ricorda lo stesso, perché la
+// stampa la legge da qui e deve dire quello che dicono le schermate.
+describe('la licenza ricordata da sola', () => {
+  it('si ricorda senza toccare le altre impostazioni', () => {
+    ricordaImpostazioni({ queue_view: 'corsie' })
+    ricordaLicenza({ piano: 'free' })
+    expect(impostazioniRicordate(DEFAULTS)).toEqual({ ...DEFAULTS, queue_view: 'corsie', licenza: { piano: 'free' } })
+  })
+
+  it('una licenza non detta non cancella quella ricordata', () => {
+    ricordaLicenza({ piano: 'free' })
+    ricordaLicenza(undefined)
+    expect(licenzaRicordata()).toEqual({ piano: 'free' })
   })
 })

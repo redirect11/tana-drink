@@ -1,19 +1,24 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { fetchOrdersByIds, fetchOrdersByCustomer } from '../lib/api.js'
+import { fetchOrdersByIds, fetchOrdersByCustomer, subscribeOrder } from '../lib/api.js'
 import { getMyOrderIds } from '../lib/cart.js'
 import { useCustomer } from '../lib/customerAuth.js'
+import { useTestoStile } from '../lib/testiStile.js'
 import {
+  ORDER_STATUSES,
   STATUS_LABELS,
   STATUS_EMOJI,
   formatPrice,
 } from '../lib/orderStatus.js'
+
+const IN_CORSO = [ORDER_STATUSES.RICEVUTO, ORDER_STATUSES.IN_PREPARAZIONE, ORDER_STATUSES.PRONTO]
 
 export default function MyOrdersPage() {
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const { user, loading: authLoading } = useCustomer()
+  const testo = useTestoStile()
 
   useEffect(() => {
     if (authLoading) return
@@ -44,13 +49,35 @@ export default function MyOrdersPage() {
       .finally(() => setLoading(false))
   }, [authLoading, user])
 
+  // GLI ORDINI IN CORSO SI AGGIORNANO DA SOLI. Fino alla 1.10.35 il cliente
+  // li vedeva, vivi, in cima al menù; ora stanno solo qui (l'utente,
+  // 11/11/2026: «gli ordini non dovrebbero apparire nel menù»), e una lista
+  // letta una volta sola direbbe «In preparazione» di un drink già pronto.
+  // Si ascoltano i più recenti ancora aperti, al massimo dieci.
+  const inCorso = orders
+    .filter((o) => IN_CORSO.includes(o.workflow_status))
+    .slice(0, 10)
+    .map((o) => o.id)
+    .join(',')
+  useEffect(() => {
+    if (!inCorso) return undefined
+    const smetti = inCorso.split(',').map((id) =>
+      subscribeOrder(
+        id,
+        (nuovo) => nuovo && setOrders((prima) => prima.map((o) => (o.id === id ? { ...o, ...nuovo } : o))),
+        () => {}
+      )
+    )
+    return () => smetti.forEach((s) => s())
+  }, [inCorso])
+
   if (loading) return <div className="empty">Carico i tuoi ordini…</div>
   if (error) return <div className="banner">Errore: {error}</div>
 
   if (orders.length === 0)
     return (
       <div className="empty">
-        Non hai ancora effettuato ordini da questo dispositivo.
+        {testo('ordini.vuoto', 'Non hai ancora effettuato ordini da questo dispositivo.')}
         <br />
         <Link className="btn block" to="/menu" style={{ marginTop: 16 }}>
           Vai al menù

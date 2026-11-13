@@ -10,19 +10,22 @@ import {
 } from '../lib/backup.js'
 import { isAdmin } from '../lib/ruoli.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
+import Icona from './Icona.jsx'
 
 // BACKUP E RIPRISTINO dal gestionale. Scarica tutto il database in un file
 // e lo rimette da un file. Serve prima di ogni operazione grossa (importi,
 // travasi, pulizie) e come rete di sicurezza: qui dentro ci sono gli
 // incassi delle serate, il magazzino e le ore del personale.
-export default function BackupPanel({ role = null }) {
+// `soloEsporta`: sul locale fermo (REQ-LIC-018) il titolare scarica i suoi
+// dati, ma il ripristino no: scrive, e le regole lo rifiuterebbero.
+export default function BackupPanel({ role = null, soloEsporta = false }) {
   const [busy, setBusy] = useState(null) // 'export' | 'import' | null
   const [passo, setPasso] = useState('')
   const [esito, setEsito] = useState(null)
   const [errore, setErrore] = useState(null)
   const [daImportare, setDaImportare] = useState(null) // backup letto, in attesa di conferma
   const fileRef = useRef(null)
-  const admin = isAdmin(role)
+  const admin = isAdmin(role) && !soloEsporta
 
   async function esporta() {
     setBusy('export')
@@ -62,12 +65,18 @@ export default function BackupPanel({ role = null }) {
     setBusy('import')
     setErrore(null)
     try {
-      const { scritti, saltate } = await importaDatabase(backup, (nome, fatti, tot) =>
+      const { scritti, saltate, fuoriLicenza, soloScript } = await importaDatabase(backup, (nome, fatti, tot) =>
         setPasso(`${nome}: ${fatti}/${tot}`)
       )
       setEsito(
         `✓ Ripristinati ${scritti} documenti.` +
-          (saltate.length ? ` Saltate (sconosciute a questa versione): ${saltate.join(', ')}.` : '')
+          (saltate.length ? ` Saltate (sconosciute a questa versione): ${saltate.join(', ')}.` : '') +
+          (fuoriLicenza.length
+            ? ` Non ripristinate perché di moduli non inclusi nella licenza: ${fuoriLicenza.join(', ')}.`
+            : '') +
+          (soloScript.length
+            ? ` Lo storico importato (${soloScript.join(', ')}) è nel file, e si ripristina con lo script di manutenzione.`
+            : '')
       )
     } catch (e) {
       setErrore(e.message)
@@ -79,16 +88,16 @@ export default function BackupPanel({ role = null }) {
 
   return (
     <div className="card settings-section">
-      <h3>Backup e ripristino</h3>
+      <h3>{soloEsporta ? 'I dati del locale' : 'Backup e ripristino'}</h3>
       <p className="muted small" style={{ margin: '0 0 10px' }}>
-        Scarica in un file tutto quello che c’è nel database: ordini, incassi,
-        magazzino, menù, ore del personale. Fallo prima di ogni operazione
-        grossa — e ogni tanto anche senza motivo.
+        {soloEsporta
+          ? 'Scarica in un file tutto quello che c’è nel database: ordini, incassi, fatture, clienti, magazzino, menù.'
+          : 'Scarica in un file tutto quello che c’è nel database: ordini, incassi, magazzino, menù, ore del personale. Fallo prima di ogni operazione grossa — e ogni tanto anche senza motivo.'}
       </p>
 
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
         <button className="btn grow" onClick={esporta} disabled={!!busy}>
-          {busy === 'export' ? 'Scarico…' : '⬇️ Esporta tutto'}
+          {busy === 'export' ? 'Scarico…' : <><Icona nome="esporta" gruppo="tasti" /> Esporta tutto</>}
         </button>
         {admin && (
           <>
@@ -97,7 +106,7 @@ export default function BackupPanel({ role = null }) {
               onClick={() => fileRef.current?.click()}
               disabled={!!busy}
             >
-              {busy === 'import' ? 'Ripristino…' : '⬆️ Ripristina da file'}
+              {busy === 'import' ? 'Ripristino…' : <><Icona nome="importa" gruppo="tasti" /> Ripristina da file</>}
             </button>
             <input
               ref={fileRef}
@@ -126,14 +135,16 @@ export default function BackupPanel({ role = null }) {
         </div>
       )}
 
-      <p className="muted small" style={{ margin: '10px 0 0' }}>
-        Il ripristino <strong>riscrive</strong> quello che c’è nel file e lascia
-        stare il resto: non cancella nulla.{' '}
-        {admin
-          ? 'Per rimettere il database esattamente com’era — cancellando anche quello che è arrivato dopo — si usa lo script ripristina-db.js.'
-          : 'Il ripristino è riservato all’admin.'}{' '}
-        Le utenze non sono nel backup: stanno in Firebase Auth, con i loro ruoli.
-      </p>
+      {!soloEsporta && (
+        <p className="muted small" style={{ margin: '10px 0 0' }}>
+          Il ripristino <strong>riscrive</strong> quello che c’è nel file e lascia
+          stare il resto: non cancella nulla.{' '}
+          {admin
+            ? 'Per rimettere il database esattamente com’era — cancellando anche quello che è arrivato dopo — si usa lo script ripristina-db.js.'
+            : 'Il ripristino è riservato all’admin.'}{' '}
+          Le utenze non sono nel backup: stanno in Firebase Auth, con i loro ruoli.
+        </p>
+      )}
 
       {daImportare && (
         <ConfirmDialog

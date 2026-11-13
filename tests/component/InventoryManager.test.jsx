@@ -113,9 +113,9 @@ const SUPS = [
 
 // Quello che la serata sta facendo, quando serve: cassa aperta, conti in
 // corso, listino. Di suo il locale è chiuso e non c'è niente in ballo.
-// I moduli premium, come sta questa installazione (lib/licenza.js): lo
-// SCADENZARIO è incluso e lavora, la CONTA no. Le prove che vogliono
-// un'altra configurazione se la scrivono, coi campi veri.
+// I moduli premium: le prove che li vogliono si scrivono la licenza, coi
+// campi veri (da REQ-LIC-009 non c'è più una licenza della build su cui
+// ricadere).
 const IMPOSTAZIONI_BASE = { price_markup: 3, purchase_vat: 22 }
 const stato = {
   cassa: null,
@@ -141,6 +141,10 @@ vi.mock('../../src/lib/api.js', () => ({
   fetchSupplierPrices: vi.fn(async () => []),
   salvaRigaListino: vi.fn(async () => ({})),
   fetchStockMovements: vi.fn(async () => []),
+  // La movimentazione di un prodotto (REQ-MAG-048): qui vuota, basta che
+  // la finestra si apra.
+  fetchMovimentiProdotto: vi.fn(async () => []),
+  fetchVendutoStoricoProdotto: vi.fn(async () => null),
   fetchMacroCategories: vi.fn(async () => MACRO_MAG),
   // Le voci del menù servono al pannello delle macro, che le elenca una a una.
   fetchDrinks: vi.fn(async () => [{ id: 'd1', name: 'Negroni' }]),
@@ -227,6 +231,26 @@ beforeEach(() => {
   stato.impostazioni = IMPOSTAZIONI_BASE
 })
 
+// «📜 MOVIMENTI» SI APRE DALL'ELENCO (BUG-128). Flavio, 04/11/2026, sul
+// test: «ci clicchi sopra e non si apre». La finestra era montata solo
+// mentre si modifica un prodotto, e il tasto sta nelle azioni di una riga
+// dell'elenco: dal 10/10 non si era mai aperta. La prova della finestra
+// (MovimentiProdotto.test.jsx) la montava da sola, e non lo vedeva.
+describe('i movimenti di un prodotto, dalle sue azioni (BUG-128)', () => {
+  it('il tasto apre la finestra del prodotto, e ✕ la chiude', async () => {
+    const user = userEvent.setup()
+    mostra()
+    await aspettaLista()
+    const riga = screen.getByText('Gin Mare').closest('.inv-row')
+    await user.click(within(riga).getByRole('button', { name: /Gin Mare/ }))
+    await user.click(within(riga).getByRole('button', { name: /Movimenti/ }))
+    const finestra = await screen.findByRole('dialog', { name: 'Movimenti di Gin Mare' })
+    expect(await within(finestra).findByText('Nessun movimento nel periodo.')).toBeInTheDocument()
+    await user.click(within(finestra).getByRole('button', { name: 'Chiudi' }))
+    expect(screen.queryByRole('dialog', { name: 'Movimenti di Gin Mare' })).toBeNull()
+  })
+})
+
 describe('la schermata del magazzino (REQ-MAG-010)', () => {
   it('le sezioni stanno nella barra, e ognuna apre il suo pannello', async () => {
     const user = userEvent.setup()
@@ -250,8 +274,8 @@ describe('la schermata del magazzino (REQ-MAG-010)', () => {
     await aspettaLista()
     expect(screen.getByPlaceholderText(/Cerca prodotto/)).toBeInTheDocument()
     // Le tendine sono CHIUSE: il tasto dice cosa è scelto, le voci no.
-    expect(screen.getByRole('button', { name: /⚗️ Filtra/ })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /🏭 Fornitore/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Filtra/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Fornitore/ })).toBeInTheDocument()
     expect(screen.queryByText('In esaurimento')).toBeNull()
     // Il valore di magazzino è un numero da leggere, non un filtro.
     const valore = screen.getByText('Valore magazzino')
@@ -277,7 +301,7 @@ describe('la schermata del magazzino (REQ-MAG-010)', () => {
     const user = userEvent.setup()
     mostra()
     await aspettaLista()
-    await user.click(screen.getByRole('button', { name: /⚗️ Filtra/ }))
+    await user.click(screen.getByRole('button', { name: /Filtra/ }))
     await user.click(screen.getByRole('button', { name: /Esauriti/ }))
     expect(screen.getByText('Vodka Vecchia')).toBeInTheDocument()
     expect(screen.queryByText('Gin Mare')).toBeNull()
@@ -292,7 +316,7 @@ describe('la schermata del magazzino (REQ-MAG-010)', () => {
     const user = userEvent.setup()
     mostra()
     await aspettaLista()
-    await user.click(screen.getByRole('button', { name: /⚗️ Filtra/ }))
+    await user.click(screen.getByRole('button', { name: /Filtra/ }))
     const voce = screen.getByRole('button', { name: /In scorta/ })
     // Il conteggio c'è come sulle altre voci: Gin Mare, Rum, Ichnusa e il
     // Mezcal nato da una consegna (REQ-MAG-032) — una scheda da completare è
@@ -309,7 +333,7 @@ describe('la schermata del magazzino (REQ-MAG-010)', () => {
     const user = userEvent.setup()
     mostra()
     await aspettaLista()
-    await user.click(screen.getByRole('button', { name: /⚗️ Filtra/ }))
+    await user.click(screen.getByRole('button', { name: /Filtra/ }))
     await user.click(screen.getByRole('button', { name: /In linea/ }))
     await user.click(screen.getByRole('button', { name: /Premium/ }))
     expect(screen.getByText('Gin Mare')).toBeInTheDocument()
@@ -322,13 +346,13 @@ describe('la schermata del magazzino (REQ-MAG-010)', () => {
     const user = userEvent.setup()
     mostra()
     await aspettaLista()
-    await user.click(screen.getByRole('button', { name: /🏭 Fornitore/ }))
+    await user.click(screen.getByRole('button', { name: /Fornitore/ }))
     await user.click(screen.getByRole('button', { name: 'NOVA' }))
     expect(screen.getByText('Gin Mare')).toBeInTheDocument()
     expect(screen.getByText('Ichnusa')).toBeInTheDocument()
     expect(screen.queryByText('Rum Diplomatico')).toBeNull()
     // Scelto il fornitore, il tasto lo dice senza doversi riaprire.
-    expect(screen.getByRole('button', { name: /🏭 NOVA/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /NOVA/ })).toBeInTheDocument()
   })
 
   it('«+ Nuovo prodotto» apre il modulo con Salva e Annulla', async () => {
@@ -527,7 +551,8 @@ describe('la legenda del magazzino', () => {
 // Rimettendo il difetto — cioè togliendo il filtro da INV_VIEWS — la prima
 // prova qui sotto diventa rossa.
 describe('le sezioni premium del magazzino (REQ-LIC-001)', () => {
-  it('l\u2019INVENTARIO non c\u2019\u00e8: non \u00e8 incluso in questa installazione', async () => {
+  it('l\u2019INVENTARIO non c\u2019\u00e8 dove la licenza non lo include', async () => {
+    stato.impostazioni = { ...IMPOSTAZIONI_BASE, licenza: { moduli: { magazzino: true, scadenzario: true } } }
     mostra()
     await aspettaLista()
     expect(screen.queryByRole('button', { name: /Inventario/ })).toBeNull()
@@ -538,7 +563,7 @@ describe('le sezioni premium del magazzino (REQ-LIC-001)', () => {
 
   it('lo Storico inventari viene con l’inventario, subito dopo di lui', async () => {
     const user = userEvent.setup()
-    stato.impostazioni = { ...IMPOSTAZIONI_BASE, licenza: { moduli: { conta: true } } }
+    stato.impostazioni = { ...IMPOSTAZIONI_BASE, licenza: { moduli: { magazzino: true, conta: true } } }
     mostra()
     await aspettaLista()
     const voci = screen.getAllByRole('button').map((b) => b.textContent)
@@ -554,7 +579,7 @@ describe('le sezioni premium del magazzino (REQ-LIC-001)', () => {
     // E la voce torna DOVE STAVA, fra Prodotti e Categorie: l'elenco delle
     // sezioni \u00e8 uno solo, filtrato.
     const user = userEvent.setup()
-    stato.impostazioni = { ...IMPOSTAZIONI_BASE, licenza: { moduli: { conta: true } } }
+    stato.impostazioni = { ...IMPOSTAZIONI_BASE, licenza: { moduli: { magazzino: true, conta: true } } }
     mostra()
     await aspettaLista()
     const voci = screen
@@ -571,7 +596,7 @@ describe('le sezioni premium del magazzino (REQ-LIC-001)', () => {
   it('inclusa ma spenta a mano: non c\u2019\u00e8', async () => {
     stato.impostazioni = {
       ...IMPOSTAZIONI_BASE,
-      licenza: { moduli: { conta: true } },
+      licenza: { moduli: { magazzino: true, conta: true } },
       modulo_conta_enabled: false,
     }
     mostra()
@@ -590,7 +615,7 @@ describe('le sezioni premium del magazzino (REQ-LIC-001)', () => {
     expect(screen.getByText('Ancora nessun movimento.')).toBeInTheDocument()
 
     await act(async () => {
-      stato.avvisaImpostazioni({ ...IMPOSTAZIONI_BASE, licenza: { moduli: { conta: true } } })
+      stato.avvisaImpostazioni({ ...IMPOSTAZIONI_BASE, licenza: { moduli: { magazzino: true, conta: true } } })
     })
     expect(screen.getByRole('button', { name: /Inventario/ })).toBeInTheDocument()
     expect(screen.getByText('Ancora nessun movimento.')).toBeInTheDocument()
@@ -598,7 +623,7 @@ describe('le sezioni premium del magazzino (REQ-LIC-001)', () => {
 
   it('e se a spegnersi \u00e8 la sezione che si sta guardando, si torna ai Prodotti', async () => {
     const user = userEvent.setup()
-    stato.impostazioni = { ...IMPOSTAZIONI_BASE, licenza: { moduli: { conta: true } } }
+    stato.impostazioni = { ...IMPOSTAZIONI_BASE, licenza: { moduli: { magazzino: true, conta: true } } }
     mostra()
     await aspettaLista()
     await user.click(screen.getByRole('button', { name: /Inventario/ }))

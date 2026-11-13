@@ -13,10 +13,16 @@ import { fetchGiorniDiServizio } from '../lib/giorniDiServizio.js'
 import Caricamento from './Caricamento.jsx'
 import { businessDayKey } from '../lib/businessDay.js'
 import { isPersonale } from '../lib/ruoli.js'
-import { formatPrice, ORDER_STATUSES, PAYMENT_METHOD_LABELS } from '../lib/orderStatus.js'
+import { formatPrice, ORDER_STATUSES } from '../lib/orderStatus.js'
 import { paidAmount, orderTotal, scontoTotale } from '../lib/pagamento.js'
 import { printScontrino } from '../lib/printer.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
+import { visibiliNelloStorico, giorniDiStorico, MESSAGGI_PIANO, stampaNelPiano } from '../lib/limiti.js'
+import AvvisoPiano from './AvvisoPiano.jsx'
+import Icona, { ConIcona } from './Icona.jsx'
+import { useTestoConIcona } from '../lib/temaIcone.js'
+import { conEmoji } from '../lib/icone.js'
+import { MetodiPagamento } from './MetodoPagamento.jsx'
 
 // STORICO ORDINI (nel Flusso cassa): la lista CRONOLOGICA di tutti i conti —
 // aperti, chiusi, annullati — col nome se gliene è stato dato uno, altrimenti
@@ -37,8 +43,8 @@ const dalCliente = (o) => !daTiller(o) && !isPersonale(o?.placed_by?.role)
 
 const ORIGINI = [
   ['tutte', 'Tutti'],
-  ['locale', '🍸 Dal locale'],
-  ['clienti', '📱 Dai clienti'],
+  ['locale', conEmoji('menu', 'Dal locale')],
+  ['clienti', conEmoji('telefono', 'Dai clienti')],
 ]
 
 const statoDi = (o) => {
@@ -53,7 +59,7 @@ const metodoDi = (o) => {
   const metodi = [...new Set((o.payments || []).map((p) => p.method).filter(Boolean))]
   if (metodi.length === 0 && o.payment_method) metodi.push(o.payment_method)
   if (metodi.length === 0) return null
-  return metodi.map((m) => PAYMENT_METHOD_LABELS[m] || m).join(' + ')
+  return metodi
 }
 
 const quando = (iso) => {
@@ -72,6 +78,7 @@ const quando = (iso) => {
 }
 
 export default function OrdersHistory() {
+  const testoConIcona = useTestoConIcona()
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -87,10 +94,22 @@ export default function OrdersHistory() {
   // un conto dell'app da aprire.
   const [apertoTiller, setApertoTiller] = useState(null)
   const [cutoffHour, setCutoffHour] = useState(DEFAULT_SETTINGS.business_day_cutoff_hour)
+  // Le impostazioni servono anche al limite dello storico del piano Free
+  // (REQ-LIC-003): senza limiti nella licenza non cambia niente.
+  const [impostazioni, setImpostazioni] = useState(null)
+  // Una volta per render, non per riga: la ristampa c'è solo se il piano
+  // comprende la stampa (REQ-LIC-016). Dalla licenza ricordata, che c'è
+  // subito: le impostazioni qui arrivano dopo, e il tasto lampeggerebbe.
+  const stampaOn = stampaNelPiano()
   useEffect(
-    () => subscribeSettings((s) => setCutoffHour(s.business_day_cutoff_hour), () => {}),
+    () =>
+      subscribeSettings((s) => {
+        setCutoffHour(s.business_day_cutoff_hour)
+        setImpostazioni(s)
+      }, () => {}),
     []
   )
+  const giorniStorico = giorniDiStorico(impostazioni)
   const oggi = businessDayKey(new Date(), cutoffHour)
   const navigate = useNavigate()
   // I giorni di servizio, per colorare il calendario (REQ-STAT-007).
@@ -148,9 +167,16 @@ export default function OrdersHistory() {
     if (!periodo.da) setDelPeriodo(null)
   }, [periodo.da])
 
+  // LO STORICO DEL PIANO FREE: i conti chiusi e annullati più vecchi di
+  // `storico_giorni` non si mostrano (restano nel database). Quelli ancora
+  // aperti sì, di qualunque giorno: sono lavoro da finire, non storico.
   const lista = useMemo(
-    () => (periodo.da ? delPeriodo || [] : orders),
-    [periodo.da, delPeriodo, orders]
+    () =>
+      visibiliNelloStorico(impostazioni, periodo.da ? delPeriodo || [] : orders, {
+        data: (o) => o.created_at,
+        aperta: (o) => statoDi(o) === 'aperti',
+      }),
+    [periodo.da, delPeriodo, orders, impostazioni]
   )
   // I clienti ordinano dall'app solo se il locale glielo permette: dove non
   // succede, un filtro sull'origine sarebbe una domanda senza risposta.
@@ -178,12 +204,15 @@ export default function OrdersHistory() {
   return (
     <div className="storico-ordini">
       <SelettorePeriodo periodo={periodo} onChange={setPeriodo} oggi={oggi} servizio={servizio} />
+      {giorniStorico != null && (
+        <AvvisoPiano messaggio={MESSAGGI_PIANO.storico(giorniStorico)} impostazioni={impostazioni} compatto />
+      )}
 
       <input
         type="search"
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder="🔍 Cerca numero, nome, tavolo…"
+        placeholder={testoConIcona('cerca', 'Cerca numero, nome, tavolo…')}
       />
       <div className="chips-row" style={{ margin: '8px 0' }}>
         {FILTRI.map(([id, label]) => (
@@ -204,7 +233,7 @@ export default function OrdersHistory() {
               className={`chip ${origine === id ? 'active' : ''}`}
               onClick={() => setOrigine(id)}
             >
-              {label}
+              <ConIcona testo={label} />
             </button>
           ))}
         </div>
@@ -240,7 +269,7 @@ export default function OrdersHistory() {
                 {quando(o.created_at)}
                 {/* Come è stato incassato: serve per i conti di fine serata. */}
                 {st === 'chiusi' && metodoDi(o) && (
-                  <span className="ordhist-pay"> · {metodoDi(o)}</span>
+                  <span className="ordhist-pay"> · <MetodiPagamento metodi={metodoDi(o)} /></span>
                 )}
               </span>
               <span className={`pill small ordhist-state ${st === 'chiusi' ? 'pagato' : st === 'annullati' ? 'ritirato' : 'ricevuto'}`}>
@@ -249,7 +278,7 @@ export default function OrdersHistory() {
               {/* Ristampa dello scontrino (anche di conti vecchi): riporta
                   articoli, sconto, totale reale e come è stato incassato.
                   Non per i conti di Tiller: lo scontrino l'ha fatto Tiller. */}
-              {!tiller && <span
+              {!tiller && stampaOn && <span
                 role="button"
                 tabIndex={0}
                 className="ordhist-print"
@@ -264,12 +293,12 @@ export default function OrdersHistory() {
                   if (e.key === 'Enter') e.currentTarget.click()
                 }}
               >
-                🖨
+                <Icona nome="stampa" gruppo="tasti" />
               </span>}
               <span className="ordhist-tot">
                 {formatPrice(orderTotal(o))}
                 {scontoTotale(o) > 0 && (
-                  <span className="sconto-badge"> 🎁 −{formatPrice(scontoTotale(o))}</span>
+                  <span className="sconto-badge"> <Icona nome="sconto" gruppo="tasti" /> −{formatPrice(scontoTotale(o))}</span>
                 )}
               </span>
             </button>

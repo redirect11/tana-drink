@@ -204,6 +204,44 @@ export const THEME_PRESETS = {
       '--muted': '#6f6353',
     },
   },
+  // LE TAVOLOZZE CHE ARRIVANO CON UNO STILE (REQ-MENU-027). «Lavagna» e
+  // «Meraviglie» si scelgono, dal marketplace, insieme ai loro colori; ma i
+  // colori restano una tavolozza come le altre, e si cambiano (l'utente,
+  // 05/11/2026: la tavolozza «sempre libera»). Fino alla 1.10.15 «Lavagna»
+  // i colori li scriveva nel suo CSS, e il tema del menù non contava.
+  lavagna: {
+    label: '🖍️ Lavagna',
+    vars: {
+      '--bg': '#24332d',
+      '--bg-2': '#1d2a25',
+      '--card': '#2c3d36',
+      '--accent': '#f3d27a',
+      '--accent-2': '#f3d27a',
+      '--btn': '#f3d27a',
+      '--text': '#f2eee4',
+      // Il gesso al 66% sull'ardesia, in tinta piena: i colori di una
+      // tavolozza si modificano dal selettore, che vuole un esadecimale.
+      '--muted': '#acaea6',
+    },
+  },
+  // La carta di un libro dell'Ottocento: avorio, inchiostro, seppia, il
+  // rosso della Regina di Cuori e un oro antico scuro abbastanza da
+  // leggersi sull'avorio. Le forme sono quelle «documento» di Pico: angoli
+  // appena smussati, tasti piatti, niente ombre — un libro non ha rilievi.
+  meraviglie: {
+    label: '🎩 Meraviglie',
+    forme: 'pico',
+    vars: {
+      '--bg': '#f3ead6',
+      '--bg-2': '#faf4e6',
+      '--card': '#fdf8ec',
+      '--accent': '#a8231c',
+      '--accent-2': '#7d5d17',
+      '--btn': '#a8231c',
+      '--text': '#2a1f16',
+      '--muted': '#6b5843',
+    },
+  },
 }
 
 export const DEFAULT_THEME = 'tana-scuro'

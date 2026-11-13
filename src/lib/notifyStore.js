@@ -8,7 +8,7 @@
 // buttano: finiscono nello STORICO, che si apre dalla campanella stessa
 // («cos'era quell'avviso di prima?» è una domanda che si fa davvero).
 
-const KEY = 'tana:notifs'
+const KEY = 'drink:notifs'
 const MAX = 60
 
 const readItems = () => {

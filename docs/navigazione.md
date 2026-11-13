@@ -11,7 +11,7 @@ una riga, e il nome del locale ridotto a «La …».
 |---|---|---|
 | Sinistra | ☰ oppure ← | «Come esco da qui?» |
 | Centro | marchio · titolo della pagina e della sezione | «Dove sono?» |
-| Destra | campanella, ⋮ / chi sono | «Cosa posso fare adesso?» |
+| Destra | assistente AI (gestionale), campanella, ⋮ / chi sono | «Cosa posso fare adesso?» |
 
 L'ordine non cambia mai. Chi cerca il menu guarda a sinistra anche in una
 schermata che non ha mai visto.
@@ -52,6 +52,11 @@ sotto i 44px si sbaglia. Si **toglie**, in quest'ordine:
    è l'unica cosa che dice dove sei;
 5. non cadono mai: **☰, campanella, ⋮**.
 
+L'**assistente AI** (REQ-AI-006) sta nella zona destra, prima della
+campanella, solo per lo staff di gestione e solo dove l'AI arriva. Sul
+telefono non ha un tasto suo: è una voce del ⋮, come le altre azioni che in
+fila non ci stanno. Si apre come pannello sopra la pagina, che resta dov'è.
+
 ## Le gerarchie: una per volta, e ognuna al suo posto
 
 - **Le pagine** stanno nel menu laterale (☰). Punto.
@@ -85,6 +90,16 @@ sotto i 44px si sbaglia. Si **toglie**, in quest'ordine:
   gli devo». Stavano lì per contiguità (parlano tutti di prodotti), e chi
   cercava una fattura passava da una schermata di giacenze. Adesso sono la
   pagina «🏭 Fornitori», con le sue tre sottosezioni.
+
+  Lo stesso, il 02/11/2026, per il **marketplace dei temi**: era un
+  riquadro di Impostazioni → Aspetto, ma risponde a «che aspetto potrebbe
+  avere il mio menù», non a «come è regolato il locale», e si sfoglia come
+  un catalogo. Ora è la pagina «🛍️ Marketplace» (Temi, Stili del menù,
+  Installati); in Impostazioni ne resta la strada. I **moduli**
+  (REQ-LIC-012) ci sono entrati come quarta sottosezione e non come
+  pagina a parte: il gesto è lo stesso — sfogliare un catalogo e prendere
+  quello che serve — e la Licenza in Impostazioni resta il posto dove si
+  consulta cosa si ha, non dove si compra.
 
   Il segnale che il gruppo è maturo, in pratica: **le sue voci non
   compaiono mai nella stessa frase** delle altre («guarda quanto gin è

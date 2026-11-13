@@ -7,6 +7,7 @@
 import { createOrder } from './api.js'
 import { isPersonale } from './ruoli.js'
 import { printComanda } from './printer.js'
+import { stampaComandeNelPiano } from './limiti.js'
 import { statoComandaNuova } from './comande.js'
 import { impostazioniRicordate } from './impostazioniLocali.js'
 import { rememberOrderId } from './cart.js'
@@ -128,7 +129,7 @@ export function submitPosOrder({
     try {
       // La stampa della comanda è un'azione a parte (esplicita): qui solo
       // se richiesta al momento dell'invio.
-      if (printNow) await printComanda(created, created.comande?.[0] ?? null)
+      if (printNow && stampaComandeNelPiano()) await printComanda(created, created.comande?.[0] ?? null)
     } catch (e) {
       addBanner(`Comanda #${created.daily_number ?? ''} non stampata: ${e.message}`)
       toastError(`Comanda non stampata: ${e.message}`)

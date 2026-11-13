@@ -1,14 +1,14 @@
+// IL DATABASE PASSA DALLA PORTA DEI DATI (REQ-FLOTTA-021): il contratto,
+// compreso cosa vuol dire una scrittura presa in carico e una arrivata, è
+// scritto in src/porte/dati.js. Dietro oggi c'è Firestore.
 import {
+  db,
   collection,
   doc,
-  addDoc,
   getDoc,
   getDocs,
   getDocsFromCache,
   getDocFromCache,
-  setDoc,
-  updateDoc,
-  deleteDoc,
   deleteField,
   query,
   where,
@@ -19,10 +19,16 @@ import {
   serverTimestamp,
   increment,
   arrayUnion,
-  writeBatch,
   Timestamp,
-} from 'firebase/firestore'
-import { db, auth } from './firebaseClient.js'
+  addDoc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  writeBatch,
+  cercaDalServer,
+} from '../porte/dati.js'
+import { auth } from './firebaseClient.js'
+import { VENUE_VUOTO } from './venue.js'
 import { ORDER_STATUSES } from './orderStatus.js'
 import {
   COLLEZIONE as DIAGNOSTICA_STAMPANTE,
@@ -90,6 +96,7 @@ import {
   ANNULLATA_PER_DIVISIONE,
   itemsTotal as sumItems,
 } from './comande.js'
+import { attesaDopoLaModifica, rispostaAccettata, inAttesa, ANNULLO_RIFIUTO, MESSAGGIO_ATTESA } from './attesaCliente.js'
 import {
   discountAmount,
   discountAfterChange,
@@ -105,6 +112,12 @@ import { MOTIVI_DI_CARICO } from './magazzinoPeriodo.js'
 import { businessDayKey, coverageStart, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
 import { ORARIO_PREDEFINITO } from './orario.js'
 import { recentDrinkIds } from './posCatalog.js'
+import { MESSAGGI_AGGIORNAMENTI, esitoScelta } from './aggiornamenti.js'
+import { esitoPresentazione } from './presentazione.js'
+import { esitoAzione } from './marketplaceModuli.js'
+import { ATTESA_REGIA_MS, postaAllaRegia } from './funzioniRegia.js'
+import { licenzaEffettiva, scritturaConsentita } from './licenza.js'
+import { ordina, vistaSezione, nomeGruppo, sezioneDaScrivere, voceDaScrivere, materializza, categoriaScritta } from './strutturaMenu.js'
 import { DEFAULT_MARKUP, DEFAULT_ROUND_STEP } from './pricing.js'
 import { notify } from './notify.js'
 import { bgWrite } from './sync.js'
@@ -118,7 +131,9 @@ import {
   ordineRicordato,
   VITA_MEMORIA,
 } from './mutazioniOrdine.js'
-import { ricordaImpostazioni, impostazioniRicordate } from './impostazioniLocali.js'
+import { etichetteDellaVoce } from './etichetteIngredienti.js'
+import { ricordaImpostazioni, ricordaLicenza, impostazioniRicordate, licenzaRicordata } from './impostazioniLocali.js'
+import { conEmoji } from './icone.js'
 import {
   cassaCorrente,
   prendiNumero,
@@ -149,6 +164,9 @@ const supplierPriceHistoryCol = collection(db, 'supplier_price_history')
 const orderTemplatesCol = collection(db, 'purchase_order_templates')
 const movementsCol = collection(db, 'stock_movements')
 const settingsDoc = doc(db, 'settings', 'bar')
+// La licenza dell'installazione (BUG-125): fuori da settings/, che lo staff
+// può scrivere. La scrive solo la regia.
+const licenzaDoc = doc(db, 'licenza', 'attuale')
 const groupsCol = collection(db, 'groups')
 const paymentsCol = collection(db, 'payments')
 const cashSessionsCol = collection(db, 'cash_sessions')
@@ -157,10 +175,15 @@ const vouchersCol = collection(db, 'vouchers')
 
 // --- Helpers ------------------------------------------------------------
 
-// Converte un Timestamp Firestore in stringa ISO (compatibile con created_at).
+// Converte una data letta dal database in stringa ISO (compatibile con
+// created_at). La riconosce dal metodo, non dalla classe: il client
+// diretto (cercaDalServer, BUG-117) ha una sua classe, e con il controllo
+// sulla classe le sue date restavano oggetti — la finestra dei movimenti
+// non ne avrebbe trovato nessuno nel periodo. Ed è quello che la porta dei
+// dati promette a ogni adattatore: una data letta ha toDate().
 function toIso(value) {
   if (!value) return null
-  if (value instanceof Timestamp) return value.toDate().toISOString()
+  if (typeof value.toDate === 'function') return value.toDate().toISOString()
   return value
 }
 
@@ -181,7 +204,21 @@ function mapDrink(snap) {
     // esente — quindi i due casi non si possono confondere in un falsy.
     sale_vat: d.sale_vat ?? null,
     available: d.available ?? true,
+    // LA VOCE NON DISPONIBILE AL CLIENTE (REQ-MENU-017): l'opzione del
+    // prodotto, e il segno che scrive la Function quando un ingrediente
+    // attraversa la soglia. Al cliente arriva solo il sì o il no.
+    segue_giacenze: d.segue_giacenze === true,
+    non_disponibile_cliente: d.non_disponibile_cliente === true,
     image_url: d.image_url ?? null,
+    // GLI SPECIAL DELLA CASA (REQ-MENU-018): il segno, e l'illustrazione
+    // pronta da usare quando la foto manca.
+    speciale: d.speciale === true,
+    // Gli ingredienti in carta, scritti a mano (REQ-MENU-019).
+    ingredienti: d.ingredienti ?? null,
+    // Il nome che legge il cliente, se diverso da quello del banco
+    // (REQ-MENU-025): «Gin Mare» al banco, «Gin Mare tonic» al tavolo.
+    nome_cliente: d.nome_cliente ?? null,
+    illustrazione: d.illustrazione ?? null,
     created_at: toIso(d.created_at),
   }
 }
@@ -231,6 +268,9 @@ function mapItem(snap) {
     low_threshold: Number(i.low_threshold) || 0,
     category_id: i.category_id ?? null,
     supplier_id: i.supplier_id ?? null,
+    // IL CLIENTE PUÒ SCEGLIERLO DAL MENÙ (REQ-MAG-055): è fra le alternative
+    // delle voci che offrono la scelta (REQ-MENU-042). Spento se non scritto.
+    scelta_cliente: i.scelta_cliente === true,
     cost: i.cost != null ? Number(i.cost) : null,
     vat: i.vat != null ? Number(i.vat) : 22,
     // Chi non lo dichiara è semplicemente in assortimento: "in linea" è una
@@ -325,6 +365,10 @@ function mapOrder(snap) {
     cancel_phrase: o.cancel_phrase ?? null,
     cancel_message: o.cancel_message ?? null,
     cancel_notify: o.cancel_notify ?? false,
+    // L'ORDINE MODIFICATO DAL BANCO CHE ASPETTA IL CLIENTE (REQ-CLI-009), e
+    // com'è finita: lib/attesaCliente.js.
+    attesa_cliente: o.attesa_cliente ?? null,
+    risposta_cliente: o.risposta_cliente ?? null,
     serial: o.serial ?? null,
     created_at: toIso(o.created_at),
     sumup_sale_id: o.sumup_sale_id ?? null,
@@ -475,6 +519,173 @@ export async function updateCategory(id, patch) {
 
 export async function deleteCategory(id) {
   await deleteDoc(doc(db, 'categories', id))
+}
+
+// --- LA STRUTTURA DEL MENÙ DEI CLIENTI (REQ-MENU-025) ---
+// Le sezioni del menù che si legge al tavolo e le loro voci, ognuna
+// collegata a un prodotto della cassa (la logica sta in
+// lib/strutturaMenu.js). Le collezioni hanno il nome
+// di quando era una «carta» a parte. Due collezioni e non un
+// documento solo: le voci si scrivono una alla volta, mentre le si
+// compila, e un documento unico viaggerebbe intero a ogni descrizione
+// toccata (lo stesso conto di BUG-110). Le scritture partono in
+// sottofondo, con l'identificativo fatto dal terminale: la sottoscrizione
+// le mostra subito, dalla cache.
+
+const cartaSezioniCol = collection(db, 'carta_sezioni')
+const cartaVociCol = collection(db, 'carta_voci')
+
+function mapSezioneCarta(snap) {
+  const s = snap.data() || {}
+  return {
+    id: snap.id,
+    nome: s.nome ?? '',
+    ordine: s.ordine ?? 0,
+    vista: vistaSezione(s.vista),
+    nascosta: s.nascosta === true,
+    // Il gruppo (REQ-MENU-030). Ogni campo nuovo della sezione va copiato
+    // qui, se no l'editor lo scrive e il menù non lo vede mai.
+    gruppo: nomeGruppo(s),
+  }
+}
+
+function mapVoceCarta(snap) {
+  const v = snap.data() || {}
+  return {
+    id: snap.id,
+    sezione_id: v.sezione_id ?? null,
+    drink_id: v.drink_id ?? null,
+    nome: v.nome ?? '',
+    descrizione: v.descrizione ?? '',
+    ingredienti: v.ingredienti ?? '',
+    // Le etichette degli ingredienti (REQ-MENU-040): null finché la voce non
+    // le ha, e allora vale il testo di sempre.
+    etichette: etichetteDellaVoce(v.etichette),
+    ingredienti_nascosti: v.ingredienti_nascosti === true,
+    // La categoria della voce (REQ-MENU-041): null vale quella del prodotto.
+    categoria: categoriaScritta(v.categoria),
+    ordine: v.ordine ?? 0,
+  }
+}
+
+// La carta intera, { sezioni, voci }, quando sono arrivate tutte e due.
+export function subscribeCarta(onChange, onError) {
+  let sezioni = null
+  let voci = null
+  const emetti = () => sezioni && voci && onChange({ sezioni, voci })
+  const errore = onError ?? (() => {})
+  const via1 = onSnapshot(
+    cartaSezioniCol,
+    (snap) => {
+      sezioni = ordina(snap.docs.map(mapSezioneCarta))
+      emetti()
+    },
+    errore
+  )
+  const via2 = onSnapshot(
+    cartaVociCol,
+    (snap) => {
+      voci = snap.docs.map(mapVoceCarta)
+      emetti()
+    },
+    errore
+  )
+  return () => {
+    via1()
+    via2()
+  }
+}
+
+// LE ALTERNATIVE CHE IL CLIENTE PUÒ SCEGLIERE ADESSO (REQ-MENU-042): un sì o
+// un no per prodotto di magazzino, scritti dalle Functions
+// (functions/lib/disponibilita.js). Torna una Map id → disponibile.
+export function subscribeAlternativeCliente(onChange, onError) {
+  return onSnapshot(
+    collection(db, 'alternative_cliente'),
+    (snap) => onChange(new Map(snap.docs.map((d) => [d.id, d.data()?.disponibile === true]))),
+    onError ?? (() => {})
+  )
+}
+
+export function creaSezioneCarta(dati) {
+  const ref = doc(cartaSezioniCol)
+  const sezione = sezioneDaScrivere(dati)
+  bgWrite(() => setDoc(ref, { ...sezione, created_at: serverTimestamp() }), 'carta')
+  return { id: ref.id, ...sezione }
+}
+
+// Le scritture di una struttura intera, a pacchetti: Firestore ne accetta
+// al massimo 500 per pacchetto, e il listino di un locale vero, una voce
+// per prodotto, li supera.
+function inPacchetti(operazioni) {
+  for (let i = 0; i < operazioni.length; i += 450) {
+    const batch = writeBatch(db)
+    for (const op of operazioni.slice(i, i + 450)) op(batch)
+    bgWrite(() => batch.commit(), 'carta')
+  }
+}
+
+const cancellazioni = ({ sezioni, voci } = {}) => [
+  ...(voci || []).map((v) => (b) => b.delete(doc(db, 'carta_voci', v.id))),
+  ...(sezioni || []).map((s) => (b) => b.delete(doc(db, 'carta_sezioni', s.id))),
+]
+
+// LA COPIA DI PARTENZA (strutturaMenu.js, prepopolazione) scritta tutta:
+// sezioni e voci, con gli id fatti qui. Con `sostituisci` la struttura di
+// prima se ne va nello stesso giro di pacchetti («Riparti dalle voci della
+// cassa»): due giri separati facevano passare l'editor per il menù vuoto.
+// Torna la struttura composta, così chi chiama non rilegge quello che si è
+// appena scritto.
+export function prepopolaStruttura(copia, { sostituisci } = {}) {
+  const fatta = materializza(copia, (tipo) => doc(tipo === 'sezione' ? cartaSezioniCol : cartaVociCol).id)
+  inPacchetti([
+    ...cancellazioni(sostituisci),
+    ...fatta.sezioni.map(({ id, ...s }) => (b) => b.set(doc(cartaSezioniCol, id), { ...s, created_at: serverTimestamp() })),
+    ...fatta.voci.map(({ id, ...v }) => (b) => b.set(doc(cartaVociCol, id), { ...v, created_at: serverTimestamp() })),
+  ])
+  return fatta
+}
+
+// Tutta la struttura via: il menù dei clienti torna a dividersi per le
+// categorie della cassa.
+export function eliminaStruttura(carta) {
+  inPacchetti(cancellazioni(carta))
+}
+
+// UN RIORDINO IN UN PACCHETTO SOLO (strutturaMenu.js, riordino): scritti
+// uno per uno, i numeri d'ordine di una sezione lunga facevano una
+// scrittura e un giro di schermo per ognuno. Lo stesso per lo spostamento
+// di più voci in un'altra sezione (spostamentoInBlocco): ogni cambio porta
+// l'id e i campi da scrivere.
+const inBlocco = (collezione) => (cambi) =>
+  inPacchetti((cambi || []).map(({ id, ...campi }) => (b) => b.update(doc(db, collezione, id), campi)))
+export const riordinaSezioniCarta = inBlocco('carta_sezioni')
+export const riordinaVociCarta = inBlocco('carta_voci')
+export const spostaVociCarta = inBlocco('carta_voci')
+
+export function aggiornaSezioneCarta(id, patch) {
+  bgWrite(() => updateDoc(doc(db, 'carta_sezioni', id), patch), 'carta')
+}
+
+// Una sezione se ne va con le sue voci, nello stesso pacchetto: voci
+// rimaste senza sezione non si vedrebbero da nessuna parte, nemmeno qui.
+export function eliminaSezioneCarta(id, vociIds = []) {
+  eliminaStruttura({ sezioni: [{ id }], voci: vociIds.map((v) => ({ id: v })) })
+}
+
+export function creaVoceCarta(dati) {
+  const ref = doc(cartaVociCol)
+  const voce = voceDaScrivere(dati)
+  bgWrite(() => setDoc(ref, { ...voce, created_at: serverTimestamp() }), 'carta')
+  return { id: ref.id, ...voce }
+}
+
+export function aggiornaVoceCarta(id, patch) {
+  bgWrite(() => updateDoc(doc(db, 'carta_voci', id), patch), 'carta')
+}
+
+export function eliminaVoceCarta(id) {
+  bgWrite(() => deleteDoc(doc(db, 'carta_voci', id)), 'carta')
 }
 
 // --- INVENTORY ---
@@ -1048,26 +1259,48 @@ function nonEsistePiu(errore) {
 //
 // LO SCARICO A MANO NON C'È (Flavio, 25-26/09/2026): «carico lo lasciamo
 // com'è, solo in positivo, e va negli acquisti»; le correzioni in meno si
-// fanno col contenuto reale, e il tasto per scaricare non lo vuole. Qui
-// c'era un ramo per i numeri negativi, fermato a zero da una regola nostra
-// che nessuno aveva chiesto, e nessuna schermata lo usava più: un numero
-// negativo adesso è un errore, non un'altra funzione.
+// fanno col contenuto reale, e il tasto per scaricare non lo vuole. Un
+// numero negativo qui è un errore, non un'altra funzione: la merce che
+// torna al fornitore ha la sua, `resoAlFornitore`, qui sotto.
 export function loadStock(item, qty, { reason = 'carico' } = {}) {
-  const cur = articoloScrivibileInMano(item)
   const delta = Number(qty)
   if (!(delta > 0)) throw new Error('Il carico si fa con un numero maggiore di zero.')
+  return movimentoDiMagazzino(item, delta, reason)
+}
+
+// ── IL RESO AL FORNITORE, cioè IL CARICO IN NEGATIVO (REQ-MAG-053) ───
+// Flavio, 04/11/2026: «il fornitore si è convinto a farsi restituire una
+// bottiglia, e io adesso se faccio contenuto reale da 1 passa a 0: è come se
+// me la porta come se fosse stata consumata. Ho bisogno di fare anche il
+// carico negativo». Il contenuto reale è una RETTIFICA, e nel periodo
+// (magazzinoPeriodo.js) il conto deposito + acquisti − consumo la tratta
+// come merce sparita; il reso invece è un acquisto disfatto. Ha il suo
+// motivo, «reso fornitore», nel gruppo degli acquisti: toglie dagli
+// acquisti del periodo, in pezzi e al costo del prodotto, e il consumo non
+// lo vede. Esce come uno scarico, ed è composto in memoria come il carico.
+export function resoAlFornitore(item, qty) {
+  const delta = Number(qty)
+  if (!(delta > 0)) throw new Error('Il reso si fa con un numero maggiore di zero.')
+  return movimentoDiMagazzino(item, -delta, 'reso fornitore')
+}
+
+// Il movimento a mano, nei due versi: la giacenza si sposta con `increment`
+// (commutativo, si accoda offline) e il movimento lo dice col segno nel
+// tipo, la quantità sempre positiva come tutti gli altri.
+function movimentoDiMagazzino(item, delta, reason) {
+  const cur = articoloScrivibileInMano(item)
   const partenza = Number(cur.stock) || 0
   bgWrite(
     () => updateDoc(doc(db, 'inventory_items', cur.id), { stock: increment(delta) }),
-    'carico scorta'
+    delta > 0 ? 'carico scorta' : 'reso scorta'
   )
   bgWrite(
     () =>
       addDoc(movementsCol, {
         item_id: cur.id,
         item_name: cur.name,
-        type: 'load',
-        qty: delta,
+        type: delta > 0 ? 'load' : 'unload',
+        qty: Math.abs(delta),
         unit: cur.unit ?? null,
         reason,
         created_at: serverTimestamp(),
@@ -1205,11 +1438,26 @@ export async function fetchStockMovementsSince(iso) {
 // un distillato ne accumula migliaia l'anno, e leggerli tutti per guardarne
 // novanta giorni sarebbe una lettura che cresce ogni mese. Vuole l'indice
 // composto (item_id, created_at) di firestore.indexes.json.
+//
+// SI LEGGE DAL SERVER DIRETTO, NON DALLA CACHE (BUG-117): con la cache, a
+// ogni prodotto aperto l'SDK scorreva prima tutti i movimenti salvati sul
+// tablet, e la finestra arrivava dopo secondi anche per un prodotto con tre
+// righe. È una consultazione, non un gesto del banco: la rete serve comunque
+// per avere i numeri di tutti i terminali. Senza rete si ripiega sulla
+// lettura di sempre, che risponde con quello che la cache ha.
 export async function fetchMovimentiProdotto(itemId, dal = null) {
-  const vincoli = [where('item_id', '==', itemId)]
-  if (dal) vincoli.push(where('created_at', '>=', Timestamp.fromDate(new Date(`${dal}T00:00:00Z`))))
-  const snap = await getDocs(query(movementsCol, ...vincoli, orderBy('created_at', 'desc')))
-  return snap.docs.map(mapMovement)
+  const da = dal ? new Date(`${dal}T00:00:00Z`) : null
+  try {
+    const dove = [['item_id', '==', itemId]]
+    if (da) dove.push(['created_at', '>=', da])
+    const docs = await cercaDalServer('stock_movements', { dove, ordina: [['created_at', 'desc']] })
+    return docs.map(mapMovement)
+  } catch {
+    const vincoli = [where('item_id', '==', itemId)]
+    if (da) vincoli.push(where('created_at', '>=', Timestamp.fromDate(da)))
+    const snap = await getDocs(query(movementsCol, ...vincoli, orderBy('created_at', 'desc')))
+    return snap.docs.map(mapMovement)
+  }
 }
 
 // I CARICHI DI UN INTERVALLO DI GIORNATE (REQ-MAG-022): carico da Prodotti
@@ -3872,6 +4120,7 @@ async function creaOrdine({
     ...(i.line_id ? { line_id: i.line_id } : {}),
     ...(i.custom ? { custom: true, recipe_items: i.recipe_items ?? [] } : {}),
     ...(i.note ? { note: i.note } : {}),
+    ...autoreDellaRiga(i),
   }))
   // Modello conto/comande: l'ordine nasce `aperto` con la COMANDA 1, che
   // porta lo stato di lavorazione (il POS la crea già in preparazione).
@@ -4254,6 +4503,17 @@ export const setOrderDiscount = perConto(async function setOrderDiscount(
 // CHI STA INCASSANDO, per il rendiconto: in una serata si alternano in due
 // o tre alla cassa, e se il contante non torna è la prima domanda che ci si
 // fa. Si scrive sul pagamento, che è la riga a cui la domanda si riferisce.
+// CHI HA BATTUTO LA RIGA (REQ-ORD-023). La firma la mette il conto
+// (OrderPosDetail, firmaRiga), che sa il ruolo; qui la si porta fino al
+// documento in ogni scrittura delle righe — creazione, comanda aggiunta,
+// modifica — così una riga corretta dal banco resta di chi l'aveva battuta.
+// Una riga senza firma (il cliente, i conti di prima) resta senza.
+function autoreDellaRiga(i) {
+  const a = i?.added_by
+  if (!a) return {}
+  return { added_by: { name: a.name ?? null, email: a.email ?? null, role: a.role ?? null } }
+}
+
 function chiIncassa() {
   const u = auth.currentUser
   if (!u) return null
@@ -4470,6 +4730,7 @@ export function segnaScontrinoStampato(orderId) {
 }
 
 function scaricaInSottofondo(orderId, comandaId) {
+  if (!magazzinoIncluso()) return
   ;(async () => {
     try {
       const ref = doc(db, 'orders', orderId)
@@ -4490,6 +4751,7 @@ function scaricaInSottofondo(orderId, comandaId) {
 // differenza. Come per lo scarico, la vendita è già scritta: qui si insegue
 // il magazzino, non viceversa.
 function riallineaInSottofondo(orderId, comandaId) {
+  if (!magazzinoIncluso()) return
   ;(async () => {
     try {
       const ref = doc(db, 'orders', orderId)
@@ -4630,6 +4892,21 @@ async function leggiArticoli(ids) {
   return itemsById
 }
 
+// IL MAGAZZINO SI SCALA SOLO DOVE LA LICENZA LO INCLUDE (REQ-LIC-008).
+// Lo scarico di una vendita parte da solo, a ogni «pronto» e a ogni
+// chiusura, appena una ricetta punta a un articolo di magazzino: anche in
+// un locale che il modulo non ce l'ha più (una prova scaduta, un piano
+// più piccolo). Da quando le regole del database rifiutano le scritture
+// sul magazzino senza il modulo, ogni vendita lì diventava un errore di
+// sincronizzazione al banco. Quindi senza il modulo non si scala niente.
+// Si chiede alla stessa tabella delle regole (COLLEZIONI_DEI_MODULI), che
+// guarda l'INCLUSO e non l'interruttore d'uso: chi ha il modulo e l'ha
+// spento ha sempre scalato.
+// Se la licenza non si sa ancora (nessuna, da nessuna parte) si scala come
+// prima e decidono le regole: perdere uno scarico vero è peggio.
+const magazzinoIncluso = () =>
+  scritturaConsentita(settingsCache ?? { licenza: licenzaRicordata() }, 'stock_movements')
+
 // LO SCARICO DI UNA CHIUSURA, E IL SEGNO CHE È STATO FATTO (BUG-113).
 // Alla chiusura il segno `inventory_applied` non arrivava mai sul conto, e
 // un conto riaperto e richiuso si scalava due volte. Qui, dopo lo scarico,
@@ -4637,7 +4914,7 @@ async function leggiArticoli(ids) {
 // suo turno come ogni altra (scriviCampiComande). Tutto in sottofondo: il
 // conto è già chiuso, il magazzino lo segue.
 function scaricaComande(entries) {
-  if (!entries.length) return
+  if (!entries.length || !magazzinoIncluso()) return
   depleteComandeInventory(entries)
     .then(({ lowStock, scalate }) => {
       const perConto = new Map()
@@ -4677,7 +4954,7 @@ function notifyLowStock(lowStock) {
     const finito = it.stock <= 0
     if (!avvisoAttivo(preferenze, idAvvisoScorta(finito ? 'empty' : 'low'))) continue
     notify(
-      `⚠️ Scorta ${finito ? 'esaurita' : 'in esaurimento'}`,
+      conEmoji('avviso', `Scorta ${finito ? 'esaurita' : 'in esaurimento'}`),
       `${it.name}: rimasti ${formatQty(it.stock, it.unit)}`
     )
   }
@@ -4700,6 +4977,11 @@ async function advanceComandaOra(orderId, comandaId, newStatus) {
     ? comande.find((c) => c.id === comandaId)
     : activeComanda({ comande })
   if (!comanda) throw new Error('Comanda non trovata')
+  // IL CONTO CHE ASPETTA IL CLIENTE NON AVANZA (REQ-CLI-009), da nessuna
+  // strada: coda, conto, comanda, trascinamento, tasto dello staff. Qui e
+  // non in ogni schermata, che così non se ne dimentica nessuna. Annullare
+  // resta possibile.
+  if (newStatus !== ORDER_STATUSES.ANNULLATO && inAttesa({ ...raw, status: norm.status })) throw new Error(MESSAGGIO_ATTESA)
 
   // IL MAGAZZINO SI SCALA A «PRONTO»: lì il drink è fatto, e a segnarlo è
   // chi l'ha fatto. Prima e dopo gli ingredienti sono IMPEGNATI, e si
@@ -4837,7 +5119,9 @@ export async function updateOrderPushToken(id, token) {
 // comanda riga per riga, e `aggregateItems` invece fonde due righe dello
 // stesso drink — due Mojito battuti separati diventerebbero uno da due, e
 // una nota o un prezzo cambiato a mano su una delle due sparirebbe.
-function salvaComandeERifaiTotale(ref, cur, comande, etichetta, righe = null) {
+// `extra`: altri campi del conto che cambiano INSIEME alle righe, nella
+// stessa scrittura (l'attesa del cliente, REQ-CLI-009).
+function salvaComandeERifaiTotale(ref, cur, comande, etichetta, righe = null, extra = null) {
   const items = righe || aggregateItems(comande)
   const extras =
     Number(cur.coperto_amount || 0) +
@@ -4857,6 +5141,7 @@ function salvaComandeERifaiTotale(ref, cur, comande, etichetta, righe = null) {
         items,
         total,
         ...(sconto != null ? { discount_amount: sconto } : {}),
+        ...extra,
       }),
     etichetta
   )
@@ -4870,6 +5155,7 @@ function salvaComandeERifaiTotale(ref, cur, comande, etichetta, righe = null) {
     items,
     total,
     ...(sconto != null ? { discount_amount: sconto } : {}),
+    ...extra,
   }
   // Ricordato qui e non solo in `ordineDopo`: c'è chi scrive senza dover
   // restituire niente (la preparazione parziale), e anche il suo array deve
@@ -4906,6 +5192,7 @@ export const updateOrderItems = perConto(async function updateOrderItems(id, ite
     ...(i.line_id ? { line_id: i.line_id } : {}),
     ...(i.custom ? { custom: true, recipe_items: i.recipe_items ?? [] } : {}),
     ...(i.note ? { note: i.note } : {}),
+    ...autoreDellaRiga(i),
   }))
   // Come per la modifica dal banco: il ticket già uscito va ristampato
   // completo (qui la comanda è per forza una sola e ancora «da fare»).
@@ -5048,6 +5335,7 @@ export const addComanda = perConto(async function addComanda(orderId, items, { n
       ...(i.line_id ? { line_id: i.line_id } : {}),
       ...(i.custom ? { custom: true, recipe_items: i.recipe_items ?? [] } : {}),
       ...(i.note ? { note: i.note } : {}),
+      ...autoreDellaRiga(i),
     })),
     // In che passo nasce lo dice il locale, e lo dice in un posto solo
     // (statoComandaNuova). L'ora del «ricevuto» c'è comunque: la comanda è
@@ -5101,6 +5389,9 @@ export const preparazioneParziale = perConto(async function preparazioneParziale
   const cur = snap.data()
   const norm = normalizeOrderDoc(cur)
   if (norm.status !== ORDER_OPEN) throw new Error('Conto chiuso: non più modificabile')
+  // Dividere fa avanzare la parte scelta: non col cliente che deve ancora
+  // accettare le modifiche (REQ-CLI-009).
+  if (inAttesa({ ...cur, status: norm.status })) throw new Error(MESSAGGIO_ATTESA)
   const comande = norm.comande.map((c) => ({ ...c }))
   const comanda = comande.find((c) => c.id === comandaId)
   if (!comanda) throw new Error('Comanda non trovata')
@@ -5195,6 +5486,7 @@ export const bartenderUpdateComanda = perConto(async function bartenderUpdateCom
     ...(i.line_id ? { line_id: i.line_id } : {}),
     ...(i.custom ? { custom: true, recipe_items: i.recipe_items ?? [] } : {}),
     ...(i.note ? { note: i.note } : {}),
+    ...autoreDellaRiga(i),
   }))
 
   const snap = await leggiOrdine(ref)
@@ -5225,6 +5517,21 @@ export const bartenderUpdateComanda = perConto(async function bartenderUpdateCom
   // non veniva scritta e gli item andavano persi.
   const daRiallineare = comanda.inventory_applied === true
 
+  // L'ORDINE DAL TELEFONO CAMBIATO DAL BANCO TORNA AL CLIENTE (REQ-CLI-009):
+  // prezzo o ingredienti diversi da quelli che ha ordinato, e lui deve
+  // poterli accettare o rifiutare. L'attesa parte nella STESSA scrittura
+  // delle righe: non c'è un istante in cui il conto è cambiato e la coda
+  // lo crede confermato. Se il banco rimette l'ordine com'era, l'attesa
+  // finisce da sé.
+  const attesaDopo = attesaDopoLaModifica(
+    { ...cur, status: norm.status, comande: norm.comande },
+    comandaId,
+    comanda.items,
+    newItems,
+    impostazioni()
+  )
+  const attesa = attesaDopo === undefined ? null : { attesa_cliente: attesaDopo }
+
   comanda.items = newItems
   // IL TICKET CHE ERA USCITO ADESSO È VECCHIO. Una comanda non ancora presa
   // in carico può accogliere righe nuove (comandaPerLeAggiunte): se era già
@@ -5233,16 +5540,40 @@ export const bartenderUpdateComanda = perConto(async function bartenderUpdateCom
   // Su una comanda presa in carico non si tocca niente: quella carta è in
   // mano a qualcuno che ci sta lavorando.
   if (comanda.auto_print_at && !presaInCarico(comanda)) comanda.auto_print_at = null
-  const patch = salvaComandeERifaiTotale(ref, cur, comande, 'modifica comanda')
+  const patch = salvaComandeERifaiTotale(ref, cur, comande, 'modifica comanda', null, attesa)
   // Scorte dopo: se erano già state scalate si applica solo la differenza.
   if (daRiallineare) riallineaInSottofondo(orderId, comandaId)
   return ordineDopo(orderId, cur, patch)
 })
 
+// LA RISPOSTA DEL CLIENTE A UN ORDINE MODIFICATO DAL BANCO (REQ-CLI-009).
+// Accettato, l'attesa si chiude e il conto prosegue; rifiutato, è annullato
+// dal cliente. `alBanco`: il sì è arrivato a voce, lo segna chi lavora.
+// Si scrive in sottofondo e si torna il conto già composto.
+// Il rifiuto passa da cancelOrder FUORI dal turno del conto: cancelOrder ha
+// il suo, e chiamarlo da dentro questo lo farebbe aspettare se stesso.
+export function rispondiAllaModifica(id, esito, opzioni = {}) {
+  if (esito === 'rifiutato') return cancelOrder(id, { by: 'cliente', kind: ANNULLO_RIFIUTO })
+  return accettaLaModifica(id, opzioni)
+}
+
+const accettaLaModifica = perConto(async function accettaLaModifica(id, { alBanco = false } = {}) {
+  const ref = doc(db, 'orders', id)
+  const snap = await leggiOrdine(ref)
+  if (!snap.exists()) throw new Error('Ordine non trovato')
+  const cur = snap.data()
+  const patch = rispostaAccettata({ alBanco })
+  bgWrite(() => updateDoc(ref, patch), 'risposta del cliente')
+  return ordineDopo(id, cur, patch)
+})
+
 // Annulla un ordine. Se lo stock era già stato scalato lo ripristina dallo
 // snapshot del consumo — TRANNE per kind 'non_ritirato': il drink è stato
 // preparato (e sprecato), quindi le scorte restano consumate.
-// opts: { by: 'cliente'|'bartender', kind, phrase, message, notify }
+// opts: { by: 'cliente'|'bartender', kind, phrase, message, notify, persona }
+// `persona: null` per un annullo che non ha fatto nessuno di persona (il
+// tempo del cliente scaduto, REQ-CLI-009): la storia del conto non deve
+// dire che l'ha annullato chi aveva la coda aperta.
 export const cancelOrder = perConto(async function cancelOrder(id, opts = {}) {
   const {
     by = 'cliente',
@@ -5251,6 +5582,7 @@ export const cancelOrder = perConto(async function cancelOrder(id, opts = {}) {
     message = null,
     notify: notifyClient = false,
   } = opts
+  const persona = 'persona' in opts ? opts.persona : chiIncassa()
   const orderRef = doc(db, 'orders', id)
   const snap = await leggiOrdine(orderRef)
   if (!snap.exists()) throw new Error('Ordine non trovato')
@@ -5313,7 +5645,7 @@ export const cancelOrder = perConto(async function cancelOrder(id, opts = {}) {
     // E CHI, di persona: `cancelled_by` dice solo se è stato il cliente o il
     // banco, e nella storia del conto compariva «bartender» mentre le altre
     // righe dicevano il nome. Tre etichette diverse per la stessa persona.
-    cancelled_persona: chiIncassa(),
+    cancelled_persona: persona,
     // DA QUALE TERMINALE. Serve a non ripetere l'avviso a chi ha appena
     // annullato: lo sa già. Stesso metro degli ordini (placed_by.device).
     cancelled_device: idDispositivo(),
@@ -5321,6 +5653,10 @@ export const cancelOrder = perConto(async function cancelOrder(id, opts = {}) {
     cancel_phrase: phrase,
     cancel_message: message || null,
     cancel_notify: !!notifyClient,
+    // Un conto annullato non aspetta più nessuno (REQ-CLI-009). E le regole
+    // lo pretendono: il rifiuto del cliente passa di qui, e il cliente può
+    // annullare un conto in attesa solo chiudendo l'attesa.
+    attesa_cliente: null,
   }
   bgWrite(() => updateDoc(orderRef, patchAnnullo), 'annullo ordine')
 
@@ -5345,6 +5681,7 @@ export const cancelOrder = perConto(async function cancelOrder(id, opts = {}) {
 // altre scritture sullo stesso articolo.
 // Chi ha già letto gli articoli li passa (`itemsById`), e non si rileggono.
 async function stornaScorte(orderId, consumption, itemsById = null) {
+  if (!magazzinoIncluso()) return
   try {
     const articoli = itemsById || (await leggiArticoli(consumption.map((c) => c.inventory_item_id)))
     for (const c of consumption) {
@@ -5992,6 +6329,45 @@ export function subscribePendingCalls(onChange, onError) {
 }
 
 // Lo staff risponde alla chiamata.
+// ── LA SALA CHIAMA IL BANCONE (REQ-STAFF-019) ─────────────────────────
+// Flavio, 30/10/2026: «in questo momento lo staff può solo ricevere una
+// chiamata dal bancone ma non può effettuarla … permettere la chiamata al
+// bancone, quindi ad un account admin». La chiamata non è per una persona:
+// è per il bancone, cioè per chi ci lavora da titolare (`to_role: 'admin'`),
+// su tutti i suoi terminali. Le regole lasciano alla sala SOLO questa
+// chiamata, firmata da chi la fa.
+// Parte in sottofondo e il tasto risponde subito: chi chiama ha un vassoio
+// in mano, e offline la conferma del server non arriverebbe mai.
+export function chiamaIlBancone({ from_uid, from_email = null, from_name = null, message = null }) {
+  const ref = doc(staffCallsCol)
+  setDoc(ref, {
+    to_uid: null,
+    to_email: null,
+    to_role: 'admin',
+    from_uid,
+    from_email,
+    from_name,
+    message: message || null,
+    status: 'pending',
+    created_at: serverTimestamp(),
+    acked_at: null,
+  }).catch((e) => console.error('[chiamata] al bancone:', e?.message || e))
+  return ref.id
+}
+
+// Le chiamate al bancone ancora senza risposta: le ascolta chi è titolare.
+export function subscribeCallsAlBancone(onChange, onError) {
+  const q = query(staffCallsCol, where('to_role', '==', 'admin'), where('status', '==', 'pending'))
+  return onSnapshot(q, (snap) => onChange(snap.docs.map((d) => ({ id: d.id, ...d.data() }))), onError ?? (() => {}))
+}
+
+// Le MIE chiamate al bancone ancora senza risposta: il tasto della sala
+// dice «in attesa» finché il bancone non risponde, e non si chiama due volte.
+export function subscribeMieChiamateAlBancone(uid, onChange, onError) {
+  const q = query(staffCallsCol, where('from_uid', '==', uid), where('status', '==', 'pending'))
+  return onSnapshot(q, (snap) => onChange(snap.docs.map((d) => ({ id: d.id, ...d.data() }))), onError ?? (() => {}))
+}
+
 export async function ackStaffCall(id) {
   await updateDoc(doc(db, 'staff_calls', id), {
     status: 'acked',
@@ -6002,6 +6378,10 @@ export async function ackStaffCall(id) {
 // --- SETTINGS ---
 
 export const DEFAULT_SETTINGS = {
+  // L'IDENTITÀ DEL LOCALE (REQ-VENUE-001): vuote di partenza, e vuote
+  // vuol dire «vale la build» (clienti/<slug>/venue.json, lib/venue.js).
+  // Le scrive l'admin da Impostazioni → Il locale.
+  ...VENUE_VUOTO,
   menu_only: false,
   // GIORNATA COMMERCIALE: ora a cui "gira" la giornata. Il locale lavora
   // oltre la mezzanotte, quindi la nottata resta contata nella giornata in
@@ -6027,9 +6407,9 @@ export const DEFAULT_SETTINGS = {
   workflow_enabled: false,
   // LE FUNZIONI PREMIUM (lib/licenza.js). Questi sono gli interruttori
   // D'USO — «il locale lo sta usando?» — e NON dicono cosa il locale ha
-  // comprato: quella è la licenza, e sta in licenza.js (campo `incluso`)
-  // finché non arriva il documento `settings/licenza` della Fase 3. Un
-  // modulo non incluso resta spento comunque, qualunque cosa dica il flag.
+  // comprato: quello lo dice la licenza (`licenza/attuale` o la build,
+  // BUG-125), e non sta in settings/ apposta, perché settings/ lo scrive lo
+  // staff. Un modulo non incluso resta spento qualunque cosa dica il flag.
   // Accesi di suo, come `workflow_enabled !== false`: quello che il locale
   // ha comprato funziona senza che nessuno lo debba accendere.
   modulo_conta_enabled: true,
@@ -6045,6 +6425,21 @@ export const DEFAULT_SETTINGS = {
   riscuoti_e_servi: false,
   // «Riscuoti (senza stampa)» nella schermata di pagamento: spento di suo.
   riscuoti_senza_stampa: false,
+  // IL MENÙ SPECIAL (REQ-MENU-018): il titolo e il sottotitolo della
+  // pagina e del carosello. Il tema cambia (oggi Alice), la pagina no.
+  special_titolo: 'Special',
+  // Lo stile del menù dei clienti (REQ-MENU-021): 'classico' o 'notte'.
+  stile_menu: 'classico',
+  special_sottotitolo: '',
+  special_attivo: true,
+  // Le sezioni fatte solo di Special (i Signature) anche fra le sezioni del
+  // menù. Spento di partenza (l'utente, 11/11/2026): si aprono dal carosello
+  // e dal QR del menù Special. Vale solo col menù Special attivo.
+  special_nel_menu: false,
+  // IL RESTO IN CONTANTI (REQ-PAG-015): nella schermata di pagamento, con
+  // «Contante», si dice quanto dà il cliente e compare il resto. Spento di
+  // suo: chi non lo usa non deve trovarsi un riquadro in più sul tastierino.
+  resto_contanti: false,
   // CHI PUÒ APRIRE LA CASSA, PER OGNI ACCOUNT (REQ-STAFF-016): una mappa
   // «uid di chi fa il login → uid degli admin che può scegliere». Vuota o
   // assente vuol dire «tutti gli admin», che è il comportamento di partenza:
@@ -6112,6 +6507,11 @@ export const DEFAULT_SETTINGS = {
   cancel_phrase_default: 'bancone',
   // Tabellone "stiamo servendo / pronti al ritiro" nel menù cliente.
   show_serving_board: true,
+  // Come si leggono i prezzi nel menù dei clienti (REQ-MENU-038): 'numero'
+  // (8 · 3,5, il valore di partenza: Flavio, 11/11/2026, «solo ed
+  // esclusivamente il numero»), 'centesimi' (8 · 3,50) o 'valuta'
+  // (8,00 € · 3,50 €). Vedi lib/prezzoMenu.js.
+  formato_prezzi_menu: 'numero',
   // Account clienti: se disattivato, login/registrazione clienti nascosti
   // (lo staff continua ad accedere da /bar).
   customer_accounts_enabled: true,
@@ -6153,6 +6553,10 @@ export const DEFAULT_SETTINGS = {
   // sono lo stesso tavolo. Il colore a mano si può dare comunque, acceso
   // o spento che sia questo (vedi lib/coloriConto.js).
   conti_colorati: false,
+  // L'iniziale di chi ha caricato ogni riga, e con lei il «+» e il «−»
+  // solo a chi l'ha caricata (REQ-ORD-023, REQ-ORD-024). Accesa: la
+  // chiedeva la Tana, e un locale dove non serve la spegne.
+  firma_righe: true,
   // COSA DICE LA STRISCIA a sinistra della card, in tutte le viste della
   // coda: di suo lo STATO — a che punto sta il lavoro e com'è messo il
   // pagamento — che è com'è sempre stato e resta il default. Acceso,
@@ -6210,6 +6614,13 @@ export const DEFAULT_SETTINGS = {
   // Temi: preset + eventuali override colore, separati per gestionale
   // (staff/bartender) e vista cliente. Vedi src/lib/themes.js.
   theme_staff: { preset: 'tana-scuro', custom: null },
+  // Le icone del gestionale (REQ-UI-031), un tema per gruppo (lib/icone.js):
+  // «silhouette», monocrome, di partenza per tutti (decisione dell'utente,
+  // 07/11/2026); «emoji» rimette quelle di prima. Le pagine del cliente non
+  // le guardano.
+  tema_icone_navigazione: 'silhouette',
+  tema_icone_tasti: 'silhouette',
+  tema_icone_segnali: 'silhouette',
   theme_client: { preset: 'tana-scuro', custom: null },
 }
 
@@ -6219,6 +6630,23 @@ export const DEFAULT_SETTINGS = {
 // (che il gestionale tiene sempre aperto); se nessuno l'ha ancora aperto si
 // legge una volta sola, dalla cache offline se serve.
 let settingsCache = null
+
+// LA LICENZA DENTRO LE IMPOSTAZIONI (BUG-125). Le schermate la cercano
+// dove l'hanno sempre trovata, `licenza` nelle impostazioni lette; cambia
+// da dove arriva. Quella scritta in `settings/bar.licenza` si butta: la
+// può riscrivere ogni bartender, e un ripiego lì riaprirebbe il buco. Al
+// suo posto la licenza che vale (lib/licenza.js, licenzaEffettiva).
+// Finché non si sa (prima risposta dalla cache, documento assente, nessuna
+// licenza nella build) resta l'ultima licenza nota su questo dispositivo:
+// meglio quella che un'app che si ferma o perde i moduli per un istante.
+// `licenzaLetta` è l'ultimo { documento, certo } visto da un ascolto.
+let licenzaLetta = null
+
+function conLicenza(dati, letto = licenzaLetta) {
+  const { licenza: _diSettings, ...resto } = dati || {}
+  const licenza = licenzaEffettiva(letto) ?? licenzaRicordata()
+  return licenza ? { ...resto, licenza } : resto
+}
 
 // I valori con cui disegnare la prima volta, prima che il server risponda:
 // l'ultima risposta ricordata, o i default. Serve dove l'impostazione
@@ -6235,7 +6663,7 @@ function impostazioni() {
   if (!settingsCache) {
     getDoc(settingsDoc)
       .then((snap) => {
-        if (snap.exists()) settingsCache = snap.data()
+        if (snap.exists()) settingsCache = conLicenza(snap.data())
       })
       .catch(() => {})
   }
@@ -6268,25 +6696,136 @@ function scontoRicalcolato(cur, nuovoTotale, nuoviItems = null) {
   )
 }
 
+// ── LA SCELTA SUGLI AGGIORNAMENTI (REQ-FLOTTA-020) ───────────────────
+// «Aggiorna» o «Salta» del titolare: una chiamata alla regia, col suo token
+// d'accesso (il contratto è in docs/aggiornamenti-dalla-regia.md). Qui
+// l'attesa c'è, ed è voluta: non è un gesto della serata, è una decisione
+// che vale solo se la regia l'ha presa, e il titolare deve sapere se è
+// andata. Il box resta usabile mentre si aspetta, e dopo venti secondi
+// senza risposta si dice che la scelta non è partita (ATTESA_REGIA_MS, la
+// stessa di ogni chiamata alla regia).
+export const ATTESA_SCELTA_MS = ATTESA_REGIA_MS
+
+// Una chiamata alla regia col token di chi ha fatto l'accesso: { status,
+// corpo }, o null senza token. Lancia senza rete o dopo l'attesa massima.
+// La usano la scelta sugli aggiornamenti, la presentazione (REQ-FLOTTA-026)
+// e i moduli (REQ-LIC-012).
+async function chiamaRegia(url, dati) {
+  const token = await auth.currentUser?.getIdToken()
+  if (!token) return null
+  const r = await postaAllaRegia(url, { corpo: dati, intestazioni: { Authorization: `Bearer ${token}` } })
+  // Chi chiama distingue «senza rete» da una risposta: lo dice l'eccezione,
+  // col perché vero per la console.
+  if (r.status === 0) throw new Error(r.errore || 'senza risposta')
+  return r
+}
+
+export async function inviaSceltaAggiornamento(url, tag, scelta) {
+  try {
+    const r = await chiamaRegia(url, { tag, scelta })
+    if (!r) return { ok: false, messaggio: MESSAGGI_AGGIORNAMENTI.non_riuscita }
+    return esitoScelta(r.status, r.corpo)
+  } catch (e) {
+    console.warn('[aggiornamenti] scelta:', e?.message || e)
+    return { ok: false, messaggio: MESSAGGI_AGGIORNAMENTI.senza_rete }
+  }
+}
+
+// Una chiamata alla regia letta con `esito(status, corpo)`, senza errori
+// che risalgono: senza accesso { status: 401 }, senza rete { status: 0 }.
+async function chiamaRegiaConEsito(url, dati, esito, etichetta) {
+  try {
+    const r = await chiamaRegia(url, dati)
+    if (!r) return { ok: false, status: 401, errore: null }
+    return esito(r.status, r.corpo)
+  } catch (e) {
+    console.warn(`[regia] ${etichetta}:`, e?.message || e)
+    return { ok: false, status: 0, errore: null }
+  }
+}
+
+// LA PRESENTAZIONE ALLA REGIA (REQ-FLOTTA-026): quando chiamarla lo decide
+// lib/presentazione.js; qui solo la chiamata. Non è un gesto della serata:
+// parte in sottofondo e nessuno la aspetta. Senza rete, o senza risposta,
+// torna un esito non riuscito e si riprova alla prossima apertura.
+export const presentaAllaRegia = (url, versione) =>
+  chiamaRegiaConEsito(url, { versione }, esitoPresentazione, 'presentazione')
+
+// IL MARKETPLACE DEI MODULI (REQ-LIC-012): prova, acquisto, disdetta di un
+// modulo, decisi dal titolare. Come la scelta sugli aggiornamenti, qui
+// l'attesa c'è ed è voluta: è un acquisto, vale solo se la regia l'ha
+// preso, e la licenza la riscrive lei — l'app la vede cambiare in tempo
+// reale. `ritorno` è dove la pagina di pagamento riporta il titolare.
+export const azioneModulo = (url, modulo, azione, ritorno) =>
+  chiamaRegiaConEsito(url, { modulo, azione, ritorno }, esitoAzione, 'modulo')
+
+// Due ascolti, uno solo verso chi chiama: le impostazioni del bar e la
+// licenza. Si risponde quando le impostazioni ci sono, e di nuovo a ogni
+// cambio di una delle due.
+// La licenza si ascolta ANCHE quando cambia solo la provenienza della
+// risposta (`includeMetadataChanges`): un documento che non c'è né nella
+// cache né sul server non cambia mai, e senza quell'opzione la conferma
+// del server («non c'è davvero») non arriverebbe.
 export function subscribeSettings(onChange, onError) {
-  return onSnapshot(
+  let dati // undefined finché settings/bar non risponde; null se non c'è
+  let letto = licenzaLetta
+  // L'impronta è della licenza che VALE, non di quello che si è letto: alla
+  // Tana il documento non c'è e `certo` cambia a ogni caduta del wifi, ma
+  // la licenza resta quella della build, e trenta schermate non si devono
+  // ridisegnare per niente.
+  const improntaDi = (l) => JSON.stringify(licenzaEffettiva(l) ?? null)
+  let impronta = letto ? improntaDi(letto) : null
+  const errore = onError ?? (() => {})
+  const rispondi = () => {
+    if (dati === undefined) return
+    if (dati === null) {
+      // Senza settings/bar la licenza vale lo stesso, e la stampa la legge
+      // dalla memoria: si ricorda anche qui, o tasti e cancello direbbero
+      // due cose diverse (REQ-LIC-016).
+      const vuote = conLicenza({ ...DEFAULT_SETTINGS }, letto)
+      ricordaLicenza(vuote.licenza)
+      return onChange(vuote)
+    }
+    const data = conLicenza(dati, letto)
+    settingsCache = data
+    // Per la PROSSIMA apertura: si disegna con l'ultima verità nota
+    // invece che coi valori di partenza (vedi impostazioniLocali.js).
+    ricordaImpostazioni(data)
+    const merged = { ...DEFAULT_SETTINGS, ...data }
+    // Retrocompatibilità col vecchio flag booleano della scelta consegna.
+    if (!data.service_mode && data.service_mode_choice_enabled) {
+      merged.service_mode = 'entrambi'
+    }
+    onChange(merged)
+  }
+  const smettiImpostazioni = onSnapshot(
     settingsDoc,
     (snap) => {
-      if (!snap.exists()) return onChange({ ...DEFAULT_SETTINGS })
-      const data = snap.data()
-      settingsCache = data
-      // Per la PROSSIMA apertura: si disegna con l'ultima verità nota
-      // invece che coi valori di partenza (vedi impostazioniLocali.js).
-      ricordaImpostazioni(data)
-      const merged = { ...DEFAULT_SETTINGS, ...data }
-      // Retrocompatibilità col vecchio flag booleano della scelta consegna.
-      if (!data.service_mode && data.service_mode_choice_enabled) {
-        merged.service_mode = 'entrambi'
-      }
-      onChange(merged)
+      dati = snap.exists() ? snap.data() : null
+      rispondi()
     },
-    onError ?? (() => {})
+    errore
   )
+  const smettiLicenza = onSnapshot(
+    licenzaDoc,
+    { includeMetadataChanges: true },
+    (snap) => {
+      const documento = snap.exists() ? snap.data() : null
+      letto = { documento, certo: Boolean(documento) || snap.metadata?.fromCache === false }
+      licenzaLetta = letto
+      // Un cambio della sola provenienza, a licenza uguale, non ridisegna
+      // niente: risponde solo quando cambia la licenza che vale.
+      const nuova = improntaDi(letto)
+      if (nuova === impronta) return
+      impronta = nuova
+      rispondi()
+    },
+    errore
+  )
+  return () => {
+    smettiImpostazioni()
+    smettiLicenza()
+  }
 }
 
 export async function updateSettings(data) {

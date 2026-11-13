@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useStatoStampante } from '../lib/statoStampante.js'
 import { salaStampaDaSe, loadPrinterSettings } from '../lib/printer.js'
+import Icona from './Icona.jsx'
 
 // ── SI STAMPERÀ? ─────────────────────────────────────────────────────
 // Un pallino nella coda ordini, per tutti: chi sta al banco e chi sta in
@@ -13,7 +14,7 @@ import { salaStampaDaSe, loadPrinterSettings } from '../lib/printer.js'
 // L'ICONA, non la parola: «Stampante» accanto a un pallino era una
 // didascalia di quello che si vede già, e in una riga dove lo spazio serve
 // alla ricerca. L'oggetto lo dice il disegno.
-const PUNTO = { ok: '🟢', ko: '🔴', spenta: '⚪', ignota: '⚪' }
+const PUNTO = { ok: 'verde', ko: 'rosso', spenta: 'spento', ignota: 'spento' }
 
 export default function PallinoStampante({ gestore = false }) {
   const { stato, motivo, ricontrolla } = useStatoStampante()
@@ -27,7 +28,7 @@ export default function PallinoStampante({ gestore = false }) {
   if (rimbalzo && !gestore) {
     return (
       <span className="btn ghost small pallino-stampante rimbalzo" title="Le comande le stampa il banco">
-        🖨️ <span className="pallino-testo">Stampa il banco</span>
+        <Icona nome="stampante" gruppo="tasti" /> <span className="pallino-testo">Stampa il banco</span>
       </span>
     )
   }
@@ -44,7 +45,10 @@ export default function PallinoStampante({ gestore = false }) {
         aria-label={`Stampante: ${stato === 'ok' ? 'risponde' : motivo || 'in verifica'}`}
         title={stato === 'ok' ? 'La stampante risponde' : motivo || 'Controllo in corso…'}
       >
-        🖨️ <span className="pallino-punto">{punto}</span>
+        <Icona nome="stampante" gruppo="tasti" />{' '}
+        <span className="pallino-punto">
+          <Icona nome={punto} gruppo="segnali" />
+        </span>
       </button>
 
       {aperto && (
@@ -53,9 +57,7 @@ export default function PallinoStampante({ gestore = false }) {
           {stato === 'spenta' && (
             <p>
               Qui non c'è nessuna stampante impostata.{' '}
-              {gestore
-                ? 'Mettila in Impostazioni → Stampante.'
-                : 'Dillo a chi sta al banco.'}
+              {gestore ? 'Mettila in Impostazioni → Stampante.' : 'Impostala dal menu, in Stampante.'}
             </p>
           )}
           {stato === 'ko' && (

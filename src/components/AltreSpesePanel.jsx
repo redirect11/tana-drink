@@ -6,6 +6,7 @@ import {
   eliminaAltraSpesa,
 } from '../lib/api.js'
 import { formatPrice } from '../lib/orderStatus.js'
+import Icona from './Icona.jsx'
 import {
   totaleSpesa,
   spesaComprata,
@@ -13,6 +14,7 @@ import {
   speseSenzaPrezzo,
   speseSenzaData,
 } from '../lib/spese.js'
+import AiutoCampo from './AiutoCampo.jsx'
 
 // ── ALTRE SPESE (REQ-MAG-034) ────────────────────────────────────────
 //
@@ -194,7 +196,7 @@ export default function AltreSpesePanel() {
                   }
                   onClick={() => cambiaComprata(s)}
                 >
-                  {s.bought ? '✅ comprata' : '🛒 da comprare'}
+                  {s.bought ? <><Icona nome="fatto" gruppo="tasti" /> comprata</> : <><Icona nome="carrello" gruppo="tasti" /> da comprare</>}
                 </button>
               </div>
               <button
@@ -202,14 +204,14 @@ export default function AltreSpesePanel() {
                 aria-label={`Modifica «${s.name}»`}
                 onClick={() => setModulo(s)}
               >
-                ✏️
+                <Icona nome="modifica" gruppo="tasti" />
               </button>
               <button
                 className="btn ghost small"
                 aria-label={`Elimina «${s.name}»`}
                 onClick={() => elimina(s)}
               >
-                🗑
+                <Icona nome="elimina" gruppo="tasti" />
               </button>
             </div>
           </div>
@@ -314,7 +316,7 @@ function SpesaForm({ spesa, onCancel, onSave }) {
         <>
           <label htmlFor="sp-data">Data dell’acquisto</label>
           <input id="sp-data" type="date" value={form.bought_at} onChange={set('bought_at')} />
-          <p className="muted small">Decide su quale mese pesa questa spesa.</p>
+          <AiutoCampo style={{ margin: '4px 0 0' }}>Determina il mese a cui è imputata la spesa.</AiutoCampo>
         </>
       )}
 

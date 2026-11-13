@@ -28,8 +28,10 @@ export const BASE_UNITS = ['ml', 'g', 'pz', UNITA_GENERICA]
 // Sono le unità "piccole" con cui si dosa un drink (mai L/kg in una ricetta):
 // liquidi in cl/ml, solidi in g/mg. Devono restare un sottoinsieme di quelle
 // gestite da costPerUnit, altrimenti il costo dell'ingrediente andrebbe perso.
+// Il ml viene prima del cl (REQ-MAG-054): un ingrediente nuovo in ricetta
+// parte in millilitri, come le ricette che il locale già scrive.
 export const ENTRY_UNITS = {
-  ml: ['cl', 'ml'],
+  ml: ['ml', 'cl'],
   g: ['g', 'mg'],
   pz: ['pz'],
   // Il generico non ha sottomultipli: si dosa a unità.
@@ -75,18 +77,36 @@ export function resaUso(item) {
 // pezzo offriva soltanto "pz" e per 4 cl di gin bisognava scrivere 0,057
 // pezzi — un numero che non vuol dire niente per chi prepara.
 //
-// Il cl viene per primo: nelle ricette è il caso normale. Il pezzo resta,
-// perché una Coca in un drink si mette intera.
+// La prima è quella con cui parte un ingrediente nuovo: per i liquidi il
+// ml, che è come il locale scrive le ricette (REQ-MAG-054; fino al 09/11
+// era il cl). Il pezzo resta, perché una Coca in un drink si mette intera.
 export function entryUnits(item) {
   const unit = item?.unit || 'pz'
   const proprie = unit !== 'pz' ? (ENTRY_UNITS[unit] ?? [unit]) : ['pz']
   const r = resaUso(item)
   if (!r || r.base === unit) return proprie
   // Le unità d'uso vengono PRIMA: nelle ricette sono il caso normale (si
-  // dosano 4 cl di gin, non 0,057 bottiglie). Quella d'acquisto resta, che
+  // dosano 40 ml di gin, non 0,057 bottiglie). Quella d'acquisto resta, che
   // una Coca in un drink si mette intera.
   const uso = ENTRY_UNITS[r.base] ?? [r.base]
   return [...uso, ...proprie.filter((u) => !uso.includes(u))]
+}
+
+// L'UNITÀ DI UNA RIGA DI RICETTA QUANDO SI CAMBIA INGREDIENTE (BUG-124).
+// Flavio, 30/10/2026: «se cambio un ingrediente con un altro mi cambia
+// l'unità di misura da ml a cl senza cambiare la quantità, quindi mi
+// costringe a ricambiare l'unità». Prima la riga ripartiva sempre dalla
+// prima unità del nuovo articolo (cl per i liquidi): «4 ml» di un gin
+// diventava «4 cl» dell'altro, dieci volte tanto, senza che nessuno
+// l'avesse chiesto. Ingrediente, quantità e unità sono tre scelte: se
+// l'unità che c'era vale anche per il nuovo articolo resta com'è, e con
+// lei la quantità; cambia solo se non ha senso (da un liquido a un
+// articolo a pezzi), e allora si parte da quella di inserimento.
+export function unitaDopoCambioIngrediente(item, unitaAttuale) {
+  if (!item) return ''
+  const ammesse = entryUnits(item)
+  if (unitaAttuale && ammesse.includes(unitaAttuale)) return unitaAttuale
+  return ammesse[0] ?? item.unit
 }
 
 // Converte una quantità dall'unità inserita all'unità base dell'item.

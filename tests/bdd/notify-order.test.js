@@ -89,6 +89,31 @@ describe('decideOrderPush', () => {
   })
 })
 
+// REQ-CLI-009: il banco ha cambiato prezzo o ingredienti, e il cliente ha
+// un tempo per rispondere. Lo squillo arriva a ogni modifica, una volta.
+describe('l’ordine modificato dal banco', () => {
+  const attesa = (dal) => ({ dal, scade: '2026-11-13T20:10:00.000Z', totale_prima: 8 })
+  const aperto = { ...base, status: 'aperto' }
+
+  it('avvisa il cliente che deve rispondere', () => {
+    const msg = decideOrderPush(aperto, { ...aperto, attesa_cliente: attesa('2026-11-13T20:00:00.000Z') })
+    expect(msg.title).toBe('Il tuo ordine è stato modificato')
+    expect(msg.body).toContain('#7')
+  })
+
+  it('una volta per modifica, non a ogni scrittura del conto', () => {
+    const a = attesa('2026-11-13T20:00:00.000Z')
+    expect(decideOrderPush({ ...aperto, attesa_cliente: a }, { ...aperto, attesa_cliente: a, total: 9 })).toBeNull()
+    expect(
+      decideOrderPush({ ...aperto, attesa_cliente: a }, { ...aperto, attesa_cliente: attesa('2026-11-13T20:02:00.000Z') })
+    ).not.toBeNull()
+  })
+
+  it('accettato, niente squillo', () => {
+    expect(decideOrderPush({ ...aperto, attesa_cliente: attesa('2026-11-13T20:00:00.000Z') }, { ...aperto, attesa_cliente: null })).toBeNull()
+  })
+})
+
 describe('decideNewOrderStaffPush', () => {
   const ricevuto = { daily_number: 12, status: 'ricevuto' }
 

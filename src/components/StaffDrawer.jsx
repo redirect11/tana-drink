@@ -9,7 +9,9 @@ import { useNavigate } from 'react-router-dom'
 import { auth } from '../lib/firebaseClient.js'
 import { logoutStaff } from '../lib/logout.js'
 import { devToolsEnabled } from '../dev/devActions.js'
-import { isGestore, RUOLO_ETICHETTA } from '../lib/ruoli.js'
+import { isAdmin, isGestore, isSala, RUOLO_ETICHETTA } from '../lib/ruoli.js'
+import { areaClientiVisibile, versoLaRegia } from '../lib/passaggioRegia.js'
+import { toastError } from '../lib/toast.js'
 import { useSchermoLargo } from '../lib/useTelefono.js'
 import { usePaginaPiena } from '../lib/paginaPiena.js'
 import { IconGruppo, IconPersona } from './Icons.jsx'
@@ -18,10 +20,15 @@ import {
   subscribeSettings,
   subscribeOpenGroups,
   createManualGroup,
+  chiamaIlBancone,
+  subscribeMieChiamateAlBancone,
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
+import { toastSuccess } from '../lib/toast.js'
 // Le voci stanno in un posto solo: le stesse fanno il titolo nella barra.
 import { vociPerRuolo } from '../lib/sezioni.js'
+import { menuDigitaleAttivo } from '../lib/licenza.js'
+import Icona from './Icona.jsx'
 import { subscribeSottosezioni } from '../lib/sottosezioni.js'
 
 // Menu laterale dello staff: usato nel gestionale (onSelect cambia tab)
@@ -39,7 +46,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
   const [sotto, setSotto] = useState({ voci: [], attiva: null, scegli: null })
   useEffect(() => subscribeSottosezioni(setSotto), [])
   const [gruppiAperti, setGruppiAperti] = useState(
-    () => localStorage.getItem('tana:drawer-gruppi') === '1'
+    () => localStorage.getItem('drink:drawer-gruppi') === '1'
   )
   // ── IL MENU AGGANCIATO ALLA PAGINA ────────────────────────────────
   // Dove la pagina ha delle sezioni sue (Impostazioni, Inventario) e c'è
@@ -55,7 +62,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
   // dentro la pagina invece di coprirla è come si presenta, non un'altra
   // funzione. La scelta resta anche domani.
   const [agganciato, setAgganciato] = useState(
-    () => localStorage.getItem('tana:drawer-agganciato') !== '0'
+    () => localStorage.getItem('drink:drawer-agganciato') !== '0'
   )
   // Dove il menu può stare dentro la pagina: sezioni proprie da mostrare e
   // schermo abbastanza largo (sul telefono sarebbe mezzo schermo).
@@ -67,7 +74,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
 
   useEffect(() => {
     try {
-      localStorage.setItem('tana:drawer-gruppi', gruppiAperti ? '1' : '0')
+      localStorage.setItem('drink:drawer-gruppi', gruppiAperti ? '1' : '0')
     } catch {
       /* niente memoria: valgono per questa sessione */
     }
@@ -83,8 +90,8 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
       if (agganciabile) setAgganciato((v) => !v)
       else setOpen((o) => !o)
     }
-    window.addEventListener('tana:toggle-drawer', h)
-    return () => window.removeEventListener('tana:toggle-drawer', h)
+    window.addEventListener('drink:toggle-drawer', h)
+    return () => window.removeEventListener('drink:toggle-drawer', h)
   }, [agganciabile])
 
   // Col menu aperto i tasti dello zoom devono passare DIETRO: stanno in
@@ -123,7 +130,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
   // Cresce tutto insieme, testo compreso: una colonna larga con la scritta
   // piccola in mezzo sembra rotta.
   const [largh, setLargh] = useState(() => {
-    const v = Number(localStorage.getItem('tana:menu-largo'))
+    const v = Number(localStorage.getItem('drink:menu-largo'))
     return v >= MIN_MENU && v <= MAX_MENU ? v : MENU_DEFAULT
   })
   const tiraDaX = useRef(null)
@@ -141,7 +148,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
     if (!tiraDaX.current) return
     tiraDaX.current = null
     try {
-      localStorage.setItem('tana:menu-largo', String(largh))
+      localStorage.setItem('drink:menu-largo', String(largh))
     } catch {
       /* niente memoria: la larghezza vale per questa sessione */
     }
@@ -161,7 +168,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
 
   useEffect(() => {
     try {
-      localStorage.setItem('tana:drawer-agganciato', agganciato ? '1' : '0')
+      localStorage.setItem('drink:drawer-agganciato', agganciato ? '1' : '0')
     } catch {
       /* niente memoria: vale per questa volta */
     }
@@ -188,7 +195,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
   // installazione (le funzioni premium, REQ-LIC-001). Il filtro sta dove
   // sta l'elenco, e le impostazioni gliele passa chi le ha già in mano.
   const base = vociPerRuolo(role, settings)
-  const items = isGestore(role) && devToolsEnabled ? [...base, ['dev', '🛠', 'Dev']] : base
+  const items = isGestore(role) && devToolsEnabled ? [...base, ['dev', 'sviluppo', 'Dev']] : base
 
   function go(id) {
     setOpen(false)
@@ -202,12 +209,16 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
     else navigate(id === 'servizio' ? '/bar' : `/bar?tab=${id}`)
   }
 
-  function nuovoOrdine() {
+  // DUE STRADE PER UN ORDINE, una per mano. La CASSA in stile POS è lo
+  // strumento del banco (admin e bartender). Il MENÙ DELLO STAFF è quello
+  // che si mostra al tavolo, con la ricerca: ce l'ha tutto il personale.
+  // L'utente, 02/11/2026: «Ordina dal menù esce solo per lo staff o
+  // bartender o admin, ma la schermata principale rimane la coda degli
+  // ordini». Prima il banco ci arrivava solo da un tasto della coda a
+  // elenco, che per giunta si chiamava «Vista cliente» (BUG-127).
+  function vaiA(percorso) {
     setOpen(false)
-    // Per i gestori la creazione ordine è la CASSA in stile POS (segue il
-    // tema staff). La sala invece ordina DAL MENÙ: lo stesso che mostra al
-    // tavolo, con la ricerca — il POS è lo strumento del banco.
-    navigate(isGestore(role) ? '/pos' : '/menu')
+    navigate(percorso)
   }
 
   // Toccando un gruppo si aprono i SUOI ORDINI nella coda (non si entra
@@ -233,7 +244,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
     <>
       {flottante && (
         <button className="bar-burger" aria-label="Menu" onClick={() => setOpen(true)}>
-          ☰
+          <Icona nome="menu_laterale" />
         </button>
       )}
       <div className={`bar-nav-overlay${open ? ' open' : ''}`} onClick={() => setOpen(false)} />
@@ -262,7 +273,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
               className={`bar-nav-item${active === id ? ' active' : ''}`}
               onClick={() => go(id)}
             >
-              <span>{icon}</span> {label}
+              <Icona nome={icon} /> {label}
             </div>
             {active === id && sotto.voci.length > 0 && (
               <div className="bar-nav-sotto">
@@ -277,7 +288,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
                       setOpen(false)
                     }}
                   >
-                    <span>{v.icona}</span> {v.label}
+                    <Icona nome={v.icona} /> {v.label}
                   </div>
                 ))}
               </div>
@@ -285,12 +296,23 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
           </div>
         ))}
         <div className="bar-nav-sep" />
-        <div
-          className={`bar-nav-item${active === 'ordine' ? ' active' : ''}`}
-          onClick={nuovoOrdine}
-        >
-          <span>✍️</span> {isGestore(role) ? 'Nuovo ordine' : 'Nuovo ordine dal menù'}
-        </div>
+        {isGestore(role) && (
+          <div className="bar-nav-item" onClick={() => vaiA('/pos')}>
+            <Icona nome="nuovo-ordine" /> Nuovo ordine
+          </div>
+        )}
+        {/* SEGUE IL MENÙ DIGITALE (BUG-132, decisione dell'utente del
+            07/11/2026): senza il modulo /menu dice che il menù non è
+            attivo, e la voce portava lì. Per ordinare resta «Nuovo ordine». */}
+        {menuDigitaleAttivo(settings) && (
+          <div
+            className={`bar-nav-item${active === 'ordine' ? ' active' : ''}`}
+            onClick={() => vaiA('/menu')}
+          >
+            <Icona nome="ordina-dal-menu" /> Ordina dal menù
+          </div>
+        )}
+        {isSala(role) && <ChiamaIlBancone />}
 
         {showGroups && (
           <div className="drawer-groups">
@@ -357,7 +379,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
             navigate('/profilo-staff')
           }}
         >
-          <span>{RUOLO_ETICHETTA[role]?.split(' ')[0] ?? '🙋'}</span>
+          <Icona nome={RUOLO_ETICHETTA[role]?.split(' ')[0] ?? 'clienti'} />
           <span className="drawer-io-testo">
             <span className="drawer-io-nome">{nomeUtente}</span>
             <span className="drawer-io-ruolo">
@@ -365,8 +387,9 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
             </span>
           </span>
         </div>
+        {areaClientiVisibile({ admin: isAdmin(role), settings }) && <AreaClienti />}
         <div className="bar-nav-item" onClick={() => logoutStaff()}>
-          <span>🚪</span> Esci
+          <Icona nome="esci" /> Esci
         </div>
         {/* Ramo e commit del deploy: con più branch che passano a turno
             sullo stesso ambiente di test, serve sapere cosa si sta
@@ -393,7 +416,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
             // occhio è una seccatura.
             setLargh(MENU_DEFAULT)
             try {
-              localStorage.setItem('tana:menu-largo', String(MENU_DEFAULT))
+              localStorage.setItem('drink:menu-largo', String(MENU_DEFAULT))
             } catch {
               /* pazienza */
             }
@@ -402,5 +425,62 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
       )}
 
     </>
+  )
+}
+
+// ── «CHIAMA IL BANCONE», DALLA SALA (REQ-STAFF-019) ──────────────────
+// Flavio, 30/10/2026: lo staff «può solo ricevere una chiamata dal bancone
+// ma non può effettuarla». Un tocco e la chiamata parte; finché il bancone
+// non risponde la voce dice che si è in attesa, e un secondo tocco non ne
+// manda un'altra.
+function ChiamaIlBancone() {
+  const [inAttesa, setInAttesa] = useState(false)
+  const uid = auth.currentUser?.uid
+  useEffect(() => {
+    if (!uid) return undefined
+    return subscribeMieChiamateAlBancone(uid, (mie) => setInAttesa(mie.length > 0))
+  }, [uid])
+  const chiama = () => {
+    if (inAttesa || !uid) return
+    const u = auth.currentUser
+    chiamaIlBancone({ from_uid: uid, from_email: u?.email ?? null, from_name: u?.displayName ?? null })
+    setInAttesa(true)
+    toastSuccess('Chiamata inviata al bancone', { icona: 'chiama-bancone' })
+  }
+  return (
+    <div
+      className={`bar-nav-item${inAttesa ? ' in-attesa' : ''}`}
+      role="button"
+      tabIndex={0}
+      aria-disabled={inAttesa || undefined}
+      onClick={chiama}
+      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && chiama()}
+    >
+      <Icona nome="chiama-bancone" /> {inAttesa ? 'In attesa del bancone…' : 'Chiama il bancone'}
+    </div>
+  )
+}
+
+// «AREA CLIENTI» (REQ-FLOTTA-030): il titolare passa alla sua area nella
+// regia già entrato, col suo account di qui. Il tocco aspetta la regia —
+// è un passaggio di pagina, non un gesto della serata — e se non riesce lo
+// dice in una riga.
+function AreaClienti() {
+  const [inCorso, setInCorso] = useState(false)
+  async function vai() {
+    if (inCorso) return
+    setInCorso(true)
+    const esito = await versoLaRegia({ token: () => auth.currentUser?.getIdToken(true) })
+    if (esito.ok) {
+      window.location.assign(esito.url)
+      return
+    }
+    setInCorso(false)
+    toastError(esito.messaggio)
+  }
+  return (
+    <div className="bar-nav-item" role="button" aria-busy={inCorso} onClick={vai}>
+      <Icona nome="area-clienti" /> {inCorso ? 'Apro l’area clienti…' : 'Area clienti'}
+    </div>
   )
 }

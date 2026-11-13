@@ -23,6 +23,7 @@ import {
 } from '../lib/licenza.js'
 import ToggleRow from './ToggleRow.jsx'
 import { runImport } from '../dev/importExcel.js'
+import Icona from './Icona.jsx'
 
 // Opzioni sviluppatore: visibili SOLO in ambiente emulatore (Docker locale
 // o ambiente di test). Permettono di svuotare il db o resettarlo coi mock.
@@ -40,23 +41,10 @@ export default function DevTools() {
   // l'esito del checkout SumUp si "recita" da qui.
   const [pending, setPending] = useState([])
   const [unpaid, setUnpaid] = useState([])
-  // Le impostazioni del bar servono agli interruttori dei moduli premium
-  // qui sotto: si guarda e si scrive lo stesso flag che legge lib/licenza.js.
+  // Le impostazioni del bar servono ai moduli premium qui sotto: la
+  // licenza (in sola lettura) e gli interruttori d'uso.
   const [impostazioni, setImpostazioni] = useState(null)
   useEffect(() => subscribeSettings(setImpostazioni, () => {}), [])
-
-  // L'inclusione si scrive SEMPRE per intero: `licenza.moduli` è la verità
-  // completa su cosa il locale ha, e una mappa scritta a metà direbbe che
-  // tutto il resto non è incluso. Si parte da com'è messo adesso ogni
-  // modulo e si cambia solo quello toccato.
-  const scriviInclusione = (id, incluso) => {
-    const moduli = Object.fromEntries(
-      moduliPremium().map((m) => [m.id, m.id === id ? incluso : moduloIncluso(impostazioni, m.id)])
-    )
-    updateSettings({ licenza: { ...(impostazioni?.licenza || {}), moduli } }).catch((e) =>
-      setError(e.message)
-    )
-  }
   useEffect(() => {
     return subscribeActiveOrders((orders) => {
       setPending(orders.filter((o) => o.payment_status === 'in_attesa'))
@@ -96,7 +84,7 @@ export default function DevTools() {
   return (
     <div>
       <div className="banner">
-        🛠 Strumenti di sviluppo — visibili solo in ambiente di sviluppo
+        <Icona nome="sviluppo" gruppo="tasti" /> Strumenti di sviluppo — visibili solo in ambiente di sviluppo
         (emulatore locale) e di test, mai in produzione.
       </div>
 
@@ -108,7 +96,7 @@ export default function DevTools() {
           (localStorage): chi prova da casa accende, il tablet del banco
           non ne sa niente. */}
       <div className="card settings-section">
-        <strong>🖨 Stampante simulata</strong>
+        <strong><Icona nome="stampa" gruppo="tasti" /> Stampante simulata</strong>
         <p className="muted small" style={{ margin: '4px 0 8px' }}>
           Le stampe escono come facsimile a schermo invece che sulla
           stampante vera. Vale solo per questo dispositivo.
@@ -156,33 +144,32 @@ export default function DevTools() {
         )}
       </div>
 
-      {/* QUI SI FA LA LICENZA, e solo qui: nelle impostazioni normali si
-          accende e si spegne quello che il locale HA, non si decide cosa
-          ha (lib/licenza.js). Serve a provare i moduli — hanno i loro test
-          e c'è l'ambiente di test — senza inventare un meccanismo di
-          vendita che ancora non esiste.
-          DUE INTERRUTTORI PER MODULO, che sono due domande diverse:
-          «inclusa» scrive `licenza.moduli` su settings/bar, cioè la stessa
-          forma che avrà il documento della licenza della Fase 3 — questa
-          è la sua prova generale; «accesa» scrive il flag d'uso, quello
-          che si tocca anche dalle impostazioni normali.
-          L'altra strada, equivalente, è scrivere quei campi a mano dalla
-          console Firestore o dall'emulatore.
+      {/* LA LICENZA QUI SI GUARDA SOLTANTO. Fino a BUG-125 questi
+          interruttori la scrivevano in settings/bar.licenza: era la prova
+          generale del documento vero, e insieme il buco, perché quello che
+          scriveva questo pannello lo poteva scrivere ogni bartender dalla
+          console. Ora la licenza sta in `licenza/attuale` e le regole non
+          la fanno scrivere a nessuno dall'app: per provare un modulo si
+          scrive quel documento con scripts/licenza-moduli.js, o dalla
+          console dell'emulatore. Senza documento l'installazione non è
+          attivata (REQ-LIC-009).
+          L'interruttore d'uso, «accesa», resta: è del locale.
           SPEGNERE NASCONDE, NON CANCELLA: conte e fatture già scritte
           restano dove sono e tornano quando il modulo si riaccende. */}
       <div className="card settings-section">
         <h3>Funzioni premium</h3>
         <p className="muted small" style={{ margin: '4px 0 8px' }}>
           Valgono per tutto il locale, non per questo dispositivo. Un modulo
-          lavora solo se è incluso <em>e</em> acceso.
+          lavora solo se è incluso nella licenza <em>e</em> acceso. La licenza
+          si cambia con <code>scripts/licenza-moduli.js</code>.
         </p>
         {moduliPremium().map((m) => (
           <div key={m.id}>
             <ToggleRow
               label={`${m.label} — inclusa nella licenza`}
-              desc={`settings/bar · licenza.moduli.${m.id}`}
+              desc={`licenza in uso · moduli.${m.id}`}
               checked={moduloIncluso(impostazioni, m.id)}
-              onChange={(v) => scriviInclusione(m.id, v)}
+              disabled
             />
             <ToggleRow
               label={`${m.label} — accesa`}
@@ -214,7 +201,8 @@ export default function DevTools() {
             disabled={busy}
             onClick={() =>
               setConfirm({
-                title: '🔄 Reset con dati mock?',
+                icona: 'aggiorna',
+                title: 'Reset con dati mock?',
                 message:
                   'Tutti i dati attuali verranno cancellati e sostituiti con i dati di esempio.',
                 run: () => run(resetWithMockData),
@@ -237,7 +225,8 @@ export default function DevTools() {
             disabled={busy}
             onClick={() =>
               setConfirm({
-                title: '📊 Generare lo storico?',
+                icona: 'statistiche',
+                title: 'Generare lo storico?',
                 message: 'Verranno aggiunte 12 giornate passate con ordini mock (i dati esistenti restano).',
                 run: () =>
                   run(async (progress) => {
@@ -263,7 +252,8 @@ export default function DevTools() {
             disabled={busy}
             onClick={() =>
               setConfirm({
-                title: '🧹 Svuotare il database?',
+                icona: 'pulisci',
+                title: 'Svuotare il database?',
                 message: 'Tutti i dati verranno cancellati. Operazione irreversibile.',
                 danger: true,
                 run: () =>
@@ -281,7 +271,7 @@ export default function DevTools() {
       )}
 
       <div className="card settings-section">
-        <h3>📥 Import storico da Excel (JSON)</h3>
+        <h3><Icona nome="acquisti" gruppo="tasti" /> Import storico da Excel (JSON)</h3>
         <p className="muted small">
           Carica il file <code>import-tana.json</code> (estratto dagli Excel:
           fornitori, scadenzario, catalogo inventario, ore staff). Idempotente:
@@ -345,7 +335,7 @@ export default function DevTools() {
         {unpaid.length > 0 && (
           <>
             <p className="muted small" style={{ margin: '12px 0 4px' }}>
-              📟 Simulazione lettore (ordini non pagati pronti/ritirati):
+              <Icona nome="lettore" gruppo="tasti" />{' '}Simulazione lettore (ordini non pagati pronti/ritirati):
             </p>
             {unpaid.map((o) => (
               <div className="toggle-row" key={o.id}>
@@ -358,7 +348,7 @@ export default function DevTools() {
                     className="btn small"
                     onClick={() => simulateReaderPayment(o.id, true).catch((e) => setError(e.message))}
                   >
-                    📟 ✓ Carta OK
+                    <Icona nome="lettore" gruppo="tasti" /> ✓ Carta OK
                   </button>
                   <button
                     className="btn ghost small"
@@ -385,6 +375,7 @@ export default function DevTools() {
 
       {confirm && (
         <ConfirmDialog
+          icona={confirm.icona}
           title={confirm.title}
           message={confirm.message}
           confirmLabel="Procedi"

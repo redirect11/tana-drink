@@ -3,8 +3,16 @@
 // Push e pagamenti nel modello conto/comande (functions/lib).
 
 import { describe, it, expect } from 'vitest'
+import { createRequire } from 'node:module'
 import pushCore from '../../functions/lib/push-core.js'
-import payCore from '../../functions/lib/payment-core.js'
+
+// Col require nativo, come lo carica payment-service.js nelle Functions. Se
+// lo si importa passando da Vite, V8 vede due versioni dello stesso file con
+// posizioni diverse e la coverage le fonde in un ordine che cambia da un giro
+// all'altro: il 10/11/2026 i rami di functions/lib passavano da 75,6 a 71,1%
+// sullo stesso codice, e una PR è stata bocciata senza motivo.
+const require = createRequire(import.meta.url)
+const payCore = require('../../functions/lib/payment-core.js')
 
 const { decideOrderPush, decideStaffServePush, decideNewOrderStaffPush } = pushCore
 const { decidePaymentPatch, decideAutoAdvance, isServed } = payCore

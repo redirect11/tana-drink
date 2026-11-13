@@ -12,6 +12,7 @@ import {
 } from './Corsia.jsx'
 import { coloreCardConto } from '../lib/coloriConto.js'
 import { useMemo, useRef, useState } from 'react'
+import Icona, { ConIcona } from './Icona.jsx'
 import {
   DndContext,
   DragOverlay,
@@ -24,6 +25,7 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
+import AttesaCliente from './AttesaCliente.jsx'
 
 // ── LE CORSIE DEL BANCO: UNA CARD PER COMANDA ────────────────────────
 //
@@ -271,6 +273,7 @@ export default function CorsieComande({
                     >
                       <div className="row between">
                         <NomeComanda scheda={s} />
+                        <AttesaCliente order={o} />
                         <BolloAcconto order={o} />
                         {/* PERCHÉ È QUI. Nella colonna delle annullate la
                             domanda non è «da quanto sta lì» ma «che fine ha
@@ -280,7 +283,7 @@ export default function CorsieComande({
                             facendo — e leggere «Annullata» su tutte e tre
                             manderebbe a cercare un guaio che non c'è. */}
                         {s.motivo ? (
-                          <span className="pill annullato small">{ETICHETTA_ANNULLO[s.motivo]}</span>
+                          <span className="pill annullato small"><ConIcona testo={ETICHETTA_ANNULLO[s.motivo]} /></span>
                         ) : s.pagatoDaServire ? (
                           <span className="pill pagato small">Pagato</span>
                         ) : (
@@ -329,7 +332,7 @@ export default function CorsieComande({
                               }}
                               title={`Apri il conto #${s.numero ?? ''}`}
                             >
-                              🧾 Conto
+                              <Icona nome="coda" gruppo="tasti" /> Conto
                             </button>
                           )}
                           {/* IL ⋯ DELLA COMANDA. Riportarla a uno stato di
@@ -380,7 +383,7 @@ export default function CorsieComande({
                                 v.onClick?.()
                               }}
                             >
-                              {v.icon} {v.label}
+                              <Icona nome={v.icon} gruppo="tasti" /> {v.label}
                             </button>
                           ))}
                         </div>

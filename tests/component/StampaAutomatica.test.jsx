@@ -15,7 +15,7 @@
 // stessa cosa, e chi ne spegne uno crede di aver spento la stampa.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
 
@@ -133,5 +133,50 @@ describe('nel pannello «Stampante» resta la macchina', () => {
     for (const [patch] of savePrinterConfig.mock.calls) {
       expect(patch).not.toHaveProperty('autoPrintComanda')
     }
+  })
+})
+
+// DAL BANCO O DALLA SALA (REQ-STAMPA-021). Richiesta dell'08/11/2026:
+// «stampa solo riscossione da banco e stampa in automatico la comanda se
+// presa da sala». Ogni stampa automatica accesa sceglie da dove deve venire
+// il gesto; di partenza da tutte e due, come prima.
+describe('da dove deve venire il gesto', () => {
+  const interruttore = (t) => screen.getByText(t).closest('.toggle-row').querySelector('input')
+  const gruppo = (etichetta) => screen.getByRole('group', { name: etichetta })
+
+  it('la scelta compare solo sotto una stampa automatica accesa', async () => {
+    const user = userEvent.setup()
+    render(<StampaAutomatica settings={{}} save={vi.fn()} />)
+    expect(screen.queryByRole('group', { name: 'Comande prese' })).toBeNull()
+    await user.click(interruttore(AUTOMATICHE[0]))
+    expect(gruppo('Comande prese')).toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Riscossioni fatte' })).toBeNull()
+  })
+
+  it('l’esempio della richiesta: comande dalla sala, scontrini dal banco', async () => {
+    const user = userEvent.setup()
+    render(<StampaAutomatica settings={{}} save={vi.fn()} />)
+    await user.click(interruttore(AUTOMATICHE[0]))
+    await user.click(interruttore(AUTOMATICHE[1]))
+    // Di partenza: banco e sala.
+    expect(within(gruppo('Comande prese')).getByRole('button', { name: 'Banco e sala' })).toHaveAttribute('aria-pressed', 'true')
+
+    await user.click(within(gruppo('Comande prese')).getByRole('button', { name: 'Solo dalla sala' }))
+    await user.click(within(gruppo('Riscossioni fatte')).getByRole('button', { name: 'Solo dal banco' }))
+
+    expect(loadPrinterSettings()).toMatchObject({ autoPrintComandaDa: 'sala', autoPrintScontrinoDa: 'banco' })
+    // Come gli interruttori: subito in memoria, la copia al server dietro.
+    expect(savePrinterConfig).toHaveBeenCalledWith({ autoPrintComandaDa: 'sala' })
+    expect(savePrinterConfig).toHaveBeenCalledWith({ autoPrintScontrinoDa: 'banco' })
+  })
+
+  it('«la stampa il banco» con le comande solo dal banco lo dice: quelle della sala non le stampa nessuno', async () => {
+    const user = userEvent.setup()
+    render(<StampaAutomatica settings={{}} save={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: /La stampa il banco/ }))
+    await user.click(interruttore(AUTOMATICHE[0]))
+    expect(screen.queryByText(/non le stampa nessuno/)).toBeNull()
+    await user.click(within(gruppo('Comande prese')).getByRole('button', { name: 'Solo dal banco' }))
+    expect(screen.getByText(/non le stampa nessuno/)).toBeInTheDocument()
   })
 })

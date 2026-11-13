@@ -20,6 +20,7 @@
 // può essere ancora in preparazione — e le due cose vanno dette insieme.
 
 import { ORDER_STATUSES } from './orderStatus.js'
+import { conEmoji } from './icone.js'
 import { mergeLines } from './orderLines.js'
 
 // Stati dell'ORDINE (conto).
@@ -166,6 +167,27 @@ export function initialDetailView(order) {
 
 export function orderIsClosed(order) {
   return order?.status === ORDER_STATUSES.PAGATO || order?.status === ORDER_STATUSES.ANNULLATO
+}
+
+// LA RIGA È DI UN ALTRO? (REQ-ORD-024) Flavio, 09/11/2026: con l'iniziale
+// accanto a ogni riga, il «+» e il «−» li usa solo chi l'ha caricata. Se
+// Alex dalla sala vuole un'altra Tennent's sulla riga di Flavio, la batte
+// dal prodotto e fa una riga sua: altrimenti la F direbbe due Tennent's di
+// Flavio, e una non l'ha battuta lui. Vale anche per l'admin: dopo, a
+// guardare l'iniziale, nessuno saprebbe più chi ha caricato davvero.
+// Il confronto è sull'email, che è dell'account; il nome solo se manca.
+// Le righe senza iniziale (quelle del cliente dal menù e quelle battute
+// prima della 1.10.30) restano a tutti: di chi siano non si sa.
+// Vale solo con l'iniziale accesa nelle impostazioni (`firma_righe`,
+// firmaRigheAccesa): senza, nessuno vede di chi è una riga, e un tasto
+// spento senza un motivo a schermo è un tasto rotto.
+export const firmaRigheAccesa = (settings) => settings?.firma_righe !== false
+export function rigaDiAltri(riga, io) {
+  const a = riga?.added_by
+  if (!a) return false
+  if (!io) return true
+  if (a.email && io.email) return a.email.toLowerCase() !== io.email.toLowerCase()
+  return !a.name || a.name !== io.name
 }
 
 // Aggregato item dell'ordine: somma gli item di tutte le comande non
@@ -620,11 +642,11 @@ export function firmaLavoro(comande) {
 // perché una comanda è ancora in preparazione. Il gruppo «Pagati» dice la
 // prima cosa, i gruppi del servizio la seconda.
 export const SERVIZIO_ETICHETTA = {
-  [ORDER_STATUSES.RICEVUTO]: '🧾 Da fare',
-  [ORDER_STATUSES.IN_PREPARAZIONE]: '🍹 In preparazione',
-  [ORDER_STATUSES.PRONTO]: '🔔 Pronto',
-  [ORDER_STATUSES.RITIRATO]: '✅ Servito',
-  [ORDER_STATUSES.ANNULLATO]: '✖️ Annullato',
+  [ORDER_STATUSES.RICEVUTO]: conEmoji('coda', 'Da fare'),
+  [ORDER_STATUSES.IN_PREPARAZIONE]: conEmoji('in-preparazione', 'In preparazione'),
+  [ORDER_STATUSES.PRONTO]: conEmoji('pronto', 'Pronto'),
+  [ORDER_STATUSES.RITIRATO]: conEmoji('fatto', 'Servito'),
+  [ORDER_STATUSES.ANNULLATO]: conEmoji('annullato', 'Annullato'),
 }
 
 // A quale gruppo appartiene una riga del conto. Le righe della BOZZA — non
@@ -653,7 +675,7 @@ export function gruppiDelConto(righe, { conServizio = true } = {}) {
 }
 
 export function titoloGruppo(gruppo) {
-  if (gruppo === 'pagati') return '💳 Pagati'
+  if (gruppo === 'pagati') return conEmoji('carta', 'Pagati')
   return SERVIZIO_ETICHETTA[gruppo] || null
 }
 
@@ -735,9 +757,9 @@ export const MOTIVO_ANNULLO = {
 }
 
 export const ETICHETTA_ANNULLO = {
-  [MOTIVO_ANNULLO.DIVISIONE]: '✂️ Divisa',
-  [MOTIVO_ANNULLO.CONTO]: '✖️ Conto annullato',
-  [MOTIVO_ANNULLO.MANO]: '✖️ Annullata',
+  [MOTIVO_ANNULLO.DIVISIONE]: conEmoji('dividi', 'Divisa'),
+  [MOTIVO_ANNULLO.CONTO]: conEmoji('annullato', 'Conto annullato'),
+  [MOTIVO_ANNULLO.MANO]: conEmoji('annullato', 'Annullata'),
 }
 
 export function motivoAnnullo(comanda, order) {

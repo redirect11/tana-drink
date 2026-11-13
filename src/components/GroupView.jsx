@@ -32,8 +32,11 @@ import {
   splitAmounts,
   canNest,
 } from '../lib/groups.js'
-import { formatPrice, STATUS_EMOJI, statoAlBanco } from '../lib/orderStatus.js'
+import { formatPrice, statoAlBanco, STATUS_ICONA } from '../lib/orderStatus.js'
 import { IconGruppo, IconPersona } from './Icons.jsx'
+import { sumupAttivo } from '../lib/licenza.js'
+import Icona from './Icona.jsx'
+import { servizioAttivo } from '../lib/limiti.js'
 
 // Vista di un gruppo (modale) con drill-down ricorsivo: per un contenitore
 // mostra "composto da" + ordini aggregati; cliccando un sottogruppo si
@@ -43,7 +46,7 @@ export default function GroupView({ groupId, onClose }) {
   // segue la preparazione quel bollo parla di una cosa che lì non si fa.
   const [impostazioni, setImpostazioni] = useState(DEFAULT_SETTINGS)
   useEffect(() => subscribeSettings(setImpostazioni), [])
-  const workflowOn = impostazioni.workflow_enabled !== false
+  const workflowOn = servizioAttivo(impostazioni)
   const [groups, setGroups] = useState([])
   const [recent, setRecent] = useState([])
   const [orders, setOrders] = useState([])
@@ -219,7 +222,7 @@ export default function GroupView({ groupId, onClose }) {
         setSumupMsg('Lettore non disponibile su questo ambiente.')
         return
       }
-      setSumupMsg('📟 In corso sul lettore: carta del cliente sul Solo.')
+      setSumupMsg('In corso sul lettore: carta del cliente sul Solo.')
     } catch (e) {
       setError(e.message)
     } finally {
@@ -284,7 +287,7 @@ export default function GroupView({ groupId, onClose }) {
                 #{o.daily_number ?? '—'} {o.customer_name ? `· ${o.customer_name}` : ''}{' '}
                 {workflowOn && (
                   <span className="muted small">
-                    {STATUS_EMOJI[o.workflow_status]} {statoAlBanco(o.workflow_status, o.service_mode)}
+                    <Icona nome={STATUS_ICONA[o.workflow_status]} gruppo="tasti" /> {statoAlBanco(o.workflow_status, o.service_mode)}
                   </span>
                 )}
               </span>
@@ -306,26 +309,33 @@ export default function GroupView({ groupId, onClose }) {
               </div>
               <div className="grid-2" style={{ marginTop: 10 }}>
                 <button className="btn" disabled={paying} onClick={() => pay(ids, null, 'banco')}>
-                  💶 Contanti
+                  <Icona nome="contanti" gruppo="tasti" /> Contanti
                 </button>
                 {/* Carta col POS esterno: si registra qui, altrimenti finiva
                     nei contanti e la chiusura di cassa non tornava. */}
                 <button className="btn" disabled={paying} onClick={() => pay(ids, null, 'carta')}>
-                  💳 Carta
+                  <Icona nome="carta" gruppo="tasti" /> Carta
                 </button>
                 <button
                   className="btn secondary"
                   disabled={paying}
                   onClick={() => { setSplitN(defaultN); setShowSplit((v) => !v); setPerOrder(false) }}
                 >
-                  ➗ Dividi
+                  <Icona nome="dividi_in_parti" gruppo="tasti" /> Dividi
                 </button>
-                <button className="btn secondary" disabled={paying} onClick={payOnline}>
-                  💳 Online
-                </button>
-                <button className="btn secondary" disabled={paying} onClick={payReader}>
-                  📟 Lettore
-                </button>
+                {/* SOLO CON SUMUP (BUG-133): c'erano con qualsiasi
+                    licenza, e su un piano senza il modulo chiamavano le
+                    Functions lo stesso. */}
+                {sumupAttivo(impostazioni) && (
+                  <>
+                    <button className="btn secondary" disabled={paying} onClick={payOnline}>
+                      <Icona nome="carta" gruppo="tasti" /> Online
+                    </button>
+                    <button className="btn secondary" disabled={paying} onClick={payReader}>
+                      <Icona nome="lettore" gruppo="tasti" /> Lettore
+                    </button>
+                  </>
+                )}
               </div>
               {sumupMsg && (
                 <p className="muted small" style={{ marginTop: 8 }}>{sumupMsg}</p>
@@ -362,14 +372,14 @@ export default function GroupView({ groupId, onClose }) {
                       disabled={paying}
                       onClick={() => pay(ids, { count: splitN }, 'banco')}
                     >
-                      💶 {splitN} quote
+                      <Icona nome="contanti" gruppo="tasti" />{' '}{splitN} quote
                     </button>
                     <button
                       className="btn"
                       disabled={paying}
                       onClick={() => pay(ids, { count: splitN }, 'carta')}
                     >
-                      💳 {splitN} quote
+                      <Icona nome="carta" gruppo="tasti" />{' '}{splitN} quote
                     </button>
                   </div>
                 </div>
@@ -385,15 +395,19 @@ export default function GroupView({ groupId, onClose }) {
                           className="btn ghost small"
                           disabled={paying}
                           onClick={() => pay([o.id], null, 'banco')}
+                          aria-label={`Incassa #${o.daily_number ?? ''} in contanti`}
+                          title="Contanti"
                         >
-                          💶
+                          <Icona nome="contanti" gruppo="tasti" />
                         </button>
                         <button
                           className="btn ghost small"
                           disabled={paying}
                           onClick={() => pay([o.id], null, 'carta')}
+                          aria-label={`Incassa #${o.daily_number ?? ''} con carta`}
+                          title="Carta"
                         >
-                          💳
+                          <Icona nome="carta" gruppo="tasti" />
                         </button>
                       </span>
                     </div>
@@ -414,7 +428,7 @@ export default function GroupView({ groupId, onClose }) {
                 title={aggregated.length > 0 && !isContainer ? 'Il gruppo ha ordini diretti: non può diventare contenitore' : ''}
                 onClick={() => setPicking(true)}
               >
-                ➕ Aggiungi un gruppo
+                <Icona nome="aggiungi" gruppo="tasti" /> Aggiungi un gruppo
               </button>
             ) : (
               <div>
@@ -443,10 +457,10 @@ export default function GroupView({ groupId, onClose }) {
         )}
 
         <div className="grid-2" style={{ marginTop: 14 }}>
-          <button className="btn ghost" onClick={doRename}>✏️ Rinomina</button>
+          <button className="btn ghost" onClick={doRename}><Icona nome="modifica" gruppo="tasti" /> Rinomina</button>
           {!isContainer && (
             <button className="btn" onClick={() => navigate(`/pos?group=${node.group.id}`)}>
-              ✍️ Nuovo ordine
+              <Icona nome="nuovo-ordine" gruppo="tasti" /> Nuovo ordine
             </button>
           )}
         </div>
@@ -454,17 +468,18 @@ export default function GroupView({ groupId, onClose }) {
         {/* Chiusura/eliminazione del gruppo */}
         <div className="grid-2" style={{ marginTop: 8 }}>
           <button className="btn ghost small" onClick={() => setConfirm('close')}>
-            📁 Chiudi gruppo
+            <Icona nome="cartella" gruppo="tasti" /> Chiudi gruppo
           </button>
           <button className="btn ghost small" onClick={() => setConfirm('delete')}>
-            🗑 Elimina gruppo
+            <Icona nome="elimina" gruppo="tasti" /> Elimina gruppo
           </button>
         </div>
       </div>
 
       {confirm === 'close' && (
         <ConfirmDialog
-          title="📁 Chiudere il gruppo?"
+          icona="cartella"
+          title="Chiudere il gruppo?"
           message={`“${node.group.name}” verrà archiviato e sparirà dai gruppi aperti.${
             s.remaining > 0 ? ` Attenzione: restano ${formatPrice(s.remaining)} da incassare.` : ''
           } Gli ordini restano dove sono.`}
@@ -479,7 +494,8 @@ export default function GroupView({ groupId, onClose }) {
       )}
       {confirm === 'delete' && (
         <ConfirmDialog
-          title="🗑 Eliminare il gruppo?"
+          icona="elimina"
+          title="Eliminare il gruppo?"
           message={`“${node.group.name}” verrà eliminato. Gli ordini${
             aggregated.length ? ` (${aggregated.length})` : ''
           } restano ma senza etichetta di gruppo${

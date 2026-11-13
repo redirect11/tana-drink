@@ -6,31 +6,38 @@
 
 import { isAdmin, isGestore } from './ruoli.js'
 import { voceVisibile } from './licenza.js'
+import { stampaConsentita, comandeConsentite } from './limiti.js'
+
+// Le voci che il piano può togliere (REQ-LIC-016, REQ-LIC-005): la
+// stampante senza la stampa, «Da servire» senza le comande. Senza
+// impostazioni, o senza la voce nella licenza, ci sono come sempre.
+const PIANO_DELLA_VOCE = { stampante: stampaConsentita, servizio: comandeConsentite }
+const nelPiano = (impostazioni, id) => PIANO_DELLA_VOCE[id]?.(impostazioni) ?? true
 
 // Il QUARTO elemento di una voce dice CHI LA VEDE, ed è una funzione di
 // `ruoli.js`: dove manca, la voce è di tutto il gestionale. Un flag di
 // testo («solo admin») avrebbe rimesso il confronto sul ruolo qui dentro,
 // che è la cosa che ruoli.js esiste per evitare.
 export const NAV_GESTIONALE = [
-  ['coda', '🧾', 'Coda ordini'],
+  ['coda', 'coda', 'Coda ordini'],
   // La cassa è una sola: dentro ci sono flusso, lista ordini e chiusure
   // (vedi CassaTab). «Lista ordini» aveva una voce sua qui accanto, come
   // se fosse un altro mestiere.
-  ['pagamenti', '💶', 'Cassa'],
+  ['pagamenti', 'cassa', 'Cassa'],
   // FATTURE AI CLIENTI: funzione premium (REQ-LIC-001), non inclusa per la
   // Tana. Il filtro non è qui accanto al ruolo perché non è una domanda sul
   // ruolo: la voce c'è o non c'è per tutto il locale, e a deciderlo sono le
   // impostazioni — vedi `vociPerRuolo`.
-  ['fatture', '📄', 'Fatture'],
-  ['stats', '📊', 'Statistiche'],
+  ['fatture', 'fatture', 'Fatture'],
+  ['stats', 'statistiche', 'Statistiche'],
   // BILANCIO: i conti del locale — incassi, stipendi, spese, netto del
   // mese. Li guarda chi il locale lo paga, non chi ci lavora: è la prima
   // voce che non basta essere gestori per vedere. Si TOGLIE dal menu, non
   // si nasconde dentro la pagina — una pagina che si apre e poi dice «non
   // puoi» si è già fatta vedere.
-  ['bilancio', '⚖️', 'Bilancio', isAdmin],
-  ['menu', '🍸', 'Menù'],
-  ['inventario', '📦', 'Magazzino'],
+  ['bilancio', 'bilancio', 'Bilancio', isAdmin],
+  ['menu', 'menu', 'Menù'],
+  ['inventario', 'magazzino', 'Magazzino'],
   // FORNITORI: chi ci vende, cosa gli abbiamo ordinato, cosa gli dobbiamo
   // (anagrafica, ordini, scadenzario). Chiesta dall'utente il 26/08/2026:
   // stavano nel magazzino, che però risponde a «cosa ho sullo scaffale»,
@@ -41,18 +48,33 @@ export const NAV_GESTIONALE = [
   // magazzino li vedeva ogni gestore, ma per contiguità, non per una
   // scelta. Chi lavora al banco non perde niente di quello che gli serve:
   // un fornitore nuovo si crea ancora dalla tendina del modulo prodotto.
-  ['fornitori', '🏭', 'Fornitori', isAdmin],
-  ['staff', '👥', 'Staff'],
-  ['utenti', '🧑‍🤝‍🧑', 'Utenti e ruoli'],
-  ['vista-cliente', '👀', 'Vista cliente'],
-  ['impostazioni', '⚙️', 'Impostazioni'],
+  ['fornitori', 'fornitori', 'Fornitori', isAdmin],
+  ['staff', 'staff', 'Staff'],
+  ['utenti', 'utenti', 'Utenti e ruoli'],
+  ['vista-cliente', 'vista-cliente', 'Vista cliente'],
+  // IL MARKETPLACE DEI TEMI (REQ-MENU-023): una pagina sua, non un
+  // riquadro delle Impostazioni. L'utente, 02/11/2026: «una finestra/pagina
+  // nuova che apro per navigare i temi come se fosse un catalogo». Risponde
+  // a «che aspetto potrebbe avere il mio menù», non a «come è regolato»
+  // (docs/navigazione.md, quando un gruppo diventa una pagina sua).
+  ['marketplace', 'marketplace', 'Marketplace'],
+  ['impostazioni', 'impostazioni', 'Impostazioni'],
 ]
 
 // La sala parte dalla STESSA coda del banco; «I miei ordini» non è più una
 // pagina, è il filtro «Miei» dentro la coda.
+// LA STAMPANTE ANCHE ALLA SALA (REQ-STAMPA-020). Flavio, 30/10/2026:
+// «bisogna dare allo staff, cioè ad un account staff, la possibilità di
+// collegarsi alla stampante, perché sta disabilitato». La sala stampa le
+// comande dal suo telefono, ma l'indirizzo, il certificato da accettare e
+// la prova di stampa stavano in una pagina che allo staff non si apriva:
+// se il telefono non la trovava, si poteva solo «dirlo a chi sta al
+// banco». Lo staff vede la parte del collegamento; i dati del locale
+// sulla carta restano dei gestori (PrinterSetup, `gestore`).
 export const NAV_SALA = [
-  ['coda', '🧾', 'Coda ordini'],
-  ['servizio', '🫱', 'Da servire'],
+  ['coda', 'coda', 'Coda ordini'],
+  ['servizio', 'servizio', 'Da servire'],
+  ['stampante', 'stampante', 'Stampante'],
 ]
 
 // Dove sono finite le sezioni che non ci sono più.
@@ -60,11 +82,11 @@ const VECCHI_INDIRIZZI = { storico: 'pagamenti' }
 
 // Le pagine fuori dal gestionale che hanno comunque una testata visibile.
 const FUORI = [
-  ['/profilo-staff', '👤', 'Il mio profilo'],
-  ['/profilo', '👤', 'Il mio profilo'],
-  ['/ordini', '🧾', 'I miei ordini'],
-  ['/accedi', '🔑', 'Accesso'],
-  ['/registrati', '✍️', 'Registrazione'],
+  ['/profilo-staff', 'profilo', 'Il mio profilo'],
+  ['/profilo', 'profilo', 'Il mio profilo'],
+  ['/ordini', 'miei-ordini', 'I miei ordini'],
+  ['/accedi', 'accedi', 'Accesso'],
+  ['/registrati', 'nuovo-ordine', 'Registrazione'],
 ]
 
 // IL TITOLO STA NELLA BARRA, non dentro la pagina: una riga di titolo in
@@ -104,9 +126,9 @@ export function titoloPagina(pathname = '', search = '') {
 // È il pezzo che la Fase 3 del piano di sbrandizzazione chiede a questo
 // file: le voci del gestionale compaiono solo se il modulo è attivo.
 export function vociPerRuolo(role, impostazioni = null) {
-  if (!isGestore(role)) return NAV_SALA
+  if (!isGestore(role)) return NAV_SALA.filter(([id]) => nelPiano(impostazioni, id))
   return NAV_GESTIONALE.filter(
-    ([id, , , vede]) => (!vede || vede(role)) && voceVisibile(impostazioni, id)
+    ([id, , , vede]) => (!vede || vede(role)) && voceVisibile(impostazioni, id) && nelPiano(impostazioni, id)
   )
 }
 
@@ -114,9 +136,14 @@ export function vociPerRuolo(role, impostazioni = null) {
 // voce dal menu non basta: `?tab=bilancio` battuto a mano, o un
 // collegamento salvato quando si era admin, ci arriverebbero lo stesso.
 export function sezioneConsentita(id, role, impostazioni = null) {
+  // UN VECCHIO INDIRIZZO SI CONTROLLA PER DOVE PORTA (BUG-131): `storico` è
+  // la Cassa, che è di base, ma è anche il nome della sottosezione «Storico
+  // inventari», che è del modulo Inventario. Controllato col suo nome, senza
+  // l'inventario il collegamento salvato alla Cassa finiva sulla coda.
+  id = VECCHI_INDIRIZZI[id] || id
   const voce = NAV_GESTIONALE.find(([v]) => v === id)
   if (voce?.[3] && !voce[3](role)) return false
   // E una funzione che il locale non ha non si apre nemmeno a chi avrebbe
   // il ruolo giusto: la voce non c'è per nessuno.
-  return voceVisibile(impostazioni, id)
+  return voceVisibile(impostazioni, id) && nelPiano(impostazioni, id)
 }

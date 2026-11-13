@@ -1,0 +1,159 @@
+name: End-to-end (ambiente generato)
+
+# I TEST END-TO-END DEI CASI D'USO SU UN AMBIENTE VERO (REQ-DEV-019).
+#
+# L'utente, 09/11/2026: «generiamo ambiente di test, testiamo, eliminiamo»,
+# e `tana-drink-test` resta al cliente per la validazione. A ogni tag (e a
+# mano) questo giro:
+#   1. compila l'app per il progetto di prova, con la sua configurazione
+#      web letta dal progetto stesso;
+#   2. ci pubblica regole, indici, regole di Storage e Functions, e l'app
+#      su un CANALE D'ANTEPRIMA che scade da solo;
+#   3. fa girare i test di tests/e2e/ contro quel canale — ogni test semina
+#      il database da zero (tests/sistema/semina.mjs);
+#   4. SEMPRE, anche se i test falliscono: cancella dati e utenze, il
+#      canale e le Functions. Il progetto resta, vuoto.
+#
+# Il progetto (`drinkpos-prova-e2e`) lo genera una volta il Terraform
+# dell'istanza della regia; come si prepara sta in docs/ambiente-e2e.md.
+# Environment GitHub «e2e»: variabile E2E_PROGETTO, segreti
+# E2E_SERVICE_ACCOUNT (la chiave del service account di deploy del
+# progetto di prova) e E2E_PASSWORD (la password delle utenze di prova).
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Un giro alla volta: due giri seminerebbero e svuoterebbero lo stesso
+# database uno sotto l'altro.
+concurrency:
+  group: e2e
+  cancel-in-progress: false
+
+jobs:
+  e2e:
+    name: Casi d'uso sull'ambiente generato
+    runs-on: ubuntu-latest
+    environment: e2e
+    timeout-minutes: 60
+    env:
+      E2E_PROGETTO: ${{ vars.E2E_PROGETTO }}
+      CANALE: e2e-${{ github.run_id }}
+      FIREBASE_TOOLS: firebase-tools@15.26.0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm ci --prefix functions
+
+      # PRIMA DI TUTTO, LA GUARDIA: si lavora solo su un progetto di prova,
+      # con la chiave di quel progetto. Lo stesso controllo lo rifà
+      # scripts/lib-ambiente-e2e.mjs prima di svuotare qualunque cosa.
+      - name: Credenziali e guardia
+        env:
+          SA_JSON: ${{ secrets.E2E_SERVICE_ACCOUNT }}
+        run: |
+          case "$E2E_PROGETTO" in
+            drinkpos-prova-*) ;;
+            *) echo "::error::E2E_PROGETTO ($E2E_PROGETTO) non è un progetto di prova"; exit 1 ;;
+          esac
+          echo "$SA_JSON" > "$RUNNER_TEMP/sa.json"
+          suo=$(node -e "console.log(require(process.argv[1]).project_id)" "$RUNNER_TEMP/sa.json")
+          if [ "$suo" != "$E2E_PROGETTO" ]; then
+            echo "::error::la chiave è del progetto $suo, non di $E2E_PROGETTO"; exit 1
+          fi
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/sa.json" >> "$GITHUB_ENV"
+
+      # La configurazione web non si copia nei segreti: la si legge dal
+      # progetto, così resta quella giusta anche se il Terraform la rifà.
+      - name: Configurazione web del progetto di prova
+        run: |
+          npx --yes "$FIREBASE_TOOLS" apps:sdkconfig WEB --project "$E2E_PROGETTO" --json > "$RUNNER_TEMP/web.json"
+          node -e '
+            const c = require(process.argv[1]).result.sdkConfig
+            const out = {
+              VITE_FIREBASE_API_KEY: c.apiKey, VITE_FIREBASE_AUTH_DOMAIN: c.authDomain,
+              VITE_FIREBASE_PROJECT_ID: c.projectId, VITE_FIREBASE_STORAGE_BUCKET: c.storageBucket || "",
+              VITE_FIREBASE_MESSAGING_SENDER_ID: c.messagingSenderId || "", VITE_FIREBASE_APP_ID: c.appId,
+            }
+            if (out.VITE_FIREBASE_PROJECT_ID !== process.env.E2E_PROGETTO) throw new Error("configurazione di un altro progetto")
+            for (const [k, v] of Object.entries(out)) console.log(`${k}=${v}`)
+          ' "$RUNNER_TEMP/web.json" >> "$GITHUB_ENV"
+
+      - name: Build
+        env:
+          BASE_PATH: /
+          CLIENTE: tana
+          VITE_APP_ENV: test
+          VITE_REGIA_PROGETTO: drink-regia-test
+          # La stampante del banco non c'è: sugli emulatori la finta si
+          # accende da sola, su un progetto vero va chiesta. Senza, «Invia
+          # comanda» finisce in «Imposta l'IP della stampante» (primo giro,
+          # 09/11/2026) e il caso d'uso si ferma su una cosa che non prova.
+          VITE_STAMPANTE_FINTA: 'true'
+        run: npm run build
+
+      # Regole e indici, regole di Storage e Functions: lo stesso deploy del
+      # test e della produzione (deploy.yml), sul progetto di prova.
+      - name: Regole, indici e Functions
+        run: npx --yes "$FIREBASE_TOOLS" deploy --only firestore,storage,functions --project "$E2E_PROGETTO" --force
+
+      - name: L'app su un canale d'anteprima
+        run: |
+          npx --yes "$FIREBASE_TOOLS" hosting:channel:deploy "$CANALE" --expires 1d --project "$E2E_PROGETTO" --json > "$RUNNER_TEMP/canale.json"
+          url=$(node -e 'const r = require(process.argv[1]).result; console.log(Object.values(r)[0].url)' "$RUNNER_TEMP/canale.json")
+          echo "E2E_URL=$url" >> "$GITHUB_ENV"
+          echo "Canale: $url"
+
+      # Le librerie di sistema solo se il browser non parte: vedi il passo
+      # «Browser» di test.yml (apt irraggiungibile, 11/11/2026).
+      - name: Browser
+        run: |
+          npx playwright install chromium
+          node -e "import('@playwright/test').then(async ({ chromium }) => (await chromium.launch()).close())" \
+            || npx playwright install-deps chromium
+
+      - name: I casi d'uso
+        env:
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+        run: npx playwright test -c playwright.e2e.config.mjs
+
+      - name: Rapporto
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rapporto-e2e
+          path: |
+            rapporto-e2e/
+            test-results/
+          retention-days: 14
+
+      # SI SMONTA SEMPRE. Dati e utenze, il canale, le Functions: quello che
+      # resta è il progetto vuoto, pronto per il giro dopo. Ogni passo va
+      # avanti anche se il precedente non riesce, così un errore a metà non
+      # lascia in giro la parte dopo.
+      - name: Smonta l'ambiente
+        if: always()
+        run: |
+          [ -f "$RUNNER_TEMP/sa.json" ] || exit 0
+          node scripts/ambiente-e2e.mjs --smonta --project "$E2E_PROGETTO" || echo "::warning::dati e utenze non cancellati"
+          npx --yes "$FIREBASE_TOOLS" hosting:channel:delete "$CANALE" --project "$E2E_PROGETTO" --force || echo "::warning::canale non cancellato (scade comunque in un giorno)"
+          funzioni=$(npx --yes "$FIREBASE_TOOLS" functions:list --project "$E2E_PROGETTO" --json \
+            | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const r=JSON.parse(s).result||[];console.log(r.map(f=>f.id||String(f.name||"").split("/").pop()).filter(Boolean).join(" "))})') || funzioni=""
+          if [ -n "$funzioni" ]; then
+            npx --yes "$FIREBASE_TOOLS" functions:delete $funzioni --project "$E2E_PROGETTO" --force || echo "::warning::Functions non cancellate"
+          fi
+
+      - name: Via la chiave
+        if: always()
+        run: rm -f "$RUNNER_TEMP/sa.json"

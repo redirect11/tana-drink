@@ -208,6 +208,21 @@ ${nome} {`)
     expect(r).toMatch(/var\(--line\)/)
     expect(r).toMatch(/var\(--tile-bg\)/)
   })
+
+  // IL TESTO SECONDARIO DI UNA SCELTA ATTIVA SI LEGGE (BUG-146). La scelta
+  // attiva prende il colore dei tasti, e dentro ci sono testi «muted» (la
+  // descrizione di uno stile, l'esempio di un formato): col grigio pensato
+  // per il fondo della pagina, sul pesca di «catppuccin» non si leggevano
+  // (Daniele, 12/11/2026: «il testo grigio su sfondo arancione non si
+  // legge»). Prendono l'inchiostro del tasto, in ogni tema.
+  it('sulla scelta attiva il testo secondario prende l’inchiostro del tasto', () => {
+    const i = css.indexOf('\n.mode-option.active :is(')
+    expect(i, 'manca la regola per il testo secondario della scelta attiva').toBeGreaterThan(-1)
+    const r = css.slice(i, css.indexOf('}', i))
+    expect(r).toMatch(/\.muted/)
+    expect(r).toMatch(/\.formato-prezzi-esempio/)
+    expect(r).toMatch(/color:\s*var\(--btn-ink\)/)
+  })
 })
 
 // ── LA COLONNA DEL «CHIUDI CASSA» NON STIRA IL SUO TASTO (BUG-062) ───
@@ -1513,5 +1528,211 @@ describe('le finestrelle di conferma stanno nello schermo', () => {
     expect(r, 'quello che avanza nella finestrella non si puo’ piu’ raggiungere').toMatch(
       /overflow-y:\s*auto/
     )
+  })
+})
+
+// LE MANIGLIE NON SI SELEZIONANO E NON RINCORRONO IL DITO (BUG-118).
+describe('le maniglie del conto', () => {
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  const regola = (nome) => {
+    const i = css.indexOf(`\n${nome} {`)
+    expect(i, `${nome} non c'è più`).toBeGreaterThan(-1)
+    return css.slice(i, css.indexOf('}', i))
+  }
+
+  it('non si selezionano né aprono il menu della pressione lunga', () => {
+    const r = regola('.posd-altezza-handle, .posd-foot-handle, .posd-resize-handle, .payscreen-resize-handle')
+    expect(r).toMatch(/-webkit-touch-callout:\s*none/)
+    expect(r).toMatch(/user-select:\s*none/)
+  })
+
+  it('mentre se ne tiene una, il conto non si anima', () => {
+    expect(regola('.posd-body.trascinando .posd-comanda, .posd-body.trascinando .posd-cats')).toMatch(/transition:\s*none/)
+  })
+})
+
+// LA CARD FUORI MENU SI LEGGE ANCHE APERTA, CON QUALUNQUE TEMA (BUG-119).
+// Il fondo è un grigio scuro fisso: tutto quello che ci sta sopra, anche i
+// tasti che si aprono con «Azioni», deve avere l'inchiostro chiaro suo e
+// non quello del tema, che sui temi chiari è scuro.
+describe('la card fuori menu, aperta', () => {
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  const regola = (nome) => {
+    const i = css.indexOf(`
+${nome} {`)
+    expect(i, `${nome} non c'è più`).toBeGreaterThan(-1)
+    return css.slice(i, css.indexOf('}', i))
+  }
+
+  // Il selettore con `:root[data-luma]` serve a battere le varianti dei
+  // temi chiari dei tasti, che sono più specifiche di `.menu-card.off …`.
+  it('i tasti e le righe della ricetta hanno l’inchiostro chiaro, non quello del tema', () => {
+    expect(regola('.menu-card.off .grid-card-actions .btn, :root[data-luma] .menu-card.off .grid-card-actions .btn')).toMatch(/color:\s*#fff/)
+    expect(regola('.menu-card.off .grid-card-actions .muted')).toMatch(/color:\s*rgba\(255, 255, 255/)
+  })
+})
+
+// IL MENÙ SPECIAL IN GRIGLIA (REQ-MENU-018): due colonne sul telefono, tre
+// sugli schermi larghi.
+describe('il menù Special', () => {
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  it('mette le card su due colonne, e su tre dai 700px', () => {
+    const i = css.indexOf('\n.speciali-griglia {')
+    expect(i).toBeGreaterThan(-1)
+    expect(css.slice(i, css.indexOf('}', i))).toMatch(/grid-template-columns:\s*repeat\(2,/)
+    expect(css).toMatch(/@media \(min-width: 700px\) \{\s*\.speciali-griglia \{\s*grid-template-columns:\s*repeat\(3,/)
+  })
+})
+
+// BUG-120, l'utente, 29/10/2026, con due foto del menù sul telefono: «il
+// titolo esce fuori la card, i testi sopra sono attaccati al carosello. Lo
+// sfondo della lista categorie ha un colore diverso».
+describe('il carosello e la fila delle categorie (BUG-120)', () => {
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  const blocco = (sel) => {
+    const i = css.indexOf('\n' + sel + ' {')
+    expect(i, sel).toBeGreaterThan(-1)
+    return css.slice(i, css.indexOf('}', i))
+  }
+  it('il nome nella slide va a capo invece di uscire dalla card', () => {
+    expect(blocco('.carosello-testo strong')).toMatch(/overflow-wrap:\s*anywhere/)
+    expect(blocco('.carosello-testo strong')).toMatch(/font-size:\s*clamp\(/)
+  })
+  it('«Special» e «Vedi tutti» stanno staccati dalla slide', () => {
+    expect(blocco('.speciali-carosello-testa')).toMatch(/margin-bottom:\s*\d+px/)
+  })
+  it('la fila delle categorie non ha un fondo suo finché non si appiccica', () => {
+    expect(blocco('.cat-nav')).toMatch(/background:\s*transparent/)
+    expect(blocco('.cat-nav.incollata')).toMatch(/background:\s*color-mix\(in srgb, var\(--bg-2\)/)
+  })
+})
+
+describe('le voci del menù coi nomi lunghi (BUG-120)', () => {
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  const blocco = (sel) => {
+    const i = css.indexOf('\n' + sel + ' {')
+    expect(i, sel).toBeGreaterThan(-1)
+    return css.slice(i, css.indexOf('}', i))
+  }
+  it('il testo si stringe e il tasto no: «Aggiungi» resta dentro la card', () => {
+    expect(blocco('.menu-item .row > .grow')).toMatch(/min-width:\s*0/)
+    expect(css).toMatch(/\.menu-item \.row > \.btn,\s*\.menu-item \.row > \.qty \{\s*flex-shrink:\s*0/)
+    expect(blocco('.menu-item .grow > h3')).toMatch(/overflow-wrap:\s*anywhere/)
+  })
+})
+
+// LO STILE «NOTTE» (REQ-MENU-021). Sul prototipo lo scorrimento non era
+// fluido (l'utente, 30/10/2026: «lo scroll non è per niente fluido»): il
+// colore sulla sezione intera, sfocature dietro, filtri. Queste regole
+// tengono il motivo per cui ora lo è.
+describe('lo stile «Notte»', () => {
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  const blocco = (sel) => {
+    const i = css.indexOf('\n' + sel + ' {')
+    expect(i, sel).toBeGreaterThan(-1)
+    return css.slice(i, css.indexOf('}', i))
+  }
+  it('il colore della scena sta su un fondale fisso, non sulla sezione', () => {
+    expect(blocco('.notte-fondale')).toMatch(/position:\s*fixed/)
+    expect(blocco('.notte-special')).not.toMatch(/background/)
+  })
+  it('niente sfocature né filtri negli Special a scorrimento', () => {
+    const i = css.indexOf('Gli Special a scorrimento (SpecialScorrevoli)')
+    expect(i).toBeGreaterThan(-1)
+    const parte = css.slice(i)
+    expect(parte).not.toMatch(/backdrop-filter|filter:\s*blur/)
+  })
+  // Fino al 04/11/2026 qui si nascondeva il segnaposto, perché era il
+  // LOGO, e ripetuto su ogni voce faceva il menù giocattolo. Ora è un
+  // bicchiere neutro (REQ-LIC-013), e l'utente l'ha voluto in ogni stile:
+  // nessuno stile lo nasconde più.
+  it('senza foto né disegno c’è il bicchiere neutro, in ogni stile', () => {
+    expect(css).not.toMatch(/\.drink-thumb\.placeholder\s*\{[^}]*display:\s*none/)
+  })
+  it('i colori vengono dal tema: l’oro è --accent-2', () => {
+    expect(blocco('.stile-notte .menu-item .grow > .price')).toMatch(/var\(--accent-2\)/)
+  })
+})
+
+
+// GLI STILI GRATIS DEL MENÙ (REQ-MENU-022).
+describe('gli stili gratis del menù', () => {
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  const main = readFileSync(join(CARTELLA, 'main.jsx'), 'utf8')
+  // Tutti i blocchi con esattamente quel selettore, uniti.
+  const blocchi = (sel) =>
+    [...css.matchAll(new RegExp(`\n${sel.replace(/[.]/g, '\.')} \{([^}]*)\}`, 'g'))].map((m) => m[1]).join('\n')
+
+  // LA TAVOLOZZA È SEMPRE LIBERA (REQ-MENU-027). Fino alla 1.10.15
+  // «Lavagna» scriveva i suoi colori nel CSS, tutti, e il tema del menù
+  // scelto sotto non contava. L'utente, 05/11/2026: la tavolozza «sempre
+  // libera» — uno stile la propone, ma si cambia. Quindi nessuno stile
+  // scrive i colori della tavolozza: stanno in themes.js.
+  it('nessuno stile scrive i colori della tavolozza: si cambiano dal tema', () => {
+    for (const sel of ['.stile-lavagna', '.stile-meraviglie', '.stile-deco', '.stile-riviera', '.stile-giornale']) {
+      const b = blocchi(sel)
+      for (const v of ['--bg', '--bg-2', '--card', '--text', '--muted', '--accent', '--accent-2', '--btn']) {
+        expect(b, `${sel} ${v}`).not.toMatch(new RegExp(`(^|[\\s;])${v}:`))
+      }
+    }
+    const radice = [...css.matchAll(/\n:root\[data-stile='meraviglie'\] \{([^}]*)\}/g)].map((m) => m[1]).join('\n')
+    expect(radice).not.toMatch(/--(bg|card|text|accent|btn)\b[^:]*:/)
+  })
+
+  it('ogni stile dichiara i suoi tre caratteri, e quelli scaricati stanno nell’app', () => {
+    for (const id of ['lavagna', 'deco', 'riviera', 'giornale', 'meraviglie']) {
+      const b = blocchi(`.stile-${id}`)
+      for (const v of ['--stile-titolo', '--stile-voce', '--stile-testo']) expect(b, `${id} ${v}`).toMatch(new RegExp(`${v}:`))
+    }
+    // Dentro l'app, non da Google (REQ-SIC-004).
+    for (const pacchetto of ['@fontsource/caveat', '@fontsource/poiret-one', '@fontsource/dancing-script', '@fontsource/im-fell-english']) {
+      expect(main).toContain(pacchetto)
+    }
+  })
+})
+
+
+// «MERAVIGLIE» (REQ-MENU-027): il libro illustrato. Le categorie sono
+// capitoli, e veste le pagine dei clienti dalla radice del documento.
+describe('lo stile «Meraviglie»', () => {
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  const blocco = (sel) => css.match(new RegExp(`\n${sel.replace(/[.[\]()'>:=]/g, '\\$&')} \\{([^}]*)\\}`))?.[1] || ''
+
+  it('le categorie sono capitoli, numerati dal CSS nell’ordine del menù', () => {
+    expect(blocco('.stile-meraviglie')).toMatch(/counter-reset: capitolo/)
+    expect(blocco('.stile-meraviglie .cat-header')).toMatch(/counter-increment: capitolo/)
+    expect(blocco('.stile-meraviglie .cat-header::before')).toMatch(/counter\(capitolo, upper-roman\)/)
+  })
+
+  it('le pagine dei clienti si vestono dalla radice, come i colori', () => {
+    expect(css).toMatch(/:root\[data-stile='meraviglie'\] \.hero \{/)
+    expect(css).toMatch(/:root\[data-stile='meraviglie'\] main \{/)
+  })
+
+  // Sulla foto c'è sempre il velo scuro: con l'inchiostro della tavolozza
+  // il nome del locale sarebbe nero su nero.
+  it('il titolo sulla foto è chiaro con qualunque tavolozza', () => {
+    expect(blocco(":root[data-stile='meraviglie'] .hero-overlay")).toMatch(/color: #fbf6ea/)
+  })
+})
+
+
+// CHI SI APPICCICA SOTTO LA BARRA IN ALTO SI FERMA ALLA SUA ALTEZZA VERA
+// (BUG-130). Le schede delle categorie si fermavano a 64 px fissi, la barra
+// sul telefono è più alta: il loro margine sopra finiva dietro la barra, e
+// le schede restavano attaccate al suo filo («troppo attaccate sopra», sul
+// test, 05/11/2026).
+describe('sotto la barra in alto, alla sua altezza misurata', () => {
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  const regola = (sel) => css.match(new RegExp(`\\n${sel.replace(/[.]/g, '\\.')} \\{([^}]*)\\}`))?.[1] || ''
+
+  it('le schede delle categorie e il sommario del giornale', () => {
+    for (const sel of ['.cat-nav', '.g-sommario']) {
+      expect(regola(sel), sel).toMatch(/top: var\(--barra-intera, calc\(var\(--safe-top\) \+ var\(--barra-alta\)\)\)/)
+    }
+  })
+
+  it('nessuno si appiccica a una misura scritta a mano', () => {
+    expect(regola('.cat-nav')).not.toMatch(/top: \d+px/)
   })
 })

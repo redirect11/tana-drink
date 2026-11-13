@@ -3,6 +3,9 @@ import { fetchInventoryItems } from '../lib/api.js'
 import { toBaseQty, baseUnit, entryUnits } from '../lib/inventory.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import PriceSuggestion from './PriceSuggestion.jsx'
+import CostoRiga from './CostoRiga.jsx'
+import Icona from './Icona.jsx'
+import { useTestoConIcona } from '../lib/temaIcone.js'
 
 // PRODOTTO LIBERO: voce fuori catalogo battuta al volo (stile "custom
 // amount/item" dei POS SumUp). Bastano nome e prezzo — lo scarico
@@ -34,6 +37,7 @@ export default function CustomDrinkForm({
   warnNoRecipe = false,
   onSaveAsNew = null,
 }) {
+  const testoConIcona = useTestoConIcona()
   const initRows = (initial?.recipe_items || []).map((r) => ({
     inventory_item_id: r.inventory_item_id || '',
     name: r.name || '',
@@ -143,7 +147,7 @@ export default function CustomDrinkForm({
         onClick={(e) => e.stopPropagation()}
         onSubmit={submit}
       >
-        <h3 style={{ marginTop: 0 }}>{initial ? '✏️ Modifica prodotto' : '🏷 Prodotto libero'}</h3>
+        <h3 style={{ marginTop: 0 }}>{initial ? <><Icona nome="modifica" gruppo="tasti" /> Modifica prodotto</> : <><Icona nome="categorie" gruppo="tasti" /> Prodotto libero</>}</h3>
         <p className="muted small" style={{ margin: '0 0 10px' }}>
           {initial
             ? 'Modifica nome, prezzo e ingredienti solo per questa riga: diventa una voce a sé e non si unisce più con gli originali.'
@@ -216,7 +220,7 @@ export default function CustomDrinkForm({
 
             {warnNoRecipe && (
               <div className="banner" style={{ margin: '6px 0' }}>
-                ⚠️ Questo prodotto non ha ingredienti configurati: forse non sono
+                <Icona nome="avviso" gruppo="segnali" /> Questo prodotto non ha ingredienti configurati: forse non sono
                 mai stati inseriti nella sua scheda del Menù. Senza ingredienti
                 non c’è scarico di magazzino. Quelli che aggiungi qui valgono
                 solo per questa riga.
@@ -254,6 +258,7 @@ export default function CustomDrinkForm({
                       <option key={u} value={u}>{u}</option>
                     ))}
                   </select>
+                  <CostoRiga row={r} item={itemsById[r.inventory_item_id]} name={r.name} />
                   <button type="button" className="btn ghost small" onClick={() => removeRow(idx)}>✕</button>
                 </div>
               )
@@ -265,7 +270,7 @@ export default function CustomDrinkForm({
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="🔍 Cerca ingrediente…"
+              placeholder={testoConIcona('cerca', 'Cerca ingrediente…')}
               style={{ marginTop: 6 }}
             />
             {matches.length > 0 && (
@@ -308,7 +313,7 @@ export default function CustomDrinkForm({
               disabled={!valid}
               onClick={() => onSaveAsNew(composto())}
             >
-              ✨ Salva nuova
+              <Icona nome="special" gruppo="tasti" /> Salva nuova
             </button>
           )}
         </div>
