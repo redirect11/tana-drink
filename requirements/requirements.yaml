@@ -7053,11 +7053,18 @@ requirements:
       DOPO, a sezioni (pezzo 3 approvato da Daniele): la sola lettura dentro
       l'app per il titolare, col blocco centrale delle scritture; prima
       Statistiche, Cassa e Fornitori, poi Clienti e Magazzino.
-    status: todo
+      FATTI I PEZZI 1 E 2 (13/11/2026): InstallazioneSospesa sceglie la
+      schermata dal ruolo (App.jsx le passa `staffRole`); il titolare ha
+      «Riattiva il locale» (non sul chiuso; «Vai alla pagina del prodotto»
+      per l'attivazione) e BackupPanel in `soloEsporta`. Il testo al
+      personale è impersonale («per informazioni rivolgersi al titolare»),
+      come chiede il tono dell'app. RESTA il pezzo 3, la sola lettura.
+    status: partial
     generate_issue: true
     labels: [licenza, prodotto]
     priority: P1
-    test_cases: []
+    test_cases:
+      - tests/component/InstallazioneSospesa.test.jsx
 
   - id: REQ-LIC-011
     title: "Il catalogo dei temi: i gestori li aggiungono alla loro installazione, gratis o a pagamento"

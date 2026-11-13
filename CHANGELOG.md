@@ -17,6 +17,10 @@
 
 - Piano Free: le funzioni AI non sono comprese. I tasti AI e il credito non
   compaiono.
+- Locale sospeso, scaduto o chiuso: chi apre il menù legge solo che il menù
+  non è disponibile, e il personale che il locale è fermo. Il titolare
+  legge il motivo, trova «Riattiva il locale» (non sul locale chiuso) e
+  scarica i dati del locale con «Esporta tutto».
 
 ## 1.10.40-beta — 12/11/2026 (test)
 

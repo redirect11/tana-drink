@@ -799,7 +799,7 @@ export default function App() {
       {/* LA CANCELLAZIONE DEI DATI (REQ-LIC-009): sopra a tutto, anche
           sul locale fermo. */}
       <AvvisoCancellazione settings={settings} ruolo={staffRole} />
-      {bloccata && <InstallazioneSospesa licenza={licenzaDi(settings)} venue={venue} />}
+      {bloccata && <InstallazioneSospesa licenza={licenzaDi(settings)} venue={venue} ruolo={staffRole} />}
       <main hidden={bloccata}>
         <StileCliente.Provider value={stilePagine}>
         <ConDemo>
