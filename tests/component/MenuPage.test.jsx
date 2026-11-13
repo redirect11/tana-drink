@@ -20,6 +20,8 @@ import { CON_LICENZA, LICENZA_TANA } from '../helpers/licenza.js'
 import { segnapostoDrink } from '../../src/lib/speciali.js'
 
 let mockSettings = {}
+// Le alternative del cliente che il magazzino dà per disponibili (REQ-MENU-042).
+let mockAlternative = new Map()
 let ruoloClaim = 'bartender'
 
 vi.mock('../../src/lib/api.js', () => ({
@@ -35,6 +37,10 @@ vi.mock('../../src/lib/api.js', () => ({
   subscribeReadyOrders: vi.fn(() => () => {}),
   subscribeOpenGroups: vi.fn(() => () => {}),
   subscribeRecentGroups: vi.fn(() => () => {}),
+  subscribeAlternativeCliente: vi.fn((cb) => {
+    cb(mockAlternative)
+    return () => {}
+  }),
   createOrder: vi.fn(() => Promise.resolve({
     id: 'o1',
     daily_number: 7,
@@ -1318,5 +1324,120 @@ describe('i prezzi nel menù dei clienti', () => {
     expect(carrello.textContent).toMatch(/7,00\s€/)
     // E la voce, nel menù sopra, resta un numero.
     expect(prezzi()[0]).toBe('7')
+  })
+})
+
+// IL CLIENTE SCEGLIE UN INGREDIENTE (REQ-MENU-042, Daniele 13/11/2026): sul
+// Gin Tonic il titolare ha acceso la scelta del gin. Il cliente sceglie
+// quando aggiunge; chi non sceglie ha la ricetta. Fra le alternative solo
+// quelle disponibili, e quello che manca non si nomina (REQ-MENU-017). La
+// scelta arriva al banco come la riga ritoccata dal conto (REQ-CLI-008):
+// il drink, la ricetta sua, la nota.
+describe('il cliente sceglie un ingrediente', () => {
+  const GIN = {
+    tipo: 'categoria',
+    id: 'cat-gin',
+    nome: 'Gin',
+    scelta: {
+      offerti: [
+        { id: 'tanq', nome: 'Tanqueray', supplemento: 0 },
+        { id: 'mare', nome: 'Mare', supplemento: 2 },
+        { id: 'hendricks', nome: 'Hendrick’s', supplemento: 3 },
+      ],
+      sostituisce: ['tanq'],
+    },
+  }
+  const GIN_TONIC = {
+    id: 'd4',
+    name: 'Gin Tonic',
+    price: 8,
+    category_id: 'c1',
+    available: true,
+    recipe_items: [
+      { inventory_item_id: 'tanq', name: 'Tanqueray', qty: 40, unit: 'ml' },
+      { inventory_item_id: 'tonica', name: 'Tonica', qty: 1, unit: 'pz' },
+    ],
+  }
+  const conLaScelta = () => {
+    ruoloClaim = null
+    mockDrinks = [...DRINKS, GIN_TONIC]
+    mockCarta = {
+      sezioni: [{ id: 's-gin', nome: 'Gin', ordine: 0, vista: 'dettagliata' }],
+      voci: [{ id: 'v-gt', sezione_id: 's-gin', drink_id: 'd4', etichette: [GIN, { tipo: 'testo', id: null, nome: 'tonica' }], ordine: 0 }],
+    }
+    mockAlternative = new Map([
+      ['tanq', true],
+      ['mare', true],
+      ['hendricks', false],
+    ])
+  }
+  const carrello = () => JSON.parse(localStorage.getItem('drink_cart_v1') || '[]')
+
+  beforeEach(() => {
+    mockCarta = CARTA_VUOTA
+    mockAlternative = new Map()
+  })
+
+  it('«Aggiungi» chiede la scelta: la ricetta, e le sole alternative disponibili', async () => {
+    const user = userEvent.setup()
+    conLaScelta()
+    mostra()
+    await user.click(await screen.findByRole('button', { name: 'Aggiungi' }))
+    const finestra = screen.getByRole('dialog', { name: 'Gin Tonic' })
+    expect(within(finestra).getByRole('radio', { name: 'Come da ricetta' })).toBeChecked()
+    expect(within(finestra).getByRole('radio', { name: /Mare/ })).toBeInTheDocument()
+    expect(finestra.textContent).toMatch(/\+ 2,00\s€/)
+    // Esaurito: non c'è, e non si dice perché.
+    expect(within(finestra).queryByText(/Hendrick/)).toBeNull()
+    // Il Tanqueray è la ricetta: è «come da ricetta», non un'alternativa.
+    expect(within(finestra).queryByRole('radio', { name: /Tanqueray/ })).toBeNull()
+  })
+
+  it('la scelta va nel carrello col supplemento, e al banco come riga ritoccata', async () => {
+    const user = userEvent.setup()
+    conLaScelta()
+    mostra()
+    await user.click(await screen.findByRole('button', { name: 'Aggiungi' }))
+    await user.click(screen.getByRole('radio', { name: /Mare/ }))
+    await user.click(screen.getByRole('button', { name: /Aggiungi · 10,00/ }))
+    expect(screen.queryByRole('dialog', { name: 'Gin Tonic' })).toBeNull()
+    const [riga] = carrello()
+    expect(riga).toMatchObject({ drink_id: 'd4', name: 'Gin Tonic', price: 10, qty: 1, custom: true, note: 'Gin: Mare' })
+    // Il magazzino scala il gin scelto, con la dose della ricetta.
+    expect(riga.recipe_items).toEqual([
+      { inventory_item_id: 'mare', name: 'Mare', qty: 40, unit: 'ml' },
+      { inventory_item_id: 'tonica', name: 'Tonica', qty: 1, unit: 'pz' },
+    ])
+    expect(document.querySelector('.cartbar').textContent).toMatch(/Gin Tonic \(Mare\)/)
+  })
+
+  it('scelte diverse sono righe diverse; chi non sceglie ha il drink com’è', async () => {
+    const user = userEvent.setup()
+    conLaScelta()
+    mostra()
+    await user.click(await screen.findByRole('button', { name: 'Aggiungi' }))
+    await user.click(screen.getByRole('button', { name: /Aggiungi · 8,00/ }))
+    await user.click(screen.getByRole('button', { name: 'Aggiungi' }))
+    await user.click(screen.getByRole('radio', { name: /Mare/ }))
+    await user.click(screen.getByRole('button', { name: /Aggiungi · 10,00/ }))
+    await user.click(screen.getByRole('button', { name: 'Aggiungi' }))
+    await user.click(screen.getByRole('radio', { name: /Mare/ }))
+    await user.click(screen.getByRole('button', { name: /Aggiungi · 10,00/ }))
+    const righe = carrello()
+    expect(righe).toHaveLength(2)
+    expect(righe[0]).toMatchObject({ drink_id: 'd4', price: 8, qty: 1 })
+    expect(righe[0].custom).toBeUndefined()
+    expect(righe[1]).toMatchObject({ drink_id: 'd4', price: 10, qty: 2, note: 'Gin: Mare' })
+    expect(screen.getByText('3 nel carrello')).toBeInTheDocument()
+  })
+
+  it('senza alternative disponibili non c’è niente da scegliere', async () => {
+    const user = userEvent.setup()
+    conLaScelta()
+    mockAlternative = new Map([['mare', false]])
+    mostra()
+    await user.click(await screen.findByRole('button', { name: 'Aggiungi' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(carrello()).toMatchObject([{ drink_id: 'd4', price: 8, qty: 1 }])
   })
 })

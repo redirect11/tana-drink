@@ -31,6 +31,21 @@
 - Impostazioni → Licenza: il riquadro «Credito AI» mostra il credito
   disponibile, quanto si è speso nel mese e il tetto, e perché le funzioni AI
   sono ferme quando lo sono.
+- Menù dei clienti: su un ingrediente di una voce (un prodotto o una
+  categoria di magazzino) il tasto ⇄ «Il cliente sceglie» offre al cliente
+  i prodotti di quella categoria con «Il cliente può sceglierlo dal menù»;
+  per ciascuno si decide se offrirlo e il supplemento. Il supplemento di
+  partenza si imposta in Impostazioni → Menù clienti → Scelta degli
+  ingredienti.
+
+### Menù dei clienti
+
+- Sulle voci che lo prevedono, «Aggiungi» chiede la scelta dell'ingrediente:
+  la ricetta, oppure una delle alternative disponibili col suo supplemento.
+  Quelle esaurite non compaiono. Ogni scelta diversa è una riga a sé nel
+  carrello.
+- Al banco la scelta si legge nella nota della riga, sul conto e sulla
+  comanda, e il magazzino scala il prodotto scelto con la dose della ricetta.
 
 ### Licenza
 

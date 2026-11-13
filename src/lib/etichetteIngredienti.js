@@ -62,7 +62,11 @@ export function etichettaPulita(e) {
 // quali prodotti offrire, fra quelli di quella categoria con «Il cliente può
 // sceglierlo dal menù» (REQ-MAG-055), e il supplemento di ciascuno (anche
 // zero). Chi non sceglie ha il prodotto della ricetta.
-//   scelta: { offerti: [{ id, nome, supplemento }] }
+//   scelta: { offerti: [{ id, nome, supplemento }], sostituisce: [id] }
+// `sostituisce` sono i prodotti della RICETTA che la scelta prende il posto:
+// li calcola l'editor, che legge il magazzino. Al telefono il magazzino non
+// arriva (le regole lo chiudono), e per un'etichetta di categoria il
+// cliente non saprebbe quale riga della ricetta è «il gin».
 const TIPI_CON_SCELTA = ['prodotto', 'categoria']
 const euro = (v) => {
   const n = Number(String(v ?? '').replace(',', '.'))
@@ -76,7 +80,18 @@ export function sceltaPulita(e) {
     .filter((o) => o && o.id && !visti.has(o.id) && visti.add(o.id))
     .map((o) => ({ id: String(o.id), nome: String(o.nome ?? '').trim().slice(0, 60), supplemento: euro(o.supplemento) }))
     .filter((o) => o.nome)
-  return { offerti }
+  const sostituisce = [...new Set((Array.isArray(e.scelta.sostituisce) ? e.scelta.sostituisce : []).filter(Boolean).map(String))]
+  return { offerti, sostituisce }
+}
+
+// Le righe della ricetta che un'etichetta rappresenta: il prodotto stesso,
+// o i prodotti della ricetta che stanno in quella categoria di magazzino.
+export function righeSostituite(e, drink, items = []) {
+  const ricetta = (drink?.recipe_items || []).filter((r) => r.inventory_item_id)
+  if (e?.tipo === 'prodotto') return ricetta.some((r) => r.inventory_item_id === e.id) ? [e.id] : []
+  if (e?.tipo !== 'categoria') return []
+  const categoria = new Map(items.map((i) => [i.id, i.category_id]))
+  return [...new Set(ricetta.filter((r) => categoria.get(r.inventory_item_id) === e.id).map((r) => r.inventory_item_id))]
 }
 
 // La categoria di magazzino di un'etichetta: la sua, o quella del prodotto.

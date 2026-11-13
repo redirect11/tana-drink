@@ -118,6 +118,14 @@ Regole di sopravvivenza del modello:
   uno solo e sta in `comandaDaScaricare`: a «pronto» il drink è fatto, e a
   segnarlo è chi l'ha fatto — mentre «servito» lo segna la sala, che sul
   magazzino non scrive.
+- **Una riga può avere la ricetta sua** (`custom: true` + `recipe_items`):
+  il drink ritoccato dal conto e la riga con la scelta del cliente
+  (REQ-CLI-008, `lib/sceltaCliente.js`) restano il drink — `drink_id`,
+  nome, statistiche — ma lo scarico legge la ricetta della riga. Due righe
+  con ricette diverse non si accorpano (`lineSignature`). Il telefono la
+  compone senza leggere il magazzino, che per il cliente è chiuso: le
+  righe da sostituire le scrive l'editor sulla scelta (`sostituisce`), e
+  la disponibilità arriva da `alternative_cliente`.
 - **Lo sconto appartiene alla riscossione, non al conto.** Cade sulle
   righe che si stanno incassando, e all'incasso viene consumato dentro quel
   pagamento (`payments[].sconto`): due riscossioni scontate sono due sconti,

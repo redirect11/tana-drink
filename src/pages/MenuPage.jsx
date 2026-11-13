@@ -28,6 +28,7 @@ import {
   subscribeReadyOrders,
   subscribeOpenGroups,
   subscribeRecentGroups,
+  subscribeAlternativeCliente,
   createOrder,
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
@@ -49,6 +50,9 @@ import { printComanda, salaStampaDaSe, stampaDa, loadPrinterSettings } from '../
 import OrderSummary from '../components/OrderSummary.jsx'
 import StaffDrawer from '../components/StaffDrawer.jsx'
 import CustomDrinkForm from '../components/CustomDrinkForm.jsx'
+import SceltaIngredienti from '../components/SceltaIngredienti.jsx'
+import { scelteDellaVoce, rigaConScelte } from '../lib/sceltaCliente.js'
+import { etichetteConScelta } from '../lib/etichetteIngredienti.js'
 
 const NOTIF_PROMPT_KEY = 'drink_notif_prompt_v1' // chiave storica
 const WELCOME_KEY = 'drink_welcome_v1'
@@ -213,6 +217,17 @@ export default function MenuPage({ speciali = false }) {
     }
     return subscribeRecentGroups(setRecentGroups, () => {})
   }, [groupsActive])
+
+  // LE ALTERNATIVE DISPONIBILI (REQ-MENU-042): si ascoltano solo se una
+  // voce del menù fa scegliere un ingrediente, e solo per il cliente — chi
+  // lavora ordina dal menù del gestionale, senza voci.
+  const [disponibili, setDisponibili] = useState(() => new Map())
+  const [scegliendo, setScegliendo] = useState(null)
+  const conScelte = !staff && (carta?.voci || []).some((v) => etichetteConScelta(v.etichette).length > 0)
+  useEffect(() => {
+    if (!isFirebaseConfigured || !conScelte) return
+    return subscribeAlternativeCliente(setDisponibili, () => setDisponibili(new Map()))
+  }, [conScelte])
 
   // Tabellone "stiamo servendo / pronti al ritiro" (se attivo in impostazioni).
   const servingBoard = settings.show_serving_board && !settings.menu_only
@@ -420,6 +435,24 @@ export default function MenuPage({ speciali = false }) {
     if (!canOrder) return null
     // Niente motivo, niente ingrediente: solo che oggi no (REQ-MENU-017).
     if (d.non_disponibile) return <span className="muted small non-disponibile">Non disponibile</span>
+    // UNA VOCE CHE FA SCEGLIERE (REQ-MENU-042): «Aggiungi» chiede la scelta,
+    // ogni volta, e ogni scelta diversa è una riga sua. Accanto, quanti ce
+    // ne sono già nel carrello, comunque scelti.
+    const scelte = scelteDellaVoce(d.etichette_scelta, disponibili)
+    if (scelte.length > 0) {
+      const base = rigaDelCarrello(d)
+      const giaPresi = cart.items
+        .filter((i) => i.drink_id === base.drink_id && (i.nome_carta || null) === (base.nome_carta || null))
+        .reduce((s, i) => s + i.qty, 0)
+      return (
+        <span className="row" style={{ gap: 8, alignItems: 'center' }}>
+          {giaPresi > 0 && <span className="muted small">{giaPresi} nel carrello</span>}
+          <button className="btn small" onClick={() => setScegliendo({ voce: d, scelte })}>
+            Aggiungi
+          </button>
+        </span>
+      )
+    }
     // La riga del carrello si riconosce da quello che arriva al banco (il
     // drink, e il nome letto dal cliente): cart.js, chiaveRiga.
     const chiave = chiaveRiga(rigaDelCarrello(d))
@@ -1004,6 +1037,21 @@ export default function MenuPage({ speciali = false }) {
         azioni={aperto && tastiOrdine(aperto)}
         onClose={() => setApertoId(null)}
       />
+
+      {scegliendo && (
+        <SceltaIngredienti
+          voce={scegliendo.voce}
+          scelte={scegliendo.scelte}
+          onClose={() => setScegliendo(null)}
+          onAggiungi={(fatte) => {
+            // La ricetta è quella del prodotto della cassa: la voce non la
+            // porta (strutturaMenu.js, voceInSezione).
+            const ricetta = drinksDelMenu.find((x) => x.id === scegliendo.voce.drink_id)?.recipe_items || []
+            cart.aggiungiRiga(rigaConScelte(scegliendo.voce, ricetta, fatte))
+            setScegliendo(null)
+          }}
+        />
+      )}
 
       {showSummary && (
         <OrderSummary

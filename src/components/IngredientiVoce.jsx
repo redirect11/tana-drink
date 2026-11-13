@@ -9,6 +9,7 @@ import {
   suggerimenti,
   GRUPPI_SUGGERIMENTO,
   alternativeDi,
+  righeSostituite,
 } from '../lib/etichetteIngredienti.js'
 
 const testo = (v) => (typeof v === 'string' ? v.trim() : '')
@@ -49,10 +50,14 @@ export default function IngredientiVoce({ voce, drink, items = [], categorieMaga
   // LA SCELTA DEL CLIENTE (REQ-MENU-042): accesa, offre tutte le
   // alternative col supplemento predefinito; poi si tolgono e si ritoccano.
   const cambiaEtichetta = (e, patch) => salva(attuali.map((x) => (chiave(x) === chiave(e) ? { ...x, ...patch } : x)))
+  // Le righe della ricetta che la scelta sostituisce si ricalcolano a ogni
+  // ritocco: la ricetta del prodotto può essere cambiata nel frattempo.
+  const cambiaScelta = (e, offerti) =>
+    cambiaEtichetta(e, { scelta: { offerti, sostituisce: righeSostituite(e, drink, items) } })
   const alternaScelta = (e) =>
-    cambiaEtichetta(e, {
-      scelta: e.scelta ? null : { offerti: alternativeDi(e, items).map((a) => ({ ...a, supplemento: supplementoPredefinito })) },
-    })
+    e.scelta
+      ? cambiaEtichetta(e, { scelta: null })
+      : cambiaScelta(e, alternativeDi(e, items).map((a) => ({ ...a, supplemento: supplementoPredefinito })))
   const conScelta = attuali.filter((e) => e.scelta)
 
   const origine = proprie ? 'solo in questa voce' : testo(voce.ingredienti) ? 'testo della voce' : base ? 'dalla scheda prodotto' : ''
@@ -120,12 +125,18 @@ export default function IngredientiVoce({ voce, drink, items = [], categorieMaga
       {conScelta.map((e) => {
         const possibili = alternativeDi(e, items)
         const offerti = new Map(e.scelta.offerti.map((o) => [o.id, o]))
-        const aggiorna = (lista) => cambiaEtichetta(e, { scelta: { offerti: lista } })
+        const aggiorna = (lista) => cambiaScelta(e, lista)
         return (
           <div key={chiave(e)} className="scelta-cliente" role="group" aria-label={`Il cliente sceglie: ${e.nome}`}>
             <p className="small" style={{ margin: '0 0 4px' }}>
               <strong>Il cliente sceglie: {e.nome}</strong> · chi non sceglie ha il prodotto della ricetta
             </p>
+            {!righeSostituite(e, drink, items).length && (
+              <p className="muted small" style={{ margin: '0 0 4px' }}>
+                Nessuna riga della ricetta del prodotto collegato corrisponde a «{e.nome}»: la scelta arriva al banco
+                nella nota della riga e lo scarico segue la ricetta invariata.
+              </p>
+            )}
             {possibili.length === 0 ? (
               <p className="muted small" style={{ margin: 0 }}>
                 Nessun prodotto di questa categoria ha «Il cliente può sceglierlo dal menù» (scheda del prodotto di

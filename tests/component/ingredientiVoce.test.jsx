@@ -103,6 +103,8 @@ describe('le etichette di una voce', () => {
 // offre le alternative col supplemento predefinito; poi si ritocca.
 describe('la scelta del cliente', () => {
   const GIN_SCELTI = [
+    // Il gin della ricetta: sta nella categoria, ma non si offre al cliente.
+    { id: 'gin', name: 'Gin Tanqueray', category_id: 'cgin' },
     { id: 'tanq', name: 'Tanqueray', category_id: 'cgin', scelta_cliente: true },
     { id: 'hend', name: 'Hendrick’s', category_id: 'cgin', scelta_cliente: true },
   ]
@@ -127,10 +129,23 @@ describe('la scelta del cliente', () => {
           tipo: 'categoria',
           id: 'cgin',
           nome: 'Gin',
-          scelta: { offerti: [{ id: 'hend', nome: 'Hendrick’s', supplemento: 1 }, { id: 'tanq', nome: 'Tanqueray', supplemento: 1 }] },
+          // E la riga della ricetta che la scelta prende il posto: al
+          // telefono il magazzino non arriva, quindi lo dice l'editor.
+          scelta: {
+            offerti: [{ id: 'hend', nome: 'Hendrick’s', supplemento: 1 }, { id: 'tanq', nome: 'Tanqueray', supplemento: 1 }],
+            sostituisce: ['gin'],
+          },
         },
       ],
     })
+    expect(screen.queryByText(/Nessuna riga della ricetta/)).toBeNull()
+  })
+
+  // Un prodotto che la ricetta non ha: la scelta arriva lo stesso al banco,
+  // ma il magazzino non ha niente da scambiare. Lo si dice a chi la accende.
+  it('avvisa quando nessuna riga della ricetta corrisponde', () => {
+    mostraConScelta({ tipo: 'prodotto', id: 'hend', nome: 'Hendrick’s', scelta: { offerti: [{ id: 'tanq', nome: 'Tanqueray', supplemento: 0 }] } })
+    expect(screen.getByText(/Nessuna riga della ricetta del prodotto collegato corrisponde/)).toBeInTheDocument()
   })
 
   it('un’alternativa si toglie, e il supplemento si cambia', async () => {

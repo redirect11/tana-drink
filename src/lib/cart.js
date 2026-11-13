@@ -26,10 +26,18 @@ function write(key, value) {
 // lo stesso Negroni preso da «Suggeriti dallo staff» e dai «Grandi
 // classici» è una riga sola. Era la voce del menù dei clienti, e lo stesso
 // drink da due sezioni faceva due righe «Negroni × 1».
-export const chiaveRiga = (i) => (i.nome_carta ? `${i.drink_id}·${i.nome_carta}` : i.drink_id)
+// LE SCELTE DEL CLIENTE (REQ-MENU-042) fanno parte della chiave: un Gin
+// Tonic col Mare e uno col Tanqueray sono due righe, due coi Mare una.
+export const chiaveRiga = (i) =>
+  [i.nome_carta ? `${i.drink_id}·${i.nome_carta}` : i.drink_id, ...(i.scelte || []).map((s) => `${s.etichetta}=${s.id}`)].join('+')
 
-// Il nome che il cliente legge nel carrello: quello che ha scelto.
-export const nomeLetto = (i) => i.nome_carta || i.name
+// Il nome che il cliente legge nel carrello: quello che ha scelto, con le
+// sue scelte di ingredienti (REQ-MENU-042).
+export function nomeLetto(i) {
+  const nome = i.nome_carta || i.name
+  const scelte = (i.scelte || []).map((s) => s.nome).join(', ')
+  return scelte ? `${nome} (${scelte})` : nome
+}
 
 // UNA RIGA NUOVA. L'ordine porta il drink del GESTIONALE, col suo nome:
 // è quello che il banco conosce, che scala il magazzino e che finisce
@@ -67,8 +75,9 @@ export function useCart() {
     setItems(next)
   }, [])
 
-  const add = useCallback((drink) => {
-    const nuova = rigaDelCarrello(drink)
+  // Una riga già composta (con le scelte del cliente, sceltaCliente.js) o
+  // quella di un drink com'è.
+  const aggiungiRiga = useCallback((nuova) => {
     const chiave = chiaveRiga(nuova)
     update((prev) => {
       const found = prev.find((i) => chiaveRiga(i) === chiave)
@@ -80,6 +89,7 @@ export function useCart() {
       return [...prev, nuova]
     })
   }, [update])
+  const add = useCallback((drink) => aggiungiRiga(rigaDelCarrello(drink)), [aggiungiRiga])
 
   // Drink custom composto al volo dal bartender: riga a sé (id univoco
   // locale), con la ricetta incorporata per lo scarico inventario.
@@ -111,7 +121,7 @@ export function useCart() {
   const count = items.reduce((s, i) => s + i.qty, 0)
   const total = items.reduce((s, i) => s + i.qty * Number(i.price || 0), 0)
 
-  return { items, add, addCustom, setQty, clear, count, total }
+  return { items, add, aggiungiRiga, addCustom, setQty, clear, count, total }
 }
 
 // Memoria locale degli ID degli ordini effettuati da questo dispositivo,

@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 293 | fatto e coperto dai test |
+| ✅ | 295 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| 🟡 | 8 | fatto a metà |
-| ⬜ | 30 | da fare |
+| 🟡 | 7 | fatto a metà |
+| ⬜ | 29 | da fare |
 | 🗑 | 8 | non più valido |
 
-**354 voci** in tutto. **316** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
+**354 voci** in tutto. **317** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **29** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -51,7 +51,7 @@ come «vero oggi», non come «garantito».
 | [Magazzino](#magazzino) | 50 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 16 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 20 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
-| [Vista cliente](#vista-cliente) | 7 | 2 | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
+| [Vista cliente](#vista-cliente) | 8 | 1 | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
 | [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 14 | 2 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
@@ -75,7 +75,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 11 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 175 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 176 |
 | Unità | il progetto di dettaglio: un modulo da solo | 180 |
 
 **16** bisogni del locale, **0** con un test di accettazione.
@@ -1219,8 +1219,6 @@ FATTO (13/11/2026): sulla voce `categoria` (un'etichetta di tipo categoria, cate
 
 #### REQ-MENU-042 — Su una voce del menù il cliente può scegliere un ingrediente, col supplemento deciso dal titolare
 
-🟡 **Fatto a metà**: la descrizione dice anche cosa manca.
-
 Daniele, 13/11/2026.
 
 SPENTA DI PARTENZA, si accende voce per voce nell'editor. Su un'etichetta di tipo prodotto o categoria di magazzino (REQ-MENU-040) la spunta «Il cliente sceglie»: il titolare indica quali prodotti offrire, fra quelli di quella categoria spuntati in magazzino (REQ-MAG-055), e il supplemento di ciascuno (anche zero). Il supplemento predefinito di una voce è 0, e il predefinito si cambia in Impostazioni. Una voce può avere più etichette con la scelta (gin e tonica).
@@ -1229,11 +1227,11 @@ AL CLIENTE: fra le scelte solo i prodotti con giacenza; chi non sceglie ha il pr
 
 FATTO NELL'EDITOR (13/11/2026, ramo feature/scelta-cliente): sulla etichetta `scelta: { offerti: [{ id, nome, supplemento }] }` (lib/etichetteIngredienti.js, sceltaPulita, alternativeDi); in IngredientiVoce il tasto ⇄ «Il cliente sceglie», le alternative della categoria con la casella «offerto» e il supplemento; in Impostazioni → Menù clienti «Scelta degli ingredienti» col supplemento predefinito.
 
-LE ALTERNATIVE DISPONIBILI arrivano al telefono da `alternative_cliente/{id}` (solo `disponibile`), scritto dalle Functions (lib/disponibilita.js, alternativaDopo) con la soglia delle voci; le regole lo lasciano leggere a tutti e scrivere a nessuno.
+LE ALTERNATIVE DISPONIBILI arrivano al telefono da `alternative_cliente/{id}` (solo `disponibile`), scritto dalle Functions (lib/disponibilita.js, alternativaDopo) con la soglia delle voci; le regole lo lasciano leggere a tutti e scrivere a nessuno. La scelta ricorda anche le righe della ricetta che sostituisce (`sostituisce`, righeSostituite): le calcola l'editor, perché al telefono il magazzino non arriva e per un'etichetta di categoria il cliente non saprebbe quale riga è «il gin».
 
-RESTA: la scelta sul telefono e il carrello.
+FATTO AL TELEFONO (13/11/2026): sulle voci che fanno scegliere «Aggiungi» apre la scelta (SceltaIngredienti): una domanda per etichetta, già risposta con la ricetta; le alternative sono solo quelle disponibili, senza il prodotto della ricetta, ciascuna col supplemento. Un'etichetta senza alternative disponibili non chiede niente. Nel carrello ogni scelta diversa è una riga sua (cart.js, chiaveRiga), letta «Gin Tonic (Mare)»; accanto ad «Aggiungi» quanti ce ne sono già.
 
-**Dove**: `src/components/StrutturaMenu.jsx (la voce), src/pages/MenuPage.jsx (la scelta del cliente), src/lib/cart.js` · **Serve**: [UR-016](#ur-016--il-cliente-ordina-il-drink-come-lo-vuole-e-paga-quello-che-ha-accettato) · **Lo dimostrano**: `tests/component/ingredientiVoce.test.jsx`, `tests/unit/etichetteIngredienti.test.js`, `tests/bdd/disponibilita.test.js`
+**Dove**: `src/components/IngredientiVoce.jsx (la voce), src/pages/MenuPage.jsx e src/components/SceltaIngredienti.jsx (la scelta del cliente), src/lib/cart.js` · **Serve**: [UR-016](#ur-016--il-cliente-ordina-il-drink-come-lo-vuole-e-paga-quello-che-ha-accettato) · **Lo dimostrano**: `tests/component/ingredientiVoce.test.jsx`, `tests/unit/etichetteIngredienti.test.js`, `tests/bdd/disponibilita.test.js`, `tests/component/MenuPage.test.jsx`, `tests/unit/sceltaCliente.test.js`
 
 #### REQ-MENU-013 — L'IVA di vendita si cambia sulla singola voce di menù
 
@@ -2891,6 +2889,14 @@ Il menù occupa tutta la larghezza del dispositivo; nella vetrina marchio e nome
 
 **Dove**: `src/pages/LandingPage.jsx, src/index.css` · ⚠️ **Nessun test lo verifica.**
 
+#### REQ-CLI-008 — La scelta del cliente arriva nell'ordine, sulla comanda e nel magazzino
+
+Daniele, 13/11/2026. La riga dell'ordine porta le scelte del cliente (REQ-MENU-042): «Gin Lemon · gin: Hendrick's», col supplemento. Diventa un prodotto modificato al volo, come quelli battuti al POS con gli ingredienti cambiati (già possibile): la ricetta della riga ha il prodotto scelto al posto di quello della ricetta, e il magazzino scala quello (fotografato al momento dell'ordine, come sempre). La scelta si legge sulla comanda e nel conto. Due righe con scelte diverse sono righe diverse: non si accorpano. Tocca coda, conto e modello dati: si fa in un ramo suo, coi test che girano senza rete (CLAUDE.md, il local-first).
+
+FATTO (13/11/2026, lib/sceltaCliente.js, rigaConScelte): la riga è quella del ritocco dal conto — `custom: true`, il drink che resta, `recipe_items` con il prodotto scelto al posto di quello della ricetta (la dose e l'unità restano), il prezzo col supplemento, la scelta nella NOTA («Gin: Mare»), che il conto mostra e la comanda stampa (campo «Note dei singoli prodotti», acceso di partenza). createOrder la porta intera nella comanda, senza nessun caso nuovo; lo scarico legge la ricetta della riga (computeConsumption), e lineSignature, che confronta ricetta e nota, tiene separate le scelte diverse anche sul ticket accorpato. Sull'ordine non si scrive un campo `scelte` a parte: un ritocco del banco cambia ricetta e nota, e un campo in più resterebbe a dire la cosa vecchia.
+
+**Dove**: `src/lib/sceltaCliente.js, src/lib/cart.js, src/lib/api.js (createOrder), src/lib/inventory.js (scarico), docs/architettura.md` · **Serve**: [UR-016](#ur-016--il-cliente-ordina-il-drink-come-lo-vuole-e-paga-quello-che-ha-accettato) · **Lo dimostrano**: `tests/unit/sceltaCliente.test.js`
+
 #### REQ-CLI-006 — Il cliente sa che il suo drink è pronto da ritirare
 
 Chiesto dall'utente il 18/08. Su un conto da RITIRO, quando la comanda passa a «pronto» il cliente va avvisato: da lì in poi la palla è sua — deve alzarsi e venire al banco. Sul servizio al tavolo non serve: ci pensa chi porta il vassoio.
@@ -4492,12 +4498,6 @@ RESTA DA FARE: la procedura va eseguita dal locale, sul wifi del bar, col portat
 **Dove**: `scripts/certificato-stampante.js`
 
 ### Vista cliente
-
-#### REQ-CLI-008 — La scelta del cliente arriva nell'ordine, sulla comanda e nel magazzino
-
-Daniele, 13/11/2026. La riga dell'ordine porta le scelte del cliente (REQ-MENU-042): «Gin Lemon · gin: Hendrick's», col supplemento. Diventa un prodotto modificato al volo, come quelli battuti al POS con gli ingredienti cambiati (già possibile): la ricetta della riga ha il prodotto scelto al posto di quello della ricetta, e il magazzino scala quello (fotografato al momento dell'ordine, come sempre). La scelta si legge sulla comanda e nel conto. Due righe con scelte diverse sono righe diverse: non si accorpano. Tocca coda, conto e modello dati: si fa in un ramo suo, coi test che girano senza rete (CLAUDE.md, il local-first).
-
-**Dove**: `src/lib/cart.js, src/lib/comande.js (righeDellaComanda), src/lib/printer.js, src/lib/inventory.js (scarico), docs/architettura.md` · **Serve**: [UR-016](#ur-016--il-cliente-ordina-il-drink-come-lo-vuole-e-paga-quello-che-ha-accettato)
 
 #### REQ-CLI-009 — Un ordine dal telefono modificato dal banco torna al cliente, che lo accetta o lo rifiuta
 

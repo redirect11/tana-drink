@@ -591,6 +591,17 @@ export function subscribeCarta(onChange, onError) {
   }
 }
 
+// LE ALTERNATIVE CHE IL CLIENTE PUÒ SCEGLIERE ADESSO (REQ-MENU-042): un sì o
+// un no per prodotto di magazzino, scritti dalle Functions
+// (functions/lib/disponibilita.js). Torna una Map id → disponibile.
+export function subscribeAlternativeCliente(onChange, onError) {
+  return onSnapshot(
+    collection(db, 'alternative_cliente'),
+    (snap) => onChange(new Map(snap.docs.map((d) => [d.id, d.data()?.disponibile === true]))),
+    onError ?? (() => {})
+  )
+}
+
 export function creaSezioneCarta(dati) {
   const ref = doc(cartaSezioniCol)
   const sezione = sezioneDaScrivere(dati)

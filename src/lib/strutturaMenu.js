@@ -47,7 +47,7 @@
 
 import { perNome } from './macros.js'
 import { normName } from './nameMatch.js'
-import { ingredientiDellaVoce, etichettaPulita } from './etichetteIngredienti.js'
+import { ingredientiDellaVoce, etichettaPulita, etichetteConScelta } from './etichetteIngredienti.js'
 
 export const VISTE_SEZIONE = [
   { id: 'dettagliata', label: 'Dettagliata' },
@@ -153,6 +153,9 @@ export function voceInSezione(voce, drink, vista = 'dettagliata') {
     description: snella ? null : testo(voce.descrizione) || drink.description || null,
     ingredienti: snella ? '' : ingredientiDellaVoce(voce, drink),
     recipe_items: [],
+    // Le etichette su cui il cliente sceglie (REQ-MENU-042), in ogni vista:
+    // anche dalla riga snella si aggiunge al carrello.
+    etichette_scelta: etichetteConScelta(voce.etichette),
   }
 }
 

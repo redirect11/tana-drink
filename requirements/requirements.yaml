@@ -7182,7 +7182,7 @@ requirements:
 
   - id: REQ-MENU-042
     title: "Su una voce del menù il cliente può scegliere un ingrediente, col supplemento deciso dal titolare"
-    area: "src/components/StrutturaMenu.jsx (la voce), src/pages/MenuPage.jsx (la scelta del cliente), src/lib/cart.js"
+    area: "src/components/IngredientiVoce.jsx (la voce), src/pages/MenuPage.jsx e src/components/SceltaIngredienti.jsx (la scelta del cliente), src/lib/cart.js"
     description: >
       Daniele, 13/11/2026. SPENTA DI PARTENZA, si accende voce per voce
       nell'editor. Su un'etichetta di tipo prodotto o categoria di
@@ -7211,8 +7211,19 @@ requirements:
       `alternative_cliente/{id}` (solo `disponibile`), scritto dalle
       Functions (lib/disponibilita.js, alternativaDopo) con la soglia delle
       voci; le regole lo lasciano leggere a tutti e scrivere a nessuno.
-      RESTA: la scelta sul telefono e il carrello.
-    status: partial
+      La scelta ricorda anche le righe della ricetta che sostituisce
+      (`sostituisce`, righeSostituite): le calcola l'editor, perché al
+      telefono il magazzino non arriva e per un'etichetta di categoria il
+      cliente non saprebbe quale riga è «il gin».
+      FATTO AL TELEFONO (13/11/2026): sulle voci che fanno scegliere
+      «Aggiungi» apre la scelta (SceltaIngredienti): una domanda per
+      etichetta, già risposta con la ricetta; le alternative sono solo
+      quelle disponibili, senza il prodotto della ricetta, ciascuna col
+      supplemento. Un'etichetta senza alternative disponibili non chiede
+      niente. Nel carrello ogni scelta diversa è una riga sua
+      (cart.js, chiaveRiga), letta «Gin Tonic (Mare)»; accanto ad
+      «Aggiungi» quanti ce ne sono già.
+    status: implemented
     generate_issue: true
     labels: [menu, vista-cliente, cassa]
     priority: P2
@@ -7220,10 +7231,12 @@ requirements:
       - tests/component/ingredientiVoce.test.jsx
       - tests/unit/etichetteIngredienti.test.js
       - tests/bdd/disponibilita.test.js
+      - tests/component/MenuPage.test.jsx
+      - tests/unit/sceltaCliente.test.js
 
   - id: REQ-CLI-008
     title: "La scelta del cliente arriva nell'ordine, sulla comanda e nel magazzino"
-    area: "src/lib/cart.js, src/lib/comande.js (righeDellaComanda), src/lib/printer.js, src/lib/inventory.js (scarico), docs/architettura.md"
+    area: "src/lib/sceltaCliente.js, src/lib/cart.js, src/lib/api.js (createOrder), src/lib/inventory.js (scarico), docs/architettura.md"
     description: >
       Daniele, 13/11/2026. La riga dell'ordine porta le scelte del cliente
       (REQ-MENU-042): «Gin Lemon · gin: Hendrick's», col supplemento.
@@ -7235,11 +7248,24 @@ requirements:
       scelte diverse sono righe diverse: non si accorpano. Tocca coda,
       conto e modello dati: si fa in un ramo suo, coi test che girano
       senza rete (CLAUDE.md, il local-first).
-    status: todo
+      FATTO (13/11/2026, lib/sceltaCliente.js, rigaConScelte): la riga è
+      quella del ritocco dal conto — `custom: true`, il drink che resta,
+      `recipe_items` con il prodotto scelto al posto di quello della
+      ricetta (la dose e l'unità restano), il prezzo col supplemento, la
+      scelta nella NOTA («Gin: Mare»), che il conto mostra e la comanda
+      stampa (campo «Note dei singoli prodotti», acceso di partenza).
+      createOrder la porta intera nella comanda, senza nessun caso nuovo;
+      lo scarico legge la ricetta della riga (computeConsumption), e
+      lineSignature, che confronta ricetta e nota, tiene separate le
+      scelte diverse anche sul ticket accorpato. Sull'ordine non si scrive
+      un campo `scelte` a parte: un ritocco del banco cambia ricetta e
+      nota, e un campo in più resterebbe a dire la cosa vecchia.
+    status: implemented
     generate_issue: true
     labels: [clienti, cassa, magazzino]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/sceltaCliente.test.js
 
   - id: REQ-CLI-009
     title: "Un ordine dal telefono modificato dal banco torna al cliente, che lo accetta o lo rifiuta"

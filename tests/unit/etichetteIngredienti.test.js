@@ -141,8 +141,32 @@ describe('la scelta del cliente su un’etichetta', () => {
       nome: 'Gin',
       scelta: { offerti: [{ id: 'hend', nome: 'Hendrick’s', supplemento: '1,5' }, { id: 'hend', nome: 'doppio' }, { id: 'x', nome: 'Y', supplemento: -2 }] },
     })
-    expect(conScelta.scelta).toEqual({ offerti: [{ id: 'hend', nome: 'Hendrick’s', supplemento: 1.5 }, { id: 'x', nome: 'Y', supplemento: 0 }] })
+    expect(conScelta.scelta).toEqual({
+      offerti: [{ id: 'hend', nome: 'Hendrick’s', supplemento: 1.5 }, { id: 'x', nome: 'Y', supplemento: 0 }],
+      sostituisce: [],
+    })
     expect(etichettaPulita({ tipo: 'testo', nome: 'lime', scelta: { offerti: [{ id: 'a', nome: 'b' }] } }).scelta).toBeUndefined()
     expect(etichetteConScelta([conScelta, { tipo: 'categoria', id: 'c', nome: 'C', scelta: { offerti: [] } }])).toEqual([conScelta])
+  })
+
+  // Al telefono il magazzino non arriva: quale riga della ricetta è «il gin»
+  // lo calcola l'editor e lo scrive sulla scelta.
+  it('le righe della ricetta che la scelta sostituisce', async () => {
+    const { righeSostituite, etichettaPulita } = await import('../../src/lib/etichetteIngredienti.js')
+    const drink = {
+      recipe_items: [
+        { inventory_item_id: 'tanq', name: 'Tanqueray', qty: 40, unit: 'ml' },
+        { inventory_item_id: 'tonica', name: 'Tonica', qty: 1, unit: 'pz' },
+        { name: 'Lavorazione', qty: 1, unit: 'U' },
+      ],
+    }
+    expect(righeSostituite({ tipo: 'categoria', id: 'cgin' }, drink, SCELTI)).toEqual(['tanq'])
+    expect(righeSostituite({ tipo: 'prodotto', id: 'tanq' }, drink, SCELTI)).toEqual(['tanq'])
+    // Un prodotto che la ricetta non ha: niente da sostituire.
+    expect(righeSostituite({ tipo: 'prodotto', id: 'hend' }, drink, SCELTI)).toEqual([])
+    expect(righeSostituite({ tipo: 'categoria', id: 'cgin' }, null, SCELTI)).toEqual([])
+    expect(
+      etichettaPulita({ tipo: 'categoria', id: 'cgin', nome: 'Gin', scelta: { offerti: [], sostituisce: ['tanq', 'tanq', null] } }).scelta
+    ).toEqual({ offerti: [], sostituisce: ['tanq'] })
   })
 })
