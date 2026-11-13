@@ -24,12 +24,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 |---|---|---|
 | ✅ | 296 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| 🟡 | 8 | fatto a metà |
-| ⬜ | 27 | da fare |
+| 🟡 | 9 | fatto a metà |
+| ⬜ | 26 | da fare |
 | 🗑 | 8 | non più valido |
 
-**354 voci** in tutto. **319** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **27** sono lavori
+**354 voci** in tutto. **320** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **26** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -58,7 +58,7 @@ come «vero oggi», non come «garantito».
 | [Sicurezza](#sicurezza) | 3 | 2 | Regole di accesso, App Check, e cosa protegge cosa. |
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
-| [Intelligenza artificiale](#intelligenza-artificiale) | 4 | 3 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
+| [Intelligenza artificiale](#intelligenza-artificiale) | 5 | 2 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 28 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 22 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
@@ -75,7 +75,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 11 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 179 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 180 |
 | Unità | il progetto di dettaglio: un modulo da solo | 181 |
 
 **16** bisogni del locale, **0** con un test di accettazione.
@@ -3253,6 +3253,22 @@ Gli script sanno rispecchiare un ambiente su un altro, migrare il solo catalogo 
 
 Dove l’intelligenza artificiale entra nel lavoro del locale.
 
+#### REQ-AI-007 — L'AI nell'app ha tre stati: assente, senza credito, attiva
+
+🟡 **Fatto a metà**: la descrizione dice anche cosa manca.
+
+Daniele, 13/11/2026: «se l'istanza supporta l'AI (va attivata o disattivata dalla regia, anche il fatto di poter acquistare o meno crediti AI), se il cassetto crediti è vuoto bisogna segnalare all'utente che deve ricaricare il cassetto per usare l'AI. Se l'admin disattiva l'AI per un locale è come se non ci fosse. Se è attiva senza credito, il testo della chat è grigio con un'icona di avviso; se ci clicchi ti ricorda di caricare i crediti».
+
+TRE STATI, una regola sola per tutta l'app: - ASSENTE: la licenza ha `ai: false` (REQ-LIC-017), o la regia risponde al credito «senza-cassetto» o «spento» (l'admin della regia l'ha disattivata): niente chat, niente tasti AI, niente credito, come se non ci fosse; - SENZA CREDITO: il credito risponde `attivo: false` (credito finito o tetto del mese raggiunto): il tasto dell'assistente resta, grigio e con l'icona di avviso; toccandolo si legge che va ricaricato il credito (o che il tetto del mese è raggiunto); - ATTIVA: tutto come sempre. Lo stato viene dalla richiesta del credito (gratis, REQ-AI-003), fatta all'avvio del gestionale per lo staff di gestione e ricordata per qualche minuto; ogni risposta dell'AI aggiorna il credito.
+
+DA CHIEDERE ALLA REGIA: se il locale può comprare credito (Daniele: «anche il fatto di poter acquistare o meno crediti AI»), e dove: il promemoria dice «si ricarica dal sito» solo dove si può.
+
+DA CONFERMARE CON DANIELE: la stessa resa (grigio con avviso) anche per gli altri tasti AI, al posto di farli sparire.
+
+FATTO PER L'ASSISTENTE (13/11/2026, ramo feature/chat-ai): lib/statoAI.js (lo stato dal credito, ricordato cinque minuti e aggiornato da ogni risposta dell'AI, aiApi.js ascoltaRisposteAI); TastoAssistente.jsx nella barra e la voce del ⋮ seguono i tre stati; il pannello non si apre con l'AI assente.
+
+**Dove**: `src/lib/statoAI.js (nuovo), src/App.jsx (il tasto dell'assistente), src/components/PannelloChat.jsx, i tasti AI (DescrizioneAI, FatturaDaAI), src/lib/aiApi.js` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/component/tastoAssistente.test.jsx`
+
 #### REQ-AI-001 — Scansione delle fatture d'acquisto con l'AI
 
 Da una foto o un PDF della fattura fornitore ricavare righe, quantità, costi e IVA, da rivedere prima di registrare. Nelle impostazioni si abilita la scansione e si sceglie il servizio (Claude, ChatGPT, Gemini): o il nostro backend, o la propria API key, con le barre dei limiti di utilizzo. Si parte da Claude e ChatGPT. Il carico automatico in magazzino si valuta dopo.
@@ -4594,18 +4610,6 @@ Richiesta della regia (drink-regia REQ-FLOTTA-019), 02/11/2026. L'utente: «inca
 **Dove**: `scripts/genera-cliente.mjs, src/lib/funzioniRegia.js, src/lib/presentazione.js, src/App.jsx, src/porte/configurazione.js, src/lib/firebaseClient.js, public/privacy-policy.html, public/cookie-policy.html, clienti/pluginCliente.js, src/demo/, src/lib/venue.js, src/lib/stampanteFinta.js, docs/sicurezza-demo.md` · **Serve**: [UR-014](#ur-014--la-demo-che-si-mostra-a-un-locale-nuovo-non-espone-niente-di-un-locale-vero)
 
 ### Intelligenza artificiale
-
-#### REQ-AI-007 — L'AI nell'app ha tre stati: assente, senza credito, attiva
-
-Daniele, 13/11/2026: «se l'istanza supporta l'AI (va attivata o disattivata dalla regia, anche il fatto di poter acquistare o meno crediti AI), se il cassetto crediti è vuoto bisogna segnalare all'utente che deve ricaricare il cassetto per usare l'AI. Se l'admin disattiva l'AI per un locale è come se non ci fosse. Se è attiva senza credito, il testo della chat è grigio con un'icona di avviso; se ci clicchi ti ricorda di caricare i crediti».
-
-TRE STATI, una regola sola per tutta l'app: - ASSENTE: la licenza ha `ai: false` (REQ-LIC-017), o la regia risponde al credito «senza-cassetto» o «spento» (l'admin della regia l'ha disattivata): niente chat, niente tasti AI, niente credito, come se non ci fosse; - SENZA CREDITO: il credito risponde `attivo: false` (credito finito o tetto del mese raggiunto): il tasto dell'assistente resta, grigio e con l'icona di avviso; toccandolo si legge che va ricaricato il credito (o che il tetto del mese è raggiunto); - ATTIVA: tutto come sempre. Lo stato viene dalla richiesta del credito (gratis, REQ-AI-003), fatta all'avvio del gestionale per lo staff di gestione e ricordata per qualche minuto; ogni risposta dell'AI aggiorna il credito.
-
-DA CHIEDERE ALLA REGIA: se il locale può comprare credito (Daniele: «anche il fatto di poter acquistare o meno crediti AI»), e dove: il promemoria dice «si ricarica dal sito» solo dove si può.
-
-DA CONFERMARE CON DANIELE: la stessa resa (grigio con avviso) anche per gli altri tasti AI, al posto di farli sparire.
-
-**Dove**: `src/lib/statoAI.js (nuovo), src/App.jsx (il tasto dell'assistente), src/components/PannelloChat.jsx, i tasti AI (DescrizioneAI, FatturaDaAI), src/lib/aiApi.js` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica)
 
 #### REQ-AI-002 — Un prodotto nuovo diventa una voce del menù del cliente, con descrizione e foto proposte dall'AI
 

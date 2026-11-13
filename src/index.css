@@ -11795,6 +11795,21 @@ body.pagina-piena .inv-scheda {
 .pannello-chat-riga.attivita {
   padding: 0;
 }
+/* IL TASTO DELL'ASSISTENTE SENZA CREDITO (REQ-AI-007): grigio, con
+   l'avviso nell'angolo; toccandolo ricorda di ricaricare. */
+.topbar-chat {
+  position: relative;
+}
+.topbar-chat.senza-credito {
+  opacity: 0.55;
+}
+.topbar-chat-avviso {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  line-height: 1;
+  font-size: 0.75rem;
+}
 /* IL DOCUMENTO LETTO DALL'AI (REQ-AI-001, FatturaDaAI.jsx): una riga letta
    per riquadro, con la descrizione del documento sopra il prodotto
    abbinato e i tre numeri sotto, che su un telefono non ci stanno in fila

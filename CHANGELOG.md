@@ -27,7 +27,9 @@
   pannello dove si chiede di giacenze, vendite e prodotti, si fanno
   proporre le descrizioni del menù e (all’admin) leggere i documenti dei
   fornitori. Le modifiche si confermano a schermo; la conversazione non si
-  conserva alla chiusura. Usa il credito AI del locale.
+  conserva alla chiusura. Usa il credito AI del locale. Senza credito il
+  tasto resta, grigio con l’avviso, e ricorda di ricaricare; con l’AI
+  disattivata per il locale non compare.
 - Fornitori, documenti: «Leggi con l’AI» legge la foto o il PDF di una
   fattura e propone fornitore, numero, data, importo e righe abbinate ai
   prodotti del magazzino, da rivedere prima di registrare. Il documento

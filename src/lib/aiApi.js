@@ -48,12 +48,31 @@ export const messaggioAI = (codice) => MESSAGGI_AI[codice] || MESSAGGI_AI.riprov
 // sprecato.
 const ATTESA_MS = 320 * 1000
 
+// CHI ASCOLTA LE RISPOSTE: lo stato dell'AI (statoAI.js, REQ-AI-007) si
+// aggiorna da ogni risposta, così un credito finito con l'ultima richiesta
+// spegne subito il tasto dell'assistente.
+const _ascoltatori = new Set()
+export function ascoltaRisposteAI(f) {
+  _ascoltatori.add(f)
+  return () => _ascoltatori.delete(f)
+}
+const annuncia = (r) => {
+  for (const f of _ascoltatori) {
+    try {
+      f(r)
+    } catch {
+      /* un ascoltatore rotto non ferma la risposta */
+    }
+  }
+  return r
+}
+
 export async function chiediAI(richiesta, chiama = (dati) => chiamaFunzione('richiestaAI', dati, { attesaMs: ATTESA_MS })) {
   if (!aiRaggiungibile()) return { ok: false, codice: 'spento' }
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return { ok: false, codice: 'senza-rete' }
   try {
     const data = await chiama(richiesta)
-    return data && typeof data === 'object' ? data : { ok: false, codice: 'riprova' }
+    return annuncia(data && typeof data === 'object' ? data : { ok: false, codice: 'riprova' })
   } catch (e) {
     const codice = String(e?.code || '')
     if (codice.endsWith('permission-denied')) return { ok: false, codice: 'permesso' }
