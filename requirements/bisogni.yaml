@@ -342,6 +342,7 @@ bisogni:
       - REQ-MENU-039
       - REQ-AI-005
       - REQ-AI-006
+      - REQ-AI-007
       - REQ-MENU-040
       - REQ-MENU-041
     test_cases: []

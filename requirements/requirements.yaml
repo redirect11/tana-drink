@@ -7197,6 +7197,41 @@ requirements:
     priority: P2
     test_cases: []
 
+  - id: REQ-AI-007
+    title: "L'AI nell'app ha tre stati: assente, senza credito, attiva"
+    area: "src/lib/statoAI.js (nuovo), src/App.jsx (il tasto dell'assistente), src/components/PannelloChat.jsx, i tasti AI (DescrizioneAI, FatturaDaAI), src/lib/aiApi.js"
+    description: >
+      Daniele, 13/11/2026: «se l'istanza supporta l'AI (va attivata o
+      disattivata dalla regia, anche il fatto di poter acquistare o meno
+      crediti AI), se il cassetto crediti è vuoto bisogna segnalare
+      all'utente che deve ricaricare il cassetto per usare l'AI. Se l'admin
+      disattiva l'AI per un locale è come se non ci fosse. Se è attiva senza
+      credito, il testo della chat è grigio con un'icona di avviso; se ci
+      clicchi ti ricorda di caricare i crediti».
+      TRE STATI, una regola sola per tutta l'app:
+      - ASSENTE: la licenza ha `ai: false` (REQ-LIC-017), o la regia
+        risponde al credito «senza-cassetto» o «spento» (l'admin della
+        regia l'ha disattivata): niente chat, niente tasti AI, niente
+        credito, come se non ci fosse;
+      - SENZA CREDITO: il credito risponde `attivo: false` (credito finito o
+        tetto del mese raggiunto): il tasto dell'assistente resta, grigio e
+        con l'icona di avviso; toccandolo si legge che va ricaricato il
+        credito (o che il tetto del mese è raggiunto);
+      - ATTIVA: tutto come sempre.
+      Lo stato viene dalla richiesta del credito (gratis, REQ-AI-003),
+      fatta all'avvio del gestionale per lo staff di gestione e ricordata
+      per qualche minuto; ogni risposta dell'AI aggiorna il credito.
+      DA CHIEDERE ALLA REGIA: se il locale può comprare credito (Daniele:
+      «anche il fatto di poter acquistare o meno crediti AI»), e dove: il
+      promemoria dice «si ricarica dal sito» solo dove si può.
+      DA CONFERMARE CON DANIELE: la stessa resa (grigio con avviso) anche
+      per gli altri tasti AI, al posto di farli sparire.
+    status: todo
+    generate_issue: true
+    labels: [ai, gestionale]
+    priority: P2
+    test_cases: []
+
   - id: REQ-LIC-011
     title: "Il catalogo dei temi: i gestori li aggiungono alla loro installazione, gratis o a pagamento"
     area: "drink-regia (catalogo, acquisto, licenza.temi), Impostazioni → Menù clienti («Altri stili»), docs/catalogo-temi.md"
