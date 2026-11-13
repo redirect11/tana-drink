@@ -4291,6 +4291,8 @@ DA DECIDERE con l'utente: se l'opzione vale per la voce o per il prodotto di mag
 
 LA SOGLIA LA SCEGLIE IL TITOLARE (Daniele, 13/11/2026): in Impostazioni, se la voce esce dal menù quando un ingrediente della ricetta collegata è ESAURITO oppure già IN ESAURIMENTO.
 
+LE REGOLE (Daniele, 13/11/2026): - AL CLIENTE NON SI DICE MAI COSA MANCA: la voce non disponibile o sparisce dal menù, o resta con la scritta «Non disponibile»; mai l'ingrediente, mai il motivo. Lo stesso per le alternative di una scelta (REQ-MENU-042): quella che manca non compare. - LO SCEGLIE IL TITOLARE, in Impostazioni → Menù clienti: «nascondi» oppure «mostra con la scritta Non disponibile» (di partenza: con la scritta). E la soglia: ingrediente ESAURITO, oppure già IN ESAURIMENTO (sotto la scorta minima). - Il segno lo scrive una Cloud Function, solo quando la giacenza attraversa la soglia, sul prodotto della cassa (e, per le alternative, in un elenco pubblico senza quantità): al telefono arriva un sì o un no, niente del magazzino. - Vale per i prodotti che SEGUONO LE GIACENZE (opzione sul prodotto della cassa, spenta di partenza: lime, sciroppi e ghiaccio spesso non hanno una giacenza tenuta bene). Al banco la voce resta sempre.
+
 **Dove**: `functions/ (trigger su inventory_items), src/lib/api.js (fetchDrinks del menù), src/components/DrinkForm.jsx`
 
 #### REQ-MENU-042 — Su una voce del menù il cliente può scegliere un ingrediente, col supplemento deciso dal titolare
