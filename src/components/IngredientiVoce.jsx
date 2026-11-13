@@ -8,6 +8,7 @@ import {
   propostaDallaRicetta,
   suggerimenti,
   GRUPPI_SUGGERIMENTO,
+  alternativeDi,
 } from '../lib/etichetteIngredienti.js'
 
 const testo = (v) => (typeof v === 'string' ? v.trim() : '')
@@ -25,7 +26,7 @@ const NOME_GRUPPO = Object.fromEntries(GRUPPI_SUGGERIMENTO.map((g) => [g.id, g.n
 // devi prendere dalla ricetta»). Una voce che non ha mai avuto etichette
 // parte dal testo di prima, spezzato, e lo riscrive solo quando la si tocca.
 // Ogni cambio si salva subito, come gli altri testi della voce.
-export default function IngredientiVoce({ voce, drink, items = [], categorieMagazzino = [], categorieCassa = [] }) {
+export default function IngredientiVoce({ voce, drink, items = [], categorieMagazzino = [], categorieCassa = [], supplementoPredefinito = 0 }) {
   const id = useId()
   const [scritto, setScritto] = useState('')
   const proprie = etichetteDellaVoce(voce.etichette)
@@ -45,6 +46,14 @@ export default function IngredientiVoce({ voce, drink, items = [], categorieMaga
     setScritto('')
   }
   const togli = (e) => salva(attuali.filter((x) => chiave(x) !== chiave(e)))
+  // LA SCELTA DEL CLIENTE (REQ-MENU-042): accesa, offre tutte le
+  // alternative col supplemento predefinito; poi si tolgono e si ritoccano.
+  const cambiaEtichetta = (e, patch) => salva(attuali.map((x) => (chiave(x) === chiave(e) ? { ...x, ...patch } : x)))
+  const alternaScelta = (e) =>
+    cambiaEtichetta(e, {
+      scelta: e.scelta ? null : { offerti: alternativeDi(e, items).map((a) => ({ ...a, supplemento: supplementoPredefinito })) },
+    })
+  const conScelta = attuali.filter((e) => e.scelta)
 
   const origine = proprie ? 'solo in questa voce' : testo(voce.ingredienti) ? 'testo della voce' : base ? 'dalla scheda prodotto' : ''
 
@@ -57,8 +66,19 @@ export default function IngredientiVoce({ voce, drink, items = [], categorieMaga
 
       <div className={`etichette${nascosti ? ' nascoste' : ''}`}>
         {attuali.map((e) => (
-          <span key={chiave(e)} className={`etichetta tipo-${e.tipo}`}>
+          <span key={chiave(e)} className={`etichetta tipo-${e.tipo}${e.scelta ? ' con-scelta' : ''}`}>
             {e.nome}
+            {(e.tipo === 'prodotto' || e.tipo === 'categoria') && (
+              <button
+                type="button"
+                aria-pressed={Boolean(e.scelta)}
+                aria-label={`Il cliente sceglie: ${e.nome}`}
+                title="Il cliente sceglie"
+                onClick={() => alternaScelta(e)}
+              >
+                ⇄
+              </button>
+            )}
             <button type="button" aria-label={`Togli ${e.nome}`} onClick={() => togli(e)}>
               ×
             </button>
@@ -96,6 +116,61 @@ export default function IngredientiVoce({ voce, drink, items = [], categorieMaga
           </li>
         </ul>
       )}
+
+      {conScelta.map((e) => {
+        const possibili = alternativeDi(e, items)
+        const offerti = new Map(e.scelta.offerti.map((o) => [o.id, o]))
+        const aggiorna = (lista) => cambiaEtichetta(e, { scelta: { offerti: lista } })
+        return (
+          <div key={chiave(e)} className="scelta-cliente" role="group" aria-label={`Il cliente sceglie: ${e.nome}`}>
+            <p className="small" style={{ margin: '0 0 4px' }}>
+              <strong>Il cliente sceglie: {e.nome}</strong> · chi non sceglie ha il prodotto della ricetta
+            </p>
+            {possibili.length === 0 ? (
+              <p className="muted small" style={{ margin: 0 }}>
+                Nessun prodotto di questa categoria ha «Il cliente può sceglierlo dal menù» (scheda del prodotto di
+                magazzino).
+              </p>
+            ) : (
+              possibili.map((a) => {
+                const o = offerti.get(a.id)
+                return (
+                  <div key={a.id} className="scelta-cliente-riga">
+                    <label className="row small" style={{ gap: 6, alignItems: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={Boolean(o)}
+                        onChange={(ev) =>
+                          aggiorna(
+                            ev.target.checked
+                              ? [...e.scelta.offerti, { ...a, supplemento: supplementoPredefinito }]
+                              : e.scelta.offerti.filter((x) => x.id !== a.id)
+                          )
+                        }
+                      />
+                      {a.nome}
+                    </label>
+                    {o && (
+                      <input
+                        className="wys scelta-supplemento"
+                        type="number"
+                        step="0.5"
+                        min="0"
+                        defaultValue={o.supplemento || ''}
+                        placeholder="+ € 0"
+                        aria-label={`Supplemento per ${a.nome}`}
+                        onBlur={(ev) =>
+                          aggiorna(e.scelta.offerti.map((x) => (x.id === a.id ? { ...x, supplemento: ev.target.value } : x)))
+                        }
+                      />
+                    )}
+                  </div>
+                )
+              })
+            )}
+          </div>
+        )
+      })}
 
       {daProporre.length > 0 && (
         <div className="etichette-proposte">

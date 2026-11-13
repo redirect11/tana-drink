@@ -389,6 +389,7 @@ export default function MenuManager() {
           categories={categories}
           inventory={inventory}
           categorieMagazzino={categorieMagazzino}
+          supplementoPredefinito={Number(settings?.supplemento_scelta_predefinito) || 0}
           riapri={riapri}
           onApriScheda={(drink, sezioneId) => {
             setRiapri(sezioneId)

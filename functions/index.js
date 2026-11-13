@@ -101,9 +101,13 @@ exports.disponibilitaDalMagazzino = onDocumentWritten({ ...OPTS, document: 'inve
   const prima = event.data?.before?.exists ? event.data.before.data() : null
   const dopo = event.data?.after?.exists ? event.data.after.data() : null
   const impostazioni = await impostazioniDelBar()
+  const itemId = event.params.itemId
+  // L'alternativa pubblica del cliente (REQ-MENU-042), se serve.
+  const alternativa = disponibilita.alternativaDopo(prima, dopo, impostazioni)
+  if (alternativa?.cancella) await db.doc(`alternative_cliente/${itemId}`).delete()
+  if (alternativa?.scrivi) await db.doc(`alternative_cliente/${itemId}`).set(alternativa.scrivi)
   // Non a ogni vendita: solo quando la soglia si attraversa.
   if (!disponibilita.haAttraversato(prima, dopo, impostazioni)) return
-  const itemId = event.params.itemId
   await ricalcolaDisponibilita((await drinksCheSeguono()).filter((d) => disponibilita.usaIlProdotto(d, itemId)), impostazioni)
 })
 
@@ -123,6 +127,15 @@ exports.disponibilitaDalleImpostazioni = onDocumentUpdated({ ...OPTS, document: 
   const dopo = event.data?.after?.data() || {}
   if (disponibilita.sogliaDi(prima) === disponibilita.sogliaDi(dopo)) return
   await ricalcolaDisponibilita(await drinksCheSeguono(), dopo)
+  // E le alternative del cliente, con la soglia nuova.
+  const scelte = await db.collection('inventory_items').where('scelta_cliente', '==', true).get()
+  for (let i = 0; i < scelte.docs.length; i += 400) {
+    const lotto = db.batch()
+    for (const d of scelte.docs.slice(i, i + 400)) {
+      lotto.set(db.doc(`alternative_cliente/${d.id}`), { disponibile: !disponibilita.manca(d.data(), disponibilita.sogliaDi(dopo)) })
+    }
+    await lotto.commit()
+  }
 })
 
 // ── L'AI, attraverso la regia (REQ-AI-003) ───────────────────────────────────

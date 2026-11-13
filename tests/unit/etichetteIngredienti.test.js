@@ -109,3 +109,40 @@ it('il testo di prima diventa etichette libere', () => {
     { tipo: 'testo', id: null, nome: 'lime' },
   ])
 })
+
+// LA SCELTA DEL CLIENTE SU UN'ETICHETTA (REQ-MENU-042). Solo su un prodotto o
+// una categoria di magazzino; le alternative sono i prodotti di quella
+// categoria con «Il cliente può sceglierlo dal menù»; supplementi in euro,
+// mai negativi.
+describe('la scelta del cliente su un’etichetta', () => {
+  const SCELTI = [
+    { id: 'tanq', name: 'Gin Tanqueray 70 cl', category_id: 'cgin', scelta_cliente: true },
+    { id: 'hend', name: 'Hendrick’s', category_id: 'cgin', scelta_cliente: true },
+    { id: 'beef', name: 'Beefeater', category_id: 'cgin', scelta_cliente: false },
+    { id: 'tonica', name: 'Tonica', category_id: 'cbib', scelta_cliente: true },
+  ]
+
+  it('le alternative: la categoria dell’etichetta, solo quelli col permesso', async () => {
+    const { alternativeDi } = await import('../../src/lib/etichetteIngredienti.js')
+    expect(alternativeDi({ tipo: 'categoria', id: 'cgin', nome: 'Gin' }, SCELTI)).toEqual([
+      { id: 'tanq', nome: 'Gin Tanqueray' },
+      { id: 'hend', nome: 'Hendrick’s' },
+    ])
+    // Da un prodotto si risale alla sua categoria.
+    expect(alternativeDi({ tipo: 'prodotto', id: 'tanq', nome: 'Tanqueray' }, SCELTI).map((a) => a.id)).toEqual(['tanq', 'hend'])
+    expect(alternativeDi({ tipo: 'testo', nome: 'lime' }, SCELTI)).toEqual([])
+  })
+
+  it('la scelta si tiene solo dove ha senso, coi supplementi puliti', async () => {
+    const { etichettaPulita, etichetteConScelta } = await import('../../src/lib/etichetteIngredienti.js')
+    const conScelta = etichettaPulita({
+      tipo: 'categoria',
+      id: 'cgin',
+      nome: 'Gin',
+      scelta: { offerti: [{ id: 'hend', nome: 'Hendrick’s', supplemento: '1,5' }, { id: 'hend', nome: 'doppio' }, { id: 'x', nome: 'Y', supplemento: -2 }] },
+    })
+    expect(conScelta.scelta).toEqual({ offerti: [{ id: 'hend', nome: 'Hendrick’s', supplemento: 1.5 }, { id: 'x', nome: 'Y', supplemento: 0 }] })
+    expect(etichettaPulita({ tipo: 'testo', nome: 'lime', scelta: { offerti: [{ id: 'a', nome: 'b' }] } }).scelta).toBeUndefined()
+    expect(etichetteConScelta([conScelta, { tipo: 'categoria', id: 'c', nome: 'C', scelta: { offerti: [] } }])).toEqual([conScelta])
+  })
+})

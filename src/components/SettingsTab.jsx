@@ -881,6 +881,33 @@ export default function SettingsTab({ role = null }) {
       ),
     },
     {
+      id: 'scelta-ingredienti',
+      icona: 'ordina-dal-menu',
+      label: 'Scelta degli ingredienti',
+      nodo: (
+        <div className="card settings-section">
+          <h3>Scelta degli ingredienti</h3>
+          <p className="muted small" style={{ margin: '0 0 10px' }}>
+            Sulle voci del menù dei clienti dove il cliente sceglie un ingrediente (per esempio il gin), il supplemento
+            con cui parte ogni alternativa offerta. Sulla voce si cambia alternativa per alternativa.
+          </p>
+          <label htmlFor="supplemento-scelta">Supplemento predefinito (€)</label>
+          <input
+            id="supplemento-scelta"
+            type="number"
+            step="0.5"
+            min="0"
+            defaultValue={settings.supplemento_scelta_predefinito || ''}
+            placeholder="0"
+            onBlur={(e) => {
+              const v = Number(String(e.target.value).replace(',', '.'))
+              save({ supplemento_scelta_predefinito: Number.isFinite(v) && v > 0 ? Math.round(v * 100) / 100 : 0 })
+            }}
+          />
+        </div>
+      ),
+    },
+    {
       id: 'non-disponibili',
       icona: 'ordina-dal-menu',
       label: 'Voci non disponibili',
@@ -1298,6 +1325,7 @@ export default function SettingsTab({ role = null }) {
     // quale delle tre appartenesse.
     'menu-clienti': 'menu-clienti',
     'non-disponibili': 'menu-clienti',
+    'scelta-ingredienti': 'menu-clienti',
     'gestione-menu': 'gestione-menu',
     catalogo: 'catalogo',
     coda: 'banco',

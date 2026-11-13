@@ -373,7 +373,7 @@ function RigaVoce({ voce, drink, snella, gruppi, sezioni, aperta, onApri, scelta
               <IngredientiVoce voce={voce} drink={drink} {...magazzino} />
             </>
           )}
-          <CategoriaVoce voce={voce} drink={drink} {...magazzino} />
+          <CategoriaVoce voce={voce} drink={drink} categorieCassa={magazzino.categorieCassa} categorieMagazzino={magazzino.categorieMagazzino} />
           <div className="struttura-collegamento">
             <span className="wys-etichetta"><Icona nome="unisci" gruppo="tasti" /> Prodotto della cassa</span>
             {drink && !cambia ? (
@@ -527,7 +527,7 @@ function alterna(set, id) {
 // prodotti: una sottoscrizione sola. `onApriScheda` apre la scheda intera
 // di un prodotto e `onNuovoProdotto` quella di un prodotto nuovo per una
 // sezione; chiusa la scheda si torna qui, con `riapri` già aperta.
-export default function StrutturaMenu({ carta, drinks, categories, inventory = [], categorieMagazzino = [], onApriScheda, onNuovoProdotto, riapri = null }) {
+export default function StrutturaMenu({ carta, drinks, categories, inventory = [], categorieMagazzino = [], supplementoPredefinito = 0, onApriScheda, onNuovoProdotto, riapri = null }) {
   // «Raggruppa per categoria» (REQ-MENU-041): prima si dice cosa cambia,
   // poi si fa, in un pacchetto solo.
   const [raggruppa, setRaggruppa] = useState(null)
@@ -871,7 +871,7 @@ export default function StrutturaMenu({ carta, drinks, categories, inventory = [
                             sposta={(dir) => riordinaVociCarta(riordino(voci, j, dir))}
                             spostaIn={(sezione_id) => aggiornaVoceCarta(v.id, { sezione_id, ordine: inFondo(carta, sezione_id) })}
                             onApriScheda={onApriScheda}
-                            magazzino={{ items: inventory, categorieMagazzino, categorieCassa: categories }}
+                            magazzino={{ items: inventory, categorieMagazzino, categorieCassa: categories, supplementoPredefinito }}
                           />
                         ))}
                       </div>

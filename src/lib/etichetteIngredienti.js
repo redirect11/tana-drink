@@ -50,8 +50,55 @@ export function etichettaPulita(e) {
   if (!e || typeof e !== 'object' || !TIPI_ETICHETTA.includes(e.tipo)) return null
   const nome = String(e.nome ?? '').trim().slice(0, 60)
   if (!nome) return null
-  return { tipo: e.tipo, id: e.tipo === 'testo' ? null : (e.id ?? null), nome }
+  const pulita = { tipo: e.tipo, id: e.tipo === 'testo' ? null : (e.id ?? null), nome }
+  const scelta = sceltaPulita(e)
+  return scelta ? { ...pulita, scelta } : pulita
 }
+
+// ── LA SCELTA DEL CLIENTE SU UN'ETICHETTA (REQ-MENU-042) ──────────────
+//
+// Daniele, 13/11/2026: spenta di partenza, si accende etichetta per
+// etichetta su un prodotto o una categoria di magazzino. Il titolare indica
+// quali prodotti offrire, fra quelli di quella categoria con «Il cliente può
+// sceglierlo dal menù» (REQ-MAG-055), e il supplemento di ciascuno (anche
+// zero). Chi non sceglie ha il prodotto della ricetta.
+//   scelta: { offerti: [{ id, nome, supplemento }] }
+const TIPI_CON_SCELTA = ['prodotto', 'categoria']
+const euro = (v) => {
+  const n = Number(String(v ?? '').replace(',', '.'))
+  return Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : 0
+}
+
+export function sceltaPulita(e) {
+  if (!TIPI_CON_SCELTA.includes(e?.tipo) || !e?.scelta || typeof e.scelta !== 'object') return null
+  const visti = new Set()
+  const offerti = (Array.isArray(e.scelta.offerti) ? e.scelta.offerti : [])
+    .filter((o) => o && o.id && !visti.has(o.id) && visti.add(o.id))
+    .map((o) => ({ id: String(o.id), nome: String(o.nome ?? '').trim().slice(0, 60), supplemento: euro(o.supplemento) }))
+    .filter((o) => o.nome)
+  return { offerti }
+}
+
+// La categoria di magazzino di un'etichetta: la sua, o quella del prodotto.
+export function categoriaDellEtichetta(e, items = []) {
+  if (e?.tipo === 'categoria') return e.id ?? null
+  if (e?.tipo === 'prodotto') return items.find((i) => i.id === e.id)?.category_id ?? null
+  return null
+}
+
+// Le ALTERNATIVE che si possono offrire su un'etichetta: i prodotti della
+// sua categoria che il cliente può scegliere. Senza categoria, nessuna.
+export function alternativeDi(e, items = []) {
+  const cat = categoriaDellEtichetta(e, items)
+  if (!cat) return []
+  return items
+    .filter((i) => i.category_id === cat && i.scelta_cliente === true)
+    .map((i) => ({ id: i.id, nome: nomeInCarta(i.name) }))
+    .sort((a, b) => a.nome.localeCompare(b.nome, 'it'))
+}
+
+// Le etichette di una voce che fanno scegliere, con almeno un'alternativa.
+export const etichetteConScelta = (etichette) => (etichette || []).filter((e) => e?.scelta?.offerti?.length > 0)
 
 // Le etichette di una voce come stanno nel documento: un elenco pulito, o
 // null se la voce non le ha mai avute (e allora vale il testo di prima).

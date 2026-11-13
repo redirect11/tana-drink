@@ -87,3 +87,16 @@ describe('Feature: poche scritture', () => {
     expect(usaIlProdotto(GIN_TONIC, 'gin')).toBe(false)
   })
 })
+
+// LE ALTERNATIVE PUBBLICHE DEL CLIENTE (REQ-MENU-042): un sì o un no per
+// prodotto, solo per quelli col permesso, e solo quando cambia.
+describe('Feature: le alternative che il cliente vede', () => {
+  it('accesa la spunta si scrive; spenta si toglie; senza cambi niente', async () => {
+    const { alternativaDopo } = await import('../../functions/lib/disponibilita.js')
+    expect(alternativaDopo({ stock: 5 }, { stock: 5, scelta_cliente: true }, {})).toEqual({ scrivi: { disponibile: true } })
+    expect(alternativaDopo({ stock: 5, scelta_cliente: true }, { stock: 5 }, {})).toEqual({ cancella: true })
+    expect(alternativaDopo({ stock: 5, scelta_cliente: true }, { stock: 4, scelta_cliente: true }, {})).toBeNull()
+    expect(alternativaDopo({ stock: 1, scelta_cliente: true }, { stock: 0, scelta_cliente: true }, {})).toEqual({ scrivi: { disponibile: false } })
+    expect(alternativaDopo(null, { stock: 3 }, {})).toBeNull()
+  })
+})

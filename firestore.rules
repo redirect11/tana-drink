@@ -341,6 +341,14 @@ service cloud.firestore {
       allow write: if licenzaValida() && isBartender();
     }
 
+    // LE ALTERNATIVE CHE IL CLIENTE PUÒ SCEGLIERE (REQ-MENU-042): solo un sì o
+    // un no per prodotto, scritto dalle Functions (lib/disponibilita.js).
+    // Il magazzino resta chiuso: al telefono non arriva altro.
+    match /alternative_cliente/{itemId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // SETTINGS — lettura pubblica (i clienti vedono la modalità menù, coperto…), scrittura bartender.
     //
     // IL CAMPO `licenza` QUI DENTRO NON LO TOCCA NESSUNO DALL'APP (BUG-126,

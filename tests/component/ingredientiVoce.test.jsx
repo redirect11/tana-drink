@@ -98,3 +98,51 @@ describe('le etichette di una voce', () => {
     expect(salvate()).toEqual({ ingredienti_nascosti: true })
   })
 })
+
+// REQ-MENU-042: su un'etichetta di categoria il cliente può scegliere. Accesa,
+// offre le alternative col supplemento predefinito; poi si ritocca.
+describe('la scelta del cliente', () => {
+  const GIN_SCELTI = [
+    { id: 'tanq', name: 'Tanqueray', category_id: 'cgin', scelta_cliente: true },
+    { id: 'hend', name: 'Hendrick’s', category_id: 'cgin', scelta_cliente: true },
+  ]
+  const mostraConScelta = (etichetta) =>
+    render(
+      <IngredientiVoce
+        voce={{ id: 'v1', etichette: [etichetta] }}
+        drink={DRINK}
+        items={GIN_SCELTI}
+        categorieMagazzino={[{ id: 'cgin', name: 'Gin' }]}
+        supplementoPredefinito={1}
+      />
+    )
+
+  it('accesa offre tutte le alternative col supplemento predefinito', async () => {
+    const user = userEvent.setup()
+    mostraConScelta({ tipo: 'categoria', id: 'cgin', nome: 'Gin' })
+    await user.click(screen.getByRole('button', { name: 'Il cliente sceglie: Gin' }))
+    expect(salvate()).toEqual({
+      etichette: [
+        {
+          tipo: 'categoria',
+          id: 'cgin',
+          nome: 'Gin',
+          scelta: { offerti: [{ id: 'hend', nome: 'Hendrick’s', supplemento: 1 }, { id: 'tanq', nome: 'Tanqueray', supplemento: 1 }] },
+        },
+      ],
+    })
+  })
+
+  it('un’alternativa si toglie, e il supplemento si cambia', async () => {
+    const user = userEvent.setup()
+    mostraConScelta({ tipo: 'categoria', id: 'cgin', nome: 'Gin', scelta: { offerti: [{ id: 'tanq', nome: 'Tanqueray', supplemento: 0 }, { id: 'hend', nome: 'Hendrick’s', supplemento: 1 }] } })
+    const gruppo = screen.getByRole('group', { name: 'Il cliente sceglie: Gin' })
+    expect(gruppo).toHaveTextContent('chi non sceglie ha il prodotto della ricetta')
+    await user.clear(screen.getByLabelText('Supplemento per Hendrick’s'))
+    await user.type(screen.getByLabelText('Supplemento per Hendrick’s'), '2')
+    await user.tab()
+    expect(salvate().etichette[0].scelta.offerti).toEqual([{ id: 'tanq', nome: 'Tanqueray', supplemento: 0 }, { id: 'hend', nome: 'Hendrick’s', supplemento: 2 }])
+    await user.click(screen.getByRole('checkbox', { name: 'Tanqueray' }))
+    expect(salvate().etichette[0].scelta.offerti).toEqual([{ id: 'hend', nome: 'Hendrick’s', supplemento: 1 }])
+  })
+})

@@ -67,4 +67,19 @@ function cambiDiDisponibilita(drinks, itemsById, impostazioni) {
 
 const usaIlProdotto = (drink, itemId) => (drink?.recipe_items || []).some((r) => r.inventory_item_id === itemId)
 
-module.exports = { manca, nonDisponibile, haAttraversato, cambiDiDisponibilita, usaIlProdotto, sogliaDi, rigaDiServizio }
+// LE ALTERNATIVE DEL CLIENTE (REQ-MENU-042): i prodotti di magazzino che il
+// cliente può scegliere dal menù hanno un documento pubblico
+// `alternative_cliente/{id}` con solo `disponibile`: fra le scelte compare
+// chi ha giacenza (la stessa soglia delle voci), e del magazzino al
+// telefono non arriva altro. Senza la spunta, il documento non c'è.
+// Torna { scrivi: { disponibile } } | { cancella: true } | null (niente).
+function alternativaDopo(prima, dopo, impostazioni) {
+  const soglia = sogliaDi(impostazioni)
+  const era = prima?.scelta_cliente === true
+  const e = dopo?.scelta_cliente === true
+  if (!e) return era ? { cancella: true } : null
+  if (era && manca(prima, soglia) === manca(dopo, soglia)) return null
+  return { scrivi: { disponibile: !manca(dopo, soglia) } }
+}
+
+module.exports = { manca, nonDisponibile, haAttraversato, cambiDiDisponibilita, usaIlProdotto, sogliaDi, rigaDiServizio, alternativaDopo }

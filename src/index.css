@@ -11675,6 +11675,25 @@ body.pagina-piena .inv-scheda {
 .suggerimento.gruppo-testo {
   border-left-color: transparent;
 }
+/* LA SCELTA DEL CLIENTE SU UN'ETICHETTA (REQ-MENU-042). */
+.etichetta.con-scelta {
+  border-color: var(--accent);
+}
+.scelta-cliente {
+  margin-top: 6px;
+  padding: 8px 10px;
+  border: 1px dashed var(--accent);
+  border-radius: 10px;
+}
+.scelta-cliente-riga {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+.scelta-supplemento {
+  width: 6rem;
+}
 .etichette-proposte {
   display: flex;
   flex-wrap: wrap;

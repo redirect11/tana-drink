@@ -24,12 +24,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 |---|---|---|
 | ✅ | 293 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| 🟡 | 7 | fatto a metà |
-| ⬜ | 31 | da fare |
+| 🟡 | 8 | fatto a metà |
+| ⬜ | 30 | da fare |
 | 🗑 | 8 | non più valido |
 
-**354 voci** in tutto. **315** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **31** sono lavori
+**354 voci** in tutto. **316** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 37 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 38 | — | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 50 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 16 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 20 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -1216,6 +1216,24 @@ Daniele, 13/11/2026: nell'editor del menù le sezioni si possono CREARE AUTOMATI
 FATTO (13/11/2026): sulla voce `categoria` (un'etichetta di tipo categoria, categoria_cassa o testo; null vale quella del prodotto), scelta nell'editor (CategoriaVoce); «Raggruppa per categoria» dice prima cosa cambia (sezioni nuove, voci spostate) e poi lo fa in un pacchetto (raggruppamentoPerCategoria in lib/strutturaMenu.js); fra i prodotti fuori dal menù, «In ‹sezione›» li mette nella sezione della loro categoria.
 
 **Dove**: `src/components/StrutturaMenu.jsx, src/lib/strutturaMenu.js, i temi (gruppi: i semi del tema Carte)` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/unit/raggruppaCategoria.test.js`, `tests/component/MenuManager.test.jsx`
+
+#### REQ-MENU-042 — Su una voce del menù il cliente può scegliere un ingrediente, col supplemento deciso dal titolare
+
+🟡 **Fatto a metà**: la descrizione dice anche cosa manca.
+
+Daniele, 13/11/2026.
+
+SPENTA DI PARTENZA, si accende voce per voce nell'editor. Su un'etichetta di tipo prodotto o categoria di magazzino (REQ-MENU-040) la spunta «Il cliente sceglie»: il titolare indica quali prodotti offrire, fra quelli di quella categoria spuntati in magazzino (REQ-MAG-055), e il supplemento di ciascuno (anche zero). Il supplemento predefinito di una voce è 0, e il predefinito si cambia in Impostazioni. Una voce può avere più etichette con la scelta (gin e tonica).
+
+AL CLIENTE: fra le scelte solo i prodotti con giacenza; chi non sceglie ha il prodotto della ricetta («se pure c'è scritto gin, il barman lo sa quale gin usare»). La nota dell'ordine resta sempre (per esempio «nel gin lemon vorrei il Tanqueray»). Un'etichetta che è una CATEGORIA DELLA CASSA farebbe scegliere fra i prodotti della cassa di quella categoria: Daniele, «forse non ha molto senso», non nella prima tornata. L'ordine, la comanda e il magazzino in REQ-CLI-008; la conferma del banco in REQ-CLI-009.
+
+FATTO NELL'EDITOR (13/11/2026, ramo feature/scelta-cliente): sulla etichetta `scelta: { offerti: [{ id, nome, supplemento }] }` (lib/etichetteIngredienti.js, sceltaPulita, alternativeDi); in IngredientiVoce il tasto ⇄ «Il cliente sceglie», le alternative della categoria con la casella «offerto» e il supplemento; in Impostazioni → Menù clienti «Scelta degli ingredienti» col supplemento predefinito.
+
+LE ALTERNATIVE DISPONIBILI arrivano al telefono da `alternative_cliente/{id}` (solo `disponibile`), scritto dalle Functions (lib/disponibilita.js, alternativaDopo) con la soglia delle voci; le regole lo lasciano leggere a tutti e scrivere a nessuno.
+
+RESTA: la scelta sul telefono e il carrello.
+
+**Dove**: `src/components/StrutturaMenu.jsx (la voce), src/pages/MenuPage.jsx (la scelta del cliente), src/lib/cart.js` · **Serve**: [UR-016](#ur-016--il-cliente-ordina-il-drink-come-lo-vuole-e-paga-quello-che-ha-accettato) · **Lo dimostrano**: `tests/component/ingredientiVoce.test.jsx`, `tests/unit/etichetteIngredienti.test.js`, `tests/bdd/disponibilita.test.js`
 
 #### REQ-MENU-013 — L'IVA di vendita si cambia sulla singola voce di menù
 
@@ -4296,18 +4314,6 @@ Nasce l'anagrafica dei tavoli: un tavolo ha un NOME e/o un NUMERO — almeno uno
 Nella vista «Ordina dal menù» dello staff si possono inserire NOME e numero del tavolo: il nome deve poterci stare (oggi c'è solo il tavolo) e il numero è opzionale. Nella vista cliente: se si arriva dal QR del tavolo (REQ-TAVOLI-001) il tavolo è prepopolato e NON modificabile; senza QR il tavolo non serve, ma il nome sì — è quello che permette al banco di chiamare l'ordine.
 
 **Dove**: `src/pages/MenuPage.jsx, src/components/OrderSummary.jsx`
-
-### Menù e catalogo
-
-#### REQ-MENU-042 — Su una voce del menù il cliente può scegliere un ingrediente, col supplemento deciso dal titolare
-
-Daniele, 13/11/2026.
-
-SPENTA DI PARTENZA, si accende voce per voce nell'editor. Su un'etichetta di tipo prodotto o categoria di magazzino (REQ-MENU-040) la spunta «Il cliente sceglie»: il titolare indica quali prodotti offrire, fra quelli di quella categoria spuntati in magazzino (REQ-MAG-055), e il supplemento di ciascuno (anche zero). Il supplemento predefinito di una voce è 0, e il predefinito si cambia in Impostazioni. Una voce può avere più etichette con la scelta (gin e tonica).
-
-AL CLIENTE: fra le scelte solo i prodotti con giacenza; chi non sceglie ha il prodotto della ricetta («se pure c'è scritto gin, il barman lo sa quale gin usare»). La nota dell'ordine resta sempre (per esempio «nel gin lemon vorrei il Tanqueray»). Un'etichetta che è una CATEGORIA DELLA CASSA farebbe scegliere fra i prodotti della cassa di quella categoria: Daniele, «forse non ha molto senso», non nella prima tornata. L'ordine, la comanda e il magazzino in REQ-CLI-008; la conferma del banco in REQ-CLI-009.
-
-**Dove**: `src/components/StrutturaMenu.jsx (la voce), src/pages/MenuPage.jsx (la scelta del cliente), src/lib/cart.js` · **Serve**: [UR-016](#ur-016--il-cliente-ordina-il-drink-come-lo-vuole-e-paga-quello-che-ha-accettato)
 
 ### Magazzino
 
