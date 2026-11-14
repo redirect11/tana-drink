@@ -80,6 +80,19 @@ bugs:
       chiedere: succede su tutti i dispositivi o solo su uno? Comunque
       vada, la fix collaterale è azzerare il banner al primo snapshot
       buono e loggare gli errori dei listener oggi silenziati.
+      DI NUOVO IL 14/11/2026, con la 1.10.49 (Daniele, foto della coda su
+      latanadelconiglio.it/bar). Verificato in sola lettura: l'account è
+      admin, e con le regole della 1.10 l'elenco degli ordini gli è
+      permesso; App Check è ACCESO su Firestore; negli ultimi due giorni
+      81.070 richieste con gettone valido e 72 senza (36 al giorno); il
+      dominio latanadelconiglio.it è fra quelli della chiave reCAPTCHA.
+      Quindi è il browser di chi guarda che non ottiene il gettone, quasi
+      certamente un'estensione o un blocco della privacy che ferma
+      reCAPTCHA: il locale, sugli altri dispositivi, lavora. DA FARE
+      NELL'APP: un rifiuto di App Check deve dirsi in parole comuni
+      («questo dispositivo non riesce a farsi riconoscere: un'estensione o
+      il browser blocca la verifica di sicurezza»), e il banner deve
+      sparire al primo caricamento riuscito.
     in_produzione: true
     status: todo
     generate_issue: true
@@ -6325,3 +6338,94 @@ bugs:
       - tests/unit/inventarioInCorso.test.js
       - tests/component/StockCountPanel.test.jsx
       - tests/unit/chiusuraInventario.test.js
+
+  - id: BUG-154
+    title: "I moduli dall'app aspettano un indirizzo di pagamento che la regia non manda, e ignorano la scadenza della prova"
+    area: "src/components/MarketplaceTab.jsx (SezioneModuli, esito del ritorno), src/lib/licenza.js (prove)"
+    description: >
+      Dalla regia, contratto delle interfacce del 14/11/2026 (drink-regia
+      docs/contratto-regia-app.md, «incoerenze note»): l'app gestisce un
+      `checkout_url` nella risposta del modulo e il ritorno con `?esito=`,
+      ma la regia non risponde mai `checkout_url`; e ignora `scade_il` della
+      prova. Da allineare al contratto quando si torna sui moduli (senza
+      urgenza: oggi l'acquisto passa dall'area clienti della regia).
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, licenza, regia]
+    severity: bassa
+    priority: P3
+    requisiti: [REQ-LIC-012]
+    test_cases: []
+
+  - id: BUG-155
+    title: "Il credito AI scarta il link di ricarica che la regia manda"
+    area: "functions/lib/ai-service.js (risposta del credito), src/components/CreditoAI.jsx"
+    description: >
+      Dalla regia, contratto del 14/11/2026: la risposta del credito porta
+      `ricaricabile` e `ricarica_url` (REQ-FLOTTA-091 della regia, chiesti da
+      noi), ma ai-service.js nella 1.10.x li scarta, e in Impostazioni →
+      Credito AI non c'è il tasto per ricaricare. È la parte «ricarica» di
+      quello che restava della chat e del credito.
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, ai, regia]
+    severity: bassa
+    priority: P3
+    requisiti: [REQ-AI-003]
+    test_cases: []
+
+  - id: BUG-156
+    title: "La chat dell'AI non legge i limiti degli strumenti che la regia manda"
+    area: "src/lib/strumentiChat.js (LIMITI_RIGHE), src/components/PannelloChat.jsx"
+    description: >
+      Dalla regia, contratto del 14/11/2026: la regia manda
+      `limiti_strumenti`, ma strumentiChat.js usa LIMITI_RIGHE fisso. Se la
+      regia cambia i limiti (quante righe uno strumento può restituire al
+      modello), l'app non li segue.
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, ai, regia]
+    severity: bassa
+    priority: P3
+    requisiti: [REQ-AI-006]
+    test_cases: []
+
+  - id: BUG-157
+    title: "La licenza della Tana scritta dal deploy è più povera di quella che scrive la regia"
+    area: "clienti/tana/licenza-iniziale.json, scripts/licenza-iniziale.mjs"
+    description: >
+      Dalla regia, contratto del 14/11/2026: la licenza della Tana non ha
+      `piano`, `terminali`, `rinnovo_url`, `aggiornamenti` e
+      `temi_su_misura`. L'app regge le assenze, ma è diversa dalla licenza
+      che la regia scrive agli altri locali, e un comportamento che dipende
+      da quei campi si vede sugli altri e non alla Tana. Da allineare al
+      formato della regia (senza cambiare cosa la Tana può fare).
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, licenza, regia]
+    severity: bassa
+    priority: P3
+    requisiti: [REQ-LIC-009]
+    test_cases: []
+
+  - id: BUG-158
+    title: "genera-cliente.mjs non conosce il tipo di locale che il workflow della regia gli passa"
+    area: "scripts/genera-cliente.mjs"
+    description: >
+      Dalla regia, contratto del 14/11/2026: lo script della 1.10.x non
+      conosce `--sa tipo-locale` né `--tipo-locale`. Il workflow della regia
+      ripiega, ma telefono, partita IVA, codice fiscale e sede legale
+      arrivano solo da settings/bar. Lo script lo chiama la regia: i suoi
+      argomenti sono contratto.
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, flotta, regia]
+    severity: bassa
+    priority: P3
+    requisiti: [REQ-VENUE-001]
+    test_cases: []

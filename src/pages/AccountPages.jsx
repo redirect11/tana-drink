@@ -24,6 +24,8 @@ import PasswordChanger from '../components/PasswordChanger.jsx'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import { isPersonale } from '../lib/ruoli.js'
 import { accountClientiAttivi } from '../lib/licenza.js'
+import { useMenuCliente } from '../lib/useMenuCliente.js'
+import TornaAlMenu from '../components/TornaAlMenu.jsx'
 
 // Hook: gli account clienti sono attivi? (impostazione del bartender)
 function useAccountsEnabled() {
@@ -37,7 +39,7 @@ function AccountsDisabled() {
     <div className="empty">
       🔒 La registrazione clienti non è attiva al momento.
       <br />
-      <Link className="btn block" style={{ marginTop: 14 }} to="/menu">← Torna al menù</Link>
+      <TornaAlMenu className="btn block" style={{ marginTop: 14 }} />
     </div>
   )
 }
@@ -142,7 +144,7 @@ export function AccediPage() {
           </Link>
         </div>
       </form>
-      <Link className="btn ghost block" to="/menu">← Torna al menù</Link>
+      <TornaAlMenu />
     </div>
   )
 }
@@ -206,7 +208,7 @@ export function RegistratiPage() {
       </form>
       <div className="row" style={{ gap: 8 }}>
         <Link className="btn ghost grow" to="/accedi">Ho già un account</Link>
-        <Link className="btn ghost grow" to="/menu">← Menù</Link>
+        <TornaAlMenu className="btn ghost grow">← Menù</TornaAlMenu>
       </div>
     </div>
   )
@@ -216,6 +218,8 @@ export function RegistratiPage() {
 export function ProfiloPage() {
   const { user, profile, loading } = useCustomer()
   const hasOrders = useHasOrders()
+  // «I miei ordini» solo se il cliente può ordinare (REQ-LIC-002).
+  const { mieiOrdini } = useMenuCliente()
   const navigate = useNavigate()
   const [birth, setBirth] = useState('')
   const [info, setInfo] = useState(null)
@@ -346,7 +350,7 @@ export function ProfiloPage() {
 
       {hasPasswordProvider(user) && <PasswordChanger />}
 
-      {hasOrders && (
+      {hasOrders && mieiOrdini && (
         <Link className="btn secondary block" to="/ordini">🧾 I miei ordini</Link>
       )}
       <button
@@ -379,7 +383,7 @@ export function ProfiloPage() {
         </button>
       </div>
 
-      <Link className="btn ghost block" to="/menu">← Torna al menù</Link>
+      <TornaAlMenu />
 
       {confirmDelete && (
         <ConfirmDialog

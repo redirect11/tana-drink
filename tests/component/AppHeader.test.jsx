@@ -25,6 +25,8 @@ import { CON_LICENZA } from '../helpers/licenza.js'
 let ruoloClaim = null
 let clienteLoggato = null
 
+// Le impostazioni che una prova aggiunge a quelle di sempre (vedi il mock).
+const inPiu = vi.hoisted(() => ({ impostazioni: {} }))
 vi.mock('../../src/lib/firebaseClient.js', () => ({
   isFirebaseConfigured: true,
   auth: { currentUser: null },
@@ -73,6 +75,9 @@ vi.mock('../../src/lib/api.js', () => ({
       theme_client: { preset: 'crema', custom: null },
       groups_enabled: false,
       groups_in_drawer: false,
+      // Quello che una prova cambia (il menù dei clienti spento, la sola
+      // consultazione): si azzera nel beforeEach.
+      ...inPiu.impostazioni,
     })
     return () => {}
   },
@@ -135,6 +140,7 @@ const burger = () => document.querySelector('.topbar-burger')
 const accento = () => document.documentElement.style.getPropertyValue('--accent')
 
 beforeEach(() => {
+  inPiu.impostazioni = {}
   ruoloClaim = null
   clienteLoggato = null
   document.documentElement.removeAttribute('style')
@@ -467,5 +473,28 @@ describe('l’altezza della barra in alto', () => {
   it('si misura e si scrive sulla radice', async () => {
     apri('/menu')
     await waitFor(() => expect(document.documentElement.style.getPropertyValue('--barra-intera')).toMatch(/^\d+px$/))
+  })
+})
+
+// Daniele, 14/11/2026: col menù dei clienti spento «non ci si può arrivare
+// in alcun modo»; e «I miei ordini non deve esserci se è attivo solo
+// consultazione. Ovviamente anche se il menù è disattivo».
+describe('il lato cliente segue il menù dei clienti', () => {
+  const menu = () => within(document.querySelector('.bar-sidebar'))
+
+  it('col menù nascosto ai clienti: niente «Menù» e niente «I miei ordini»', async () => {
+    inPiu.impostazioni = { menu_clienti_visibile: false }
+    apri('/ordini')
+    await waitFor(() => expect(burger()).not.toBeNull())
+    expect(menu().queryByText('Menù')).toBeNull()
+    expect(menu().queryByText('I miei ordini')).toBeNull()
+  })
+
+  it('in sola consultazione il menù c’è, «I miei ordini» no', async () => {
+    inPiu.impostazioni = { menu_only: true }
+    apri('/ordini')
+    await waitFor(() => expect(burger()).not.toBeNull())
+    expect(menu().getByText('Menù')).toBeInTheDocument()
+    expect(menu().queryByText('I miei ordini')).toBeNull()
   })
 })

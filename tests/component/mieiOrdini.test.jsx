@@ -27,6 +27,13 @@ vi.mock('../../src/lib/api.js', () => ({
     ascolti.set(id, cb)
     return () => smessi.push(id)
   }),
+  // Le impostazioni del locale: il «Torna al menù» guarda se il menù dei
+  // clienti c'è (REQ-LIC-002). Qui c'è, come alla Tana.
+  settingsIniziali: () => ({ licenza: { moduli: { menu_tavoli: true, ordini_cliente: true } } }),
+  subscribeSettings: (cb) => {
+    cb({ licenza: { moduli: { menu_tavoli: true, ordini_cliente: true } } })
+    return () => {}
+  },
 }))
 vi.mock('../../src/lib/customerAuth.js', () => ({
   useCustomer: () => ({ user: null, loading: false }),

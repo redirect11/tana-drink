@@ -75,3 +75,40 @@ describe('la home con lo stile «Meraviglie»', () => {
     expect(screen.getByRole('heading', { name: 'Chi siamo' })).toBeInTheDocument()
   })
 })
+
+// Daniele, 14/11/2026: «se il menù clienti è disattivato non ci si può
+// arrivare in alcun modo. Quella cosa fissa va tolta» (REQ-LIC-002).
+describe('il tasto «Vai al menù»', () => {
+  const tasto = () => screen.queryByRole('link', { name: '🍸 Vai al menù' })
+
+  it('col menù dei clienti fuori dal piano non c’è', () => {
+    stato.impostazioni = { licenza: { moduli: { menu_tavoli: false } } }
+    mostra()
+    expect(tasto()).toBeNull()
+  })
+
+  // Il caso chiesto: il menù è nel piano e acceso, e il gestore l'ha nascosto
+  // ai clienti. Spariscono tutti e tre gli ingressi della pagina: il tasto
+  // in alto, la voce della navigazione e il tasto in fondo.
+  it('col menù nascosto ai clienti non c’è nessun ingresso al menù', () => {
+    stato.impostazioni = { licenza: { moduli: { menu_tavoli: true } }, menu_clienti_visibile: false }
+    mostra()
+    expect(tasto()).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Menù' })).toBeNull()
+    expect(screen.queryByRole('link', { name: /Sfoglia il menù/ })).toBeNull()
+    expect(document.querySelector('a[href="/menu"]')).toBeNull()
+  })
+
+  it('col menù dei clienti acceso c’è', () => {
+    stato.impostazioni = { licenza: { moduli: { menu_tavoli: true } } }
+    mostra()
+    expect(tasto()).toBeInTheDocument()
+  })
+
+  // BUG-142: prima che arrivi la licenza non si dice che il menù manca.
+  it('finché la licenza non è arrivata resta', () => {
+    stato.impostazioni = {}
+    mostra()
+    expect(tasto()).toBeInTheDocument()
+  })
+})

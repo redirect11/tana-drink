@@ -2,6 +2,19 @@
 
 ## 1.10.50-beta — in lavorazione
 
+### Il menù dei clienti
+
+- **«Menù visibile ai clienti»**, in Impostazioni → Menù clienti: spento, i
+  clienti non arrivano al menù in nessun modo — niente tasto nella pagina
+  iniziale, niente voce «Menù», la pagina del menù chiusa. Il personale
+  continua a usarlo; il modulo del menù si accende e si spegne a parte, in
+  Funzioni premium (REQ-LIC-002).
+- **«I miei ordini» solo se il cliente può ordinare**: sparisce col menù
+  spento e in sola consultazione (REQ-LIC-002).
+- Col menù spento, i «Torna al menù» delle pagine dei clienti portano alla
+  pagina iniziale, e il server non accetta ordini dal telefono, nemmeno in
+  sola consultazione (REQ-LIC-002).
+
 ## 1.10.49 — 14 novembre 2026 (produzione)
 
 Provata sul test come 1.10.49-beta.

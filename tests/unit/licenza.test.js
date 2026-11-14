@@ -20,6 +20,8 @@ import {
   voceVisibile,
   moduliDiSezione,
   menuDigitaleAttivo,
+  mieiOrdiniVisibili,
+  menuClientiVisibile,
   ordinazioneClientiAttiva,
   accountClientiAttivi,
   licenzaEffettiva,
@@ -340,5 +342,36 @@ describe('conLicenzaAttuale', () => {
     const script = readFileSync(new URL('../../scripts/ripristina-db.js', import.meta.url), 'utf8')
     expect(script).toContain('conLicenzaAttuale(d.fields, campiAttuali.get(d.id))')
     expect(script).toContain('.filter((c) => c !== COLLEZIONE_LICENZA)')
+  })
+})
+
+// Daniele, 14/11/2026: «I miei ordini non deve esserci se è attivo solo
+// consultazione. Ovviamente anche se il menù è disattivo».
+describe('«I miei ordini» solo se il cliente può ordinare', () => {
+  const tutto = { licenza: { moduli: { menu_tavoli: true, ordini_cliente: true } } }
+  it('col menù e gli ordini dal telefono, c’è', () => {
+    expect(mieiOrdiniVisibili(tutto)).toBe(true)
+  })
+  it('in sola consultazione no', () => {
+    expect(mieiOrdiniVisibili({ ...tutto, menu_only: true })).toBe(false)
+  })
+  it('col modulo del menù spento no, e il menù non c’è', () => {
+    const spento = { ...tutto, modulo_menu_tavoli_enabled: false }
+    expect(mieiOrdiniVisibili(spento)).toBe(false)
+    expect(menuDigitaleAttivo(spento)).toBe(false)
+  })
+
+  // Daniele: il modulo e la visibilità ai clienti «non dovrebbe essere la
+  // stessa cosa». Nascosto ai clienti, il modulo resta acceso (lo staff lo
+  // usa), ma per i clienti il menù e «I miei ordini» non ci sono.
+  it('col menù nascosto ai clienti il modulo resta acceso, ma per i clienti non c’è', () => {
+    const nascosto = { ...tutto, menu_clienti_visibile: false }
+    expect(menuDigitaleAttivo(nascosto)).toBe(true)
+    expect(menuClientiVisibile(nascosto)).toBe(false)
+    expect(mieiOrdiniVisibili(nascosto)).toBe(false)
+    expect(menuClientiVisibile(tutto)).toBe(true)
+  })
+  it('senza gli ordini dal telefono nel piano no', () => {
+    expect(mieiOrdiniVisibili({ licenza: { moduli: { menu_tavoli: true, ordini_cliente: false } } })).toBe(false)
   })
 })

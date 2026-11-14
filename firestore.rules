@@ -95,6 +95,22 @@ service cloud.firestore {
     function modulo(id) {
       return licenzaValida() && !alFree() && licenza().get('moduli', {}).get(id, false) == true;
     }
+    // IL LOCALE ACCETTA ORDINI DAL TELEFONO? (REQ-LIC-002, 14/11/2026).
+    // Daniele: «se il menù clienti è disattivato non ci si può arrivare in
+    // alcun modo». L'app nasconde menù e tasti, ma un telefono con le
+    // impostazioni di prima, o una scrittura fatta a mano, passerebbe: qui
+    // si guarda settings/bar: il menù e gli ordini dal telefono accesi, il
+    // menù visibile ai clienti, e non in sola consultazione. Senza il
+    // documento vale com'era: accesi.
+    function localeAccettaOrdiniDalTelefono() {
+      let bar = /databases/$(database)/documents/settings/bar;
+      return !exists(bar) || (
+        get(bar).data.get('modulo_menu_tavoli_enabled', true) != false
+        && get(bar).data.get('modulo_ordini_cliente_enabled', true) != false
+        && get(bar).data.get('menu_clienti_visibile', true) != false
+        && get(bar).data.get('menu_only', false) != true
+      );
+    }
     // Solo un `false` scritto spegne gli sconti (limiti.js, scontiConsentiti);
     // al Free gli sconti non ci sono.
     function scontiConsentiti() {
@@ -236,7 +252,7 @@ service cloud.firestore {
       // ordina DAL menù digitale (REQ-LIC-015): senza quello, l'ordine non
       // ha da dove arrivare, e chi lo scrive a mano non passa.
       allow create: if licenzaValida() && ((isStaffMember() && scontoAmmesso())
-        || (conteNuovoDaCliente() && modulo('menu_tavoli') && modulo('ordini_cliente')));
+        || (conteNuovoDaCliente() && modulo('menu_tavoli') && modulo('ordini_cliente') && localeAccettaOrdiniDalTelefono()));
       // Modello conto/comande: il flusso di lavorazione vive sulle comande
       // (array nel doc), quindi le transizioni fini sono validate in app.
       // Il banco aggiorna qualunque cosa; il cliente anonimo solo finché il

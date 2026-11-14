@@ -58,6 +58,10 @@ import {
   licenzaNota,
   menuDigitaleAttivo,
   accountClientiAttivi,
+  mieiOrdiniVisibili,
+  menuVisibile,
+  menuClientiVisibile,
+  moduloIncluso,
   statoLicenza,
   STATI_LICENZA,
 } from './lib/licenza.js'
@@ -119,6 +123,13 @@ export default function App() {
   }, [])
   // Gli account clienti: il modulo (REQ-LIC-002) e l'interruttore del locale.
   const accountsOn = accountClientiAttivi(settings)
+  // «I miei ordini» solo se il cliente può ordinare davvero (licenza.js).
+  const mieiOrdini = mieiOrdiniVisibili(settings)
+  // I link al menù (la riga del telefono, il menù laterale): ci sono anche
+  // finché la licenza non è arrivata, perché la riga non deve comparire
+  // dopo spingendo giù la pagina (licenza.js, menuVisibile). La rotta /menu
+  // invece segue menuDigitale.
+  const menuNeiLink = menuVisibile(settings)
 
   // Nuova versione online (la PWA resta aperta per giorni): banner
   // "tocca per aggiornare" invece di aspettare un reload manuale.
@@ -413,12 +424,19 @@ export default function App() {
   // Il menù digitale è un modulo (REQ-LIC-002), e le sue due pagine (/menu e
   // /menu/special) lo seguono insieme: senza, la stessa pagina che lo dice.
   const menuDigitale = menuDigitaleAttivo(settings)
+  // Il menù nascosto ai clienti (menu_clienti_visibile, REQ-LIC-002) resta
+  // aperto al personale: «Ordina dal menù» al tavolo continua a funzionare.
+  const menuAperto = menuDigitale && (menuClientiVisibile(settings) || !!staffRole)
   // FINCHÉ LA LICENZA NON È ARRIVATA NON SI DICE CHE IL MENÙ MANCA (BUG-142):
   // alla prima apertura, per un secondo, il cliente al tavolo leggeva «Il
   // menù digitale non è attivo» e poi vedeva il menù. Intanto la stessa
   // attesa che mostra MenuPage mentre carica.
   const menuNonIncluso = licenzaNota(settings) ? (
-    <FunzioneNonInclusa nome="Il menù digitale" licenza={licenzaDi(settings)} />
+    <FunzioneNonInclusa
+      nome="Il menù digitale"
+      licenza={licenzaDi(settings)}
+      spentoDalLocale={moduloIncluso(settings, 'menu_tavoli')}
+    />
   ) : (
     <div className="empty">Carico il menù…</div>
   )
@@ -592,7 +610,7 @@ export default function App() {
         staffRole && !anteprimaCliente ? (
           <StaffDrawer role={staffRole} />
         ) : (
-          <ClientDrawer user={user} profile={profile} accountsOn={accountsOn} />
+          <ClientDrawer user={user} profile={profile} accountsOn={accountsOn} menuDigitale={menuNeiLink} mieiOrdini={mieiOrdini} />
         )
       )}
       <header ref={barraInAlto} className={`topbar${onBackoffice || staffRole ? ' backoffice' : ''}`}>
@@ -703,7 +721,7 @@ export default function App() {
               {/* "I miei ordini" ha senso solo per il CLIENTE. Per lo staff/
                   bartender gli ordini aperti sono nella coda (/bar), non sono
                   ordini "suoi": niente schermata cliente. */}
-              {hasOrders && (
+              {hasOrders && mieiOrdini && (
                 <Link className="btn ghost small" to="/ordini">I miei ordini</Link>
               )}
               {user ? (
@@ -724,10 +742,13 @@ export default function App() {
           sotto, su una riga tutta loro. La riga c'è SEMPRE, anche mentre si
           sta ancora capendo chi è collegato: così non compare dopo,
           spostando quello che c'è sotto proprio mentre lo si tocca. */}
-      {telefono && !staffRole && !onBackoffice && (
+      {/* Col menù spento e senza account la riga non avrebbe niente: non c'è. */}
+      {telefono && !staffRole && !onBackoffice && (menuNeiLink || user || accountsOn) && (
         <div className="barra-cliente">
-          <Link className="btn ghost small" to="/menu"><Icona nome="menu" gruppo="tasti" /> Menù</Link>
-          {hasOrders && (
+          {menuNeiLink && (
+            <Link className="btn ghost small" to="/menu"><Icona nome="menu" gruppo="tasti" /> Menù</Link>
+          )}
+          {hasOrders && mieiOrdini && (
             <Link className="btn ghost small" to="/ordini"><Icona nome="coda" gruppo="tasti" /> I miei ordini</Link>
           )}
           {user ? (
@@ -833,10 +854,10 @@ export default function App() {
           <Route path="/" element={<LandingPage />} />
           {/* IL MENÙ DIGITALE è un modulo (REQ-LIC-002): senza, al suo posto
               una pagina che lo dice. La Tana ha tutti i moduli. */}
-          <Route path="/menu" element={menuDigitale ? <MenuPage /> : menuNonIncluso} />
+          <Route path="/menu" element={menuAperto ? <MenuPage /> : menuNonIncluso} />
           {/* IL MENÙ SPECIAL (REQ-MENU-018): sotto /menu, così valgono
               anche qui tema, cassetto e anteprima del cliente. */}
-          <Route path="/menu/special" element={menuDigitale ? <MenuPage speciali /> : menuNonIncluso} />
+          <Route path="/menu/special" element={menuAperto ? <MenuPage speciali /> : menuNonIncluso} />
           <Route path="/ordini" element={<MyOrdersPage />} />
           <Route path="/ordine/:id" element={<OrderStatusPage />} />
           {/* Il dettaglio di una COMANDA: ci si arriva dalla card in

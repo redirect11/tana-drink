@@ -23,3 +23,14 @@ describe('la pagina di una funzione non inclusa', () => {
     expect(screen.queryByRole('link')).toBeNull()
   })
 })
+
+// Il menù è nel piano ma il gestore l'ha spento (Impostazioni → Menù
+// clienti, 14/11/2026): al cliente non si parla di piano.
+describe('una funzione spenta dal locale', () => {
+  it('dice che non è disponibile, senza parlare di piano né di pagina del prodotto', () => {
+    render(<FunzioneNonInclusa nome="Il menù digitale" licenza={{ regia_url: 'https://drink-regia.web.app' }} spentoDalLocale />)
+    expect(screen.getByRole('heading', { name: 'Il menù digitale non è disponibile' })).toBeInTheDocument()
+    expect(screen.queryByText(/piano/)).toBeNull()
+    expect(screen.queryByRole('link')).toBeNull()
+  })
+})
