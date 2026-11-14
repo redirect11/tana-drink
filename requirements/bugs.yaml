@@ -6131,3 +6131,67 @@ bugs:
     requisiti: [REQ-ORD-023]
     test_cases:
       - tests/component/OrderPosDetail.test.jsx
+
+  - id: BUG-148
+    title: "Al primo drink di un conto nuovo la barra in alto si riempie un attimo dopo, e sembra che la schermata si ricarichi"
+    area: "src/components/OrderPosDetail.jsx (auto-conferma della bozza, createFromDraft)"
+    severity: media
+    priority: P1
+    description: >
+      Daniele, 14/11/2026, sul test con la 1.10.44-beta, dopo BUG-147: «c'è
+      sempre un ricaricamento di qualcosa dopo che aggiungo il primo drink».
+      La riga ormai restava ferma; a cambiare era la barra in alto. Finché il
+      conto non esiste dice solo il numero, e il conto nasceva 300 ms dopo
+      il tocco, col timer dell'auto-conferma che in modifica raccoglie i
+      tocchi ravvicinati: allo scadere la barra si riempiva di colpo (ora
+      di apertura, «Conto aperto», chi l'ha aperto, l'id, «Da fare») e si
+      accendevano «Comande» e «Stato servizio». Il conto si compone in
+      locale e createOrder risponde subito: l'attesa non serviva.
+      ORA in creazione il conto nasce al primo tocco, e la barra è quella
+      del conto insieme alla riga; le righe battute mentre nasce le
+      raccoglie createFromDraft come prima. In modifica il timer resta.
+      Dalla revisione: il conto aspetta che l'accesso abbia risposto. Una
+      bozza rimasta da una creazione non riuscita si ripristina all'apertura,
+      e senza quell'attesa il conto sarebbe nato prima di sapere chi lo apre,
+      senza `placed_by`: per l'app un ordine dal telefono del cliente.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, pos, local-first]
+    requisiti: [REQ-POS-001]
+    test_cases:
+      - tests/component/OrderPosDetail.test.jsx
+
+  - id: BUG-149
+    title: "Al primo avvio di una versione il box «Cosa è cambiato» dice che le note non sono arrivate, con il file al suo posto"
+    area: "src/lib/novita.js (caricaChangelog), src/components/NovitaDialog.jsx, src/components/InfoTab.jsx"
+    severity: bassa
+    priority: P2
+    description: >
+      Daniele, 14/11/2026, in produzione al primo avvio della 1.10.43: il
+      box delle novità ha mostrato «Le note di questa versione non sono
+      arrivate», mentre il file c'era e rispondeva. Quel rilascio, il primo
+      in produzione della linea 1.10 dopo la 1.9.3, portava anche un service
+      worker nuovo (cache `drink-v5`, cambiato il 30/10 e arrivato sul test
+      allora, una volta sola), che al primo avvio si installa e prende subito
+      il posto del vecchio. Le note sono la prima richiesta che l'app fa
+      appena si apre, e una richiesta caduta in quel cambio bastava a dire
+      che non c'erano: il box non riprovava. Sul test non si è rivisto
+      perché da allora il service worker non è più cambiato. Non è
+      riprodotto passo per passo: è l'unica spiegazione coerente con il
+      file al suo posto e con quel rilascio. Nessun'altra richiesta di
+      quell'istante ne soffre: i dati non passano dal service worker, la
+      configurazione lo salta apposta, il controllo delle versioni si ripete
+      e i pezzi di codice caricati al bisogno si riprovano da soli.
+      ORA le note si chiedono fino a tre volte (dopo 1 e dopo 3 secondi),
+      un file vuoto conta come non arrivato, e mentre si aspetta il box e
+      Impostazioni → Informazioni mostrano il caricamento; solo dopo il
+      terzo tentativo si dice che non ci sono.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, pwa, ux]
+    requisiti: [REQ-DEV-003]
+    test_cases:
+      - tests/unit/novita.test.js
+      - tests/component/AppHeader.test.jsx

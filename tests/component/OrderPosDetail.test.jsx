@@ -65,13 +65,16 @@ let ruoloCorrente = 'bartender'
 // senza sapere chi la guarda e lo scopre un attimo dopo. Questa e' quella
 // promessa, e serve ai test per aspettare la cosa giusta (vedi `mount`).
 let consegnaRuolo = null
+// Un test può tenere il token in sospeso per far arrivare il ruolo quando
+// vuole lui (vedi la bozza ripristinata, BUG-148).
+let tokenInSospeso = null
 vi.mock('firebase/auth', () => ({
   onAuthStateChanged: vi.fn((a, cb) => {
     consegnaRuolo = cb({
       uid: 'u1',
       email: 'chi@tana.local',
       displayName: 'Chi lavora',
-      getIdTokenResult: () => Promise.resolve({ claims: { role: ruoloCorrente } }),
+      getIdTokenResult: () => tokenInSospeso || Promise.resolve({ claims: { role: ruoloCorrente } }),
     })
     return () => {}
   }),
@@ -126,6 +129,7 @@ import {
   setOrderServiceMode,
 } from '../../src/lib/api.js'
 import { readerCheckout } from '../../src/lib/paymentsApi.js'
+import { saveDraft } from '../../src/lib/useDraft.js'
 import { printComanda, printComande, printComandaUnita } from '../../src/lib/printer.js'
 
 // IL CONTO DI PROVA NASCE «DA FARE», come nasce davvero: si battono tre
@@ -1169,6 +1173,71 @@ describe('il passo in cui nasce una comanda lo dice il locale', () => {
 })
 
 describe('creazione: niente si perde mentre l’ordine nasce', () => {
+  // BUG-148, Daniele 14/11/2026: «c'è sempre un ricaricamento di qualcosa
+  // dopo che aggiungo il primo drink». Era la barra in alto: il conto
+  // nasceva 300 ms dopo il tocco (il timer dell'auto-conferma), e fino ad
+  // allora la barra diceva solo il numero; poi si riempiva di colpo. Il
+  // conto si compone in locale e risponde subito: nasce al tocco, e la
+  // barra è già quella del conto mentre la riga compare.
+  it('il conto nasce al primo tocco: la barra è quella del conto subito, non 300 ms dopo', async () => {
+    createOrder.mockImplementationOnce(async ({ items, status }) => ({
+      id: 'ord-nuovo',
+      status: 'aperto',
+      payment_status: 'non_richiesto',
+      comande: [
+        {
+          id: 'c1',
+          seq: 1,
+          status,
+          status_times: {},
+          items: items.map(({ price, ...i }) => ({ ...i, unit_price: price })),
+        },
+      ],
+      payments: [],
+    }))
+    render(
+      <MemoryRouter>
+        <OrderPosDetail order={null} />
+      </MemoryRouter>
+    )
+    await avvioDelConto()
+    const user = userEvent.setup()
+    await user.click(screen.getAllByText('Mojito')[0])
+    await act(async () => {})
+    expect(createOrder, 'il conto aspetta ancora il timer').toHaveBeenCalledTimes(1)
+    expect(document.querySelector('.posd-topbar .posd-conto-stato')).toBeTruthy()
+  })
+
+  // Dalla revisione di BUG-148: una bozza rimasta da una creazione non
+  // riuscita si ripristina all'apertura, e l'effetto partiva prima che si
+  // sapesse chi lavora. Senza `placed_by` il conto sarebbe stato preso per
+  // un ordine dal telefono del cliente.
+  it('con una bozza ripristinata il conto nasce solo quando si sa chi lo apre', async () => {
+    saveDraft('new', [{ line_id: 'l1', drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1, source: 'draft' }])
+    let daiIlToken
+    tokenInSospeso = new Promise((r) => {
+      daiIlToken = r
+    })
+    try {
+      render(
+        <MemoryRouter>
+          <OrderPosDetail order={null} />
+        </MemoryRouter>
+      )
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 50))
+      })
+      expect(createOrder, 'il conto è nato prima di sapere chi lo apre').not.toHaveBeenCalled()
+      await act(async () => {
+        daiIlToken({ claims: { role: 'bartender' } })
+      })
+      await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1))
+      expect(createOrder.mock.calls[0][0].placed_by).toMatchObject({ email: 'chi@tana.local', role: 'bartender' })
+    } finally {
+      tokenInSospeso = null
+    }
+  })
+
   it('gli item battuti durante la creazione finiscono nell’ordine', async () => {
     const user = userEvent.setup()
     // Creazione LENTA e controllata da qui: è la finestra in cui si continua
@@ -1206,7 +1275,7 @@ describe('creazione: niente si perde mentre l’ordine nasce', () => {
       </MemoryRouter>
     )
 
-    // Primo item: fa partire la creazione (parte da sola dopo ~300ms).
+    // Primo item: fa partire la creazione (parte da sola, al tocco).
     await user.click(screen.getAllByText('Mojito')[0])
     await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1), { timeout: 2000 })
 
@@ -2798,12 +2867,14 @@ describe('l’iniziale di chi ha battuto ogni riga', () => {
   // conto la cui comanda è già partita (nasce una comanda nuova); quelle a
   // una comanda ancora da fare ci entrano subito, firmate.
   const ginInLista = () => [...document.querySelectorAll('.draft-line')].find((r) => r.textContent.includes('Gin Tonic'))
-  async function battiGinEGuarda(invio) {
+  // `inBozza`: al tocco nessun invio è ancora partito. Vale per l'aggiunta a
+  // una comanda già partita; il conto nuovo invece nasce al tocco (BUG-148),
+  // e lì conta solo che l'iniziale ci sia subito e resti la stessa.
+  async function battiGinEGuarda(invio, { inBozza = true } = {}) {
     const user = userEvent.setup()
     await user.click(screen.getAllByText('Gin Tonic')[0])
-    // Al tocco: la riga c'è, nessun invio è partito, e ha già l'iniziale di
-    // chi la sta battendo.
-    expect(invio).not.toHaveBeenCalled()
+    // Al tocco: la riga c'è e ha già l'iniziale di chi la sta battendo.
+    if (inBozza) expect(invio).not.toHaveBeenCalled()
     const segno = ginInLista()?.querySelector('.riga-autore .order-by')
     expect(segno, 'la riga in bozza è senza iniziale').toBeTruthy()
     expect([segno.textContent, segno.title]).toEqual(['C', 'Aggiunto da Chi lavora'])
@@ -2841,7 +2912,7 @@ describe('l’iniziale di chi ha battuto ogni riga', () => {
       </MemoryRouter>
     )
     await avvioDelConto()
-    await battiGinEGuarda(createOrder)
+    await battiGinEGuarda(createOrder, { inBozza: false })
   })
 
   it('l’aggiunta a un conto con la comanda già partita ha subito l’iniziale, e la tiene dopo', async () => {
