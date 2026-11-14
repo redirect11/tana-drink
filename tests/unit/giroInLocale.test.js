@@ -173,6 +173,39 @@ describe('la modifica dal telefono del cliente, senza rete', () => {
   })
 })
 
+// UN CONTO NUOVO, SENZA RETE (BUG-150). createOrder rileggeva il conto
+// appena scritto con un `await getDoc`: risolve anche offline, ma passa dalla
+// cache su disco — al banco più di 100 ms fra il primo drink e il conto a
+// schermo, con la barra in alto che si riempiva dopo la riga. Qui la cache
+// il conto nuovo non ce l'ha proprio: chi rilegge torna un conto vuoto.
+describe('un conto nuovo, senza rete', () => {
+  const primoDrink = () => ({
+    items: [{ drink_id: 'negroni', name: 'Negroni', price: 7, qty: 1, line_id: 'l1' }],
+    placed_by: { email: 'banco@tana.it', name: 'Banco', role: 'bartender' },
+  })
+
+  it('il conto che torna ha già la riga battuta, chi l’ha aperto e l’ora di qui', async () => {
+    stato.ordine = null
+    const nato = await subito(api.createOrder(primoDrink()))
+    expect(nato.comande).toHaveLength(1)
+    expect(nato.comande[0].items).toMatchObject([{ drink_id: 'negroni', qty: 1, line_id: 'l1' }])
+    expect(nato.total).toBe(7)
+    expect(nato.placed_by).toMatchObject({ email: 'banco@tana.it' })
+    // L'ora del server non la sa ancora nessuno; quella di qui sì, ed è
+    // quella che la barra in alto mostra intanto.
+    expect(nato.created_at).toBeNull()
+    expect(nato.tempi_conto.aperto).toBeTruthy()
+  })
+
+  it('e la comanda aggiunta subito dopo parte da lì, non dalla cache che non ce l’ha', async () => {
+    stato.ordine = null
+    const nato = await subito(api.createOrder(primoDrink()))
+    const dopo = await subito(api.addComanda(nato.id, [riga('Spritz', 1, 6)]))
+    expect(dopo.comande).toHaveLength(2)
+    expect(dopo.total).toBe(13)
+  })
+})
+
 // ── LA GUARDIA SULLA REGOLA ──────────────────────────────────────────
 //
 // I test qui sopra provano il comportamento di oggi. Questo protegge la
@@ -198,5 +231,26 @@ describe('la regola, sorvegliata nel codice', () => {
       riletture.map(([n, r]) => `riga ${n}: ${r.trim()}`),
       'chi scrive in sottofondo non può rileggere per restituire: componi con ordineDopo()'
     ).toEqual([])
+  })
+
+  // BUG-150 era sfuggito alla guardia qui sopra perché la rilettura era
+  // scritta in un altro modo: `const snap = await getDoc(ref)` e poi
+  // `mapOrder(snap)`. Si guarda funzione per funzione: chi scrive un conto
+  // (setDoc, updateDoc, bgWrite) e poi lo rilegge con getDoc per mapparlo.
+  it('nemmeno con getDoc dopo averlo scritto', async () => {
+    const { readFileSync } = await import('node:fs')
+    const { join } = await import('node:path')
+    const sorgente = readFileSync(join(process.cwd(), 'src/lib/api.js'), 'utf8')
+    const funzioni = sorgente.split(/\r?\n(?=(?:export )?(?:async )?function )/)
+    const colpevoli = funzioni
+      .filter((f) => {
+        const scrive = f.search(/\b(setDoc|updateDoc|bgWrite)\(/)
+        if (scrive < 0) return false
+        const dopo = f.slice(scrive)
+        const rilettura = dopo.match(/(\w+)\s*=\s*await\s+getDoc\(/)
+        return Boolean(rilettura) && dopo.includes(`mapOrder(${rilettura[1]})`)
+      })
+      .map((f) => f.match(/function\s+(\w+)/)?.[1] ?? '?')
+    expect(colpevoli, 'chi scrive un conto non lo rilegge per restituirlo: componi con ordineDopo()').toEqual([])
   })
 })

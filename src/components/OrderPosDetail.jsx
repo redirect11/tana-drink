@@ -2023,6 +2023,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // compare — e stanno in una costante perché adesso le guarda anche la
   // barra in alto, per sapere quanto spazio le resta.
   const mostraStatoLavoro = !isNew && workflowOn && !!active && !closed
+  const apertoAlle = isNew ? null : order.created_at || order.tempi_conto?.[ORDER_OPEN] || null
 
   // SUL TELEFONO NON CI STANNO DUE PASTIGLIE PER ESTESO. Misurato in Chrome
   // vero: la barra al completo chiede 505px, e un telefono ne ha 360-430.
@@ -2264,9 +2265,13 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             tavolo è lì dalle nove cambia come lo si tratta. Sul telefono, con
             lo stato del lavoro a bordo, è la prima cosa che cede: la si
             rilegge nella storia del conto, dal ⋯. */}
-        {!isNew && order.created_at && !barraStretta && (
+        {/* L'ora del server arriva quando la scrittura arriva al server:
+            fino ad allora quella di qui, scritta apposta alla nascita
+            (`status_times.aperto`). Senza, l'ora compariva mezzo secondo
+            dopo il primo drink e spostava la barra (BUG-150). */}
+        {!isNew && apertoAlle && !barraStretta && (
           <span className="muted small posd-aperto" title="Conto aperto il">
-            {apertoIl(order.created_at)}
+            {apertoIl(apertoAlle)}
           </span>
         )}
         {!isNew && (() => {
