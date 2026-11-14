@@ -5,9 +5,9 @@
 // loggato sia backoffice sia istanza per quell'utente», «mi serve qualcosa
 // che sia sicuro e robusto», per tutte le istanze. Ogni locale è un
 // progetto Firebase coi suoi account, e due siti su domini diversi non
-// condividono la sessione: quindi il titolare passa con un clic, in tutti e
-// due i versi, e a ogni passaggio la regia controlla che sia lui (stessa
-// email, verificata, ruolo admin). Il contratto è in
+// condividono la sessione: quindi dalla regia all'app il titolare passa con
+// un clic, e la regia controlla che sia lui (stessa email, verificata, ruolo
+// admin); dall'app alla regia, dal 14/11/2026, un collegamento. Il contratto è in
 // docs/passaggio-dalla-regia.md; la parte della regia è drink-regia
 // REQ-FLOTTA-030.
 //
@@ -19,8 +19,8 @@
 //   (indirizzoAreaClienti): lì si entra come sempre, e chi è già entrato
 //   si ritrova nella sua area.
 //
-// Logica pura: la rete (`prendi`) e l'accesso (`accedi`, `token`) li passa
-// chi chiama, così la prova non ha bisogno di Firebase.
+// Logica pura: la rete (`prendi`) e l'accesso (`accedi`) li passa chi
+// chiama, così la prova non ha bisogno di Firebase.
 
 import { urlFunzioneRegia, erroreDellaRegia, postaAllaRegia } from './funzioniRegia.js'
 import { PROGETTI_REGIA } from './aggiornamenti.js'

@@ -152,7 +152,7 @@ describe('dall’app alla regia, «Area clienti»', () => {
   // della regia (come le sue Functions).
   it('senza una regia conosciuta non c’è un indirizzo, e il tasto non c’è', () => {
     expect(indirizzoAreaClienti({}, 'un-altro-progetto')).toBeNull()
-    expect(indirizzoAreaClienti({}, undefined)).toBeNull()
+    expect(indirizzoAreaClienti({}, '')).toBeNull()
     expect(areaClientiVisibile({ admin: true, settings: {}, progetto: 'un-altro-progetto' })).toBe(false)
   })
 

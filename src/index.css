@@ -2080,6 +2080,9 @@ a.order-mini {
   gap: 12px;
   padding: 13px 18px;
   color: var(--text);
+  /* «Area clienti» è un collegamento (REQ-FLOTTA-030): come le altre voci,
+     senza sottolineatura. */
+  text-decoration: none;
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
