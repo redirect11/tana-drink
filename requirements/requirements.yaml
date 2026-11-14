@@ -961,11 +961,12 @@ requirements:
       Toccando il primo prodotto il conto viene creato in place: niente
       navigazione, niente ricaricamento, la schermata resta quella e da lì si
       continua come in modifica. Il nome del cliente si chiede all'uscita, una
-      volta sola.
+      volta sola. Nasce AL TOCCO, non quando la bozza sta ferma: la barra in
+      alto è quella del conto nell'istante in cui la riga compare (BUG-148).
     status: implemented
     generate_issue: false
     labels: [pos]
-    test_cases: [tests/component/PosPage.test.jsx]
+    test_cases: [tests/component/PosPage.test.jsx, tests/component/OrderPosDetail.test.jsx]
 
   - id: REQ-POS-002
     title: "Niente si perde mentre l'ordine sta nascendo"
@@ -9121,6 +9122,9 @@ requirements:
       campanella che porta a Impostazioni → Informazioni. Alla prima apertura
       su un dispositivo nuovo non succede niente: un box di benvenuto con le
       note di rilascio non lo vuole nessuno.
+      Le note si chiedono fino a tre volte prima di dire che non ci sono, e
+      intanto si vede il caricamento: al primo avvio di una versione la prima
+      richiesta può cadere nel cambio del service worker (BUG-149).
     status: implemented
     generate_issue: false
     labels: [metodo, ux]

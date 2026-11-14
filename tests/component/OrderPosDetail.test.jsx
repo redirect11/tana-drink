@@ -1169,6 +1169,44 @@ describe('il passo in cui nasce una comanda lo dice il locale', () => {
 })
 
 describe('creazione: niente si perde mentre l’ordine nasce', () => {
+  // BUG-148, Daniele 14/11/2026: «c'è sempre un ricaricamento di qualcosa
+  // dopo che aggiungo il primo drink». Era la barra in alto: il conto
+  // nasceva 300 ms dopo il tocco (il timer dell'auto-conferma), e fino ad
+  // allora la barra diceva solo il numero; poi si riempiva di colpo. Il
+  // conto si compone in locale e risponde subito: nasce al tocco, e la
+  // barra è già quella del conto mentre la riga compare.
+  it('il conto nasce al primo tocco: la barra è quella del conto subito, non 300 ms dopo', async () => {
+    createOrder.mockImplementationOnce(async ({ items, status }) => ({
+      id: 'ord-nuovo',
+      status: 'aperto',
+      payment_status: 'non_richiesto',
+      comande: [
+        {
+          id: 'c1',
+          seq: 1,
+          status,
+          status_times: {},
+          items: items.map(({ price, ...i }) => ({ ...i, unit_price: price })),
+        },
+      ],
+      payments: [],
+    }))
+    render(
+      <MemoryRouter>
+        <OrderPosDetail order={null} />
+      </MemoryRouter>
+    )
+    await avvioDelConto()
+    const user = userEvent.setup()
+    const prima = Date.now()
+    await user.click(screen.getAllByText('Mojito')[0])
+    await act(async () => {})
+    expect(createOrder, 'il conto aspetta ancora il timer').toHaveBeenCalledTimes(1)
+    expect(document.querySelector('.posd-topbar .posd-conto-stato')).toBeTruthy()
+    // Tutto dentro lo stesso giro del tocco: niente attese di 300 ms.
+    expect(Date.now() - prima).toBeLessThan(300)
+  })
+
   it('gli item battuti durante la creazione finiscono nell’ordine', async () => {
     const user = userEvent.setup()
     // Creazione LENTA e controllata da qui: è la finestra in cui si continua
@@ -2798,12 +2836,14 @@ describe('l’iniziale di chi ha battuto ogni riga', () => {
   // conto la cui comanda è già partita (nasce una comanda nuova); quelle a
   // una comanda ancora da fare ci entrano subito, firmate.
   const ginInLista = () => [...document.querySelectorAll('.draft-line')].find((r) => r.textContent.includes('Gin Tonic'))
-  async function battiGinEGuarda(invio) {
+  // `inBozza`: al tocco nessun invio è ancora partito. Vale per l'aggiunta a
+  // una comanda già partita; il conto nuovo invece nasce al tocco (BUG-148),
+  // e lì conta solo che l'iniziale ci sia subito e resti la stessa.
+  async function battiGinEGuarda(invio, { inBozza = true } = {}) {
     const user = userEvent.setup()
     await user.click(screen.getAllByText('Gin Tonic')[0])
-    // Al tocco: la riga c'è, nessun invio è partito, e ha già l'iniziale di
-    // chi la sta battendo.
-    expect(invio).not.toHaveBeenCalled()
+    // Al tocco: la riga c'è e ha già l'iniziale di chi la sta battendo.
+    if (inBozza) expect(invio).not.toHaveBeenCalled()
     const segno = ginInLista()?.querySelector('.riga-autore .order-by')
     expect(segno, 'la riga in bozza è senza iniziale').toBeTruthy()
     expect([segno.textContent, segno.title]).toEqual(['C', 'Aggiunto da Chi lavora'])
@@ -2841,7 +2881,7 @@ describe('l’iniziale di chi ha battuto ogni riga', () => {
       </MemoryRouter>
     )
     await avvioDelConto()
-    await battiGinEGuarda(createOrder)
+    await battiGinEGuarda(createOrder, { inBozza: false })
   })
 
   it('l’aggiunta a un conto con la comanda già partita ha subito l’iniziale, e la tiene dopo', async () => {

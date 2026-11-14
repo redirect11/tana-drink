@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import Changelog from './Changelog.jsx'
-import { sezioneChangelog } from '../lib/novita.js'
+import { caricaChangelog, sezioneChangelog } from '../lib/novita.js'
+import Caricamento from './Caricamento.jsx'
 import Icona from './Icona.jsx'
 
 // ── COSA È CAMBIATO, subito dopo un aggiornamento ────────────────────
@@ -14,8 +15,9 @@ export default function NovitaDialog({ onClose }) {
 
   useEffect(() => {
     let vivo = true
-    fetch(`${import.meta.env.BASE_URL || '/'}changelog.md`, { cache: 'no-store' })
-      .then((r) => (r.ok ? r.text() : Promise.reject(new Error(String(r.status)))))
+    // Con i tentativi di caricaChangelog: al primo avvio di una versione la
+    // prima richiesta può cadere (BUG-149), e intanto si vede il caricamento.
+    caricaChangelog({ base: import.meta.env.BASE_URL || '/' })
       // SEMPRE LA SEZIONE PIÙ RECENTE, non quella del numero di versione che
       // l'app si porta dietro: sull'ambiente di test quel numero è l'ultimo
       // tag raggiungibile (vecchio), e il box avrebbe mostrato le note di due
@@ -49,7 +51,11 @@ export default function NovitaDialog({ onClose }) {
             Impostazioni → Informazioni.
           </p>
         )}
-        {!testo && !errore && <p className="muted small" style={{ marginTop: 10 }}>Carico le note…</p>}
+        {!testo && !errore && (
+          <div style={{ marginTop: 10 }}>
+            <Caricamento piccolo testo="Carico le note…" />
+          </div>
+        )}
         {testo && <Changelog testo={testo} />}
         <button className="btn block" style={{ marginTop: 12 }} onClick={onClose}>
           Ho capito

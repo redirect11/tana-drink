@@ -2,6 +2,8 @@
 import { useEffect, useState } from 'react'
 import { etichettaVersione } from '../lib/versione.js'
 import Changelog from './Changelog.jsx'
+import Caricamento from './Caricamento.jsx'
+import { caricaChangelog } from '../lib/novita.js'
 import AvvisoPiano from './AvvisoPiano.jsx'
 import { SceltaDallAreaClienti, useSceltaAggiornamento } from './PropostaAggiornamento.jsx'
 import {
@@ -34,10 +36,14 @@ export default function InfoTab({ settings = null, role = null }) {
   const [errore, setErrore] = useState(null)
 
   useEffect(() => {
-    fetch(`${import.meta.env.BASE_URL || '/'}changelog.md`, { cache: 'no-store' })
-      .then((r) => (r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status}`))))
-      .then(setChangelog)
-      .catch(() => setErrore('Le note di questa versione non sono disponibili.'))
+    // Gli stessi tentativi del box delle novità (BUG-149).
+    let vivo = true
+    caricaChangelog({ base: import.meta.env.BASE_URL || '/' })
+      .then((t) => vivo && setChangelog(t))
+      .catch(() => vivo && setErrore('Le note di questa versione non sono disponibili.'))
+    return () => {
+      vivo = false
+    }
   }, [])
 
   const dati = [
@@ -77,7 +83,7 @@ export default function InfoTab({ settings = null, role = null }) {
       <div className="card settings-section">
         <h3>Cosa è cambiato</h3>
         {errore && <p className="muted small">{errore}</p>}
-        {!changelog && !errore && <p className="muted small">Carico le note…</p>}
+        {!changelog && !errore && <Caricamento piccolo testo="Carico le note…" />}
         {changelog && <Changelog testo={changelog} />}
       </div>
     </div>

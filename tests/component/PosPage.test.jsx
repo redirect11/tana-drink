@@ -454,7 +454,22 @@ describe('testata del nuovo ordine', () => {
 // nodo viene distrutto e ricostruito: la riga "rimbalza" e rifà l'effetto di
 // comparsa. La chiave della bozza viaggia con l'item, quindi resta la stessa.
 describe('primo item: la riga resta la stessa', () => {
+  // Dal 14/11/2026 il conto nasce AL TOCCO (BUG-148): la bozza dura il
+  // giro del tocco, e la chiave si guarda dopo la nascita. Il conto torna
+  // com'è nato davvero, con le righe mandate e il loro line_id: è createOrder
+  // che compone in locale, e lo porta con sé.
   it('la chiave della riga non cambia quando l’ordine viene creato', async () => {
+    createOrder.mockImplementationOnce(async ({ items, status }) => ({
+      id: 'ord-nuovo',
+      daily_number: 9,
+      status: 'aperto',
+      payment_status: 'non_richiesto',
+      payments: [],
+      discount_amount: 0,
+      comande: [
+        { id: 'c1', seq: 1, status, items: items.map(({ price, ...i }) => ({ ...i, unit_price: price })) },
+      ],
+    }))
     const user = userEvent.setup()
     render(
       <MemoryRouter initialEntries={['/pos']}>
@@ -462,15 +477,16 @@ describe('primo item: la riga resta la stessa', () => {
       </MemoryRouter>
     )
     await user.click(screen.getByText('Mojito'))
-    const riga = document.querySelector('.draft-line[data-line-key]')
-    const chiavePrima = riga.getAttribute('data-line-key')
-    expect(chiavePrima).toMatch(/^d:/)
-
     // L'ordine viene creato: l'item passa da bozza a confermato.
     await waitFor(() => expect(createOrder).toHaveBeenCalled())
     const inviati = createOrder.mock.calls.at(-1)[0].items
-    // Il line_id viaggia con l'item, ed è quello che tiene ferma la riga.
-    expect(inviati[0].line_id).toBe(chiavePrima.slice(2))
+    expect(inviati[0].line_id).toBeTruthy()
+    // La riga a schermo, a conto nato, ha la chiave della bozza: il line_id
+    // viaggia con l'item, ed è quello che tiene ferma la riga.
+    await waitFor(() =>
+      expect(document.querySelector('.draft-line[data-line-key]').getAttribute('data-line-key')).toBe(`d:${inviati[0].line_id}`)
+    )
+    expect(document.querySelectorAll('.draft-line[data-line-key]')).toHaveLength(1)
   })
 })
 

@@ -1721,19 +1721,30 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // resetta a ogni render.
   const flushAdditionsRef = useRef(flushAdditions)
   flushAdditionsRef.current = flushAdditions
-  // Poco dopo l'ultima aggiunta: in MODIFICA gli item si confermano da soli;
-  // in CREAZIONE l'ordine viene CREATO con la bozza e si passa alla modifica
-  // (da lì le aggiunte successive si confermano al volo). Il timer si resetta a
-  // ogni aggiunta, così parte solo quando la bozza è "ferma" (batch completo).
+  // In MODIFICA, poco dopo l'ultima aggiunta, gli item si confermano da soli:
+  // il timer si resetta a ogni aggiunta, così parte solo quando la bozza è
+  // "ferma" (batch completo). In CREAZIONE l'ordine viene CREATO con la bozza
+  // al primo tocco e si passa alla modifica (da lì le aggiunte successive si
+  // confermano al volo).
   useEffect(() => {
     // Con la scelta a schermo l'auto-conferma non parte: le righe aspettano
     // che qualcuno dica dove vanno (vedi `sceltaAggiunte`). All'uscita
     // partono lo stesso, nella comanda — è la strada che non fa carta in più.
     if (draft.length === 0 || sceltaAggiunte) return
-    const t = setTimeout(() => {
-      if (isNew) createFromDraftRef.current()
-      else flushAdditionsRef.current()
-    }, 300)
+    // IN CREAZIONE IL CONTO NASCE AL PRIMO TOCCO, senza aspettare che la
+    // bozza stia ferma. Daniele, 14/11/2026: «c'è sempre un ricaricamento di
+    // qualcosa dopo che aggiungo il primo drink» — era la barra in alto, che
+    // finché il conto non esiste dice solo il numero e 300 ms dopo si
+    // riempiva di colpo (ora, «Conto aperto», chi l'ha aperto, l'id, «Da
+    // fare»). createOrder compone in locale e risponde subito, e le righe
+    // battute mentre il conto nasce le raccoglie createFromDraft: aspettare
+    // non serviva a niente (BUG-148). In modifica il timer resta: lì
+    // raccoglie i tocchi ravvicinati in un invio solo.
+    if (isNew) {
+      createFromDraftRef.current()
+      return
+    }
+    const t = setTimeout(() => flushAdditionsRef.current(), 300)
     return () => clearTimeout(t)
   }, [draft, isNew, sceltaAggiunte])
 

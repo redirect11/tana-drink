@@ -2,6 +2,15 @@
 
 ## 1.10.45-beta — in lavorazione
 
+### Correzioni
+
+- **Al primo drink di un conto nuovo la schermata resta ferma.** La barra
+  in alto si riempiva un attimo dopo il tocco e sembrava ricaricarsi; ora
+  il conto nasce al tocco (BUG-148).
+- **Le note di una versione nuova arrivano anche al primo avvio.** Il box
+  «Cosa è cambiato» riprova prima di dire che non sono arrivate, e
+  intanto mostra il caricamento (BUG-149).
+
 ## 1.10.44-beta — 14/11/2026 (test)
 
 ### Correzioni
