@@ -308,7 +308,14 @@ function mapMovement(snap) {
 }
 
 function mapOrder(snap) {
-  const o = snap.data() || {}
+  // L'ORA DEL SERVER, STIMATA FINCHÉ NON ARRIVA. `created_at` è un orario
+  // del server: sul conto appena scritto, finché la scrittura non arriva,
+  // Firestore lo dà null — e la card in coda restava senza «da quanto», e il
+  // conto nuovo si ordinava in cima per poi saltare in fondo (BUG-151,
+  // BUG-152). Con `estimate` lo dà già, stimato con l'orologio di qui, e lo
+  // sostituisce con quello vero appena c'è. Un posto solo, per tutti i
+  // conti che si leggono.
+  const o = snap.data({ serverTimestamps: 'estimate' }) || {}
   const items = Array.isArray(o.items) ? o.items : []
   // Normalizza al modello conto/comande (i doc legacy ottengono una comanda
   // sintetica). `workflow_status` è lo stato di lavorazione della comanda
@@ -4191,7 +4198,9 @@ async function creaOrdine({
   // (BUG-150). Il conto è quello che abbiamo appena scritto, e lo si
   // ricorda per la mutazione dopo, come fa `ordineDopo` per tutte le
   // altre. `created_at` è l'orario del server e qui non lo sa nessuno: vale
-  // null, come nella cache finché la scrittura non arriva.
+  // l'ora di qui, la stessa stima che Firestore dà per una scrittura ancora
+  // in viaggio (vedi mapOrder), così il conto ha la stessa ora che arrivi
+  // dalla memoria o dalla cache.
   // Per riconoscere che la cache è arrivata si confrontano solo i campi che
   // le mutazioni dopo ricompongono: col documento intero un campo cambiato
   // da altri subito dopo (il numero ridato da risolviNumeroDuplicato, il
@@ -4200,7 +4209,7 @@ async function creaOrdine({
   const { created_at: _orarioDelServer, ...scritto } = documento
   const daRiconoscere = {}
   for (const k of ['comande', 'comande_statuses', 'items', 'total', 'status', 'in_creazione']) daRiconoscere[k] = scritto[k]
-  return ordineDopo(newOrderRef.id, { ...scritto, created_at: null }, daRiconoscere)
+  return ordineDopo(newOrderRef.id, { ...scritto, created_at: nowIso }, daRiconoscere)
 }
 
 export async function fetchOrder(id) {

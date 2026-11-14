@@ -2,6 +2,12 @@
 
 ## 1.10.47-beta — in lavorazione
 
+### Correzioni
+
+- **In coda un conto appena nato ha subito il suo «da quanto», e sta al
+  suo posto.** Prima restava senza ora finché il server non rispondeva, e
+  compariva in cima per poi saltare in fondo (BUG-151, BUG-152).
+
 ## 1.10.46-beta — 14/11/2026 (test)
 
 ### Correzioni
