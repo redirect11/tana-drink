@@ -2,6 +2,13 @@
 
 ## 1.10.44-beta — in lavorazione
 
+### Correzioni
+
+- **L'iniziale accanto al drink appena battuto compare subito.** Prima
+  arrivava dopo un attimo e la riga cambiava aspetto; succedeva al primo
+  drink di un conto nuovo e alle aggiunte dopo che la comanda era già
+  partita (BUG-147).
+
 ## 1.10.43 — 13 novembre 2026 (produzione)
 
 In produzione la linea 1.10, dopo la 1.9.3: tutto quello che c'è nelle

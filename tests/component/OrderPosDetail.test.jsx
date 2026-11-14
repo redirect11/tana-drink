@@ -2786,4 +2786,81 @@ describe('l’iniziale di chi ha battuto ogni riga', () => {
       delete mockSettings.firma_righe
     }
   })
+
+  // BUG-147, Daniele 14/11/2026: con l'iniziale accesa la riga appena
+  // battuta compariva senza, e dopo un attimo «si ricaricava» col pallino,
+  // «come se chiedesse al server». Non chiedeva niente: la riga restava in
+  // bozza fino all'invio (300 ms dopo l'ultimo tocco, di più battendo di
+  // seguito) e la bozza non mostrava firma. La firma della bozza è di chi
+  // sta guardando, e si sa già: il segno si mostra al tocco, ed è lo stesso
+  // nodo, con la stessa lettera, prima e dopo l'invio.
+  // Passano dalla bozza il primo drink di un conto nuovo e le aggiunte a un
+  // conto la cui comanda è già partita (nasce una comanda nuova); quelle a
+  // una comanda ancora da fare ci entrano subito, firmate.
+  const ginInLista = () => [...document.querySelectorAll('.draft-line')].find((r) => r.textContent.includes('Gin Tonic'))
+  async function battiGinEGuarda(invio) {
+    const user = userEvent.setup()
+    await user.click(screen.getAllByText('Gin Tonic')[0])
+    // Al tocco: la riga c'è, nessun invio è partito, e ha già l'iniziale di
+    // chi la sta battendo.
+    expect(invio).not.toHaveBeenCalled()
+    const segno = ginInLista()?.querySelector('.riga-autore .order-by')
+    expect(segno, 'la riga in bozza è senza iniziale').toBeTruthy()
+    expect([segno.textContent, segno.title]).toEqual(['C', 'Aggiunto da Chi lavora'])
+    await waitFor(() => expect(invio).toHaveBeenCalled(), { timeout: 3000 })
+    // Dopo l'invio: la stessa iniziale, e sullo stesso elemento — la riga
+    // non cambia aspetto quando parte.
+    const dopo = ginInLista().querySelector('.riga-autore .order-by')
+    expect([dopo.textContent, dopo.title]).toEqual(['C', 'Aggiunto da Chi lavora'])
+    expect(dopo).toBe(segno)
+  }
+
+  it('il primo drink di un conto nuovo ha subito l’iniziale, prima dell’invio, e la tiene dopo', async () => {
+    // Il conto torna com'è nato, con le righe mandate (e la loro firma):
+    // è quello che fa createOrder, che compone senza rileggere.
+    createOrder.mockImplementationOnce(async ({ items }) => ({
+      id: 'ord-nuovo',
+      status: 'aperto',
+      comande: [
+        {
+          id: 'c1',
+          seq: 1,
+          status: 'ricevuto',
+          status_times: {},
+          items: items.map(({ price, ...i }) => ({ ...i, unit_price: price })),
+        },
+      ],
+      payments: [],
+    }))
+    render(
+      <MemoryRouter>
+        <OrderPosDetail order={null} />
+      </MemoryRouter>
+    )
+    await avvioDelConto()
+    await battiGinEGuarda(createOrder)
+  })
+
+  it('l’aggiunta a un conto con la comanda già partita ha subito l’iniziale, e la tiene dopo', async () => {
+    await mount(
+      baseOrder({
+        comande: [
+          { id: 'c1', seq: 1, status: 'ritirato', status_times: {}, items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }] },
+        ],
+      })
+    )
+    await battiGinEGuarda(addComanda)
+  })
+
+  it('con l’iniziale spenta, nemmeno la riga in bozza la mostra', async () => {
+    mockSettings.firma_righe = false
+    try {
+      const user = userEvent.setup()
+      await mount(baseOrder())
+      await user.click(screen.getAllByText('Gin Tonic')[0])
+      expect(autori()).toEqual([])
+    } finally {
+      delete mockSettings.firma_righe
+    }
+  })
 })
