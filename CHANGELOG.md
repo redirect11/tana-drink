@@ -1,6 +1,24 @@
 # Cosa è cambiato
 
-## 1.10.46-beta — in lavorazione
+## 1.10.47-beta — in lavorazione
+
+### Correzioni
+
+- **In coda un conto appena nato ha subito il suo «da quanto», e sta al
+  suo posto.** Prima restava senza ora finché il server non rispondeva, e
+  compariva in cima per poi saltare in fondo (BUG-151, BUG-152).
+
+### Per la Tana
+
+- **I disegni dei drink sono del tema «Carte».** La composizione del disegno
+  (bicchiere, colore, decorazione) e i disegni nel menù li ha solo chi ha
+  Carte nella licenza; Notte e Meraviglie da soli non li portano più. Per
+  la Tana non cambia niente (REQ-LIC-013).
+- **L'AI si accende anche in produzione**, appena dal backoffice della regia
+  la si attiva e le si dà credito: lettura dei documenti, descrizioni e
+  assistente (REQ-AI-003).
+
+## 1.10.46-beta — 14/11/2026 (test)
 
 ### Correzioni
 

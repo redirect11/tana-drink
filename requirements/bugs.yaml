@@ -6229,3 +6229,55 @@ bugs:
     test_cases:
       - tests/unit/giroInLocale.test.js
       - tests/component/OrderPosDetail.test.jsx
+
+  - id: BUG-151
+    title: "In coda la card di un conto appena nato resta senza «da quanto» finché il server non risponde"
+    area: "src/lib/api.js (mapOrder, creaOrdine), src/components/CorsieStato.jsx"
+    severity: bassa
+    priority: P2
+    description: >
+      Trovato dalla revisione di BUG-150, 14/11/2026, e messo in lavoro da
+      Daniele: la card in coda mostra da quanto il conto è aperto
+      (`daQuanto(o.created_at)`), e per un conto appena battuto restava
+      vuota finché il server non rispondeva.
+      LA CAUSA è una sola, con BUG-152: i conti si leggevano da Firestore senza
+      chiedere la stima degli orari del server, e `created_at` di un conto
+      appena scritto vale null finché la scrittura non arriva al server —
+      offline, per tutta la durata della rete staccata.
+      ORA mapOrder legge i conti con `serverTimestamps: 'estimate'`: l'ora
+      c'è subito, stimata con l'orologio di qui, e Firestore la sostituisce
+      con quella vera appena arriva. Il conto composto da createOrder porta
+      la stessa ora, così è uguale che arrivi dalla memoria o dalla cache.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, coda, local-first]
+    requisiti: [REQ-CODA-001]
+    test_cases:
+      - tests/unit/giroInLocale.test.js
+
+  - id: BUG-152
+    title: "Un conto appena nato compare per un attimo in cima alla coda e poi salta in fondo"
+    area: "src/lib/api.js (mapOrder, componi della coda)"
+    severity: bassa
+    priority: P2
+    description: >
+      Trovato dalla revisione di BUG-150, 14/11/2026, e messo in lavoro da
+      Daniele: la coda ordina i conti per `created_at`, e un conto appena
+      battuto, con l'ora ancora vuota, finiva prima di tutti; arrivata
+      l'ora del server saltava in fondo, dove sta un conto nuovo.
+      LA CAUSA è una sola, con BUG-151: i conti si leggevano da Firestore senza
+      chiedere la stima degli orari del server, e `created_at` di un conto
+      appena scritto vale null finché la scrittura non arriva al server —
+      offline, per tutta la durata della rete staccata.
+      ORA mapOrder legge i conti con `serverTimestamps: 'estimate'`: l'ora
+      c'è subito, stimata con l'orologio di qui, e Firestore la sostituisce
+      con quella vera appena arriva. Il conto composto da createOrder porta
+      la stessa ora, così è uguale che arrivi dalla memoria o dalla cache.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, coda, local-first]
+    requisiti: [REQ-CODA-001]
+    test_cases:
+      - tests/unit/giroInLocale.test.js

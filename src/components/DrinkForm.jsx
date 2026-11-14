@@ -27,7 +27,7 @@ export default function DrinkForm({
   // Sul profilo leggero (piano Free) Storage non c'è: la foto non si carica,
   // e il campo lo dice invece di fallire al salvataggio (REQ-LIC-004).
   fotoConsentite = true,
-  // I disegni dei drink sono del locale che ha «Notte» (REQ-LIC-013,
+  // I disegni dei drink sono del locale che ha «Carte» (REQ-LIC-013,
   // disegniDelLocale): agli altri la composizione non si offre, perché in
   // carta non comparirebbe. La foto invece si carica sempre.
   disegniConsentiti = false,
