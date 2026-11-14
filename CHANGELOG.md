@@ -2,6 +2,13 @@
 
 ## 1.10.49-beta — in lavorazione
 
+### Per la Tana
+
+- **«Area clienti» apre la pagina della regia**, in una scheda nuova: chi è
+  già entrato nella regia su quel dispositivo si ritrova nella sua area, gli
+  altri entrano lì come sempre. Il tasto c'è per gli admin, anche alla Tana
+  (REQ-FLOTTA-030).
+
 ## 1.10.48 — 14 novembre 2026 (produzione)
 
 Le correzioni provate sul test dalla 1.10.44-beta alla 1.10.48-beta.

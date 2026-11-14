@@ -42,18 +42,25 @@ lì il codice si scambia lo stesso (l'account esiste comunque).
 
 ## 2. «Area clienti»: dall'app alla regia
 
-Solo per il titolare: chi ha ruolo `admin` **e** l'email del titolare. Il
-tasto chiede alla regia, e la regia controlla l'email. Per non mostrare un
-tasto che fallisce, basta mostrarlo agli admin.
+**Dal 14/11/2026 è un collegamento** (Daniele: «non può portarlo
+semplicemente all'app dove lui poi deve fare il login, ma se lo ha già
+fatto si ritrova già nella sua area?»). L'app apre, in una scheda nuova,
+la pagina della regia **`/dashboard`**: chi su quel dispositivo è già
+entrato nella regia ci si ritrova, gli altri entrano lì come sempre e poi
+ci arrivano. Chi sia lo decide la regia, con il suo accesso: l'app non le
+manda nessun token.
 
-1. `const token = await auth.currentUser.getIdToken(true)`. La regia vuole un
-   token rinnovato da meno di 5 minuti;
-2. `POST https://europe-west1-<VITE_REGIA_PROGETTO>.cloudfunctions.net/passaggioVersoRegia`
-   con `Authorization: Bearer <token>`;
-3. con `200 { url }`: `window.location.href = url`. La regia apre l'area del
-   titolare già entrato;
-4. con `403` (non è il titolare, o il token è vecchio) o `404`: si dice in
-   una riga.
+- L'indirizzo è il sito della regia che la licenza nomina (`regia_url`, se
+  è https), altrimenti `https://<VITE_REGIA_PROGETTO>.web.app`, solo per i
+  due progetti della regia. La pagina è sempre `/dashboard`.
+- Il tasto si mostra agli admin del locale.
+- **Quello che la regia deve tenere fermo:** `/dashboard` come pagina
+  d'ingresso dell'area, che con un accesso già fatto mostra l'area e senza
+  porta all'accesso e poi lì.
+
+Prima il tasto chiamava `passaggioVersoRegia` col token rinnovato del
+titolare, e la regia lo lasciava passare solo con un account admin della
+stessa email, verificata. L'app non la chiama più.
 
 ## 3. I dati del titolare nelle impostazioni
 

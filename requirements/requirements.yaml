@@ -7912,8 +7912,9 @@ requirements:
       regia apre l'app con #accesso-regia=<codice>: l'app lo toglie subito
       dall'indirizzo, lo scambia con la regia (scambiaPassaggio) e entra
       con signInWithCustomToken. «Area clienti», per il titolare admin,
-      manda alla regia (passaggioVersoRegia) un ID token appena rinnovato
-      e apre l'url della risposta. La regia scrive a ogni deploy, solo
+      mandava alla regia (passaggioVersoRegia) un ID token appena rinnovato
+      e apriva l'url della risposta; dal 14/11/2026 è un collegamento (vedi
+      sotto). La regia scrive a ogni deploy, solo
       dove sono vuoti, i dati del titolare in settings/bar, compresi
       quattro campi nuovi da mostrare e usare: venue_phone,
       venue_vat_number, venue_tax_code, venue_legal_address. Il banco
@@ -7935,7 +7936,18 @@ requirements:
       monta due volte, e il secondo scambio troverebbe il codice speso),
       lo scambia, entra con signInWithCustomToken e va in /bar; se non
       riesce, va in /bar col login normale e la riga che dice perché.
-      Nessun nuovo tentativo: il codice è già speso. Solo verso i progetti
+      Nessun nuovo tentativo: il codice è già speso.
+      «AREA CLIENTI» È UN COLLEGAMENTO (14/11/2026). Daniele: «non può
+      portarlo semplicemente all'app dove lui poi deve fare il login, ma se
+      lo ha già fatto si ritrova già nella sua area? Perché tutta questa
+      complicazione?». Il tasto apre in una scheda nuova la pagina della
+      regia `/dashboard` (indirizzoAreaClienti): chi è già entrato nella
+      regia su quel dispositivo ci si ritrova, gli altri entrano lì. Niente
+      token mandati da qui, niente controllo dell'email del titolare
+      nell'app. L'indirizzo: il sito di `regia_url` se la licenza lo dice
+      (https), se no il progetto della regia nella build; il tasto si vede
+      agli admin anche senza `regia_url`, quindi alla Tana, la cui licenza
+      non lo dice. La parte che segue sul tasto vale per com'era prima. Solo verso i progetti
       della regia (urlFunzioneRegia), solo codici di lettere, cifre, «-» e
       «_». «AREA CLIENTI» sta nel menù laterale, per l'admin, quando la
       build conosce la regia e la licenza dice dov'è (`regia_url`), come
