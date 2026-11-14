@@ -1,6 +1,14 @@
 # Cosa è cambiato
 
-## 1.10.45-beta — in lavorazione
+## 1.10.46-beta — in lavorazione
+
+### Correzioni
+
+- **Al primo drink di un conto nuovo la barra in alto non si muove più.**
+  Il conto, chi l'ha aperto e l'ora compaiono insieme alla riga, invece
+  di arrivare uno dopo l'altro spostando la pagina (BUG-150).
+
+## 1.10.45-beta — 14/11/2026 (test)
 
 ### Correzioni
 

@@ -2627,6 +2627,36 @@ describe('lo stato della lavorazione sta nella barra in alto', () => {
   })
 })
 
+// L'ORA DI APERTURA PRIMA CHE ARRIVI QUELLA DEL SERVER (BUG-150). Il conto
+// appena nato non ha ancora `created_at` (l'orario del server): la barra
+// mostra intanto l'ora di qui, scritta alla nascita, invece di aspettare
+// mezzo secondo e spostarsi quando arriva.
+describe('l’ora di apertura nella barra', () => {
+  // Schermo largo: sul telefono, con lo stato del lavoro a bordo, l'ora è
+  // la prima cosa che cede (e il blocco «sul telefono» lo lascia stretto).
+  beforeEach(() => {
+    window.matchMedia = (query) => ({
+      matches: false,
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    })
+  })
+  const ora = (iso) => new Date(iso).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+
+  it('senza l’ora del server c’è quella di qui, e la barra non aspetta', async () => {
+    await mount(baseOrder({ created_at: null, tempi_conto: { aperto: '2026-11-14T20:15:00.000Z' } }))
+    expect(document.querySelector('.posd-aperto')?.textContent).toContain(ora('2026-11-14T20:15:00.000Z'))
+  })
+
+  it('quando arriva, vale quella del server', async () => {
+    await mount(
+      baseOrder({ created_at: '2026-11-14T20:15:03.000Z', tempi_conto: { aperto: '2026-11-14T19:00:00.000Z' } })
+    )
+    expect(document.querySelector('.posd-aperto').textContent).toContain(ora('2026-11-14T20:15:03.000Z'))
+  })
+})
+
 // ── LE FASCE CHE POSSONO CEDERE (BUG-077) ────────────────────────────
 //
 // Con lo zoom alto l'altezza disponibile cala di un terzo, le misure fisse

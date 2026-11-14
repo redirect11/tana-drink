@@ -6195,3 +6195,37 @@ bugs:
     test_cases:
       - tests/unit/novita.test.js
       - tests/component/AppHeader.test.jsx
+
+  - id: BUG-150
+    title: "Al primo drink di un conto nuovo la barra in alto si riempie ancora dopo la riga, e l'ora di apertura arriva mezzo secondo dopo"
+    area: "src/lib/api.js (creaOrdine), src/components/OrderPosDetail.jsx (barra in alto)"
+    severity: media
+    priority: P1
+    description: >
+      Daniele, 14/11/2026, sul test con la 1.10.45-beta: «il primo item
+      inserito continua ad aggiornarsi». Misurato nel browser vero, con gli
+      emulatori: la riga compariva a ~90 ms dal tocco, la barra in alto si
+      riempiva a ~230 ms («Conto aperto», chi l'ha aperto, l'id) e l'ora di
+      apertura arrivava a ~640 ms. Ogni volta la barra cambiava e la pagina
+      si spostava sotto il dito. Due cause, tutte e due contro il
+      local-first:
+      1. createOrder, dopo aver scritto il conto, lo RILEGGEVA con un
+         `await getDoc`: risolve anche offline, ma passa dalla cache su disco.
+         Era la regola «non si rilegge quello che si è appena scritto: si
+         compone», sfuggita alla guardia di giroInLocale perché la rilettura
+         non usava `leggiOrdine`.
+      2. La barra mostrava l'ora di apertura solo da `created_at`, che è
+         l'orario del server e resta null finché la scrittura non arriva.
+      ORA createOrder compone il conto da quello che ha scritto (ordineDopo,
+      che lo ricorda anche per la mutazione dopo), e la barra usa l'ora di
+      qui (`status_times.aperto`, scritta alla nascita apposta) finché non
+      arriva quella del server. Nel browser: riga, barra e ora entro ~120 ms
+      dal tocco, poi più niente.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, pos, local-first]
+    requisiti: [REQ-POS-001]
+    test_cases:
+      - tests/unit/giroInLocale.test.js
+      - tests/component/OrderPosDetail.test.jsx

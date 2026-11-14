@@ -4137,7 +4137,7 @@ async function creaOrdine({
   // Anche l'ordine è local-first: la scrittura entra subito in cache (la
   // sottoscrizione lo mostra all'istante, online e offline), il server la
   // riceve appena c'è rete. Niente await: offline non si sbloccherebbe.
-  setDoc(newOrderRef, {
+  const documento = {
     daily_number: dailyNumber, // progressivo della SESSIONE DI CASSA (o del giorno se la cassa è chiusa)
     serial, // progressivo assoluto di sistema (non riparte mai)
     order_date: orderDate, // giornata commerciale (YYYY-MM-DD)
@@ -4181,14 +4181,26 @@ async function creaOrdine({
     // Aggregato di tutte le comande (qui solo la prima): usato per totale,
     // scontrino e compatibilità con le viste esistenti.
     items: mappedItems,
-  }).catch(() => {})
+  }
+  setDoc(newOrderRef, documento).catch(() => {})
 
-  // getDoc legge la scrittura locale appena applicata (risolve anche offline):
-  // niente attesa del server.
-  const snap = await getDoc(newOrderRef)
-  const order = mapOrder(snap)
-
-  return order
+  // NON SI RILEGGE: SI COMPONE. Qui c'era un `await getDoc` sulla scrittura
+  // appena partita: risolve anche offline, ma passa dalla cache su disco e
+  // al banco costava più di 100 ms fra il primo drink e il conto a schermo
+  // — la barra in alto si riempiva dopo la riga, e la pagina si spostava
+  // (BUG-150). Il conto è quello che abbiamo appena scritto, e lo si
+  // ricorda per la mutazione dopo, come fa `ordineDopo` per tutte le
+  // altre. `created_at` è l'orario del server e qui non lo sa nessuno: vale
+  // null, come nella cache finché la scrittura non arriva.
+  // Per riconoscere che la cache è arrivata si confrontano solo i campi che
+  // le mutazioni dopo ricompongono: col documento intero un campo cambiato
+  // da altri subito dopo (il numero ridato da risolviNumeroDuplicato, il
+  // nome messo da un altro terminale) terrebbe in vita il ricordo, e il POS
+  // mostrerebbe il numero vecchio finché si batte di seguito.
+  const { created_at: _orarioDelServer, ...scritto } = documento
+  const daRiconoscere = {}
+  for (const k of ['comande', 'comande_statuses', 'items', 'total', 'status', 'in_creazione']) daRiconoscere[k] = scritto[k]
+  return ordineDopo(newOrderRef.id, { ...scritto, created_at: null }, daRiconoscere)
 }
 
 export async function fetchOrder(id) {
