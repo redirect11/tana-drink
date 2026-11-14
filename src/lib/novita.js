@@ -62,6 +62,33 @@ export function cosaFareAllAvvio({ build, vista }) {
   return 'box'
 }
 
+// LE NOTE SI RIPROVANO PRIMA DI ARRENDERSI (BUG-149). Il 14/11/2026, al
+// primo avvio della 1.10.43 in produzione, il box ha detto «non sono
+// arrivate» con il file al suo posto: quel rilascio portava anche un service
+// worker nuovo, che al primo avvio prende il posto del vecchio, e la
+// richiesta delle note — la prima che l'app fa, appena si apre — è caduta
+// nel cambio. Una richiesta sola non basta: si riprova dopo un secondo e
+// poi dopo tre, e solo allora si dice che non ci sono. Un file senza
+// nessuna versione (`## `) conta come non arrivato — vuoto, o la pagina
+// dell'app che l'hosting dà per un file che non c'è: con niente da mostrare
+// il box resterebbe a caricare per sempre.
+export const ATTESE_NOTE = [1000, 3000]
+const dorme = (ms) => new Promise((r) => setTimeout(r, ms))
+export async function caricaChangelog({ base = '/', attese = ATTESE_NOTE, aspetta = dorme } = {}) {
+  for (let tentativo = 0; ; tentativo++) {
+    try {
+      const r = await fetch(`${base}changelog.md`, { cache: 'no-store' })
+      if (!r.ok) throw new Error(`HTTP ${r.status}`)
+      const testo = await r.text()
+      if (!/^## /m.test(testo)) throw new Error('Note senza versioni')
+      return testo
+    } catch (e) {
+      if (tentativo >= attese.length) throw e
+      await aspetta(attese[tentativo])
+    }
+  }
+}
+
 // Il pezzo di changelog di UNA versione. Il file è in Markdown e le versioni
 // sono titoli `## 1.4.0 — data`: si prende dal titolo che corrisponde fino al
 // titolo dopo. Senza corrispondenza si torna la prima sezione, che è la più

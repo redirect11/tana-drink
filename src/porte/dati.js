@@ -22,8 +22,12 @@
 //   Un riferimento ha `id`.
 //
 // Letture
-//   getDoc(ref) → { id, ref, exists(), data() }; data() è undefined se il
-//     documento non c'è
+//   getDoc(ref) → { id, ref, exists(), data(opzioni) }; data() è undefined
+//     se il documento non c'è. data({ serverTimestamps: 'estimate' }) dà
+//     l'ora del server ancora da confermare STIMATA con l'orologio di qui,
+//     invece di null: la usano i conti (mapOrder, BUG-151/152), e un
+//     adattatore che la ignorasse rimetterebbe senza ora i conti appena
+//     battuti
 //   getDocs(ricerca) → { docs, empty, size, forEach }
 //   getDocFromCache / getDocsFromCache: lo stesso, solo da quello che il
 //     dispositivo ha già; se non ce l'ha, la promessa fallisce
@@ -55,7 +59,7 @@
 //
 // Valori speciali, dentro i dati di una scrittura
 //   serverTimestamp() — l'ora del server; prima della conferma vale null
-//   nelle letture ·
+//   nelle letture, o la stima di qui se la si chiede (vedi data(opzioni)) ·
 //   increment(n) · arrayUnion(...valori) · deleteField()
 //
 // Date

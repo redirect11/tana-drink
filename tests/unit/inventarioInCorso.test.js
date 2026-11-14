@@ -14,7 +14,7 @@
 // il conteggio e la chiusura (BUG-112).
 
 import { describe, it, expect } from 'vitest'
-import { righeInventario } from '../../src/lib/inventarioInCorso.js'
+import { righeInventario, raggruppaMovimenti, conProdottiNuovi } from '../../src/lib/inventarioInCorso.js'
 
 // Una bottiglia da 1 litro contata a pezzi, 13,80 € + IVA 22%.
 const JAGER = {
@@ -207,5 +207,68 @@ describe('i totali e il consumo a settimana', () => {
     expect(giorni).toBeCloseTo(14, 3)
     expect(lines[0].cons).toBe(1500)
     expect(lines[0].cons_week).toBeCloseTo(750, 3)
+  })
+})
+
+// I PRODOTTI NATI DOPO L'APERTURA (BUG-153). Flavio, 13/11/2026: «mi
+// appaiono solo i prodotti che c'erano anche nell'inventario precedente»:
+// le righe erano la fotografia del 05/10, e 13 prodotti creati dopo (le
+// toniche Galvanina fra questi) non si potevano contare. Come li vuole
+// Flavio (14/11): DEP zero, e acquisto tutto quello che il prodotto ha
+// avuto — i carichi, e la giacenza di adesso meno quello che si è mosso.
+describe('i prodotti nati dopo l’apertura dell’inventario', () => {
+  const GALVANINA = { id: 'galv', name: 'Galvanina Pompelmo 20cl', unit: 'pz', package_size: 1, cost: 0.9, vat: 22, stock: 17 }
+  const vecchia = riga()
+
+  it('entrano in fondo, e quelli che c’erano restano com’erano', () => {
+    const righe = conProdottiNuovi([vecchia], { items: [JAGER, GALVANINA] })
+    expect(righe.map((r) => r.item_id)).toEqual([vecchia.item_id, 'galv'])
+    expect(righe[0]).toBe(vecchia)
+  })
+
+  it('comprati dopo: partono da zero e il carico è acquisto, così il consumo torna', () => {
+    const movimenti = [
+      { item_id: 'galv', type: 'load', qty: 24, unit: 'pz', reason: 'ordine fornitore', created_at: '2026-10-21T12:00:00Z' },
+      { item_id: 'galv', type: 'unload', qty: 7, unit: 'pz', reason: 'ordine', created_at: '2026-10-25T22:00:00Z' },
+    ]
+    const raggruppati = raggruppaMovimenti(movimenti, [GALVANINA])
+    const righe = conProdottiNuovi([], { items: [GALVANINA], raggruppati })
+    expect(righe[0].dep).toBe(0)
+    const [r] = righeInventario(righe, { raggruppati, items: [GALVANINA] }).lines
+    expect([r.dep, r.acq, r.cons, r.rim_adesso]).toEqual([0, 24, 7, 17])
+  })
+
+  // Flavio, 14/11/2026: «deposito è zero, acquisto è l'acquisto che ho
+  // fatto». Anche quando la giacenza è stata scritta nella scheda alla
+  // nascita, senza un carico: è merce comprata.
+  it('creati con la giacenza scritta nella scheda, senza un carico: DEP 0, e quella è acquisto', () => {
+    const TISANA = { id: 'tisana', name: 'Tisana Generica', unit: 'pz', stock: 197 }
+    const [r] = righeInventario(conProdottiNuovi([], { items: [TISANA] }), { items: [TISANA] }).lines
+    // Senza contarla come acquisto il consumo sarebbe -197: un numero sbagliato.
+    expect([r.dep, r.acq, r.cons]).toEqual([0, 197, 0])
+  })
+
+  it('l’acquisto alla nascita non va sotto zero: quello che non torna resta nel consumo', () => {
+    const TONICA = { id: 'tonica', name: 'Galvanina Tonica Classica 20cl', unit: 'pz', stock: -21 }
+    // -21 adesso, e solo 10 venduti: i conti darebbero -11 alla nascita.
+    const raggruppati = raggruppaMovimenti([{ item_id: 'tonica', type: 'unload', qty: 10, unit: 'pz', reason: 'ordine' }], [TONICA])
+    const righe = conProdottiNuovi([], { items: [TONICA], raggruppati })
+    expect([righe[0].dep, righe[0].acq_alla_nascita]).toEqual([0, 0])
+    const [r] = righeInventario(righe, { raggruppati, items: [TONICA] }).lines
+    expect([r.dep, r.acq, r.cons]).toEqual([0, 0, 21])
+  })
+
+  it('il numero già contato e salvato torna sulla sua riga', () => {
+    const [r] = conProdottiNuovi([], {
+      items: [GALVANINA],
+      rimanenze: { galv: 15 },
+      ore: { galv: '2026-11-13T20:00:00Z' },
+    })
+    expect([r.rim, r.rim_at]).toEqual([15, '2026-11-13T20:00:00Z'])
+  })
+
+  it('senza prodotti nuovi le righe restano le stesse', () => {
+    const righe = [vecchia]
+    expect(conProdottiNuovi(righe, { items: [JAGER] })).toBe(righe)
   })
 })

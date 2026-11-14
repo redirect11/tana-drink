@@ -385,6 +385,26 @@ describe('le novità dopo un aggiornamento', () => {
     expect(notifiche[0].letta).toBe(true)
   })
 
+  // BUG-149: la prima richiesta delle note può cadere al primo avvio di una
+  // versione (il service worker nuovo prende il posto del vecchio). Il box
+  // mostra il caricamento e riprova; le note arrivano lo stesso.
+  it('la prima richiesta delle note cade: il box mostra il caricamento e le note arrivano', async () => {
+    // Cade la prima richiesta DELLE NOTE, non la prima dell'app: all'avvio
+    // partono anche altre letture.
+    let richiesteNote = 0
+    global.fetch = vi.fn((url) => {
+      if (String(url).includes('changelog.md') && ++richiesteNote === 1) return Promise.reject(new TypeError('Failed to fetch'))
+      return Promise.resolve({ ok: true, text: () => Promise.resolve(CHANGELOG) })
+    })
+    localStorage.setItem('drink:novita:vista', 'build-vecchia')
+    apri('/menu')
+    const box = await screen.findByRole('dialog', { name: 'Novità di questa versione' })
+    expect(within(box).getByRole('status')).toHaveTextContent('Carico le note…')
+    expect(await within(box).findByText(/La cosa nuova/, {}, { timeout: 3000 })).toBeInTheDocument()
+    expect(within(box).queryByText(/non sono arrivate/)).toBeNull()
+    expect(richiesteNote).toBe(2)
+  })
+
   it('prima apertura su un dispositivo nuovo: nessun box, nessuna notifica', async () => {
     apri('/menu')
     await screen.findByText('PAGINA MENU')

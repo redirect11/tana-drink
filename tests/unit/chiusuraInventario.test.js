@@ -146,7 +146,18 @@ beforeEach(() => {
     jager: articolo('Jagermeister', 3.2),
     lete: articolo('Acqua Lete', 66),
   }
-  stato.conta = { status: 'open', started_at: '2026-09-21T18:03:40.000Z', lines: [] }
+  // L'inventario salvato ha le sue righe, con il DEP dell'apertura e senza
+  // numeri: i numeri contati arrivano dalla schermata (BUG-153: la chiusura
+  // compone le righe da qui, non da quelle che le passa la schermata).
+  stato.conta = {
+    status: 'open',
+    started_at: '2026-09-21T18:03:40.000Z',
+    lines: [
+      riga('gin', '400 Conigli Gin', -0.1, null),
+      riga('jager', 'Jagermeister', 3.2, null),
+      riga('lete', 'Acqua Lete', 66, null),
+    ],
+  }
   stato.movimenti = []
   stato.scritture = []
   stato.pacchetti = []
@@ -295,5 +306,79 @@ describe('le rimanenze mentre si conta', () => {
     const aperta = await api.getOpenStockCount()
     expect(aperta.lines.map((l) => l.rim)).toEqual([0.9, null])
     expect(aperta.lines[0].rim_at).toBe('2026-09-23T16:00:00.000Z')
+  })
+})
+
+// BUG-153: il numero contato di un prodotto nato dopo l'apertura si salva
+// nell'inventario (rimanenze.<id>), ma quel prodotto non ha una riga. La
+// lettura dell'inventario aperto deve restituirlo lo stesso, se no
+// riaprendo la pagina il numero sparisce.
+describe('l’inventario aperto, riletto', () => {
+  it('porta anche i numeri contati dei prodotti che non hanno una riga', async () => {
+    const { getOpenStockCount } = await import('../../src/lib/api.js')
+    stato.conta = {
+      status: 'open',
+      started_at: '2026-10-05T18:38:25.850Z',
+      lines: [{ item_id: 'jager', name: 'Jagermeister', unit: 'pz', dep: 3, rim: null }],
+      rimanenze: { jager: 2, galv: 15 },
+      rimanenze_ora: { jager: '2026-11-13T20:00:00Z', galv: '2026-11-13T20:05:00Z' },
+    }
+    const conta = await getOpenStockCount()
+    expect(conta.lines[0]).toMatchObject({ item_id: 'jager', rim: 2 })
+    expect(conta.rimanenze).toMatchObject({ galv: 15 })
+    expect(conta.rimanenze_ora).toMatchObject({ galv: '2026-11-13T20:05:00Z' })
+  })
+})
+
+// BUG-153, dalla revisione: la chiusura di un inventario con un prodotto
+// nato dopo l'apertura. La riga la compone la chiusura coi movimenti appena
+// letti, anche se dalla schermata ne arriva una con numeri sbagliati (una
+// lettura dei movimenti non riuscita là): nell'inventario chiuso il consumo
+// resterebbe sbagliato per sempre.
+describe('la chiusura con un prodotto nato dopo l’apertura', () => {
+  it('lo conta, con i conti rifatti dai movimenti, e il prossimo lo porta già', async () => {
+    stato.articoli.galv = { name: 'Galvanina Pompelmo 20cl', unit: 'pz', stock: 17 }
+    stato.movimenti = [
+      { item_id: 'galv', type: 'load', qty: 24, unit: 'pz', reason: 'ordine fornitore', created_at: '2026-10-21T12:00:00.000Z' },
+      { item_id: 'galv', type: 'unload', qty: 7, unit: 'pz', reason: 'ordine', created_at: '2026-10-25T22:00:00.000Z' },
+    ]
+    const dallaSchermata = [
+      { ...riga('jager', 'Jagermeister', 3.2, 0.9) },
+      // DEP 17 come se la schermata non avesse letto i movimenti.
+      { item_id: 'galv', name: 'Galvanina Pompelmo 20cl', unit: 'pz', dep: 17, rim: 15, rim_at: null },
+    ]
+    const { lines, prossimo } = await subito(api.closeStockCount('inv-1', { lines: dallaSchermata, riapri: true }))
+    const galv = lines.find((l) => l.item_id === 'galv')
+    // DEP 0, ACQ 24, contati 15: consumati 9 (non 26).
+    expect([galv.dep, galv.acq, galv.rim, galv.cons, galv.diff]).toEqual([0, 24, 15, 9, -2])
+    await giro()
+    const [p] = stato.pacchetti
+    const incremento = p.scritture.find((s) => s.col === 'inventory_items' && s.id === 'galv')
+    expect(incremento.patch.stock.incremento).toBe(-2)
+    expect(p.scritture.filter((s) => s.col === 'stock_movements' && s.data.item_id === 'galv')).toHaveLength(1)
+    const chiusa = p.scritture.find((s) => s.col === 'stock_counts' && s.id === 'inv-1')
+    expect(chiusa.patch.lines.map((l) => l.item_id)).toContain('galv')
+    // Il prossimo inventario lo ha già, e parte dal contato.
+    expect(prossimo.lines.find((l) => l.item_id === 'galv').dep).toBe(15)
+  })
+})
+
+// Il caso in cui il dato resta per sempre: un prodotto creato con la
+// giacenza scritta nella scheda (5) E poi caricato (24), con 7 venduti.
+// Flavio, 14/11: «deposito è zero, acquisto è l'acquisto che ho fatto».
+describe('la chiusura con un prodotto nato con la giacenza scritta e poi caricato', () => {
+  it('salva DEP 0 e in ACQ anche la giacenza della nascita', async () => {
+    stato.articoli.boem = { name: 'Boem Pompelmo Alcolico', unit: 'pz', stock: 22 }
+    stato.movimenti = [
+      { item_id: 'boem', type: 'load', qty: 24, unit: 'pz', reason: 'ordine fornitore', created_at: '2026-10-21T12:00:00.000Z' },
+      { item_id: 'boem', type: 'unload', qty: 7, unit: 'pz', reason: 'ordine', created_at: '2026-10-25T22:00:00.000Z' },
+    ]
+    const dallaSchermata = [{ item_id: 'boem', name: 'Boem Pompelmo Alcolico', unit: 'pz', rim: 20, rim_at: null }]
+    await subito(api.closeStockCount('inv-1', { lines: dallaSchermata }))
+    await giro()
+    const chiusa = stato.pacchetti[0].scritture.find((s) => s.col === 'stock_counts' && s.id === 'inv-1')
+    const boem = chiusa.patch.lines.find((l) => l.item_id === 'boem')
+    // 5 alla nascita + 24 caricati = 29 acquistati; 20 contati: 9 consumati.
+    expect([boem.dep, boem.acq, boem.rim, boem.cons, boem.diff]).toEqual([0, 29, 20, 9, -2])
   })
 })

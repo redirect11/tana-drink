@@ -12,7 +12,7 @@ import {
 } from '../lib/api.js'
 import { assortimentoDi } from '../lib/inventory.js'
 import { riassuntoAssortimento, toggleVoce } from '../lib/assortimento.js'
-import { raggruppaMovimenti, righeInventario } from '../lib/inventarioInCorso.js'
+import { raggruppaMovimenti, righeInventario, conProdottiNuovi } from '../lib/inventarioInCorso.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { dataBreve as dataScritta } from '../lib/ore.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
@@ -135,12 +135,27 @@ export default function StockCountPanel() {
 
   // Il passo pesante, fuori dalla battitura: cambia solo coi dati.
   const raggruppati = useMemo(() => raggruppaMovimenti(movimenti, items), [movimenti, items])
+  // LE RIGHE DI QUESTO INVENTARIO: quelle dell'apertura più i prodotti nati
+  // dopo (BUG-153), che altrimenti non si potevano contare. Tutto quello che
+  // segue — numeri, filtri, chiusura — parte da qui, non da `open.lines`.
+  const righeConta = useMemo(
+    () =>
+      open
+        ? conProdottiNuovi(open.lines, {
+            items,
+            raggruppati,
+            rimanenze: open.rimanenze,
+            ore: open.rimanenze_ora,
+          })
+        : [],
+    [open, items, raggruppati]
+  )
   const computed = useMemo(() => {
     if (!open) return null
     // La conta è APERTA: il suo periodo finisce adesso e si allunga mentre
     // la si compila.
-    return righeInventario(conRimanenze(open.lines, modifiche), { raggruppati, items, dal: open.started_at })
-  }, [open, modifiche, raggruppati, items])
+    return righeInventario(conRimanenze(righeConta, modifiche), { raggruppati, items, dal: open.started_at })
+  }, [open, righeConta, modifiche, raggruppati, items])
   const rigaDi = useMemo(() => new Map((computed?.lines || []).map((l) => [l.item_id, l])), [computed])
 
   // ── LE CATEGORIE ────────────────────────────────────────────────────
@@ -155,17 +170,17 @@ export default function StockCountPanel() {
   // I prodotti di QUESTO inventario: per filtrare le righe e per i numeri
   // accanto alle voci del filtro.
   const articoliDellInventario = useMemo(() => {
-    const inConta = new Set((open?.lines || []).map((l) => l.item_id))
+    const inConta = new Set(righeConta.map((l) => l.item_id))
     return items.filter((i) => inConta.has(i.id))
-  }, [open, items])
+  }, [righeConta, items])
   const { voci, gruppi } = useMemo(() => {
     if (!open) return { voci: [], gruppi: [] }
     const scelti = new Set(
       articoliDellInventario.filter((i) => assortimenti.includes(assortimentoDi(i))).map((i) => i.id)
     )
-    const righe = assortimenti.length ? open.lines.filter((l) => scelti.has(l.item_id)) : open.lines
+    const righe = assortimenti.length ? righeConta.filter((l) => scelti.has(l.item_id)) : righeConta
     return perScaffale(righe, items, categorie)
-  }, [open, items, categorie, assortimenti, articoliDellInventario])
+  }, [open, righeConta, items, categorie, assortimenti, articoliDellInventario])
 
   async function start() {
     setBusy(true)
@@ -219,7 +234,7 @@ export default function StockCountPanel() {
       // Le differenze le calcola la chiusura, coi dati di quel momento
       // (vedi closeStockCount): da qui passa solo quello che si è scritto.
       const chiusa = await closeStockCount(open.id, {
-        lines: conRimanenze(open.lines, modifiche),
+        lines: conRimanenze(righeConta, modifiche),
         riapri: riapreDaSola,
       })
       // L'esito si compone, non si rilegge: la chiusura è partita in
@@ -259,7 +274,7 @@ export default function StockCountPanel() {
             titolo={`Inventario in corso dal ${dataBreve(open.started_at)}`}
             giorni={computed.giorni}
             contati={computed.totals.counted}
-            totale={open.lines.length}
+            totale={righeConta.length}
             totals={computed.totals}
           >
             RIM: giacenza registrata. Nella casella si inserisce la rimanenza rilevata, oppure si conferma la
@@ -328,7 +343,7 @@ export default function StockCountPanel() {
         <ConfirmDialog
           icona="fatto"
           title="Chiudere l’inventario?"
-          message={`Prodotti contati: ${computed.totals.counted}/${open.lines.length}.\nLe giacenze dei prodotti contati diventano il numero contato (differenza: ${formatPrice(computed.totals.diff_value)}).\nConsumo del periodo: ${formatPrice(computed.totals.cons_value)}.${riapreDaSola ? '\nNe parte subito uno nuovo, da oggi.' : ''}`}
+          message={`Prodotti contati: ${computed.totals.counted}/${righeConta.length}.\nLe giacenze dei prodotti contati diventano il numero contato (differenza: ${formatPrice(computed.totals.diff_value)}).\nConsumo del periodo: ${formatPrice(computed.totals.cons_value)}.${riapreDaSola ? '\nNe parte subito uno nuovo, da oggi.' : ''}`}
           confirmLabel="Chiudi l’inventario"
           onCancel={() => setConfirmClose(false)}
           onConfirm={doClose}

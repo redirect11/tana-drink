@@ -41,15 +41,12 @@ export const STILI_MENU = [
     id: 'notte',
     nome: 'Notte',
     inLicenza: true,
-    // Porta con sé i disegni dei drink (disegniDelLocale).
-    disegni: true,
     desc: 'Carta a righe, senza riquadri, con titoli sottili; gli Special scorrono a tutto schermo, uno per volta.',
   },
   {
     id: 'meraviglie',
     nome: 'Meraviglie',
     inLicenza: true,
-    disegni: true,
     // Veste tutte le pagine dei clienti, non solo il menù, e ha le sue
     // frasi (testiStile.js).
     pagine: true,
@@ -62,6 +59,8 @@ export const STILI_MENU = [
     id: 'carte',
     nome: 'Carte',
     inLicenza: true,
+    // Porta con sé i disegni dei drink (disegniDelLocale, REQ-LIC-013).
+    disegni: true,
     desc: 'Il menù come un mazzo di carte francesi: ogni sezione è una carta col seme del suo gruppo, e la carta scelta si alza e si apre. Gli Special restano nel carosello in cima.',
   },
   {
@@ -140,16 +139,18 @@ export const stiliDisponibili = (settings) => [
   ...stiliRicettaDelLocale(settings).map(comeStile),
 ]
 
-// I DISEGNI DEI DRINK SONO DEL LOCALE CHE HA «NOTTE» (REQ-LIC-013). Le
+// I DISEGNI DEI DRINK SONO DEL LOCALE CHE HA «CARTE» (REQ-LIC-013). Le
 // illustrazioni di Alice e i disegni composti (illustrazioneDrink.js) sono
-// nati con lo stile esclusivo della Tana. L'utente, 04/11/2026: «le
-// immagini dei drink che abbiamo fatto sono solo per lo stile Notte che
-// abbiamo fatto in esclusiva per la Tana», e poi «quelli stilizzati per
-// Notte sono della Tana, ma può riutilizzarli Flavio se cambia stile».
-// Quindi vanno col LOCALE, non con lo stile in uso: chi ha Notte nella
-// licenza li vede in ogni stile; gli altri locali in nessuno, e al loro
-// posto c'è il segnaposto (speciali.js). Le foto sono un'altra cosa: le
-// carica chiunque e si vedono in ogni stile.
+// nati per lo stile esclusivo della Tana. Il 04/11/2026 quello stile era
+// «Notte»; il 14/11/2026 l'utente: «dovrebbe valere solo per il tema delle
+// carte. È una cosa che fa il tema. Per chi non ha quel tema non deve avere
+// la possibilità di fare i bicchieri come può farli Flavio». Oggi lo stile
+// della Tana è «Carte», e i disegni sono suoi, non di Notte né Meraviglie.
+// Restano col LOCALE, non con lo stile in uso («può riutilizzarli Flavio se
+// cambia stile», 04/11): chi ha Carte nella licenza li vede in ogni stile;
+// gli altri locali in nessuno, e al loro posto c'è il segnaposto
+// (speciali.js). Le foto sono un'altra cosa: le carica chiunque e si vedono
+// in ogni stile.
 export const disegniDelLocale = (settings) => STILI_MENU.some((s) => s.disegni && haStile(settings, s))
 
 export function stileMenu(settings) {

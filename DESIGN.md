@@ -177,7 +177,7 @@ prima di sceglierli. Ogni stile dichiara tre caratteri (`--stile-titolo`,
 
 **Le immagini dei drink, in ogni stile.** La foto caricata dal titolare si
 vede in tutti gli stili, ed è di tutti. I disegni dei drink (illustrazioni
-di Alice e disegni composti) sono del locale che ha «Notte» nella licenza
+di Alice e disegni composti) sono del locale che ha «Carte» nella licenza
 (REQ-LIC-013): lui li vede in qualunque stile, gli altri in nessuno. Dove
 non c'è né foto né disegno c'è il segnaposto, un bicchiere al tratto
 neutro e attenuato (`segnapostoDrink`), in ogni stile: nelle card del menù

@@ -6100,3 +6100,228 @@ bugs:
     requisiti: [REQ-UI-005]
     test_cases:
       - tests/unit/css.test.js
+
+  - id: BUG-147
+    title: "Con l'iniziale accesa, la riga appena battuta compare senza e dopo un attimo cambia aspetto col pallino"
+    area: "src/components/OrderPosDetail.jsx (righe del conto), src/lib/comande.js (firmaDi)"
+    severity: media
+    priority: P1
+    description: >
+      Daniele, 14/11/2026, in produzione con la 1.10.43: con «Chi ha caricato
+      la riga» accesa, l'iniziale accanto al drink appena battuto arrivava
+      in ritardo, «come se chiedesse al server», e la riga «si ricaricava»
+      passando da normale a quella col pallino; anche il primo drink di un
+      conto nuovo. Le impostazioni non c'entravano (sono già ricordate sul
+      dispositivo, settingsIniziali): la riga resta IN BOZZA finché la bozza
+      non parte — 300 ms dopo l'ultimo tocco, di più battendo di seguito —
+      e il conto mostrava l'iniziale solo sulle righe già mandate, perché
+      la firma (`added_by`) si mette all'invio. Succedeva al primo drink di
+      un conto nuovo e alle aggiunte a un conto con la comanda già partita;
+      non a quelle che entrano dritte in una comanda ancora da fare, che
+      sono firmate subito.
+      ORA la riga in bozza mostra subito l'iniziale di chi la sta battendo,
+      cioè chi la firmerà all'invio, con la stessa firma (firmaDi): la
+      lettera e il colore sono gli stessi prima e dopo l'invio, e la riga
+      non cambia aspetto quando parte. Con l'iniziale spenta la bozza non la
+      mostra, come le altre righe.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, ordini, pos, local-first]
+    requisiti: [REQ-ORD-023]
+    test_cases:
+      - tests/component/OrderPosDetail.test.jsx
+
+  - id: BUG-148
+    title: "Al primo drink di un conto nuovo la barra in alto si riempie un attimo dopo, e sembra che la schermata si ricarichi"
+    area: "src/components/OrderPosDetail.jsx (auto-conferma della bozza, createFromDraft)"
+    severity: media
+    priority: P1
+    description: >
+      Daniele, 14/11/2026, sul test con la 1.10.44-beta, dopo BUG-147: «c'è
+      sempre un ricaricamento di qualcosa dopo che aggiungo il primo drink».
+      La riga ormai restava ferma; a cambiare era la barra in alto. Finché il
+      conto non esiste dice solo il numero, e il conto nasceva 300 ms dopo
+      il tocco, col timer dell'auto-conferma che in modifica raccoglie i
+      tocchi ravvicinati: allo scadere la barra si riempiva di colpo (ora
+      di apertura, «Conto aperto», chi l'ha aperto, l'id, «Da fare») e si
+      accendevano «Comande» e «Stato servizio». Il conto si compone in
+      locale e createOrder risponde subito: l'attesa non serviva.
+      ORA in creazione il conto nasce al primo tocco, e la barra è quella
+      del conto insieme alla riga; le righe battute mentre nasce le
+      raccoglie createFromDraft come prima. In modifica il timer resta.
+      Dalla revisione: il conto aspetta che l'accesso abbia risposto. Una
+      bozza rimasta da una creazione non riuscita si ripristina all'apertura,
+      e senza quell'attesa il conto sarebbe nato prima di sapere chi lo apre,
+      senza `placed_by`: per l'app un ordine dal telefono del cliente.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, pos, local-first]
+    requisiti: [REQ-POS-001]
+    test_cases:
+      - tests/component/OrderPosDetail.test.jsx
+
+  - id: BUG-149
+    title: "Al primo avvio di una versione il box «Cosa è cambiato» dice che le note non sono arrivate, con il file al suo posto"
+    area: "src/lib/novita.js (caricaChangelog), src/components/NovitaDialog.jsx, src/components/InfoTab.jsx"
+    severity: bassa
+    priority: P2
+    description: >
+      Daniele, 14/11/2026, in produzione al primo avvio della 1.10.43: il
+      box delle novità ha mostrato «Le note di questa versione non sono
+      arrivate», mentre il file c'era e rispondeva. Quel rilascio, il primo
+      in produzione della linea 1.10 dopo la 1.9.3, portava anche un service
+      worker nuovo (cache `drink-v5`, cambiato il 30/10 e arrivato sul test
+      allora, una volta sola), che al primo avvio si installa e prende subito
+      il posto del vecchio. Le note sono la prima richiesta che l'app fa
+      appena si apre, e una richiesta caduta in quel cambio bastava a dire
+      che non c'erano: il box non riprovava. Sul test non si è rivisto
+      perché da allora il service worker non è più cambiato. Non è
+      riprodotto passo per passo: è l'unica spiegazione coerente con il
+      file al suo posto e con quel rilascio. Nessun'altra richiesta di
+      quell'istante ne soffre: i dati non passano dal service worker, la
+      configurazione lo salta apposta, il controllo delle versioni si ripete
+      e i pezzi di codice caricati al bisogno si riprovano da soli.
+      ORA le note si chiedono fino a tre volte (dopo 1 e dopo 3 secondi),
+      un file vuoto conta come non arrivato, e mentre si aspetta il box e
+      Impostazioni → Informazioni mostrano il caricamento; solo dopo il
+      terzo tentativo si dice che non ci sono.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, pwa, ux]
+    requisiti: [REQ-DEV-003]
+    test_cases:
+      - tests/unit/novita.test.js
+      - tests/component/AppHeader.test.jsx
+
+  - id: BUG-150
+    title: "Al primo drink di un conto nuovo la barra in alto si riempie ancora dopo la riga, e l'ora di apertura arriva mezzo secondo dopo"
+    area: "src/lib/api.js (creaOrdine), src/components/OrderPosDetail.jsx (barra in alto)"
+    severity: media
+    priority: P1
+    description: >
+      Daniele, 14/11/2026, sul test con la 1.10.45-beta: «il primo item
+      inserito continua ad aggiornarsi». Misurato nel browser vero, con gli
+      emulatori: la riga compariva a ~90 ms dal tocco, la barra in alto si
+      riempiva a ~230 ms («Conto aperto», chi l'ha aperto, l'id) e l'ora di
+      apertura arrivava a ~640 ms. Ogni volta la barra cambiava e la pagina
+      si spostava sotto il dito. Due cause, tutte e due contro il
+      local-first:
+      1. createOrder, dopo aver scritto il conto, lo RILEGGEVA con un
+         `await getDoc`: risolve anche offline, ma passa dalla cache su disco.
+         Era la regola «non si rilegge quello che si è appena scritto: si
+         compone», sfuggita alla guardia di giroInLocale perché la rilettura
+         non usava `leggiOrdine`.
+      2. La barra mostrava l'ora di apertura solo da `created_at`, che è
+         l'orario del server e resta null finché la scrittura non arriva.
+      ORA createOrder compone il conto da quello che ha scritto (ordineDopo,
+      che lo ricorda anche per la mutazione dopo), e la barra usa l'ora di
+      qui (`status_times.aperto`, scritta alla nascita apposta) finché non
+      arriva quella del server. Nel browser: riga, barra e ora entro ~120 ms
+      dal tocco, poi più niente.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, pos, local-first]
+    requisiti: [REQ-POS-001]
+    test_cases:
+      - tests/unit/giroInLocale.test.js
+      - tests/component/OrderPosDetail.test.jsx
+
+  - id: BUG-151
+    title: "In coda la card di un conto appena nato resta senza «da quanto» finché il server non risponde"
+    area: "src/lib/api.js (mapOrder, creaOrdine), src/components/CorsieStato.jsx"
+    severity: bassa
+    priority: P2
+    description: >
+      Trovato dalla revisione di BUG-150, 14/11/2026, e messo in lavoro da
+      Daniele: la card in coda mostra da quanto il conto è aperto
+      (`daQuanto(o.created_at)`), e per un conto appena battuto restava
+      vuota finché il server non rispondeva.
+      LA CAUSA è una sola, con BUG-152: i conti si leggevano da Firestore senza
+      chiedere la stima degli orari del server, e `created_at` di un conto
+      appena scritto vale null finché la scrittura non arriva al server —
+      offline, per tutta la durata della rete staccata.
+      ORA mapOrder legge i conti con `serverTimestamps: 'estimate'`: l'ora
+      c'è subito, stimata con l'orologio di qui, e Firestore la sostituisce
+      con quella vera appena arriva. Il conto composto da createOrder porta
+      la stessa ora, così è uguale che arrivi dalla memoria o dalla cache.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, coda, local-first]
+    requisiti: [REQ-CODA-001]
+    test_cases:
+      - tests/unit/giroInLocale.test.js
+
+  - id: BUG-152
+    title: "Un conto appena nato compare per un attimo in cima alla coda e poi salta in fondo"
+    area: "src/lib/api.js (mapOrder, componi della coda)"
+    severity: bassa
+    priority: P2
+    description: >
+      Trovato dalla revisione di BUG-150, 14/11/2026, e messo in lavoro da
+      Daniele: la coda ordina i conti per `created_at`, e un conto appena
+      battuto, con l'ora ancora vuota, finiva prima di tutti; arrivata
+      l'ora del server saltava in fondo, dove sta un conto nuovo.
+      LA CAUSA è una sola, con BUG-151: i conti si leggevano da Firestore senza
+      chiedere la stima degli orari del server, e `created_at` di un conto
+      appena scritto vale null finché la scrittura non arriva al server —
+      offline, per tutta la durata della rete staccata.
+      ORA mapOrder legge i conti con `serverTimestamps: 'estimate'`: l'ora
+      c'è subito, stimata con l'orologio di qui, e Firestore la sostituisce
+      con quella vera appena arriva. Il conto composto da createOrder porta
+      la stessa ora, così è uguale che arrivi dalla memoria o dalla cache.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, coda, local-first]
+    requisiti: [REQ-CODA-001]
+    test_cases:
+      - tests/unit/giroInLocale.test.js
+
+  - id: BUG-153
+    title: "Nell'inventario in corso mancano i prodotti creati dopo la sua apertura"
+    area: "src/lib/inventarioInCorso.js (conProdottiNuovi, rigaDiInventario), src/components/StockCountPanel.jsx, src/lib/api.js (mapStockCount)"
+    severity: alta
+    priority: P1
+    description: >
+      Flavio, vocale del 13/11/2026 sera: «all'interno dell'inventario mi
+      appaiono solo i prodotti che c'erano anche nell'inventario
+      precedente; tutto quello che ho acquistato, tipo le toniche a
+      pompelmo di Galvanina, la tonica mediterranea di Galvanina, non ci
+      sono». Le righe di un inventario sono la fotografia dei prodotti del
+      momento in cui si apre, e quello che riparte da sé alla chiusura del
+      precedente era aperto dal 05/10: verificato sul backup della
+      produzione del 14/11, 416 righe contro 428 prodotti, e i 13 mancanti
+      sono tutti creati fra l'08 e il 30/10 (le quattro Galvanina, Boem
+      Pompelmo, El Jimador Blanco, Jack Daniels e Honey, Kimbo, Crema
+      Cocco, Sifone Soda, Tisana Generica, Ararat). Non si potevano contare.
+      In più un numero contato per un prodotto senza riga si salvava
+      (rimanenze.<id>) ma la lettura dell'inventario lo perdeva.
+      ORA la schermata aggiunge in fondo i prodotti nati dopo l'apertura.
+      Fino alla 1.10.47 il DEP non si indovinava: era la giacenza di adesso meno quello che si è
+      mosso dall'apertura, così una giacenza scritta nella scheda alla
+      nascita conta come già presente e un carico come acquisto, e il
+      consumo torna (partendo da zero la Tisana Generica, 197 pezzi senza
+      carico, avrebbe dato un consumo di -197). Mai sotto zero. La lettura
+      dell'inventario restituisce anche i numeri contati senza riga, e la
+      chiusura porta le righe nuove con le altre.
+      LA REGOLA DI FLAVIO (vocale del 14/11/2026, dopo la 1.10.47-beta):
+      «io acquisto un prodotto, quindi me lo dovrebbe mettere all'interno
+      dell'inventario in corso, dove deposito è zero, acquisto è l'acquisto
+      che ho fatto, e poi rimanenza e consumato». Dalla 1.10.48 un prodotto
+      nato dopo l'apertura ha DEP 0, e la giacenza avuta alla nascita senza
+      un carico va in ACQ (`acq_alla_nascita`) invece che nel DEP: il
+      consumo è lo stesso, cambia la colonna in cui sta.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, magazzino, inventario]
+    requisiti: [REQ-MAG-046]
+    test_cases:
+      - tests/unit/inventarioInCorso.test.js
+      - tests/component/StockCountPanel.test.jsx
+      - tests/unit/chiusuraInventario.test.js

@@ -64,6 +64,7 @@ import {
   ORDER_OPEN,
   rigaDiAltri,
   firmaRigheAccesa,
+  firmaDi,
 } from '../lib/comande.js'
 import { paidAmount, dettaglioIncassi, scontoTotale } from '../lib/pagamento.js'
 import { aggiunteInComandaNuova, isPersonale, puoGestireComande, puoSegnare } from '../lib/ruoli.js'
@@ -548,9 +549,25 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // offrirebbe i passi del banco.
   const [staff, setStaff] = useState(null)
   const [ruolo, setRuolo] = useState(null)
+  // L'ACCESSO HA RISPOSTO, comunque sia andata: il conto nuovo aspetta questo
+  // per nascere (vedi l'auto-conferma, BUG-148). Non aspetta `staff` e basta:
+  // se il ruolo non arrivasse mai — offline col token scaduto — il conto non
+  // nascerebbe più da solo.
+  const [chiLavoraNoto, setChiLavoraNoto] = useState(false)
   useEffect(() => {
     return onAuthStateChanged(auth, async (u) => {
+      try {
+        await chiStaLavorando(u)
+      } finally {
+        setChiLavoraNoto(true)
+      }
+    })
+    async function chiStaLavorando(u) {
       if (!u) {
+        // Anche il ref: è lui che firma le righe all'invio, e con lo stato
+        // azzerato e il ref no la bozza si mostrerebbe senza firma e
+        // partirebbe firmata da chi è appena uscito (BUG-147).
+        staffRef.current = null
         setRuolo(null)
         return setStaff(null)
       }
@@ -564,10 +581,11 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           setStaff(io)
         }
       } catch {
+        staffRef.current = null
         setRuolo(null)
         setStaff(null)
       }
-    })
+    }
   }, [])
 
   // LA SALA SERVE, NON PREPARA. Vede il conto e ci lavora sopra — aggiunge
@@ -1598,7 +1616,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   const firmaRiga = (l) => {
     const io = staffRef.current
     if (l.added_by || !io) return l
-    return { ...l, added_by: { name: io.name || null, email: io.email || null, role: io.role || null } }
+    return { ...l, added_by: firmaDi(io) }
   }
   const draftToItems = (righe = draft) =>
     righe.map(firmaRiga).map((l) => ({
@@ -1708,28 +1726,44 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     }
   }, [isNew, order?.id, flushAll, clearDraft, segnaModifica])
 
-  // Auto-conferma in MODIFICA: poco dopo l'ultima aggiunta gli item vengono
-  // confermati da soli (niente tasto Conferma, niente stato "non confermato"
-  // che resta). In CREAZIONE resta la conferma manuale (serve nome/tavolo).
-  // Il timer dipende SOLO da draft/isNew (flushAdditions via ref) così non si
-  // resetta a ogni render.
+  // Auto-conferma (niente tasto Conferma, niente stato "non confermato" che
+  // resta). L'effetto dipende solo da bozza, modo e chi lavora — le funzioni
+  // passano da ref — così il timer della modifica non si resetta a ogni render.
   const flushAdditionsRef = useRef(flushAdditions)
   flushAdditionsRef.current = flushAdditions
-  // Poco dopo l'ultima aggiunta: in MODIFICA gli item si confermano da soli;
-  // in CREAZIONE l'ordine viene CREATO con la bozza e si passa alla modifica
-  // (da lì le aggiunte successive si confermano al volo). Il timer si resetta a
-  // ogni aggiunta, così parte solo quando la bozza è "ferma" (batch completo).
+  // In MODIFICA, poco dopo l'ultima aggiunta, gli item si confermano da soli:
+  // il timer si resetta a ogni aggiunta, così parte solo quando la bozza è
+  // "ferma" (batch completo). In CREAZIONE l'ordine viene CREATO con la bozza
+  // al primo tocco e si passa alla modifica (da lì le aggiunte successive si
+  // confermano al volo).
   useEffect(() => {
     // Con la scelta a schermo l'auto-conferma non parte: le righe aspettano
     // che qualcuno dica dove vanno (vedi `sceltaAggiunte`). All'uscita
     // partono lo stesso, nella comanda — è la strada che non fa carta in più.
     if (draft.length === 0 || sceltaAggiunte) return
-    const t = setTimeout(() => {
-      if (isNew) createFromDraftRef.current()
-      else flushAdditionsRef.current()
-    }, 300)
+    // IN CREAZIONE IL CONTO NASCE AL PRIMO TOCCO, senza aspettare che la
+    // bozza stia ferma. Daniele, 14/11/2026: «c'è sempre un ricaricamento di
+    // qualcosa dopo che aggiungo il primo drink» — era la barra in alto, che
+    // finché il conto non esiste dice solo il numero e 300 ms dopo si
+    // riempiva di colpo (ora, «Conto aperto», chi l'ha aperto, l'id, «Da
+    // fare»). createOrder compone in locale e risponde subito, e le righe
+    // battute mentre il conto nasce le raccoglie createFromDraft: aspettare
+    // non serviva a niente (BUG-148). In modifica il timer resta: lì
+    // raccoglie i tocchi ravvicinati in un invio solo.
+    // Ma non prima di sapere CHI lo apre. Con una bozza ripristinata
+    // all'apertura (una creazione non riuscita la volta prima) l'effetto
+    // parte prima che arrivi il ruolo, e un conto nato senza `placed_by` per
+    // l'app è un ordine dal telefono del cliente: finisce fra i «Clienti»,
+    // aspetterebbe la sua risposta a ogni modifica e lo stampa chi ha
+    // l'interruttore invece di questo terminale. Il conto nasce appena
+    // l'accesso ha risposto.
+    if (isNew) {
+      if (chiLavoraNoto) createFromDraftRef.current()
+      return
+    }
+    const t = setTimeout(() => flushAdditionsRef.current(), 300)
     return () => clearTimeout(t)
-  }, [draft, isNew, sceltaAggiunte])
+  }, [draft, isNew, sceltaAggiunte, chiLavoraNoto])
 
   // CREAZIONE: appena si aggiunge il primo item l'ordine viene CREATO IN PLACE
   // (setSelfOrder), SENZA navigare: la schermata resta montata e da lì si
@@ -1989,6 +2023,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // compare — e stanno in una costante perché adesso le guarda anche la
   // barra in alto, per sapere quanto spazio le resta.
   const mostraStatoLavoro = !isNew && workflowOn && !!active && !closed
+  const apertoAlle = isNew ? null : order.created_at || order.tempi_conto?.[ORDER_OPEN] || null
 
   // SUL TELEFONO NON CI STANNO DUE PASTIGLIE PER ESTESO. Misurato in Chrome
   // vero: la barra al completo chiede 505px, e un telefono ne ha 360-430.
@@ -2230,9 +2265,13 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             tavolo è lì dalle nove cambia come lo si tratta. Sul telefono, con
             lo stato del lavoro a bordo, è la prima cosa che cede: la si
             rilegge nella storia del conto, dal ⋯. */}
-        {!isNew && order.created_at && !barraStretta && (
+        {/* L'ora del server arriva quando la scrittura arriva al server:
+            fino ad allora quella di qui, scritta apposta alla nascita
+            (`status_times.aperto`). Senza, l'ora compariva mezzo secondo
+            dopo il primo drink e spostava la barra (BUG-150). */}
+        {!isNew && apertoAlle && !barraStretta && (
           <span className="muted small posd-aperto" title="Conto aperto il">
-            {apertoIl(order.created_at)}
+            {apertoIl(apertoAlle)}
           </span>
         )}
         {!isNew && (() => {
@@ -2673,6 +2712,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
               // lui (REQ-ORD-024). `staff` e non il ref: quando si scopre
               // chi sta usando il conto, i tasti si ridisegnano.
               const altrui = firmaRigheAccesa(settings) && !isDraft && rigaDiAltri(l, staff)
+              const autore = firmaRigheAccesa(settings) ? (l.added_by || (isDraft && staff ? firmaDi(staff) : null)) : null
               const canMinus = !closed && !isPaid && !altrui && (isDraft || l.removable)
               // A CHE PUNTO È QUESTA RIGA. Gli stati del servizio stanno sulle
               // COMANDE, non sul conto: con una comanda sola tutti i drink
@@ -2728,11 +2768,14 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                       <span style={{ minWidth: 0, overflow: 'hidden' }}>
                         <span style={{ display: 'flex', alignItems: 'baseline', minWidth: 0 }}>
                           {/* Chi l'ha battuta, col suo colore (REQ-ORD-023).
-                              Le righe in bozza non ce l'hanno ancora: sono
-                              di chi sta guardando, e si firmano all'invio. */}
-                          {l.added_by && firmaRigheAccesa(settings) && (
+                              Una riga in bozza non ancora firmata la firma
+                              chi sta guardando (firmaRiga, all'invio): il
+                              segno si mostra SUBITO col suo nome, non dopo
+                              l'invio (BUG-147). Quella già firmata, rimessa
+                              in bozza da un invio non riuscito, tiene la sua. */}
+                          {autore && (
                             <span className="riga-autore">
-                              <OrderBy persona={l.added_by} titolo="Aggiunto" />
+                              <OrderBy persona={autore} titolo="Aggiunto" />
                             </span>
                           )}
                           <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
@@ -3671,8 +3714,8 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             // lì, l'uscita toglieva il segno e la comanda usciva.
             staAnnullando.current = true
             // Conto «nuovo»: la bozza si butta e si torna indietro. MA se
-            // nel frattempo l'ordine è nato — l'auto-creazione scatta poco
-            // dopo l'ultima riga, e battere quattro cose ci mette di più —
+            // nel frattempo l'ordine è nato — l'auto-creazione scatta al
+            // primo prodotto (BUG-148) —
             // quello va ANNULLATO davvero, altrimenti resta aperto in coda
             // con dentro la roba che si è appena buttata. Era il conto
             // fantasma che poi ricompariva aprendo il conto dopo.

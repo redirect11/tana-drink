@@ -65,13 +65,16 @@ let ruoloCorrente = 'bartender'
 // senza sapere chi la guarda e lo scopre un attimo dopo. Questa e' quella
 // promessa, e serve ai test per aspettare la cosa giusta (vedi `mount`).
 let consegnaRuolo = null
+// Un test può tenere il token in sospeso per far arrivare il ruolo quando
+// vuole lui (vedi la bozza ripristinata, BUG-148).
+let tokenInSospeso = null
 vi.mock('firebase/auth', () => ({
   onAuthStateChanged: vi.fn((a, cb) => {
     consegnaRuolo = cb({
       uid: 'u1',
       email: 'chi@tana.local',
       displayName: 'Chi lavora',
-      getIdTokenResult: () => Promise.resolve({ claims: { role: ruoloCorrente } }),
+      getIdTokenResult: () => tokenInSospeso || Promise.resolve({ claims: { role: ruoloCorrente } }),
     })
     return () => {}
   }),
@@ -126,6 +129,7 @@ import {
   setOrderServiceMode,
 } from '../../src/lib/api.js'
 import { readerCheckout } from '../../src/lib/paymentsApi.js'
+import { saveDraft } from '../../src/lib/useDraft.js'
 import { printComanda, printComande, printComandaUnita } from '../../src/lib/printer.js'
 
 // IL CONTO DI PROVA NASCE «DA FARE», come nasce davvero: si battono tre
@@ -1169,6 +1173,71 @@ describe('il passo in cui nasce una comanda lo dice il locale', () => {
 })
 
 describe('creazione: niente si perde mentre l’ordine nasce', () => {
+  // BUG-148, Daniele 14/11/2026: «c'è sempre un ricaricamento di qualcosa
+  // dopo che aggiungo il primo drink». Era la barra in alto: il conto
+  // nasceva 300 ms dopo il tocco (il timer dell'auto-conferma), e fino ad
+  // allora la barra diceva solo il numero; poi si riempiva di colpo. Il
+  // conto si compone in locale e risponde subito: nasce al tocco, e la
+  // barra è già quella del conto mentre la riga compare.
+  it('il conto nasce al primo tocco: la barra è quella del conto subito, non 300 ms dopo', async () => {
+    createOrder.mockImplementationOnce(async ({ items, status }) => ({
+      id: 'ord-nuovo',
+      status: 'aperto',
+      payment_status: 'non_richiesto',
+      comande: [
+        {
+          id: 'c1',
+          seq: 1,
+          status,
+          status_times: {},
+          items: items.map(({ price, ...i }) => ({ ...i, unit_price: price })),
+        },
+      ],
+      payments: [],
+    }))
+    render(
+      <MemoryRouter>
+        <OrderPosDetail order={null} />
+      </MemoryRouter>
+    )
+    await avvioDelConto()
+    const user = userEvent.setup()
+    await user.click(screen.getAllByText('Mojito')[0])
+    await act(async () => {})
+    expect(createOrder, 'il conto aspetta ancora il timer').toHaveBeenCalledTimes(1)
+    expect(document.querySelector('.posd-topbar .posd-conto-stato')).toBeTruthy()
+  })
+
+  // Dalla revisione di BUG-148: una bozza rimasta da una creazione non
+  // riuscita si ripristina all'apertura, e l'effetto partiva prima che si
+  // sapesse chi lavora. Senza `placed_by` il conto sarebbe stato preso per
+  // un ordine dal telefono del cliente.
+  it('con una bozza ripristinata il conto nasce solo quando si sa chi lo apre', async () => {
+    saveDraft('new', [{ line_id: 'l1', drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1, source: 'draft' }])
+    let daiIlToken
+    tokenInSospeso = new Promise((r) => {
+      daiIlToken = r
+    })
+    try {
+      render(
+        <MemoryRouter>
+          <OrderPosDetail order={null} />
+        </MemoryRouter>
+      )
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 50))
+      })
+      expect(createOrder, 'il conto è nato prima di sapere chi lo apre').not.toHaveBeenCalled()
+      await act(async () => {
+        daiIlToken({ claims: { role: 'bartender' } })
+      })
+      await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1))
+      expect(createOrder.mock.calls[0][0].placed_by).toMatchObject({ email: 'chi@tana.local', role: 'bartender' })
+    } finally {
+      tokenInSospeso = null
+    }
+  })
+
   it('gli item battuti durante la creazione finiscono nell’ordine', async () => {
     const user = userEvent.setup()
     // Creazione LENTA e controllata da qui: è la finestra in cui si continua
@@ -1206,7 +1275,7 @@ describe('creazione: niente si perde mentre l’ordine nasce', () => {
       </MemoryRouter>
     )
 
-    // Primo item: fa partire la creazione (parte da sola dopo ~300ms).
+    // Primo item: fa partire la creazione (parte da sola, al tocco).
     await user.click(screen.getAllByText('Mojito')[0])
     await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1), { timeout: 2000 })
 
@@ -2558,6 +2627,36 @@ describe('lo stato della lavorazione sta nella barra in alto', () => {
   })
 })
 
+// L'ORA DI APERTURA PRIMA CHE ARRIVI QUELLA DEL SERVER (BUG-150). Il conto
+// appena nato non ha ancora `created_at` (l'orario del server): la barra
+// mostra intanto l'ora di qui, scritta alla nascita, invece di aspettare
+// mezzo secondo e spostarsi quando arriva.
+describe('l’ora di apertura nella barra', () => {
+  // Schermo largo: sul telefono, con lo stato del lavoro a bordo, l'ora è
+  // la prima cosa che cede (e il blocco «sul telefono» lo lascia stretto).
+  beforeEach(() => {
+    window.matchMedia = (query) => ({
+      matches: false,
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    })
+  })
+  const ora = (iso) => new Date(iso).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+
+  it('senza l’ora del server c’è quella di qui, e la barra non aspetta', async () => {
+    await mount(baseOrder({ created_at: null, tempi_conto: { aperto: '2026-11-14T20:15:00.000Z' } }))
+    expect(document.querySelector('.posd-aperto')?.textContent).toContain(ora('2026-11-14T20:15:00.000Z'))
+  })
+
+  it('quando arriva, vale quella del server', async () => {
+    await mount(
+      baseOrder({ created_at: '2026-11-14T20:15:03.000Z', tempi_conto: { aperto: '2026-11-14T19:00:00.000Z' } })
+    )
+    expect(document.querySelector('.posd-aperto').textContent).toContain(ora('2026-11-14T20:15:03.000Z'))
+  })
+})
+
 // ── LE FASCE CHE POSSONO CEDERE (BUG-077) ────────────────────────────
 //
 // Con lo zoom alto l'altezza disponibile cala di un terzo, le misure fisse
@@ -2782,6 +2881,98 @@ describe('l’iniziale di chi ha battuto ogni riga', () => {
       expect(autori()).toEqual([])
       expect(screen.getByRole('button', { name: 'Aumenta Mojito' })).toBeEnabled()
       expect(screen.getByRole('button', { name: 'Riduci Mojito' })).toBeEnabled()
+    } finally {
+      delete mockSettings.firma_righe
+    }
+  })
+
+  // BUG-147, Daniele 14/11/2026: con l'iniziale accesa la riga appena
+  // battuta compariva senza, e dopo un attimo «si ricaricava» col pallino,
+  // «come se chiedesse al server». Non chiedeva niente: la riga restava in
+  // bozza fino all'invio (300 ms dopo l'ultimo tocco, di più battendo di
+  // seguito) e la bozza non mostrava firma. La firma della bozza è di chi
+  // sta guardando, e si sa già: il segno si mostra al tocco, ed è lo stesso
+  // nodo, con la stessa lettera, prima e dopo l'invio.
+  // Passano dalla bozza il primo drink di un conto nuovo e le aggiunte a un
+  // conto la cui comanda è già partita (nasce una comanda nuova); quelle a
+  // una comanda ancora da fare ci entrano subito, firmate.
+  const ginInLista = () => [...document.querySelectorAll('.draft-line')].find((r) => r.textContent.includes('Gin Tonic'))
+  // `inBozza`: al tocco nessun invio è ancora partito. Vale per l'aggiunta a
+  // una comanda già partita; il conto nuovo invece nasce al tocco (BUG-148),
+  // e lì conta solo che l'iniziale ci sia subito e resti la stessa.
+  async function battiGinEGuarda(invio, { inBozza = true } = {}) {
+    const user = userEvent.setup()
+    await user.click(screen.getAllByText('Gin Tonic')[0])
+    // Al tocco: la riga c'è e ha già l'iniziale di chi la sta battendo.
+    if (inBozza) expect(invio).not.toHaveBeenCalled()
+    const segno = ginInLista()?.querySelector('.riga-autore .order-by')
+    expect(segno, 'la riga in bozza è senza iniziale').toBeTruthy()
+    expect([segno.textContent, segno.title]).toEqual(['C', 'Aggiunto da Chi lavora'])
+    await waitFor(() => expect(invio).toHaveBeenCalled(), { timeout: 3000 })
+    // Si lascia arrivare il conto che l'invio restituisce: da lì la riga è
+    // quella mandata, non più la bozza.
+    await act(async () => {})
+    // Dopo l'invio: la stessa iniziale, e sullo stesso elemento — la riga
+    // non cambia aspetto quando parte.
+    const dopo = ginInLista().querySelector('.riga-autore .order-by')
+    expect([dopo.textContent, dopo.title]).toEqual(['C', 'Aggiunto da Chi lavora'])
+    expect(dopo).toBe(segno)
+  }
+
+  it('il primo drink di un conto nuovo ha subito l’iniziale, prima dell’invio, e la tiene dopo', async () => {
+    // Il conto torna com'è nato, con le righe mandate (e la loro firma):
+    // è quello che fa createOrder, che compone senza rileggere.
+    createOrder.mockImplementationOnce(async ({ items }) => ({
+      id: 'ord-nuovo',
+      status: 'aperto',
+      comande: [
+        {
+          id: 'c1',
+          seq: 1,
+          status: 'ricevuto',
+          status_times: {},
+          items: items.map(({ price, ...i }) => ({ ...i, unit_price: price })),
+        },
+      ],
+      payments: [],
+    }))
+    render(
+      <MemoryRouter>
+        <OrderPosDetail order={null} />
+      </MemoryRouter>
+    )
+    await avvioDelConto()
+    await battiGinEGuarda(createOrder, { inBozza: false })
+  })
+
+  it('l’aggiunta a un conto con la comanda già partita ha subito l’iniziale, e la tiene dopo', async () => {
+    await mount(
+      baseOrder({
+        comande: [
+          { id: 'c1', seq: 1, status: 'ritirato', status_times: {}, items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }] },
+        ],
+      })
+    )
+    await battiGinEGuarda(addComanda)
+  })
+
+  it('con l’iniziale spenta, nemmeno la riga in bozza la mostra', async () => {
+    mockSettings.firma_righe = false
+    try {
+      const user = userEvent.setup()
+      // Comanda già partita: l'aggiunta passa dalla bozza (con una comanda
+      // ancora da fare ci entrerebbe dritta, e la bozza non si vedrebbe).
+      await mount(
+        baseOrder({
+          comande: [
+            { id: 'c1', seq: 1, status: 'ritirato', status_times: {}, items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }] },
+          ],
+        })
+      )
+      await user.click(screen.getAllByText('Gin Tonic')[0])
+      expect(addComanda).not.toHaveBeenCalled()
+      expect(ginInLista(), 'la riga appena battuta non c’è').toBeTruthy()
+      expect(autori()).toEqual([])
     } finally {
       delete mockSettings.firma_righe
     }

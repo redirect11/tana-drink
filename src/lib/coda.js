@@ -1205,8 +1205,9 @@ export function corsieVisibili(corsie, nascoste = []) {
 // date locali che quel conto si porta dietro, in ordine di attendibilità:
 //
 //   1. `order_date`, la giornata scritta alla nascita;
-//   2. `created_at`, l'orario del server (null finché la scrittura è per
-//      strada, quindi non può essere il primo);
+//   2. `created_at`, l'orario del server (mapOrder lo legge stimato finché
+//      la scrittura è per strada, BUG-151; ma un conto non letto da lì può
+//      averlo null, quindi non può essere il primo);
 //   3. l'APERTURA scritta dal client (`status_times.aperto` sul conto, che
 //      mapOrder porta in `tempi_conto`): è un ISO dell'orologio di qui,
 //      c'è dal primo istante;

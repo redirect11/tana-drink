@@ -75,6 +75,64 @@ function mossoDopo(lista, rimAt) {
 
 const VUOTO = { acq: 0, lista: [] }
 
+// LA RIGA DI UN PRODOTTO IN UN INVENTARIO: quella che nasce all'apertura e
+// quella di un prodotto arrivato dopo (conProdottiNuovi) sono la stessa
+// forma, e la scrive una funzione sola.
+export function rigaDiInventario(it, dep = it.stock) {
+  return {
+    item_id: it.id,
+    name: it.name,
+    unit: it.unit,
+    package_size: it.package_size ?? null,
+    cost: it.cost ?? null,
+    vat: it.vat ?? 22,
+    dep: Number(dep) || 0,
+    acq: 0,
+    rim: null,
+  }
+}
+
+/**
+ * I PRODOTTI NATI DOPO L'APERTURA (BUG-153). Le righe di un inventario sono
+ * la fotografia dei prodotti del momento in cui si apre — e quello che
+ * riparte da sé alla chiusura del precedente può restare aperto settimane.
+ * Flavio, 13/11/2026: «mi appaiono solo i prodotti che c'erano anche
+ * nell'inventario precedente… le toniche di Galvanina non ci sono». Erano
+ * 13 prodotti creati dopo il 05/10, che non si potevano contare.
+ *
+ * Qui si aggiungono, in fondo, COME LI VUOLE FLAVIO (vocale del
+ * 14/11/2026): «io acquisto un prodotto, quindi me lo dovrebbe mettere
+ * all'interno dell'inventario in corso, dove deposito è zero, acquisto è
+ * l'acquisto che ho fatto, e poi rimanenza e consumato». Quindi DEP 0, e
+ * in ACQ, oltre ai carichi registrati, quello che il prodotto ha avuto
+ * alla nascita senza un carico: la giacenza di adesso meno tutto quello che
+ * si è mosso dall'apertura (`acq_alla_nascita`). Una giacenza scritta nella
+ * scheda al momento di crearlo è merce comprata come le altre; e senza,
+ * il consumo verrebbe negativo (la Tisana Generica: 197 pezzi senza
+ * carico). Mai sotto zero: quello che non torna resta nel consumo, dove
+ * lo si vede.
+ *
+ * `rimanenze` / `ore`: i numeri contati salvati nell'inventario
+ * (salvaRimanenza), che per un prodotto nuovo non hanno una riga su cui
+ * stare finché non la si compone qui.
+ */
+export function conProdottiNuovi(lines, { items = [], raggruppati = new Map(), rimanenze = {}, ore = {} } = {}) {
+  const giaDentro = new Set((lines || []).map((l) => l.item_id))
+  const nuovi = []
+  for (const it of items || []) {
+    if (!it?.id || giaDentro.has(it.id)) continue
+    const mosso = (raggruppati.get(it.id) || VUOTO).lista.reduce((s, x) => s + x.q, 0)
+    const riga = rigaDiInventario(it, 0)
+    riga.acq_alla_nascita = Math.max(0, arrotonda((Number(it.stock) || 0) - mosso))
+    if (Object.prototype.hasOwnProperty.call(rimanenze, it.id)) {
+      riga.rim = rimanenze[it.id]
+      riga.rim_at = ore[it.id] ?? null
+    }
+    nuovi.push(riga)
+  }
+  return nuovi.length ? [...(lines || []), ...nuovi] : lines || []
+}
+
 /**
  * Le righe di un inventario, completate coi movimenti del periodo.
  *
@@ -95,7 +153,9 @@ export function righeInventario(lines, { raggruppati = null, movimenti = [], ite
     const item = perId.get(l.item_id)
     // Il reso che supera gli acquisti del periodo esce dal deposito
     // (REQ-MAG-053): ACQ non va sotto zero, e il consumo resta quello.
-    const { dep, acq } = resoSulDeposito(Number(l.dep) || 0, g.acq)
+    // Un prodotto nato dopo l'apertura porta in ACQ anche quello che ha
+    // avuto alla nascita senza un carico (conProdottiNuovi, BUG-153).
+    const { dep, acq } = resoSulDeposito(Number(l.dep) || 0, g.acq + (Number(l.acq_alla_nascita) || 0))
     // Quanto c'è adesso secondo l'app: la giacenza del prodotto. Un
     // prodotto che non c'è più non ha movimenti: resta quello di partenza.
     const atteso = item ? Number(item.stock) || 0 : dep

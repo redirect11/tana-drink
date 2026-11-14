@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 13 novembre 2026.
+> Generato il 14 novembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -395,6 +395,8 @@ IL COLORE è della persona e viene dal nome (lib/colorePersona.js): lo stesso su
 
 NON ANCORA: la finestra del conto nella coda, che legge le righe sommate per drink, e il dettaglio della comanda. DAL 09/11/2026 È UN'OPZIONE (Impostazioni, «Chi ha caricato la riga», `firma_righe`, accesa di partenza): spenta, le iniziali non si vedono, ma chi ha battuto la riga si registra lo stesso, e riaccendendo si vede anche sulle righe di quando era spenta. Con lei va il blocco del «+» e del «−» (REQ-ORD-024).
 
+LA RIGA IN BOZZA, non ancora mandata, mostra subito l'iniziale di chi la sta battendo — chi la firmerà all'invio — con la stessa firma (firmaDi in comande.js): niente attesa dell'invio, e la riga non cambia aspetto quando parte (BUG-147).
+
 **Dove**: `src/components/OrderPosDetail.jsx (firmaRiga), src/lib/api.js (autoreDellaRiga), src/components/OrderBy.jsx, src/lib/colorePersona.js, src/pages/BartenderPage.jsx (legenda), src/App.jsx` · **Serve**: [UR-012](#ur-012--su-un-conto-si-vede-chi-ha-battuto-cosa) · **Lo dimostrano**: `tests/unit/autoreDellaRiga.test.js`, `tests/unit/colorePersona.test.js`, `tests/component/OrderPosDetail.test.jsx`, `tests/sistema/chiHaBattuto.spec.js`
 
 #### REQ-ORD-024 — Il «+» e il «−» di una riga li usa solo chi l'ha caricata, se l'iniziale è accesa
@@ -409,9 +411,9 @@ La schermata più usata della serata: si compone un conto, si corregge, si chiud
 
 #### REQ-POS-001 — L'ordine nasce al primo prodotto, senza cambiare schermata
 
-Toccando il primo prodotto il conto viene creato in place: niente navigazione, niente ricaricamento, la schermata resta quella e da lì si continua come in modifica. Il nome del cliente si chiede all'uscita, una volta sola.
+Toccando il primo prodotto il conto viene creato in place: niente navigazione, niente ricaricamento, la schermata resta quella e da lì si continua come in modifica. Il nome del cliente si chiede all'uscita, una volta sola. Nasce AL TOCCO, non quando la bozza sta ferma: la barra in alto è quella del conto nell'istante in cui la riga compare (BUG-148).
 
-**Dove**: `src/components/OrderPosDetail.jsx, src/pages/PosPage.jsx` · **Serve**: [UR-001](#ur-001--un-conto-si-batte-e-si-incassa-anche-con-la-rete-staccata) · **Lo dimostrano**: `tests/component/PosPage.test.jsx`
+**Dove**: `src/components/OrderPosDetail.jsx, src/pages/PosPage.jsx` · **Serve**: [UR-001](#ur-001--un-conto-si-batte-e-si-incassa-anche-con-la-rete-staccata) · **Lo dimostrano**: `tests/component/PosPage.test.jsx`, `tests/component/OrderPosDetail.test.jsx`
 
 #### REQ-POS-002 — Niente si perde mentre l'ordine sta nascendo
 
@@ -3367,7 +3369,9 @@ PROVATO SUL TEST (12/11/2026, prova-bar aggiornato dalla regia con questo ramo, 
 
 LA TANA: le sue Functions le pubblica il deploy.yml di tana-drink, col suo account di deploy, che deve poter agire come `ai-locale` (roles/iam.serviceAccountUser SULL'ACCOUNT, non sul progetto): senza, il deploy di tutte le Functions si ferma su actAs. Account, ruoli e permesso li prepara il workflow della regia «Prepara l'AI di un locale esistente» (drink-regia #202); solo DOPO si aggiunge `REGIA_PROGETTO`. Fatto su tana-drink-test il 12/11/2026 (run 43292808376, verificato con gcloud): la riga c'è. Fatto anche su tana-drink (run 43295988436, col via libera di Daniele, verificato con gcloud), ma lì `REGIA_PROGETTO=drink-regia` si aggiunge solo quando la regia di produzione riconosce il gettone (dal suo prossimo rilascio su main): prima risponderebbe sempre 401.
 
-RESTA: `REGIA_PROGETTO` sulla produzione della Tana, la fattura (REQ-AI-001), il credito in Impostazioni, pacchetti e prezzo.
+IN PRODUZIONE DALLA 1.10.47 (14/11/2026): la regia di produzione ha detto che riconosce il gettone, e la riga `REGIA_PROGETTO=drink-regia` è in functions/.env.tana-drink; il permesso di agire come `ai-locale@tana-drink` verificato con gcloud lo stesso giorno. L'AI risponde dopo che il backoffice della regia la accende e le dà credito (prima: 402).
+
+RESTA: la fattura (REQ-AI-001), il credito in Impostazioni, pacchetti e prezzo.
 
 IL CREDITO SENZA CHIAMARE IL MODELLO (contratto della regia, 13/11/2026, drink-regia #217): `{ tipo: 'credito' }` col gettone → 200 `{ ok, tipo: 'credito', credito_eur, tetto_mensile_eur (sempre un numero), speso_mese_eur, attivo, motivo }`, gratis e senza riga di consumo. `attivo` vuol dire «una richiesta AI può partire adesso» (cassetto acceso, credito sopra zero, mese sotto il tetto); `motivo` è null, «credito» o «tetto». Senza cassetto o col cassetto spento il 402 di sempre. Si chiede all'apertura delle Impostazioni (e della chat, REQ-AI-006).
 
@@ -3671,7 +3675,7 @@ In fondo al menu laterale c'è la versione: in produzione il solo numero, altrov
 
 #### REQ-DEV-003 — Changelog delle versioni, leggibile anche dall'app
 
-Ogni versione rilasciata ha le sue note in CHANGELOG.md, e le stesse note si leggono dentro l'app in Impostazioni → Informazioni, insieme ai dati tecnici (versione, ramo, commit, ambiente, progetto). Chi usa l'app deve poter sapere cosa è cambiato senza chiederlo a chi l'ha scritta. Il NUMERO di versione lo dice package.json, allineato al rilascio, non l'ultimo tag raggiungibile: il tag sta sul merge in main, che non è antenato dei rami di lavoro, e lì `git describe` risaliva al rilascio PRECEDENTE — l'ambiente di test diceva 1.2.0 mentre ci girava la 1.3.0. Un numero sbagliato è peggio di nessun numero: chi segnala un problema dichiara una versione che non è quella che ha davanti. E non deve andarle a cercare: l'app si aggiorna da sé mentre la si usa, e chi lavora si accorge del cambiamento solo perché qualcosa è finito in un altro posto. Toccando «Nuova versione disponibile», alla riapertura compare il BOX con le note di quella versione — una volta sola, poi mai più. Se invece l'aggiornamento arriva da sé (l'app riaperta il giorno dopo) niente box in faccia mentre si lavora: resta una NOTIFICA nella campanella che porta a Impostazioni → Informazioni. Alla prima apertura su un dispositivo nuovo non succede niente: un box di benvenuto con le note di rilascio non lo vuole nessuno.
+Ogni versione rilasciata ha le sue note in CHANGELOG.md, e le stesse note si leggono dentro l'app in Impostazioni → Informazioni, insieme ai dati tecnici (versione, ramo, commit, ambiente, progetto). Chi usa l'app deve poter sapere cosa è cambiato senza chiederlo a chi l'ha scritta. Il NUMERO di versione lo dice package.json, allineato al rilascio, non l'ultimo tag raggiungibile: il tag sta sul merge in main, che non è antenato dei rami di lavoro, e lì `git describe` risaliva al rilascio PRECEDENTE — l'ambiente di test diceva 1.2.0 mentre ci girava la 1.3.0. Un numero sbagliato è peggio di nessun numero: chi segnala un problema dichiara una versione che non è quella che ha davanti. E non deve andarle a cercare: l'app si aggiorna da sé mentre la si usa, e chi lavora si accorge del cambiamento solo perché qualcosa è finito in un altro posto. Toccando «Nuova versione disponibile», alla riapertura compare il BOX con le note di quella versione — una volta sola, poi mai più. Se invece l'aggiornamento arriva da sé (l'app riaperta il giorno dopo) niente box in faccia mentre si lavora: resta una NOTIFICA nella campanella che porta a Impostazioni → Informazioni. Alla prima apertura su un dispositivo nuovo non succede niente: un box di benvenuto con le note di rilascio non lo vuole nessuno. Le note si chiedono fino a tre volte prima di dire che non ci sono, e intanto si vede il caricamento: al primo avvio di una versione la prima richiesta può cadere nel cambio del service worker (BUG-149).
 
 **Dove**: `CHANGELOG.md, src/components/InfoTab.jsx` · **Lo dimostrano**: `tests/unit/novita.test.js`, `tests/component/AppHeader.test.jsx`, `tests/unit/notifyStore.test.js`
 
@@ -4137,11 +4141,11 @@ DA FARE nella regia: catalogoModuli, moduloDallApp col controllo del titolare e 
 
 **Dove**: `src/components/MarketplaceTab.jsx (sezione Moduli), src/lib/marketplaceModuli.js, src/lib/funzioniRegia.js, src/lib/api.js (azioneModulo), drink-regia (catalogoModuli, moduloDallApp), docs/marketplace-moduli.md` · **Lo dimostrano**: `tests/unit/marketplaceModuli.test.js`, `tests/unit/azioneModulo.test.js`, `tests/component/MarketplaceTab.test.jsx`
 
-#### REQ-LIC-013 — I disegni dei drink sono del locale che ha «Notte»; altrove la foto o un bicchiere neutro
+#### REQ-LIC-013 — I disegni dei drink sono del locale che ha «Carte»; altrove la foto o un bicchiere neutro
 
-L'utente, 04/11/2026: «le immagini dei drink che abbiamo fatto sono solo per lo stile Notte che abbiamo fatto in esclusiva per la Tana. Dobbiamo prevedere un placeholder per altri stili e per altri locali». E alle domande dello stesso giorno: «quelli stilizzati per Notte sono della Tana, ma può riutilizzarli Flavio se cambia stile»; «chiunque può caricare le immagini dei drink», e tutti gli stili mostrano le foto che il titolare carica; al posto dell'immagine «un bicchiere neutro». I DISEGNI VANNO COL LOCALE, NON CON LO STILE IN USO: le illustrazioni di Alice e i disegni composti (REQ-MENU-018) si vedono dove la licenza dà uno stile che li porta (`disegni: true` nel catalogo: oggi solo «Notte», REQ-LIC-010), in qualunque stile il locale abbia scelto, Giornale compreso con le sue incisioni. Gli altri locali non li vedono in nessuno stile, e nella scheda del drink la composizione del disegno non si offre. `immagineVoce` senza `disegni` restituisce solo la foto: chi chiama e se ne dimentica non regala l'esclusiva.
+L'utente, 04/11/2026: «le immagini dei drink che abbiamo fatto sono solo per lo stile Notte che abbiamo fatto in esclusiva per la Tana. Dobbiamo prevedere un placeholder per altri stili e per altri locali». E alle domande dello stesso giorno: «quelli stilizzati per Notte sono della Tana, ma può riutilizzarli Flavio se cambia stile»; «chiunque può caricare le immagini dei drink», e tutti gli stili mostrano le foto che il titolare carica; al posto dell'immagine «un bicchiere neutro». I DISEGNI VANNO COL LOCALE, NON CON LO STILE IN USO: le illustrazioni di Alice e i disegni composti (REQ-MENU-018) si vedono dove la licenza dà uno stile che li porta (`disegni: true` nel catalogo: dal 14/11/2026 solo «Carte», REQ-MENU-029), in qualunque stile il locale abbia scelto, Giornale compreso con le sue incisioni. Gli altri locali non li vedono in nessuno stile, e nella scheda del drink la composizione del disegno non si offre. `immagineVoce` senza `disegni` restituisce solo la foto: chi chiama e se ne dimentica non regala l'esclusiva.
 
-LE FOTO SONO DI TUTTI: si caricano dalla scheda a prescindere da tema e stile, e vincono sempre sul disegno.
+LE FOTO SONO DI TUTTI: si caricano dalla scheda a prescindere da tema e stile, e vincono sempre sul disegno. DAL 14/11/2026 LI PORTA «CARTE», non più Notte e Meraviglie. L'utente: «dovrebbe valere solo per il tema delle carte. È una cosa che fa il tema. Per chi non ha quel tema non deve avere la possibilità di fare i bicchieri come può farli Flavio. Quei bicchieri sono per il suo tema». Carte è oggi lo stile della Tana; `disegni: true` sta solo lì, e chi ha Carte nella licenza li vede in ogni stile, come prima con Notte.
 
 IL SEGNAPOSTO: dove una voce non ha né foto né disegno c'è un bicchiere al tratto, neutro e attenuato (`segnapostoDrink`, in due versioni per i fondi scuri e chiari), nell'elenco del menù, nelle card del menù Special e nelle slide del carosello, in ogni stile. Prima c'era il logo del locale, che Notte, Lavagna, Déco e Riviera nascondevano perché ripetuto su ogni voce faceva il menù giocattolo; col bicchiere quelle eccezioni non servono più. Il Giornale, che non ha un riquadro fisso per l'immagine, e il dettaglio del drink restano senza immagine quando non c'è.
 

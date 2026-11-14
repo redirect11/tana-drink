@@ -1,5 +1,92 @@
 # Cosa è cambiato
 
+## 1.10.48 — 14 novembre 2026 (produzione)
+
+Le correzioni provate sul test dalla 1.10.44-beta alla 1.10.48-beta.
+
+### Al banco
+
+- **L'iniziale accanto al drink appena battuto compare subito**, e la riga
+  non cambia aspetto un attimo dopo (BUG-147).
+- **Al primo drink di un conto nuovo la schermata resta ferma**: il conto,
+  chi l'ha aperto e l'ora compaiono insieme alla riga (BUG-148, BUG-150).
+- **In coda un conto appena nato ha subito il suo «da quanto»** e sta al suo
+  posto, anche senza rete (BUG-151, BUG-152).
+- **Le note di una versione nuova arrivano anche al primo avvio**: il
+  riquadro «Cosa è cambiato» riprova prima di dire che non sono arrivate
+  (BUG-149).
+
+### In magazzino
+
+- **L'inventario in corso comprende anche i prodotti creati dopo la sua
+  apertura**: partono con deposito zero, e quello che hanno è acquisto,
+  compresa la giacenza scritta nella scheda alla creazione (BUG-153).
+
+### Per la Tana
+
+- **L'AI è pronta anche in produzione**: lettura dei documenti, descrizioni
+  e assistente rispondono quando dal backoffice della regia la si attiva e
+  le si dà credito (REQ-AI-003).
+- **I disegni dei drink sono del tema «Carte»**: per la Tana non cambia
+  niente (REQ-LIC-013).
+
+## 1.10.48-beta — 14/11/2026 (test)
+
+### Correzioni
+
+- **Nell'inventario un prodotto comprato dopo l'apertura parte da zero**, e
+  tutto quello che ha è acquisto, anche la giacenza scritta nella scheda
+  quando lo si è creato: come il foglio di Flavio (BUG-153).
+
+## 1.10.47-beta — 14/11/2026 (test)
+
+### Correzioni
+
+- **In coda un conto appena nato ha subito il suo «da quanto», e sta al
+  suo posto.** Prima restava senza ora finché il server non rispondeva, e
+  compariva in cima per poi saltare in fondo (BUG-151, BUG-152).
+- **Nell'inventario in corso ci sono anche i prodotti creati dopo la sua
+  apertura**, con la giacenza di partenza ricostruita dai movimenti: prima
+  mancavano, e non si potevano contare (BUG-153).
+
+### Per la Tana
+
+- **I disegni dei drink sono del tema «Carte».** La composizione del disegno
+  (bicchiere, colore, decorazione) e i disegni nel menù li ha solo chi ha
+  Carte nella licenza; Notte e Meraviglie da soli non li portano più. Per
+  la Tana non cambia niente (REQ-LIC-013).
+- **L'AI si accende anche in produzione**, appena dal backoffice della regia
+  la si attiva e le si dà credito: lettura dei documenti, descrizioni e
+  assistente (REQ-AI-003).
+
+## 1.10.46-beta — 14/11/2026 (test)
+
+### Correzioni
+
+- **Al primo drink di un conto nuovo la barra in alto non si muove più.**
+  Il conto, chi l'ha aperto e l'ora compaiono insieme alla riga, invece
+  di arrivare uno dopo l'altro spostando la pagina (BUG-150).
+
+## 1.10.45-beta — 14/11/2026 (test)
+
+### Correzioni
+
+- **Al primo drink di un conto nuovo la schermata resta ferma.** La barra
+  in alto si riempiva un attimo dopo il tocco e sembrava ricaricarsi; ora
+  il conto nasce al tocco (BUG-148).
+- **Le note di una versione nuova arrivano anche al primo avvio.** Il box
+  «Cosa è cambiato» riprova prima di dire che non sono arrivate, e
+  intanto mostra il caricamento (BUG-149).
+
+## 1.10.44-beta — 14/11/2026 (test)
+
+### Correzioni
+
+- **L'iniziale accanto al drink appena battuto compare subito.** Prima
+  arrivava dopo un attimo e la riga cambiava aspetto; succedeva al primo
+  drink di un conto nuovo e alle aggiunte dopo che la comanda era già
+  partita (BUG-147).
+
 ## 1.10.43 — 13 novembre 2026 (produzione)
 
 In produzione la linea 1.10, dopo la 1.9.3: tutto quello che c'è nelle

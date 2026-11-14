@@ -310,6 +310,21 @@ export function contrattoDati(nome, prepara) {
         smetti()
       })
 
+      // BUG-151, BUG-152: i conti si leggono chiedendo la stima, così un
+      // conto appena battuto ha già la sua ora (la card in coda dice «da
+      // quanto», e il conto sta al suo posto). Il mock di giroInLocale lo
+      // dà per buono: qui lo si verifica sul database vero.
+      it('l’ora del server, prima della conferma, la si può avere stimata', async () => {
+        const ref = p.doc(db, nuova(), 'd1')
+        const prima = Date.now()
+        const arrivo = p.setDoc(ref, { il: p.serverTimestamp() })
+        const inCache = await p.getDocFromCache(ref)
+        const stimata = inCache.data({ serverTimestamps: 'estimate' }).il
+        expect(typeof stimata?.toDate, 'nessuna stima: la porta ignora data(opzioni)').toBe('function')
+        expect(Math.abs(stimata.toDate().getTime() - prima)).toBeLessThan(60_000)
+        await arrivo
+      })
+
       it('rifiutata: la promessa fallisce, e il dispositivo torna a quello che c’era', async () => {
         const col = nuova()
         const ref = p.doc(dbSenzaPermessi, col, 'd1')
