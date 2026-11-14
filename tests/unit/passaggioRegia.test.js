@@ -15,9 +15,8 @@ import {
   codiceRegiaInAttesa,
   consumaCodiceRegia,
   esitoScambio,
-  esitoVersoRegia,
   entraDallaRegia,
-  versoLaRegia,
+  indirizzoAreaClienti,
   areaClientiVisibile,
   urlScambio,
   MESSAGGI_PASSAGGIO,
@@ -130,45 +129,35 @@ describe('dalla regia all’app', () => {
 })
 
 describe('dall’app alla regia, «Area clienti»', () => {
-  // La regia vuole un accesso di meno di cinque minuti: il token si rinnova
-  // al tocco, e viaggia nell'intestazione.
-  it('manda il token rinnovato e apre l’indirizzo che la regia risponde', async () => {
-    const prendi = vi.fn(async () => risposta(200, { url: 'https://regia.example/area?t=1' }))
-    const token = vi.fn(async () => 'id-token-fresco')
-    expect(await versoLaRegia({ token, prendi, progetto: PROGETTO })).toEqual({ ok: true, url: 'https://regia.example/area?t=1' })
-    const [url, opzioni] = prendi.mock.calls[0]
-    expect(url).toBe(`https://europe-west1-${PROGETTO}.cloudfunctions.net/passaggioVersoRegia`)
-    expect(opzioni.headers.Authorization).toBe('Bearer id-token-fresco')
-  })
-
-  it('chi non è il titolare, o ha un accesso vecchio, lo legge in una riga', () => {
-    expect(esitoVersoRegia(403, null).messaggio).toBe(MESSAGGI_PASSAGGIO.non_titolare)
-    expect(esitoVersoRegia(404, null).messaggio).toBe(MESSAGGI_PASSAGGIO.non_trovato)
-    expect(esitoVersoRegia(401, null).messaggio).toBe(MESSAGGI_PASSAGGIO.da_rientrare)
-  })
-
-  // La risposta decide dove va il titolare: un `javascript:` non passa.
-  it('si apre solo un indirizzo https', () => {
-    expect(esitoVersoRegia(200, { url: 'javascript:alert(1)' }).ok).toBe(false)
-    expect(esitoVersoRegia(200, { url: 'http://regia.example' }).ok).toBe(false)
-    expect(esitoVersoRegia(200, { url: 'https://regia.example' }).ok).toBe(true)
-  })
-
-  it('senza accesso non chiama', async () => {
-    const prendi = vi.fn()
-    expect((await versoLaRegia({ token: async () => null, prendi, progetto: PROGETTO })).messaggio).toBe(
-      MESSAGGI_PASSAGGIO.da_rientrare
+  // Daniele, 14/11/2026: «non può portarlo semplicemente all'app dove lui
+  // poi deve fare il login, ma se lo ha già fatto si ritrova già nella sua
+  // area?». È un collegamento alla pagina della regia `/dashboard`: lì si
+  // entra come sempre, e chi è già entrato ci si ritrova.
+  it('porta alla pagina della regia della build, anche senza la regia nella licenza', () => {
+    expect(indirizzoAreaClienti({ licenza: { moduli: {}, regia_url: null } }, 'drink-regia')).toBe(
+      'https://drink-regia.web.app/dashboard'
     )
-    expect(prendi).not.toHaveBeenCalled()
+    expect(indirizzoAreaClienti({}, 'drink-regia-test')).toBe('https://drink-regia-test.web.app/dashboard')
   })
 
-  // I tasti verso la regia compaiono quando la licenza dice dov'è: prima
-  // che la regia scriva quella della Tana, non ci sono.
-  it('il tasto c’è per l’admin, con la regia nella build e nella licenza', () => {
-    const settings = { licenza: { moduli: {}, regia_url: 'https://regia.example' } }
-    expect(areaClientiVisibile({ admin: true, settings, progetto: PROGETTO })).toBe(true)
-    expect(areaClientiVisibile({ admin: false, settings, progetto: PROGETTO })).toBe(false)
-    expect(areaClientiVisibile({ admin: true, settings: { licenza: { moduli: {} } }, progetto: PROGETTO })).toBe(false)
-    expect(areaClientiVisibile({ admin: true, settings, progetto: 'un-altro-progetto' })).toBe(false)
+  it('se la licenza nomina la regia vale quella, ma solo il sito e solo in https', () => {
+    const conRegia = (regia_url) => ({ licenza: { moduli: {}, regia_url } })
+    expect(indirizzoAreaClienti(conRegia('https://regia.example/area?x=1'), PROGETTO)).toBe('https://regia.example/dashboard')
+    // Un indirizzo che non è https non si apre: vale quello della build.
+    expect(indirizzoAreaClienti(conRegia('http://regia.example'), 'drink-regia')).toBe('https://drink-regia.web.app/dashboard')
+    expect(indirizzoAreaClienti(conRegia('javascript:alert(1)'), 'drink-regia')).toBe('https://drink-regia.web.app/dashboard')
+  })
+
+  // Un progetto qualunque nella build non diventa un indirizzo: solo i due
+  // della regia (come le sue Functions).
+  it('senza una regia conosciuta non c’è un indirizzo, e il tasto non c’è', () => {
+    expect(indirizzoAreaClienti({}, 'un-altro-progetto')).toBeNull()
+    expect(indirizzoAreaClienti({}, '')).toBeNull()
+    expect(areaClientiVisibile({ admin: true, settings: {}, progetto: 'un-altro-progetto' })).toBe(false)
+  })
+
+  it('il tasto c’è per l’admin, e per gli altri no', () => {
+    expect(areaClientiVisibile({ admin: true, settings: {}, progetto: 'drink-regia' })).toBe(true)
+    expect(areaClientiVisibile({ admin: false, settings: {}, progetto: 'drink-regia' })).toBe(false)
   })
 })

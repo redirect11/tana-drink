@@ -412,3 +412,27 @@ bisogni:
       - REQ-CLI-008
       - REQ-CLI-009
     test_cases: []
+
+  - id: UR-017
+    title: "Quando il fornitore cambia un prodotto, ricette e menù lo seguono in un gesto"
+    area: "Gestore"
+    description: >
+      Flavio, 14/11/2026: «spesso i fornitori non hanno sempre il
+      prodotto» — il Carpano Dry diventa un Noilly Prat, e il Carpano sta in
+      tutte le ricette dei Martini. Riscriverle una per una è lungo e se ne
+      dimentica sempre una, e il menù dei clienti continua a dire il
+      prodotto vecchio. Si deve vedere in quante ricette sta un prodotto, e
+      sostituirlo ovunque con un gesto solo, a parità di quantità.
+    accettazione: >
+      In Magazzino, aprendo il Carpano Dry, si legge in quante ricette del
+      menù è presente e quali. In Menù → Modifica menù, «Switch prodotto»
+      con Carpano Dry in uscita e Noilly Prat in ingresso mostra le ricette
+      che cambiano (quella che li ha già tutti e due segnalata) e le voci
+      del menù dei clienti che nominano il Carpano; confermato, ogni
+      ricetta ha il Noilly Prat con la stessa quantità, le ricette che
+      avevano solo il Noilly Prat sono come prima, e il menù dei clienti
+      dice Noilly Prat.
+    requisiti:
+      - REQ-MAG-056
+      - REQ-MENU-043
+    test_cases: []

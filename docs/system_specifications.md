@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 298 | fatto e coperto dai test |
+| ✅ | 300 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 9 | fatto a metà |
 | ⬜ | 25 | da fare |
 | 🗑 | 8 | non più valido |
 
-**355 voci** in tutto. **322** descrivono il sistema com'è oggi e
+**357 voci** in tutto. **324** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **25** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
@@ -47,8 +47,8 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 38 | — | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 50 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Menù e catalogo](#menù-e-catalogo) | 39 | — | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Magazzino](#magazzino) | 51 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 16 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 20 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 9 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
@@ -75,11 +75,11 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 11 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 181 |
-| Unità | il progetto di dettaglio: un modulo da solo | 183 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 183 |
+| Unità | il progetto di dettaglio: un modulo da solo | 184 |
 
-**16** bisogni del locale, **0** con un test di accettazione.
-**107** requisiti su 347 sono collegati a un bisogno;
+**17** bisogni del locale, **0** con un test di accettazione.
+**109** requisiti su 349 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -216,6 +216,14 @@ Dove il titolare lo permette, il cliente sceglie dal menù del telefono un ingre
 **Come si accetta**: Sul menù del telefono, nel Gin Lemon con la scelta del gin accesa, il cliente sceglie Hendrick's (+1 €); al banco la comanda dice «gin: Hendrick's», il conto porta il supplemento e il magazzino scala Hendrick's. Un altro cliente scrive nella nota «col Tanqueray»: il barman cambia il gin e il prezzo, il cliente vede l'ordine modificato e lo accetta; se lo rifiuta, l'ordine risulta annullato dal cliente, e se non risponde entro dieci minuti si annulla da sé.
 
 **Chi**: Cliente, Banco · **Lo realizzano**: [REQ-MAG-055](#req-mag-055--un-prodotto-di-magazzino-si-può-far-scegliere-al-cliente-dal-menù), [REQ-MENU-042](#req-menu-042--su-una-voce-del-menù-il-cliente-può-scegliere-un-ingrediente-col-supplemento-deciso-dal-titolare), [REQ-CLI-008](#req-cli-008--la-scelta-del-cliente-arriva-nellordine-sulla-comanda-e-nel-magazzino), [REQ-CLI-009](#req-cli-009--un-ordine-dal-telefono-modificato-dal-banco-torna-al-cliente-che-lo-accetta-o-lo-rifiuta) · ⚠️ **Nessun test di accettazione, ancora.**
+
+#### UR-017 — Quando il fornitore cambia un prodotto, ricette e menù lo seguono in un gesto
+
+Flavio, 14/11/2026: «spesso i fornitori non hanno sempre il prodotto» — il Carpano Dry diventa un Noilly Prat, e il Carpano sta in tutte le ricette dei Martini. Riscriverle una per una è lungo e se ne dimentica sempre una, e il menù dei clienti continua a dire il prodotto vecchio. Si deve vedere in quante ricette sta un prodotto, e sostituirlo ovunque con un gesto solo, a parità di quantità.
+
+**Come si accetta**: In Magazzino, aprendo il Carpano Dry, si legge in quante ricette del menù è presente e quali. In Menù → Modifica menù, «Switch prodotto» con Carpano Dry in uscita e Noilly Prat in ingresso mostra le ricette che cambiano (quella che li ha già tutti e due segnalata) e le voci del menù dei clienti che nominano il Carpano; confermato, ogni ricetta ha il Noilly Prat con la stessa quantità, le ricette che avevano solo il Noilly Prat sono come prima, e il menù dei clienti dice Noilly Prat.
+
+**Chi**: Gestore · **Lo realizzano**: [REQ-MAG-056](#req-mag-056--nel-dettaglio-di-un-prodotto-di-magazzino-si-vede-in-quante-ricette-del-menù-è-presente), [REQ-MENU-043](#req-menu-043--lo-switch-prodotto-un-prodotto-si-sostituisce-con-un-altro-in-tutte-le-ricette-e-nelle-etichette-del-menù-dei-clienti) · ⚠️ **Nessun test di accettazione, ancora.**
 
 ## Cosa fa il sistema
 
@@ -1237,6 +1245,14 @@ FATTO AL TELEFONO (13/11/2026): sulle voci che fanno scegliere «Aggiungi» apre
 
 **Dove**: `src/components/IngredientiVoce.jsx (la voce), src/pages/MenuPage.jsx e src/components/SceltaIngredienti.jsx (la scelta del cliente), src/lib/cart.js` · **Serve**: [UR-016](#ur-016--il-cliente-ordina-il-drink-come-lo-vuole-e-paga-quello-che-ha-accettato) · **Lo dimostrano**: `tests/component/ingredientiVoce.test.jsx`, `tests/unit/etichetteIngredienti.test.js`, `tests/bdd/disponibilita.test.js`, `tests/component/MenuPage.test.jsx`, `tests/unit/sceltaCliente.test.js`, `tests/unit/paritaFunctions.test.js`
 
+#### REQ-MENU-043 — Lo switch prodotto: un prodotto si sostituisce con un altro in tutte le ricette e nelle etichette del menù dei clienti
+
+Flavio, 14/11/2026: «aggiungere in alto a questa sezione lo SWITCH PRODOTTO, ovvero il gestionale ricerca un prodotto d'uscita presente in tutte le ricette e lo sostituisce col prodotto d'ingresso (esempio: Tanqueray - Bombay) lasciando invariata la quantità». Nel vocale lo stesso giorno il perché: «spesso i fornitori non hanno sempre il prodotto» — gli avevano appena cambiato il Carpano Dry con un Noilly Prat; e le regole: lo switch sta in Modifica menù, e va in UN VERSO SOLO («solo Tanqueray con Bombay, Bombay resta Bombay»: le ricette che hanno solo il prodotto d'ingresso non si toccano). Daniele, stesso giorno: una ricetta che li ha tutti e due resta con due righe del prodotto d'ingresso, segnalata nell'anteprima («lasciale così»); e «si devono ovviamente aggiornare anche le etichette nel menù clienti».
+
+FATTO (14/11/2026): in cima a Menù → Modifica menù, «⇄ Switch prodotto»: si scelgono il prodotto in uscita (accanto, in quante ricette sta) e quello in ingresso; l'anteprima elenca le ricette che cambiano, segna quelle che hanno già il prodotto d'ingresso, e le voci del menù dei clienti la cui etichetta cambia; si scrive solo col tasto «Sostituisci in N ricette». In ogni riga cambiano il prodotto e il nome, mai quantità e unità: quindi un prodotto d'ingresso che non si dosa nell'unità della riga (un articolo a pezzi al posto di uno in ml) ferma lo switch, e lo si dice. Le etichette di tipo prodotto passano al prodotto d'ingresso col nome da menù (nomeInCarta), e sparisce quella d'uscita se la voce ha già quella d'ingresso; le scelte del cliente (REQ-MENU-042) che lo offrono o lo sostituiscono lo seguono. Il testo libero non si tocca. Si scrivono solo `recipe_items` dei drink ed `etichette` delle voci, in pacchetti da 400. I drink già fatti non cambiano: il magazzino li ha scalati con la ricetta di allora.
+
+**Dove**: `src/lib/switchProdotto.js (pianoSwitch, etichetteDopoSwitch), src/components/SwitchProdotto.jsx, src/components/MenuManager.jsx (in cima a Modifica menù), src/lib/api.js (switchProdotto)` · **Serve**: [UR-017](#ur-017--quando-il-fornitore-cambia-un-prodotto-ricette-e-menù-lo-seguono-in-un-gesto) · **Lo dimostrano**: `tests/unit/switchProdotto.test.js`, `tests/component/SwitchProdotto.test.jsx`, `tests/unit/switchProdottoScrittura.test.js`
+
 #### REQ-MENU-013 — L'IVA di vendita si cambia sulla singola voce di menù
 
 DECISO (19/08, dall'utente che riporta Flavio). L'IVA ha DUE LATI e vanno tenuti distinti: quella con cui si COMPRA e quella con cui si VENDE. Su tutti e due il valore generale sta nelle Impostazioni, e su tutti e due si deve poter fare l'eccezione sulla singola riga.
@@ -1608,6 +1624,14 @@ FATTO (13/11/2026): il campo `scelta_cliente` sul prodotto (letto in mapItem, sc
 DA SAPERE PER REQ-MENU-042: i prodotti di magazzino li leggono solo banco e gestori (firestore.rules); le alternative e la loro disponibilità dovranno arrivare al cliente per un'altra strada.
 
 **Dove**: `la scheda del prodotto di magazzino (InventoryManager), src/lib/inventory.js` · **Serve**: [UR-016](#ur-016--il-cliente-ordina-il-drink-come-lo-vuole-e-paga-quello-che-ha-accettato) · **Lo dimostrano**: `tests/component/InventoryManagerCard.test.jsx`
+
+#### REQ-MAG-056 — Nel dettaglio di un prodotto di magazzino si vede in quante ricette del menù è presente
+
+Flavio, 14/11/2026, con la foto di Magazzino → Prodotti: «si può inserire in questa sezione del Prodotto in quante Ricette di Menù è presente?». Serve prima di cambiare un prodotto (lo switch, REQ-MENU-043) o di toglierlo dall'assortimento.
+
+FATTO (14/11/2026): nel dettaglio del prodotto, sotto Movimenti, un tasto «In N ricette del menù» (o «In nessuna ricetta del menù», spento) che apre l'elenco dei drink della cassa che lo hanno in ricetta, per nome. I drink sono quelli che la schermata già ascolta per l'impegnato.
+
+**Dove**: `src/components/RicetteDelProdotto.jsx, src/components/InventoryManager.jsx (il dettaglio del prodotto), src/lib/switchProdotto.js (ricetteDelProdotto)` · **Serve**: [UR-017](#ur-017--quando-il-fornitore-cambia-un-prodotto-ricette-e-menù-lo-seguono-in-un-gesto) · **Lo dimostrano**: `tests/unit/switchProdotto.test.js`, `tests/component/SwitchProdotto.test.jsx`
 
 #### REQ-MAG-009 — Macro-categorie: il magazzino letto per famiglie
 
@@ -4317,13 +4341,13 @@ UNA DIFESA IN PIÙ: il token va solo a una Function dei progetti della regia (`d
 
 #### REQ-FLOTTA-030 — Il passaggio dalla regia all'app e ritorno con un clic, i dati del titolare nelle impostazioni, il banco con Google
 
-L'utente, 02/11/2026: «Dobbiamo prevedere un single sign-on [...] risulta loggato sia backoffice sia istanza per quell'utente», «mi serve qualcosa che sia sicuro e robusto», per tutte le istanze. La regia apre l'app con #accesso-regia=<codice>: l'app lo toglie subito dall'indirizzo, lo scambia con la regia (scambiaPassaggio) e entra con signInWithCustomToken. «Area clienti», per il titolare admin, manda alla regia (passaggioVersoRegia) un ID token appena rinnovato e apre l'url della risposta. La regia scrive a ogni deploy, solo dove sono vuoti, i dati del titolare in settings/bar, compresi quattro campi nuovi da mostrare e usare: venue_phone, venue_vat_number, venue_tax_code, venue_legal_address. Il banco entra anche con Google. Il contratto in docs/passaggio-dalla-regia.md; la regia è pronta (drink-regia REQ-FLOTTA-030, PR #49).
+L'utente, 02/11/2026: «Dobbiamo prevedere un single sign-on [...] risulta loggato sia backoffice sia istanza per quell'utente», «mi serve qualcosa che sia sicuro e robusto», per tutte le istanze. La regia apre l'app con #accesso-regia=<codice>: l'app lo toglie subito dall'indirizzo, lo scambia con la regia (scambiaPassaggio) e entra con signInWithCustomToken. «Area clienti», per il titolare admin, mandava alla regia (passaggioVersoRegia) un ID token appena rinnovato e apriva l'url della risposta; dal 14/11/2026 è un collegamento (vedi sotto). La regia scrive a ogni deploy, solo dove sono vuoti, i dati del titolare in settings/bar, compresi quattro campi nuovi da mostrare e usare: venue_phone, venue_vat_number, venue_tax_code, venue_legal_address. Il banco entra anche con Google. Il contratto in docs/passaggio-dalla-regia.md; la regia è pronta (drink-regia REQ-FLOTTA-030, PR #49).
 
 LA TANA IN PRODUZIONE (04/11/2026). L'utente: la regia «deve sapere che Flavio è il titolare, deve poter inviare comunicazioni a lui via email rispetto al prodotto e deve poter effettuare il single sign on con la sua utenza». Gli account restano due, legati dall'email: il passaggio vuole nel locale la stessa email del titolare, verificata, e il ruolo admin. Quindi titolare-locale.mjs dice anche se l'email è verificata, e con un'opzione esplicita la segna verificata. La 1.10 con questo requisito va su main, perché la regia di produzione legge da lì. L'ordine del giorno del rilascio, coi permessi da dare l'utente, sta in docs/la-tana-nella-regia.md.
 
 COME È FATTO (05/11/2026, su richiesta dell'utente).
 
-IL CODICE si cattura in main.jsx prima del router e si toglie dall'indirizzo (replaceState); App lo consuma una volta sola (React in sviluppo monta due volte, e il secondo scambio troverebbe il codice speso), lo scambia, entra con signInWithCustomToken e va in /bar; se non riesce, va in /bar col login normale e la riga che dice perché. Nessun nuovo tentativo: il codice è già speso. Solo verso i progetti della regia (urlFunzioneRegia), solo codici di lettere, cifre, «-» e «_». «AREA CLIENTI» sta nel menù laterale, per l'admin, quando la build conosce la regia e la licenza dice dov'è (`regia_url`), come gli altri tasti verso la regia; il token si rinnova al tocco (getIdToken(true)) e si apre solo un indirizzo https. Chi è admin ma non il titolare lo dice la regia, al tocco. I DATI FISCALI (partita IVA, codice fiscale, sede legale) si leggono dal locale al momento della stampa, non dalle impostazioni della stampante, che su un dispositivo si tengono l'intestazione di quando le si è salvate: la partita IVA va sotto la ragione sociale sulle ricevute, tutti e tre sulla fattura di cortesia e nel suo testo per email; il telefono nei contatti della pagina iniziale.
+IL CODICE si cattura in main.jsx prima del router e si toglie dall'indirizzo (replaceState); App lo consuma una volta sola (React in sviluppo monta due volte, e il secondo scambio troverebbe il codice speso), lo scambia, entra con signInWithCustomToken e va in /bar; se non riesce, va in /bar col login normale e la riga che dice perché. Nessun nuovo tentativo: il codice è già speso. «AREA CLIENTI» È UN COLLEGAMENTO (14/11/2026). Daniele: «non può portarlo semplicemente all'app dove lui poi deve fare il login, ma se lo ha già fatto si ritrova già nella sua area? Perché tutta questa complicazione?». Il tasto apre in una scheda nuova la pagina della regia `/dashboard` (indirizzoAreaClienti): chi è già entrato nella regia su quel dispositivo ci si ritrova, gli altri entrano lì. Niente token mandati da qui, niente controllo dell'email del titolare nell'app. L'indirizzo: il sito di `regia_url` se la licenza lo dice (https), se no il progetto della regia nella build; il tasto si vede agli admin anche senza `regia_url`, quindi alla Tana, la cui licenza non lo dice. La parte che segue sul tasto vale per com'era prima. Solo verso i progetti della regia (urlFunzioneRegia), solo codici di lettere, cifre, «-» e «_». «AREA CLIENTI» sta nel menù laterale, per l'admin, quando la build conosce la regia e la licenza dice dov'è (`regia_url`), come gli altri tasti verso la regia; il token si rinnova al tocco (getIdToken(true)) e si apre solo un indirizzo https. Chi è admin ma non il titolare lo dice la regia, al tocco. I DATI FISCALI (partita IVA, codice fiscale, sede legale) si leggono dal locale al momento della stampa, non dalle impostazioni della stampante, che su un dispositivo si tengono l'intestazione di quando le si è salvate: la partita IVA va sotto la ragione sociale sulle ricevute, tutti e tre sulla fattura di cortesia e nel suo testo per email; il telefono nei contatti della pagina iniziale.
 
 AL BANCO CON GOOGLE: un account Google senza ruolo del personale trova «Quest'area è riservata allo staff», come un cliente.
 

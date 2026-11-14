@@ -86,6 +86,7 @@ import { toastSuccess, toastError } from '../lib/toast.js'
 import StockCountPanel from './StockCountPanel.jsx'
 import StoricoInventari from './StoricoInventari.jsx'
 import MovimentiProdotto from './MovimentiProdotto.jsx'
+import RicetteDelProdotto from './RicetteDelProdotto.jsx'
 import ControlloMagazzino from './ControlloMagazzino.jsx'
 import { controlloMagazzinoVisibile } from '../lib/prova.js'
 import CategoryRail from './CategoryRail.jsx'
@@ -475,6 +476,7 @@ function ProductsPanel({ onApriMenu = null }) {
     []
   )
   const itemsById = useMemo(() => Object.fromEntries(items.map((i) => [i.id, i])), [items])
+  const elencoDrink = useMemo(() => Object.values(drinksById), [drinksById])
   const impegnato = useMemo(
     () =>
       cassaAperta
@@ -737,6 +739,9 @@ function ProductsPanel({ onApriMenu = null }) {
           <button className="btn ghost small block" style={{ marginTop: 6 }} onClick={() => setMovimentiDi(it)}>
             <Icona nome="movimenti" gruppo="tasti" /> Movimenti
           </button>
+          {/* IN QUANTE RICETTE (REQ-MAG-056): prima di cambiarlo o di
+              toglierlo, si vede quali drink ne dipendono. */}
+          <RicetteDelProdotto drinks={elencoDrink} itemId={it.id} />
           <div className="inv-azioni" style={{ marginTop: 6 }}>
             <button className="btn ghost small" disabled={!modificabile(it)} onClick={() => setEditing(it)}><Icona nome="modifica" gruppo="tasti" /> Modifica</button>
             <button className="btn ghost small" disabled={bloccato} onClick={() => duplica(it)}>⧉ Duplica</button>

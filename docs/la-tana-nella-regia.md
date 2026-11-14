@@ -119,7 +119,9 @@ le fa l'utente, o un agente col suo via libera esplicito.
      un locale registrato a mano nasce con `marketing: false`.
 8. **La prova:**
    - dalla regia, «Apri la tua app»: Flavio entra nella Tana da admin;
-   - dalla Tana, «Area clienti»: torna nella regia già entrato.
+   - dalla Tana, «Area clienti»: apre la regia, dove Flavio, se è già
+     entrato su quel dispositivo, si ritrova nella sua area (dal 14/11 è un
+     collegamento, vedi passaggio-dalla-regia.md).
 
    Si prova prima tutto su `tana-drink-test` con `drink-regia-test`.
 
