@@ -10,6 +10,10 @@
 
 ### Per la Tana
 
+- **I disegni dei drink sono del tema «Carte».** La composizione del disegno
+  (bicchiere, colore, decorazione) e i disegni nel menù li ha solo chi ha
+  Carte nella licenza; Notte e Meraviglie da soli non li portano più. Per
+  la Tana non cambia niente (REQ-LIC-013).
 - **L'AI si accende anche in produzione**, appena dal backoffice della regia
   la si attiva e le si dà credito: lettura dei documenti, descrizioni e
   assistente (REQ-AI-003).

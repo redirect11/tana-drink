@@ -51,24 +51,34 @@ describe('lo stile del menù', () => {
   })
 })
 
-// I DISEGNI DEI DRINK SONO DEL LOCALE CHE HA «NOTTE» (REQ-LIC-013). L'utente,
-// 04/11/2026: «sono solo per lo stile Notte che abbiamo fatto in esclusiva
-// per la Tana», e «può riutilizzarli Flavio se cambia stile». Quindi la
-// licenza decide, non lo stile in uso.
+// I DISEGNI DEI DRINK SONO DEL LOCALE CHE HA «CARTE» (REQ-LIC-013). L'utente,
+// 04/11/2026: erano «solo per lo stile Notte che abbiamo fatto in esclusiva
+// per la Tana», e «può riutilizzarli Flavio se cambia stile»; il 14/11/2026:
+// «dovrebbe valere solo per il tema delle carte», che è oggi lo stile della
+// Tana. Quindi la licenza decide, non lo stile in uso, e decide Carte.
 describe('i disegni dei drink', () => {
-  const TANA = { licenza: { moduli: {}, temi: ['notte'] } }
+  const TANA = { licenza: { moduli: {}, temi: ['carte'] } }
 
-  it('li ha il locale con «Notte» nella licenza, in qualunque stile', () => {
+  it('li ha il locale con «Carte» nella licenza, in qualunque stile', () => {
     expect(disegniDelLocale(TANA)).toBe(true)
     expect(disegniDelLocale({ ...TANA, stile_menu: 'giornale', stili_installati: ['giornale'] })).toBe(true)
     expect(disegniDelLocale({ ...TANA, stile_menu: 'classico' })).toBe(true)
   })
 
-  it('gli altri locali no: né installando stili gratis né scrivendo «notte» a mano', () => {
+  it('gli altri locali no: né installando stili gratis né scrivendo «carte» a mano', () => {
     expect(disegniDelLocale({})).toBe(false)
     expect(disegniDelLocale(null)).toBe(false)
     expect(disegniDelLocale({ licenza: { moduli: {}, temi: [] } })).toBe(false)
-    expect(disegniDelLocale({ stile_menu: 'notte', stili_installati: ['notte', 'giornale'] })).toBe(false)
+    expect(disegniDelLocale({ stile_menu: 'carte', stili_installati: ['carte', 'giornale'] })).toBe(false)
+  })
+
+  // Il 14/11/2026 i disegni passano a «Carte»: gli altri stili esclusivi
+  // non li portano più. Un locale che avesse Notte o Meraviglie senza Carte
+  // non compone i bicchieri e non li vede.
+  it('«Notte» e «Meraviglie» da soli non li portano', () => {
+    expect(disegniDelLocale({ licenza: { temi: ['notte'] } })).toBe(false)
+    expect(disegniDelLocale({ licenza: { temi: ['meraviglie'] } })).toBe(false)
+    expect(disegniDelLocale({ licenza: { temi: ['notte', 'meraviglie'] } })).toBe(false)
   })
 })
 
@@ -137,8 +147,8 @@ describe('lo stile «Meraviglie»', () => {
     expect(stileProvabile({}, 'meraviglie')).toBe(false)
   })
 
-  it('porta i disegni dei drink, come «Notte»', () => {
-    expect(disegniDelLocale({ licenza: { temi: ['meraviglie'] } })).toBe(true)
+  it('non porta i disegni dei drink: sono di «Carte» (REQ-LIC-013)', () => {
+    expect(disegniDelLocale({ licenza: { temi: ['meraviglie'] } })).toBe(false)
   })
 
   it('veste anche le altre pagine; gli altri stili solo il menù', () => {

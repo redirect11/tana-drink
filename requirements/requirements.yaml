@@ -6837,7 +6837,7 @@ requirements:
       - tests/component/MarketplaceTab.test.jsx
 
   - id: REQ-LIC-013
-    title: "I disegni dei drink sono del locale che ha «Notte»; altrove la foto o un bicchiere neutro"
+    title: "I disegni dei drink sono del locale che ha «Carte»; altrove la foto o un bicchiere neutro"
     area: "src/lib/stileMenu.js (disegni, disegniDelLocale), src/lib/speciali.js (immagineVoce, segnapostoDrink), src/pages/MenuPage.jsx, src/components/CaroselloSpeciali.jsx, src/components/SpecialScorrevoli.jsx, src/components/DettaglioDrink.jsx, src/components/SpecialManager.jsx, src/components/DrinkForm.jsx (disegniConsentiti), src/index.css, DESIGN.md"
     description: >
       L'utente, 04/11/2026: «le immagini dei drink che abbiamo fatto sono
@@ -6850,14 +6850,20 @@ requirements:
       bicchiere neutro».
       I DISEGNI VANNO COL LOCALE, NON CON LO STILE IN USO: le illustrazioni
       di Alice e i disegni composti (REQ-MENU-018) si vedono dove la licenza
-      dà uno stile che li porta (`disegni: true` nel catalogo: oggi solo
-      «Notte», REQ-LIC-010), in qualunque stile il locale abbia scelto,
+      dà uno stile che li porta (`disegni: true` nel catalogo: dal
+      14/11/2026 solo «Carte», REQ-MENU-029), in qualunque stile il locale abbia scelto,
       Giornale compreso con le sue incisioni. Gli altri locali non li vedono
       in nessuno stile, e nella scheda del drink la composizione del
       disegno non si offre. `immagineVoce` senza `disegni` restituisce solo
       la foto: chi chiama e se ne dimentica non regala l'esclusiva.
       LE FOTO SONO DI TUTTI: si caricano dalla scheda a prescindere da tema
       e stile, e vincono sempre sul disegno.
+      DAL 14/11/2026 LI PORTA «CARTE», non più Notte e Meraviglie. L'utente:
+      «dovrebbe valere solo per il tema delle carte. È una cosa che fa il
+      tema. Per chi non ha quel tema non deve avere la possibilità di fare i
+      bicchieri come può farli Flavio. Quei bicchieri sono per il suo tema».
+      Carte è oggi lo stile della Tana; `disegni: true` sta solo lì, e chi
+      ha Carte nella licenza li vede in ogni stile, come prima con Notte.
       IL SEGNAPOSTO: dove una voce non ha né foto né disegno c'è un
       bicchiere al tratto, neutro e attenuato (`segnapostoDrink`, in due
       versioni per i fondi scuri e chiari), nell'elenco del menù, nelle card
