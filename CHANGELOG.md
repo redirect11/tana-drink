@@ -1,6 +1,34 @@
 # Cosa è cambiato
 
-## 1.10.49-beta — in lavorazione
+## 1.10.48 — 14 novembre 2026 (produzione)
+
+Le correzioni provate sul test dalla 1.10.44-beta alla 1.10.48-beta.
+
+### Al banco
+
+- **L'iniziale accanto al drink appena battuto compare subito**, e la riga
+  non cambia aspetto un attimo dopo (BUG-147).
+- **Al primo drink di un conto nuovo la schermata resta ferma**: il conto,
+  chi l'ha aperto e l'ora compaiono insieme alla riga (BUG-148, BUG-150).
+- **In coda un conto appena nato ha subito il suo «da quanto»** e sta al suo
+  posto, anche senza rete (BUG-151, BUG-152).
+- **Le note di una versione nuova arrivano anche al primo avvio**: il
+  riquadro «Cosa è cambiato» riprova prima di dire che non sono arrivate
+  (BUG-149).
+
+### In magazzino
+
+- **L'inventario in corso comprende anche i prodotti creati dopo la sua
+  apertura**: partono con deposito zero, e quello che hanno è acquisto,
+  compresa la giacenza scritta nella scheda alla creazione (BUG-153).
+
+### Per la Tana
+
+- **L'AI è pronta anche in produzione**: lettura dei documenti, descrizioni
+  e assistente rispondono quando dal backoffice della regia la si attiva e
+  le si dà credito (REQ-AI-003).
+- **I disegni dei drink sono del tema «Carte»**: per la Tana non cambia
+  niente (REQ-LIC-013).
 
 ## 1.10.48-beta — 14/11/2026 (test)
 
