@@ -8,6 +8,12 @@
   suo posto.** Prima restava senza ora finché il server non rispondeva, e
   compariva in cima per poi saltare in fondo (BUG-151, BUG-152).
 
+### Per la Tana
+
+- **L'AI si accende anche in produzione**, appena dal backoffice della regia
+  la si attiva e le si dà credito: lettura dei documenti, descrizioni e
+  assistente (REQ-AI-003).
+
 ## 1.10.46-beta — 14/11/2026 (test)
 
 ### Correzioni

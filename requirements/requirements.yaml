@@ -8902,7 +8902,13 @@ requirements:
       `REGIA_PROGETTO=drink-regia` si aggiunge solo quando la regia di
       produzione riconosce il gettone (dal suo prossimo rilascio su main):
       prima risponderebbe sempre 401.
-      RESTA: `REGIA_PROGETTO` sulla produzione della Tana, la
+      IN PRODUZIONE DALLA 1.10.47 (14/11/2026): la regia di produzione ha
+      detto che riconosce il gettone, e la riga `REGIA_PROGETTO=drink-regia`
+      è in functions/.env.tana-drink; il permesso di agire come
+      `ai-locale@tana-drink` verificato con gcloud lo stesso giorno. L'AI
+      risponde dopo che il backoffice della regia la accende e le dà
+      credito (prima: 402).
+      RESTA: la
       fattura (REQ-AI-001), il credito in Impostazioni, pacchetti e prezzo.
       IL CREDITO SENZA CHIAMARE IL MODELLO (contratto della regia,
       13/11/2026, drink-regia #217): `{ tipo: 'credito' }` col gettone →

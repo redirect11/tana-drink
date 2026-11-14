@@ -3369,7 +3369,9 @@ PROVATO SUL TEST (12/11/2026, prova-bar aggiornato dalla regia con questo ramo, 
 
 LA TANA: le sue Functions le pubblica il deploy.yml di tana-drink, col suo account di deploy, che deve poter agire come `ai-locale` (roles/iam.serviceAccountUser SULL'ACCOUNT, non sul progetto): senza, il deploy di tutte le Functions si ferma su actAs. Account, ruoli e permesso li prepara il workflow della regia «Prepara l'AI di un locale esistente» (drink-regia #202); solo DOPO si aggiunge `REGIA_PROGETTO`. Fatto su tana-drink-test il 12/11/2026 (run 43292808376, verificato con gcloud): la riga c'è. Fatto anche su tana-drink (run 43295988436, col via libera di Daniele, verificato con gcloud), ma lì `REGIA_PROGETTO=drink-regia` si aggiunge solo quando la regia di produzione riconosce il gettone (dal suo prossimo rilascio su main): prima risponderebbe sempre 401.
 
-RESTA: `REGIA_PROGETTO` sulla produzione della Tana, la fattura (REQ-AI-001), il credito in Impostazioni, pacchetti e prezzo.
+IN PRODUZIONE DALLA 1.10.47 (14/11/2026): la regia di produzione ha detto che riconosce il gettone, e la riga `REGIA_PROGETTO=drink-regia` è in functions/.env.tana-drink; il permesso di agire come `ai-locale@tana-drink` verificato con gcloud lo stesso giorno. L'AI risponde dopo che il backoffice della regia la accende e le dà credito (prima: 402).
+
+RESTA: la fattura (REQ-AI-001), il credito in Impostazioni, pacchetti e prezzo.
 
 IL CREDITO SENZA CHIAMARE IL MODELLO (contratto della regia, 13/11/2026, drink-regia #217): `{ tipo: 'credito' }` col gettone → 200 `{ ok, tipo: 'credito', credito_eur, tetto_mensile_eur (sempre un numero), speso_mese_eur, attivo, motivo }`, gratis e senza riga di consumo. `attivo` vuol dire «una richiesta AI può partire adesso» (cassetto acceso, credito sopra zero, mese sotto il tetto); `motivo` è null, «credito» o «tetto». Senza cassetto o col cassetto spento il 402 di sempre. Si chiede all'apertura delle Impostazioni (e della chat, REQ-AI-006).
 
