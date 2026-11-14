@@ -1,6 +1,8 @@
 # Cosa è cambiato
 
-## 1.10.47-beta — in lavorazione
+## 1.10.48-beta — in lavorazione
+
+## 1.10.47-beta — 14/11/2026 (test)
 
 ### Correzioni
 
