@@ -332,11 +332,11 @@ describe('l’inventario aperto, riletto', () => {
 
 // BUG-153, dalla revisione: la chiusura di un inventario con un prodotto
 // nato dopo l'apertura. La riga la compone la chiusura coi movimenti appena
-// letti, anche se dalla schermata ne arriva una con un DEP sbagliato (una
+// letti, anche se dalla schermata ne arriva una con numeri sbagliati (una
 // lettura dei movimenti non riuscita là): nell'inventario chiuso il consumo
 // resterebbe sbagliato per sempre.
 describe('la chiusura con un prodotto nato dopo l’apertura', () => {
-  it('lo conta, con il DEP rifatto dai movimenti, e il prossimo lo porta già', async () => {
+  it('lo conta, con i conti rifatti dai movimenti, e il prossimo lo porta già', async () => {
     stato.articoli.galv = { name: 'Galvanina Pompelmo 20cl', unit: 'pz', stock: 17 }
     stato.movimenti = [
       { item_id: 'galv', type: 'load', qty: 24, unit: 'pz', reason: 'ordine fornitore', created_at: '2026-10-21T12:00:00.000Z' },
@@ -360,5 +360,25 @@ describe('la chiusura con un prodotto nato dopo l’apertura', () => {
     expect(chiusa.patch.lines.map((l) => l.item_id)).toContain('galv')
     // Il prossimo inventario lo ha già, e parte dal contato.
     expect(prossimo.lines.find((l) => l.item_id === 'galv').dep).toBe(15)
+  })
+})
+
+// Il caso in cui il dato resta per sempre: un prodotto creato con la
+// giacenza scritta nella scheda (5) E poi caricato (24), con 7 venduti.
+// Flavio, 14/11: «deposito è zero, acquisto è l'acquisto che ho fatto».
+describe('la chiusura con un prodotto nato con la giacenza scritta e poi caricato', () => {
+  it('salva DEP 0 e in ACQ anche la giacenza della nascita', async () => {
+    stato.articoli.boem = { name: 'Boem Pompelmo Alcolico', unit: 'pz', stock: 22 }
+    stato.movimenti = [
+      { item_id: 'boem', type: 'load', qty: 24, unit: 'pz', reason: 'ordine fornitore', created_at: '2026-10-21T12:00:00.000Z' },
+      { item_id: 'boem', type: 'unload', qty: 7, unit: 'pz', reason: 'ordine', created_at: '2026-10-25T22:00:00.000Z' },
+    ]
+    const dallaSchermata = [{ item_id: 'boem', name: 'Boem Pompelmo Alcolico', unit: 'pz', rim: 20, rim_at: null }]
+    await subito(api.closeStockCount('inv-1', { lines: dallaSchermata }))
+    await giro()
+    const chiusa = stato.pacchetti[0].scritture.find((s) => s.col === 'stock_counts' && s.id === 'inv-1')
+    const boem = chiusa.patch.lines.find((l) => l.item_id === 'boem')
+    // 5 alla nascita + 24 caricati = 29 acquistati; 20 contati: 9 consumati.
+    expect([boem.dep, boem.acq, boem.rim, boem.cons, boem.diff]).toEqual([0, 29, 20, 9, -2])
   })
 })

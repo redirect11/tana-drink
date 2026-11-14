@@ -1620,10 +1620,10 @@ export async function closeStockCount(id, { lines, riapri = false }) {
   const raggruppati = raggruppaMovimenti(movimenti, articoli)
   // LE RIGHE LE COMPONE LA CHIUSURA, coi dati di adesso (come le
   // differenze, BUG-112): quelle dell'apertura più i prodotti nati dopo
-  // (BUG-153), il cui DEP si ricostruisce qui dai movimenti appena letti.
-  // Dalla schermata arrivano solo i numeri contati: un DEP calcolato là su
-  // una lettura dei movimenti non riuscita finirebbe per sempre
-  // nell'inventario chiuso.
+  // (BUG-153), il cui acquisto alla nascita si ricostruisce qui dai
+  // movimenti appena letti. Dalla schermata arrivano solo i numeri contati:
+  // un acquisto calcolato là su una lettura dei movimenti non riuscita
+  // finirebbe per sempre nell'inventario chiuso.
   const contati = new Map((lines || []).map((l) => [l.item_id, l]))
   const righe = conProdottiNuovi(conta.lines, {
     items: articoli,

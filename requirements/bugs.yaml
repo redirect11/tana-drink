@@ -6302,13 +6302,20 @@ bugs:
       In più un numero contato per un prodotto senza riga si salvava
       (rimanenze.<id>) ma la lettura dell'inventario lo perdeva.
       ORA la schermata aggiunge in fondo i prodotti nati dopo l'apertura.
-      Il DEP non si indovina: è la giacenza di adesso meno quello che si è
+      Fino alla 1.10.47 il DEP non si indovinava: era la giacenza di adesso meno quello che si è
       mosso dall'apertura, così una giacenza scritta nella scheda alla
       nascita conta come già presente e un carico come acquisto, e il
       consumo torna (partendo da zero la Tisana Generica, 197 pezzi senza
       carico, avrebbe dato un consumo di -197). Mai sotto zero. La lettura
       dell'inventario restituisce anche i numeri contati senza riga, e la
       chiusura porta le righe nuove con le altre.
+      LA REGOLA DI FLAVIO (vocale del 14/11/2026, dopo la 1.10.47-beta):
+      «io acquisto un prodotto, quindi me lo dovrebbe mettere all'interno
+      dell'inventario in corso, dove deposito è zero, acquisto è l'acquisto
+      che ho fatto, e poi rimanenza e consumato». Dalla 1.10.48 un prodotto
+      nato dopo l'apertura ha DEP 0, e la giacenza avuta alla nascita senza
+      un carico va in ACQ (`acq_alla_nascita`) invece che nel DEP: il
+      consumo è lo stesso, cambia la colonna in cui sta.
     status: fixed
     in_produzione: false
     generate_issue: true
