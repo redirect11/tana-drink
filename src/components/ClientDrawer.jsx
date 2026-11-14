@@ -19,7 +19,7 @@ import { useVenue } from '../lib/useVenue.js'
 // IL MENÙ E «I MIEI ORDINI» SOLO SE CI SONO (REQ-LIC-002): col menù dei
 // clienti spento non ci si arriva in nessun modo, e «I miei ordini» c'è
 // solo se il cliente può ordinare (licenza.js, mieiOrdiniVisibili).
-export default function ClientDrawer({ user, profile, accountsOn = false, menuDigitale = true, mieiOrdini = true }) {
+export default function ClientDrawer({ user, profile, accountsOn = false, menuVisibile = true, mieiOrdini = true }) {
   const venue = useVenue()
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
@@ -62,7 +62,7 @@ export default function ClientDrawer({ user, profile, accountsOn = false, menuDi
           {venue.venue_name}
         </div>
 
-        {menuDigitale && (
+        {menuVisibile && (
           <div className={`bar-nav-item${attivo('/menu')}`} onClick={() => vai('/menu')}>
             <span>🍸</span> Menù
           </div>

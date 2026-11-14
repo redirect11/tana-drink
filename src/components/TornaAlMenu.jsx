@@ -6,7 +6,12 @@ import { useMenuCliente } from '../lib/useMenuCliente.js'
 // modo». Le pagine dei clienti (accesso, profilo, i propri ordini, lo
 // stato di un ordine) avevano un «Torna al menù» fisso, che col menù spento
 // portava alla pagina che dice che non c'è: allora si torna all'inizio.
-export default function TornaAlMenu({ className = 'btn ghost block', style, children = '← Torna al menù' }) {
+export default function TornaAlMenu({
+  className = 'btn ghost block',
+  style,
+  children = '← Torna al menù',
+  altrimenti = '← Torna alla pagina iniziale',
+}) {
   const { menu } = useMenuCliente()
   return menu ? (
     <Link className={className} style={style} to="/menu">
@@ -14,7 +19,7 @@ export default function TornaAlMenu({ className = 'btn ghost block', style, chil
     </Link>
   ) : (
     <Link className={className} style={style} to="/">
-      ← Torna alla pagina iniziale
+      {altrimenti}
     </Link>
   )
 }

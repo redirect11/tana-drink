@@ -318,6 +318,11 @@ export default function App() {
   // entrato: da sloggati si è un cliente qualunque, e la campanella degli
   // avvisi non lo riguarda.
   const [collegato, setCollegato] = useState(false)
+  // L'ACCESSO HA RISPOSTO: si sa chi è collegato e col suo ruolo. Serve al
+  // menù nascosto ai clienti, che è aperto allo staff: prima di saperlo,
+  // un barista che riapre /menu leggeva per un attimo «non è disponibile»
+  // (come BUG-142, ma sul ruolo invece che sulla licenza).
+  const [accessoNoto, setAccessoNoto] = useState(!isFirebaseConfigured)
   useEffect(() => {
     if (!isFirebaseConfigured) return
     return onAuthStateChanged(auth, async (u) => {
@@ -329,7 +334,10 @@ export default function App() {
       impostaUtenteStampante(u?.uid || null, u ? { name: u.displayName, email: u.email } : null)
       setCollegato(!!u)
       setUidCollegato(u?.uid || null)
-      if (!u) return setStaffRole(null)
+      if (!u) {
+        setAccessoNoto(true)
+        return setStaffRole(null)
+      }
       try {
         const token = await u.getIdTokenResult()
         const role = token.claims.role
@@ -356,6 +364,8 @@ export default function App() {
         }
       } catch {
         setStaffRole(null)
+      } finally {
+        setAccessoNoto(true)
       }
     })
   }, [])
@@ -431,7 +441,10 @@ export default function App() {
   // alla prima apertura, per un secondo, il cliente al tavolo leggeva «Il
   // menù digitale non è attivo» e poi vedeva il menù. Intanto la stessa
   // attesa che mostra MenuPage mentre carica.
-  const menuNonIncluso = licenzaNota(settings) ? (
+  // Il menù nascosto ai clienti, prima che si sappia se chi guarda è dello
+  // staff: si aspetta, come per la licenza (BUG-142).
+  const attesaMenu = !licenzaNota(settings) || (menuDigitale && !menuClientiVisibile(settings) && !accessoNoto)
+  const menuNonIncluso = !attesaMenu ? (
     <FunzioneNonInclusa
       nome="Il menù digitale"
       licenza={licenzaDi(settings)}
@@ -610,7 +623,7 @@ export default function App() {
         staffRole && !anteprimaCliente ? (
           <StaffDrawer role={staffRole} />
         ) : (
-          <ClientDrawer user={user} profile={profile} accountsOn={accountsOn} menuDigitale={menuNeiLink} mieiOrdini={mieiOrdini} />
+          <ClientDrawer user={user} profile={profile} accountsOn={accountsOn} menuVisibile={menuNeiLink} mieiOrdini={mieiOrdini} />
         )
       )}
       <header ref={barraInAlto} className={`topbar${onBackoffice || staffRole ? ' backoffice' : ''}`}>

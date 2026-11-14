@@ -31,7 +31,7 @@ Il sito del locale è un insieme di **pagine predefinite**, che diamo noi. Il lo
 |---|---|---|
 | **Home** | benvenuto, slogan, immagine, il tasto del menù quando c'è | Identità del locale |
 | **Contatti** | indirizzo, telefono, email, social, come arrivare | Identità del locale |
-| **Orari** | giorni e orari di apertura | apertura e chiusura che il locale già scrive |
+| **Orari** | giorni e orari di apertura | oggi ci sono solo l'ora di apertura e di chiusura (`orario_apertura`, `orario_chiusura`): i giorni sono da aggiungere |
 | **Chi siamo** | il testo del locale, qualche immagine | Identità del locale |
 | **Eventi** | serate in programma (il riquadro del karaoke di agosto ne era un abbozzo) | da definire |
 | **Menù** | il menù dei clienti, se attivo | la carta (`carta_*`) |

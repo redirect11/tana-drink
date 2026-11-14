@@ -152,6 +152,25 @@ describe('/menu col menù nascosto ai clienti', () => {
     expect(screen.queryByText('PAGINA MENU')).toBeNull()
   })
 
+  // Dalla revisione: il ruolo arriva dopo le impostazioni (il token si
+  // legge in un secondo tempo). Prima di saperlo non si dice al barista che
+  // il menù non c'è.
+  it('finché non si sa chi è collegato aspetta, invece di dire che non è disponibile', async () => {
+    let daiIlToken
+    collegato = {
+      uid: 's1',
+      email: 'banco@tana.local',
+      displayName: 'Banco',
+      getIdTokenResult: () => new Promise((r) => (daiIlToken = r)),
+    }
+    await apri('/menu')
+    act(() => arrivano(nascosto()))
+    expect(screen.queryByRole('heading', { name: /non è disponibile/ })).toBeNull()
+    expect(screen.getByText('Carico il menù…')).toBeInTheDocument()
+    await act(async () => daiIlToken({ claims: { role: 'bartender' } }))
+    expect(screen.getByText('PAGINA MENU')).toBeInTheDocument()
+  })
+
   it('al personale si apre', async () => {
     collegato = {
       uid: 's1',
