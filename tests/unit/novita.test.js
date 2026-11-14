@@ -96,15 +96,22 @@ describe('il caricamento delle note riprova prima di arrendersi', () => {
     expect(aspetta).toHaveBeenCalledWith(1000)
   })
 
-  it('una risposta di errore o un file vuoto contano come non arrivati', async () => {
+  it('una risposta di errore, un file vuoto o senza versioni contano come non arrivati', async () => {
     const f = vi
       .fn()
       .mockImplementationOnce(() => risposta('', false))
       .mockImplementationOnce(() => risposta('   '))
-      .mockImplementation(() => risposta('note'))
+      .mockImplementation(() => risposta('## 1.0 — oggi'))
     vi.stubGlobal('fetch', f)
-    await expect(caricaChangelog({ aspetta })).resolves.toBe('note')
+    await expect(caricaChangelog({ aspetta })).resolves.toBe('## 1.0 — oggi')
     expect(aspetta.mock.calls.map((c) => c[0])).toEqual([1000, 3000])
+  })
+
+  // L'hosting risponde con la pagina dell'app a un file che non c'è: è un
+  // 200, ma di note non ce n'è, e il box resterebbe a caricare per sempre.
+  it('la pagina dell’app al posto delle note non conta come note', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => risposta('<!doctype html><html><body><div id="root"></div></body></html>')))
+    await expect(caricaChangelog({ aspetta })).rejects.toThrow('Note senza versioni')
   })
 
   it('tre tentativi andati a vuoto: allora non ci sono', async () => {

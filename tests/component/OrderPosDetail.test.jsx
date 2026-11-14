@@ -65,13 +65,16 @@ let ruoloCorrente = 'bartender'
 // senza sapere chi la guarda e lo scopre un attimo dopo. Questa e' quella
 // promessa, e serve ai test per aspettare la cosa giusta (vedi `mount`).
 let consegnaRuolo = null
+// Un test può tenere il token in sospeso per far arrivare il ruolo quando
+// vuole lui (vedi la bozza ripristinata, BUG-148).
+let tokenInSospeso = null
 vi.mock('firebase/auth', () => ({
   onAuthStateChanged: vi.fn((a, cb) => {
     consegnaRuolo = cb({
       uid: 'u1',
       email: 'chi@tana.local',
       displayName: 'Chi lavora',
-      getIdTokenResult: () => Promise.resolve({ claims: { role: ruoloCorrente } }),
+      getIdTokenResult: () => tokenInSospeso || Promise.resolve({ claims: { role: ruoloCorrente } }),
     })
     return () => {}
   }),
@@ -126,6 +129,7 @@ import {
   setOrderServiceMode,
 } from '../../src/lib/api.js'
 import { readerCheckout } from '../../src/lib/paymentsApi.js'
+import { saveDraft } from '../../src/lib/useDraft.js'
 import { printComanda, printComande, printComandaUnita } from '../../src/lib/printer.js'
 
 // IL CONTO DI PROVA NASCE «DA FARE», come nasce davvero: si battono tre
@@ -1198,13 +1202,40 @@ describe('creazione: niente si perde mentre l’ordine nasce', () => {
     )
     await avvioDelConto()
     const user = userEvent.setup()
-    const prima = Date.now()
     await user.click(screen.getAllByText('Mojito')[0])
     await act(async () => {})
     expect(createOrder, 'il conto aspetta ancora il timer').toHaveBeenCalledTimes(1)
     expect(document.querySelector('.posd-topbar .posd-conto-stato')).toBeTruthy()
-    // Tutto dentro lo stesso giro del tocco: niente attese di 300 ms.
-    expect(Date.now() - prima).toBeLessThan(300)
+  })
+
+  // Dalla revisione di BUG-148: una bozza rimasta da una creazione non
+  // riuscita si ripristina all'apertura, e l'effetto partiva prima che si
+  // sapesse chi lavora. Senza `placed_by` il conto sarebbe stato preso per
+  // un ordine dal telefono del cliente.
+  it('con una bozza ripristinata il conto nasce solo quando si sa chi lo apre', async () => {
+    saveDraft('new', [{ line_id: 'l1', drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1, source: 'draft' }])
+    let daiIlToken
+    tokenInSospeso = new Promise((r) => {
+      daiIlToken = r
+    })
+    try {
+      render(
+        <MemoryRouter>
+          <OrderPosDetail order={null} />
+        </MemoryRouter>
+      )
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 50))
+      })
+      expect(createOrder, 'il conto è nato prima di sapere chi lo apre').not.toHaveBeenCalled()
+      await act(async () => {
+        daiIlToken({ claims: { role: 'bartender' } })
+      })
+      await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1))
+      expect(createOrder.mock.calls[0][0].placed_by).toMatchObject({ email: 'chi@tana.local', role: 'bartender' })
+    } finally {
+      tokenInSospeso = null
+    }
   })
 
   it('gli item battuti durante la creazione finiscono nell’ordine', async () => {
@@ -1244,7 +1275,7 @@ describe('creazione: niente si perde mentre l’ordine nasce', () => {
       </MemoryRouter>
     )
 
-    // Primo item: fa partire la creazione (parte da sola dopo ~300ms).
+    // Primo item: fa partire la creazione (parte da sola, al tocco).
     await user.click(screen.getAllByText('Mojito')[0])
     await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1), { timeout: 2000 })
 

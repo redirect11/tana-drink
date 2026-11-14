@@ -6150,6 +6150,10 @@ bugs:
       ORA in creazione il conto nasce al primo tocco, e la barra è quella
       del conto insieme alla riga; le righe battute mentre nasce le
       raccoglie createFromDraft come prima. In modifica il timer resta.
+      Dalla revisione: il conto aspetta che l'accesso abbia risposto. Una
+      bozza rimasta da una creazione non riuscita si ripristina all'apertura,
+      e senza quell'attesa il conto sarebbe nato prima di sapere chi lo apre,
+      senza `placed_by`: per l'app un ordine dal telefono del cliente.
     status: fixed
     in_produzione: false
     generate_issue: true

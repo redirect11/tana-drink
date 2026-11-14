@@ -125,8 +125,13 @@ vi.mock('../../src/lib/menuCache.js', () => ({
   }),
 }))
 vi.mock('../../src/lib/firebaseClient.js', () => ({ auth: {} }))
+// L'accesso risponde sempre, come fa Firebase appena è pronto: qui nessuno
+// collegato. Il conto nuovo aspetta questa risposta per nascere (BUG-148).
 vi.mock('firebase/auth', () => ({
-  onAuthStateChanged: vi.fn(() => () => {}),
+  onAuthStateChanged: vi.fn((a, cb) => {
+    cb(null)
+    return () => {}
+  }),
 }))
 
 import PosPage from '../../src/pages/PosPage.jsx'
@@ -477,6 +482,9 @@ describe('primo item: la riga resta la stessa', () => {
       </MemoryRouter>
     )
     await user.click(screen.getByText('Mojito'))
+    // Il nodo della riga com'è al tocco: a conto nato dev'essere ancora lui.
+    const nodo = document.querySelector('.draft-line[data-line-key]')
+    expect(nodo).toBeTruthy()
     // L'ordine viene creato: l'item passa da bozza a confermato.
     await waitFor(() => expect(createOrder).toHaveBeenCalled())
     const inviati = createOrder.mock.calls.at(-1)[0].items
@@ -487,6 +495,7 @@ describe('primo item: la riga resta la stessa', () => {
       expect(document.querySelector('.draft-line[data-line-key]').getAttribute('data-line-key')).toBe(`d:${inviati[0].line_id}`)
     )
     expect(document.querySelectorAll('.draft-line[data-line-key]')).toHaveLength(1)
+    expect(nodo.isConnected, 'la riga è stata ricreata').toBe(true)
   })
 })
 

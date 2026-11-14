@@ -549,8 +549,20 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // offrirebbe i passi del banco.
   const [staff, setStaff] = useState(null)
   const [ruolo, setRuolo] = useState(null)
+  // L'ACCESSO HA RISPOSTO, comunque sia andata: il conto nuovo aspetta questo
+  // per nascere (vedi l'auto-conferma, BUG-148). Non aspetta `staff` e basta:
+  // se il ruolo non arrivasse mai — offline col token scaduto — il conto non
+  // nascerebbe più da solo.
+  const [chiLavoraNoto, setChiLavoraNoto] = useState(false)
   useEffect(() => {
     return onAuthStateChanged(auth, async (u) => {
+      try {
+        await chiStaLavorando(u)
+      } finally {
+        setChiLavoraNoto(true)
+      }
+    })
+    async function chiStaLavorando(u) {
       if (!u) {
         // Anche il ref: è lui che firma le righe all'invio, e con lo stato
         // azzerato e il ref no la bozza si mostrerebbe senza firma e
@@ -573,7 +585,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
         setRuolo(null)
         setStaff(null)
       }
-    })
+    }
   }, [])
 
   // LA SALA SERVE, NON PREPARA. Vede il conto e ci lavora sopra — aggiunge
@@ -1714,11 +1726,9 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     }
   }, [isNew, order?.id, flushAll, clearDraft, segnaModifica])
 
-  // Auto-conferma in MODIFICA: poco dopo l'ultima aggiunta gli item vengono
-  // confermati da soli (niente tasto Conferma, niente stato "non confermato"
-  // che resta). In CREAZIONE resta la conferma manuale (serve nome/tavolo).
-  // Il timer dipende SOLO da draft/isNew (flushAdditions via ref) così non si
-  // resetta a ogni render.
+  // Auto-conferma (niente tasto Conferma, niente stato "non confermato" che
+  // resta). L'effetto dipende solo da bozza, modo e chi lavora — le funzioni
+  // passano da ref — così il timer della modifica non si resetta a ogni render.
   const flushAdditionsRef = useRef(flushAdditions)
   flushAdditionsRef.current = flushAdditions
   // In MODIFICA, poco dopo l'ultima aggiunta, gli item si confermano da soli:
@@ -1740,13 +1750,20 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     // battute mentre il conto nasce le raccoglie createFromDraft: aspettare
     // non serviva a niente (BUG-148). In modifica il timer resta: lì
     // raccoglie i tocchi ravvicinati in un invio solo.
+    // Ma non prima di sapere CHI lo apre. Con una bozza ripristinata
+    // all'apertura (una creazione non riuscita la volta prima) l'effetto
+    // parte prima che arrivi il ruolo, e un conto nato senza `placed_by` per
+    // l'app è un ordine dal telefono del cliente: finisce fra i «Clienti»,
+    // aspetterebbe la sua risposta a ogni modifica e lo stampa chi ha
+    // l'interruttore invece di questo terminale. Il conto nasce appena
+    // l'accesso ha risposto.
     if (isNew) {
-      createFromDraftRef.current()
+      if (chiLavoraNoto) createFromDraftRef.current()
       return
     }
     const t = setTimeout(() => flushAdditionsRef.current(), 300)
     return () => clearTimeout(t)
-  }, [draft, isNew, sceltaAggiunte])
+  }, [draft, isNew, sceltaAggiunte, chiLavoraNoto])
 
   // CREAZIONE: appena si aggiunge il primo item l'ordine viene CREATO IN PLACE
   // (setSelfOrder), SENZA navigare: la schermata resta montata e da lì si
@@ -3692,8 +3709,8 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             // lì, l'uscita toglieva il segno e la comanda usciva.
             staAnnullando.current = true
             // Conto «nuovo»: la bozza si butta e si torna indietro. MA se
-            // nel frattempo l'ordine è nato — l'auto-creazione scatta poco
-            // dopo l'ultima riga, e battere quattro cose ci mette di più —
+            // nel frattempo l'ordine è nato — l'auto-creazione scatta al
+            // primo prodotto (BUG-148) —
             // quello va ANNULLATO davvero, altrimenti resta aperto in coda
             // con dentro la roba che si è appena buttata. Era il conto
             // fantasma che poi ricompariva aprendo il conto dopo.

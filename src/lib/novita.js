@@ -68,8 +68,10 @@ export function cosaFareAllAvvio({ build, vista }) {
 // worker nuovo, che al primo avvio prende il posto del vecchio, e la
 // richiesta delle note — la prima che l'app fa, appena si apre — è caduta
 // nel cambio. Una richiesta sola non basta: si riprova dopo un secondo e
-// poi dopo tre, e solo allora si dice che non ci sono. Un file vuoto conta
-// come non arrivato: con niente da mostrare il box resterebbe a caricare.
+// poi dopo tre, e solo allora si dice che non ci sono. Un file senza
+// nessuna versione (`## `) conta come non arrivato — vuoto, o la pagina
+// dell'app che l'hosting dà per un file che non c'è: con niente da mostrare
+// il box resterebbe a caricare per sempre.
 export const ATTESE_NOTE = [1000, 3000]
 const dorme = (ms) => new Promise((r) => setTimeout(r, ms))
 export async function caricaChangelog({ base = '/', attese = ATTESE_NOTE, aspetta = dorme } = {}) {
@@ -78,7 +80,7 @@ export async function caricaChangelog({ base = '/', attese = ATTESE_NOTE, aspett
       const r = await fetch(`${base}changelog.md`, { cache: 'no-store' })
       if (!r.ok) throw new Error(`HTTP ${r.status}`)
       const testo = await r.text()
-      if (!testo.trim()) throw new Error('Note vuote')
+      if (!/^## /m.test(testo)) throw new Error('Note senza versioni')
       return testo
     } catch (e) {
       if (tentativo >= attese.length) throw e
