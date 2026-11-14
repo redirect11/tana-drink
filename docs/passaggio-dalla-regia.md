@@ -1,5 +1,7 @@
 # Il passaggio fra la regia e l'app, e i dati del titolare (REQ-FLOTTA-030)
 
+> **Il contratto con la regia** è in drink-regia, [`docs/contratto-regia-app.md`](https://github.com/redirect11/drink-regia/blob/develop/docs/contratto-regia-app.md): se non coincide con questo documento, vale quello. Qui restano i dettagli del lato dell'app.
+
 Richiesta della regia, 02/11/2026. La parte della regia è pronta:
 [drink-regia PR #49](https://github.com/redirect11/drink-regia/pull/49).
 La parte dell'app è fatta il 05/11/2026 (1.10.15-beta): il codice si legge

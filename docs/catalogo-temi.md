@@ -1,5 +1,7 @@
 # I temi nella licenza, e il catalogo dei temi (REQ-LIC-010, REQ-LIC-011)
 
+> **Il contratto con la regia** è in drink-regia, [`docs/contratto-regia-app.md`](https://github.com/redirect11/drink-regia/blob/develop/docs/contratto-regia-app.md): se non coincide con questo documento, vale quello. Qui restano i dettagli del lato dell'app.
+
 Per la regia (drink-regia) e per chi lavora qui. 02/11/2026.
 
 ## La decisione dell'utente

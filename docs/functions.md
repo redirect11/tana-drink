@@ -1,5 +1,7 @@
 # Firebase Functions
 
+> **Il contratto con la regia** è in drink-regia, [`docs/contratto-regia-app.md`](https://github.com/redirect11/drink-regia/blob/develop/docs/contratto-regia-app.md): se non coincide con questo documento, vale quello. Qui restano i dettagli del lato dell'app.
+
 Le Cloud Functions di Tana Drink. Fanno tre mestieri: **incassare** (SumUp,
 lettore e checkout online), **avvisare** (notifiche push a cliente e
 personale) e **amministrare** (account dello staff, numerazione dei conti).
