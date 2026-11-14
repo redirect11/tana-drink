@@ -341,53 +341,38 @@ describe('il ☰ flottante del menu laterale', () => {
   })
 })
 
-// «AREA CLIENTI» (REQ-FLOTTA-030): il titolare passa alla sua area nella
-// regia già entrato. Il tasto c'è per l'admin quando la build conosce la
-// regia e la licenza dice dov'è; prima che la regia scriva la licenza della
-// Tana, non c'è.
+// «AREA CLIENTI» (REQ-FLOTTA-030): un collegamento all'area nella regia.
+// Daniele, 14/11/2026: chi è già entrato nella regia ci si ritrova, gli
+// altri entrano lì come sempre; niente token mandati da qui. Il tasto c'è
+// per l'admin quando la build conosce la regia, anche se la licenza non
+// dice dov'è (quella della Tana non lo dice).
 describe('«Area clienti», verso la regia', () => {
-  const LICENZA_DELLA_REGIA = { ...CON_LICENZA.licenza, regia_url: 'https://regia.example/area' }
-
   beforeEach(() => vi.stubEnv('VITE_REGIA_PROGETTO', 'drink-regia-test'))
   afterEach(() => {
     vi.unstubAllEnvs()
     vi.unstubAllGlobals()
   })
 
-  it('senza la regia nella licenza non c’è', () => {
+  it('all’admin è un collegamento alla regia, in una scheda nuova, anche senza la regia nella licenza', () => {
+    const prendi = vi.fn()
+    vi.stubGlobal('fetch', prendi)
     apri('admin')
-    expect(screen.queryByText('Area clienti')).toBeNull()
+    const link = screen.getByRole('link', { name: /Area clienti/ })
+    expect(link).toHaveAttribute('href', 'https://drink-regia-test.web.app/dashboard')
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'))
+    // Niente chiamate alla regia e niente token: è solo un indirizzo.
+    expect(prendi).not.toHaveBeenCalled()
   })
 
   it('al bartender non c’è', () => {
-    filo.licenza = LICENZA_DELLA_REGIA
     apri('bartender')
     expect(screen.queryByText('Area clienti')).toBeNull()
   })
 
-  it('al titolare manda il token rinnovato e apre l’area', async () => {
-    const user = userEvent.setup()
-    filo.licenza = LICENZA_DELLA_REGIA
-    const prendi = vi.fn(async () => ({ status: 200, json: async () => ({ url: 'https://regia.example/area?t=1' }) }))
-    vi.stubGlobal('fetch', prendi)
-    const vai = vi.spyOn(window.location, 'assign').mockImplementation(() => {})
+  it('senza una regia nella build non c’è', () => {
+    vi.stubEnv('VITE_REGIA_PROGETTO', '')
     apri('admin')
-    await user.click(screen.getByText('Area clienti'))
-    await vi.waitFor(() => expect(vai).toHaveBeenCalledWith('https://regia.example/area?t=1'))
-    expect(filo.getIdToken).toHaveBeenCalledWith(true)
-    const [url, opzioni] = prendi.mock.calls[0]
-    expect(url).toBe('https://europe-west1-drink-regia-test.cloudfunctions.net/passaggioVersoRegia')
-    expect(opzioni.headers.Authorization).toBe('Bearer token-rinnovato')
-    vai.mockRestore()
-  })
-
-  it('se la regia dice di no, lo dice in una riga e resta qui', async () => {
-    const user = userEvent.setup()
-    filo.licenza = LICENZA_DELLA_REGIA
-    vi.stubGlobal('fetch', vi.fn(async () => ({ status: 403, json: async () => null })))
-    const { toastError } = await import('../../src/lib/toast.js')
-    apri('admin')
-    await user.click(screen.getByText('Area clienti'))
-    await vi.waitFor(() => expect(toastError).toHaveBeenCalledWith('L’area clienti è riservata al titolare del locale, con la sua email.'))
+    expect(screen.queryByText('Area clienti')).toBeNull()
   })
 })

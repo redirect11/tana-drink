@@ -5,9 +5,9 @@
 // loggato sia backoffice sia istanza per quell'utente», «mi serve qualcosa
 // che sia sicuro e robusto», per tutte le istanze. Ogni locale è un
 // progetto Firebase coi suoi account, e due siti su domini diversi non
-// condividono la sessione: quindi il titolare passa con un clic, in tutti e
-// due i versi, e a ogni passaggio la regia controlla che sia lui (stessa
-// email, verificata, ruolo admin). Il contratto è in
+// condividono la sessione: quindi dalla regia all'app il titolare passa con
+// un clic, e la regia controlla che sia lui (stessa email, verificata, ruolo
+// admin); dall'app alla regia, dal 14/11/2026, un collegamento. Il contratto è in
 // docs/passaggio-dalla-regia.md; la parte della regia è drink-regia
 // REQ-FLOTTA-030.
 //
@@ -15,20 +15,20 @@
 //   Il codice vale 60 secondi e una volta sola. L'app lo toglie subito
 //   dall'indirizzo, lo scambia con la regia (scambiaPassaggio) per un token
 //   di accesso al locale, ed entra con quello.
-// · VERSO LA REGIA: «Area clienti», per il titolare, manda alla regia
-//   (passaggioVersoRegia) il suo ID token rinnovato adesso, e apre
-//   l'indirizzo che la regia risponde, già entrato.
+// · VERSO LA REGIA: «Area clienti» è un collegamento alla regia
+//   (indirizzoAreaClienti): lì si entra come sempre, e chi è già entrato
+//   si ritrova nella sua area.
 //
-// Logica pura: la rete (`prendi`) e l'accesso (`accedi`, `token`) li passa
-// chi chiama, così la prova non ha bisogno di Firebase.
+// Logica pura: la rete (`prendi`) e l'accesso (`accedi`) li passa chi
+// chiama, così la prova non ha bisogno di Firebase.
 
 import { urlFunzioneRegia, erroreDellaRegia, postaAllaRegia } from './funzioniRegia.js'
+import { PROGETTI_REGIA } from './aggiornamenti.js'
 import { urlRegia } from './limiti.js'
 
 const CHIAVE_FRAMMENTO = 'accesso-regia'
 
 export const urlScambio = (progetto) => urlFunzioneRegia('scambiaPassaggio', progetto)
-const urlVersoRegia = (progetto) => urlFunzioneRegia('passaggioVersoRegia', progetto)
 
 // Il codice è una stringa corta di lettere, cifre, «-» e «_»: quello che non
 // lo è non parte verso la regia.
@@ -79,10 +79,6 @@ export const MESSAGGI_PASSAGGIO = Object.freeze({
     'Il collegamento dall’area clienti è scaduto o è già stato usato. Si riapre dall’area clienti, oppure si entra con email e password.',
   non_disponibile: 'L’area clienti non risponde in questo momento. Si entra con email e password.',
   senza_rete: 'Senza connessione l’accesso dall’area clienti non è possibile. Si entra con email e password.',
-  non_titolare: 'L’area clienti è riservata al titolare del locale, con la sua email.',
-  da_rientrare: 'Per aprire l’area clienti serve un accesso recente: si esce, si rientra e si riprova.',
-  non_trovato: 'Questo locale non risulta nell’area clienti.',
-  verso_non_riuscito: 'L’area clienti non si è aperta. Si riprova tra poco.',
 })
 
 // Un rifiuto: la frase della regia, se c'è, vince; se no quella per lo
@@ -98,27 +94,6 @@ const rifiuto = (status, corpo, perStatus, ripiego) => ({
 export function esitoScambio(status, corpo) {
   if (status === 200 && typeof corpo?.token === 'string' && corpo.token) return { ok: true, token: corpo.token }
   return rifiuto(status, corpo, { 400: 'non_valido', 403: 'scaduto', 0: 'senza_rete' }, 'non_disponibile')
-}
-
-// La risposta di passaggioVersoRegia: { ok, url } o { ok: false, messaggio }.
-// Si apre solo un indirizzo https: la risposta decide dove va il titolare,
-// e un `javascript:` non deve poter passare.
-export function esitoVersoRegia(status, corpo) {
-  if (status === 200 && httpsValido(corpo?.url)) return { ok: true, url: corpo.url }
-  return rifiuto(
-    status,
-    corpo,
-    { 401: 'da_rientrare', 403: 'non_titolare', 404: 'non_trovato', 0: 'senza_rete' },
-    'verso_non_riuscito'
-  )
-}
-
-function httpsValido(url) {
-  try {
-    return new URL(url).protocol === 'https:'
-  } catch {
-    return false
-  }
 }
 
 // DALLA REGIA ALL'APP. `accedi(token)` è signInWithCustomToken: l'utente è
@@ -140,28 +115,29 @@ export async function entraDallaRegia(codice, { accedi, prendi = globalThis.fetc
   }
 }
 
-// DALL'APP ALLA REGIA. `token()` è l'ID token RINNOVATO adesso
-// (getIdToken(true)): la regia vuole un accesso di meno di cinque minuti, e
-// uno vecchio di un'ora lo rifiuta. Torna { ok, url } o il messaggio.
-export async function versoLaRegia({ token, prendi = globalThis.fetch, progetto } = {}) {
-  const url = urlVersoRegia(progetto)
-  if (!url || typeof prendi !== 'function') return { ok: false, messaggio: MESSAGGI_PASSAGGIO.verso_non_riuscito }
-  let idToken
+// «AREA CLIENTI» È UN COLLEGAMENTO. Prima il tasto chiedeva alla regia
+// (passaggioVersoRegia) di aprire l'area già entrati col token di qui, e la
+// regia lasciava passare solo il titolare: un account admin con la sua
+// stessa email, verificata. Daniele, 14/11/2026: «non può portarlo
+// semplicemente all'app dove lui poi deve fare il login, ma se lo ha già
+// fatto si ritrova già nella sua area? Perché tutta questa complicazione?».
+// Quindi si apre la pagina della regia `/dashboard`: chi vi è già entrato su
+// quel dispositivo ci si ritrova, gli altri entrano lì come sempre. Chi sia
+// lo dice la regia, non l'account con cui si è entrati qui.
+// DOVE: la regia che la licenza nomina (`regia_url`), se è un https; se no
+// quella della build, ma solo se è uno dei progetti della regia (come le
+// Functions, funzioniRegia.js). Della licenza conta l'indirizzo del sito, non
+// il percorso: la pagina è sempre `/dashboard`.
+export function indirizzoAreaClienti(settings, progetto = import.meta.env?.VITE_REGIA_PROGETTO) {
   try {
-    idToken = await token()
+    const daLicenza = new URL(urlRegia(settings))
+    if (daLicenza.protocol === 'https:') return new URL('/dashboard', daLicenza.origin).href
   } catch {
-    return { ok: false, messaggio: MESSAGGI_PASSAGGIO.senza_rete }
+    /* nessun indirizzo nella licenza, o non valido: vale la build */
   }
-  if (!idToken) return { ok: false, messaggio: MESSAGGI_PASSAGGIO.da_rientrare }
-  const r = await postaAllaRegia(url, { prendi, intestazioni: { Authorization: `Bearer ${idToken}` } })
-  return esitoVersoRegia(r.status, r.corpo)
+  return PROGETTI_REGIA.includes(progetto) ? `https://${progetto}.web.app/dashboard` : null
 }
 
-// «Area clienti» si mostra al titolare (admin), quando la build conosce la
-// regia e la licenza dice dov'è (`urlRegia`): prima che la regia scriva
-// la licenza della Tana, i tasti verso la regia non ci sono, come gli altri
-// (FunzioneNonInclusa, InstallazioneSospesa, i moduli dall'app). Chi è
-// admin ma non è il titolare lo dice la regia, al tocco: controllarlo qui
-// vorrebbe dire conoscere l'email del titolare, che sta nella regia.
+// Il tasto si mostra agli admin, quando c'è un indirizzo dove mandarli.
 export const areaClientiVisibile = ({ admin, settings, progetto }) =>
-  Boolean(admin && urlRegia(settings) && urlVersoRegia(progetto))
+  Boolean(admin && indirizzoAreaClienti(settings, progetto))

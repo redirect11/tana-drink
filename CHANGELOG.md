@@ -1,6 +1,55 @@
 # Cosa è cambiato
 
-## 1.10.48-beta — in lavorazione
+## 1.10.49-beta — in lavorazione
+
+### Nel gestionale
+
+- **Switch prodotto**, in cima a Menù → Modifica menù: un prodotto di
+  magazzino si sostituisce con un altro in tutte le ricette che lo
+  contengono, a parità di quantità, e nelle etichette del menù dei clienti.
+  Prima di confermare si vedono le ricette e le voci che cambiano
+  (REQ-MENU-043).
+- **Nel dettaglio di un prodotto di magazzino**: in quante ricette del menù
+  è presente, e quali (REQ-MAG-056).
+
+### Per la Tana
+
+- **«Area clienti» apre la pagina della regia**, in una scheda nuova: chi è
+  già entrato nella regia su quel dispositivo si ritrova nella sua area, gli
+  altri entrano lì come sempre. Il tasto c'è per gli admin, anche alla Tana
+  (REQ-FLOTTA-030).
+
+## 1.10.48 — 14 novembre 2026 (produzione)
+
+Le correzioni provate sul test dalla 1.10.44-beta alla 1.10.48-beta.
+
+### Al banco
+
+- **L'iniziale accanto al drink appena battuto compare subito**, e la riga
+  non cambia aspetto un attimo dopo (BUG-147).
+- **Al primo drink di un conto nuovo la schermata resta ferma**: il conto,
+  chi l'ha aperto e l'ora compaiono insieme alla riga (BUG-148, BUG-150).
+- **In coda un conto appena nato ha subito il suo «da quanto»** e sta al suo
+  posto, anche senza rete (BUG-151, BUG-152).
+- **Le note di una versione nuova arrivano anche al primo avvio**: il
+  riquadro «Cosa è cambiato» riprova prima di dire che non sono arrivate
+  (BUG-149).
+
+### In magazzino
+
+- **L'inventario in corso comprende anche i prodotti creati dopo la sua
+  apertura**: partono con deposito zero, e quello che hanno è acquisto,
+  compresa la giacenza scritta nella scheda alla creazione (BUG-153).
+
+### Per la Tana
+
+- **L'AI è pronta anche in produzione**: lettura dei documenti, descrizioni
+  e assistente rispondono quando dal backoffice della regia la si attiva e
+  le si dà credito (REQ-AI-003).
+- **I disegni dei drink sono del tema «Carte»**: per la Tana non cambia
+  niente (REQ-LIC-013).
+
+## 1.10.48-beta — 14/11/2026 (test)
 
 ### Correzioni
 

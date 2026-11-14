@@ -7248,6 +7248,66 @@ requirements:
       - tests/unit/sceltaCliente.test.js
       - tests/unit/paritaFunctions.test.js
 
+  - id: REQ-MAG-056
+    title: "Nel dettaglio di un prodotto di magazzino si vede in quante ricette del menù è presente"
+    area: "src/components/RicetteDelProdotto.jsx, src/components/InventoryManager.jsx (il dettaglio del prodotto), src/lib/switchProdotto.js (ricetteDelProdotto)"
+    description: >
+      Flavio, 14/11/2026, con la foto di Magazzino → Prodotti: «si può
+      inserire in questa sezione del Prodotto in quante Ricette di Menù è
+      presente?». Serve prima di cambiare un prodotto (lo switch,
+      REQ-MENU-043) o di toglierlo dall'assortimento.
+      FATTO (14/11/2026): nel dettaglio del prodotto, sotto Movimenti, un
+      tasto «In N ricette del menù» (o «In nessuna ricetta del menù», spento)
+      che apre l'elenco dei drink della cassa che lo hanno in ricetta, per
+      nome. I drink sono quelli che la schermata già ascolta per
+      l'impegnato.
+    status: implemented
+    generate_issue: false
+    labels: [magazzino, menu]
+    test_cases:
+      - tests/unit/switchProdotto.test.js
+      - tests/component/SwitchProdotto.test.jsx
+
+  - id: REQ-MENU-043
+    title: "Lo switch prodotto: un prodotto si sostituisce con un altro in tutte le ricette e nelle etichette del menù dei clienti"
+    area: "src/lib/switchProdotto.js (pianoSwitch, etichetteDopoSwitch), src/components/SwitchProdotto.jsx, src/components/MenuManager.jsx (in cima a Modifica menù), src/lib/api.js (switchProdotto)"
+    description: >
+      Flavio, 14/11/2026: «aggiungere in alto a questa sezione lo SWITCH
+      PRODOTTO, ovvero il gestionale ricerca un prodotto d'uscita presente
+      in tutte le ricette e lo sostituisce col prodotto d'ingresso
+      (esempio: Tanqueray - Bombay) lasciando invariata la quantità». Nel
+      vocale lo stesso giorno il perché: «spesso i fornitori non hanno
+      sempre il prodotto» — gli avevano appena cambiato il Carpano Dry con
+      un Noilly Prat; e le regole: lo switch sta in Modifica menù, e va in
+      UN VERSO SOLO («solo Tanqueray con Bombay, Bombay resta Bombay»: le
+      ricette che hanno solo il prodotto d'ingresso non si toccano).
+      Daniele, stesso giorno: una ricetta che li ha tutti e due resta con
+      due righe del prodotto d'ingresso, segnalata nell'anteprima («lasciale
+      così»); e «si devono ovviamente aggiornare anche le etichette nel menù
+      clienti».
+      FATTO (14/11/2026): in cima a Menù → Modifica menù, «⇄ Switch
+      prodotto»: si scelgono il prodotto in uscita (accanto, in quante
+      ricette sta) e quello in ingresso; l'anteprima elenca le ricette che
+      cambiano, segna quelle che hanno già il prodotto d'ingresso, e le voci
+      del menù dei clienti la cui etichetta cambia; si scrive solo col tasto
+      «Sostituisci in N ricette». In ogni riga cambiano il prodotto e il
+      nome, mai quantità e unità: quindi un prodotto d'ingresso che non si
+      dosa nell'unità della riga (un articolo a pezzi al posto di uno in ml)
+      ferma lo switch, e lo si dice. Le etichette di tipo prodotto passano al
+      prodotto d'ingresso col nome da menù (nomeInCarta), e sparisce quella
+      d'uscita se la voce ha già quella d'ingresso; le scelte del cliente
+      (REQ-MENU-042) che lo offrono o lo sostituiscono lo seguono. Il testo
+      libero non si tocca. Si scrivono solo `recipe_items` dei drink ed
+      `etichette` delle voci, in pacchetti da 400. I drink già fatti non
+      cambiano: il magazzino li ha scalati con la ricetta di allora.
+    status: implemented
+    generate_issue: false
+    labels: [menu, magazzino]
+    test_cases:
+      - tests/unit/switchProdotto.test.js
+      - tests/component/SwitchProdotto.test.jsx
+      - tests/unit/switchProdottoScrittura.test.js
+
   - id: REQ-CLI-008
     title: "La scelta del cliente arriva nell'ordine, sulla comanda e nel magazzino"
     area: "src/lib/sceltaCliente.js, src/lib/cart.js, src/lib/api.js (createOrder), src/lib/inventory.js (scarico), docs/architettura.md"
@@ -7912,8 +7972,9 @@ requirements:
       regia apre l'app con #accesso-regia=<codice>: l'app lo toglie subito
       dall'indirizzo, lo scambia con la regia (scambiaPassaggio) e entra
       con signInWithCustomToken. «Area clienti», per il titolare admin,
-      manda alla regia (passaggioVersoRegia) un ID token appena rinnovato
-      e apre l'url della risposta. La regia scrive a ogni deploy, solo
+      mandava alla regia (passaggioVersoRegia) un ID token appena rinnovato
+      e apriva l'url della risposta; dal 14/11/2026 è un collegamento (vedi
+      sotto). La regia scrive a ogni deploy, solo
       dove sono vuoti, i dati del titolare in settings/bar, compresi
       quattro campi nuovi da mostrare e usare: venue_phone,
       venue_vat_number, venue_tax_code, venue_legal_address. Il banco
@@ -7935,7 +7996,18 @@ requirements:
       monta due volte, e il secondo scambio troverebbe il codice speso),
       lo scambia, entra con signInWithCustomToken e va in /bar; se non
       riesce, va in /bar col login normale e la riga che dice perché.
-      Nessun nuovo tentativo: il codice è già speso. Solo verso i progetti
+      Nessun nuovo tentativo: il codice è già speso.
+      «AREA CLIENTI» È UN COLLEGAMENTO (14/11/2026). Daniele: «non può
+      portarlo semplicemente all'app dove lui poi deve fare il login, ma se
+      lo ha già fatto si ritrova già nella sua area? Perché tutta questa
+      complicazione?». Il tasto apre in una scheda nuova la pagina della
+      regia `/dashboard` (indirizzoAreaClienti): chi è già entrato nella
+      regia su quel dispositivo ci si ritrova, gli altri entrano lì. Niente
+      token mandati da qui, niente controllo dell'email del titolare
+      nell'app. L'indirizzo: il sito di `regia_url` se la licenza lo dice
+      (https), se no il progetto della regia nella build; il tasto si vede
+      agli admin anche senza `regia_url`, quindi alla Tana, la cui licenza
+      non lo dice. La parte che segue sul tasto vale per com'era prima. Solo verso i progetti
       della regia (urlFunzioneRegia), solo codici di lettere, cifre, «-» e
       «_». «AREA CLIENTI» sta nel menù laterale, per l'admin, quando la
       build conosce la regia e la licenza dice dov'è (`regia_url`), come

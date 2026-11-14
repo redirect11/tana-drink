@@ -10,8 +10,7 @@ import { auth } from '../lib/firebaseClient.js'
 import { logoutStaff } from '../lib/logout.js'
 import { devToolsEnabled } from '../dev/devActions.js'
 import { isAdmin, isGestore, isSala, RUOLO_ETICHETTA } from '../lib/ruoli.js'
-import { areaClientiVisibile, versoLaRegia } from '../lib/passaggioRegia.js'
-import { toastError } from '../lib/toast.js'
+import { areaClientiVisibile, indirizzoAreaClienti } from '../lib/passaggioRegia.js'
 import { useSchermoLargo } from '../lib/useTelefono.js'
 import { usePaginaPiena } from '../lib/paginaPiena.js'
 import { IconGruppo, IconPersona } from './Icons.jsx'
@@ -387,7 +386,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
             </span>
           </span>
         </div>
-        {areaClientiVisibile({ admin: isAdmin(role), settings }) && <AreaClienti />}
+        {areaClientiVisibile({ admin: isAdmin(role), settings }) && <AreaClienti settings={settings} />}
         <div className="bar-nav-item" onClick={() => logoutStaff()}>
           <Icona nome="esci" /> Esci
         </div>
@@ -461,26 +460,13 @@ function ChiamaIlBancone() {
   )
 }
 
-// «AREA CLIENTI» (REQ-FLOTTA-030): il titolare passa alla sua area nella
-// regia già entrato, col suo account di qui. Il tocco aspetta la regia —
-// è un passaggio di pagina, non un gesto della serata — e se non riesce lo
-// dice in una riga.
-function AreaClienti() {
-  const [inCorso, setInCorso] = useState(false)
-  async function vai() {
-    if (inCorso) return
-    setInCorso(true)
-    const esito = await versoLaRegia({ token: () => auth.currentUser?.getIdToken(true) })
-    if (esito.ok) {
-      window.location.assign(esito.url)
-      return
-    }
-    setInCorso(false)
-    toastError(esito.messaggio)
-  }
+// «AREA CLIENTI» (REQ-FLOTTA-030): un collegamento all'area nella regia,
+// dove si entra come sempre (indirizzoAreaClienti). In una scheda nuova:
+// l'app resta aperta dov'era, col conto o la coda davanti.
+function AreaClienti({ settings }) {
   return (
-    <div className="bar-nav-item" role="button" aria-busy={inCorso} onClick={vai}>
-      <Icona nome="area-clienti" /> {inCorso ? 'Apro l’area clienti…' : 'Area clienti'}
-    </div>
+    <a className="bar-nav-item" href={indirizzoAreaClienti(settings)} target="_blank" rel="noopener noreferrer">
+      <Icona nome="area-clienti" /> Area clienti
+    </a>
   )
 }
