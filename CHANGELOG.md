@@ -1,6 +1,14 @@
 # Cosa è cambiato
 
-## 1.10.47-beta — in lavorazione
+## 1.10.48-beta — in lavorazione
+
+### Correzioni
+
+- **Nell'inventario un prodotto comprato dopo l'apertura parte da zero**, e
+  tutto quello che ha è acquisto, anche la giacenza scritta nella scheda
+  quando lo si è creato: come il foglio di Flavio (BUG-153).
+
+## 1.10.47-beta — 14/11/2026 (test)
 
 ### Correzioni
 

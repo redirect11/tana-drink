@@ -213,8 +213,9 @@ describe('i totali e il consumo a settimana', () => {
 // I PRODOTTI NATI DOPO L'APERTURA (BUG-153). Flavio, 13/11/2026: «mi
 // appaiono solo i prodotti che c'erano anche nell'inventario precedente»:
 // le righe erano la fotografia del 05/10, e 13 prodotti creati dopo (le
-// toniche Galvanina fra questi) non si potevano contare. Il DEP non si
-// indovina: è la giacenza di adesso meno quello che si è mosso.
+// toniche Galvanina fra questi) non si potevano contare. Come li vuole
+// Flavio (14/11): DEP zero, e acquisto tutto quello che il prodotto ha
+// avuto — i carichi, e la giacenza di adesso meno quello che si è mosso.
 describe('i prodotti nati dopo l’apertura dell’inventario', () => {
   const GALVANINA = { id: 'galv', name: 'Galvanina Pompelmo 20cl', unit: 'pz', package_size: 1, cost: 0.9, vat: 22, stock: 17 }
   const vecchia = riga()
@@ -237,19 +238,24 @@ describe('i prodotti nati dopo l’apertura dell’inventario', () => {
     expect([r.dep, r.acq, r.cons, r.rim_adesso]).toEqual([0, 24, 7, 17])
   })
 
-  it('creati con la giacenza scritta nella scheda, senza un carico: quella conta come già presente', () => {
+  // Flavio, 14/11/2026: «deposito è zero, acquisto è l'acquisto che ho
+  // fatto». Anche quando la giacenza è stata scritta nella scheda alla
+  // nascita, senza un carico: è merce comprata.
+  it('creati con la giacenza scritta nella scheda, senza un carico: DEP 0, e quella è acquisto', () => {
     const TISANA = { id: 'tisana', name: 'Tisana Generica', unit: 'pz', stock: 197 }
     const [r] = righeInventario(conProdottiNuovi([], { items: [TISANA] }), { items: [TISANA] }).lines
-    // Partendo da zero il consumo sarebbe -197: un numero sbagliato.
-    expect([r.dep, r.acq, r.cons]).toEqual([197, 0, 0])
+    // Senza contarla come acquisto il consumo sarebbe -197: un numero sbagliato.
+    expect([r.dep, r.acq, r.cons]).toEqual([0, 197, 0])
   })
 
-  it('il deposito non va sotto zero: quello che non torna resta nel consumo', () => {
+  it('l’acquisto alla nascita non va sotto zero: quello che non torna resta nel consumo', () => {
     const TONICA = { id: 'tonica', name: 'Galvanina Tonica Classica 20cl', unit: 'pz', stock: -21 }
-    // -21 adesso, e solo 10 venduti: i conti darebbero -11 alla partenza.
+    // -21 adesso, e solo 10 venduti: i conti darebbero -11 alla nascita.
     const raggruppati = raggruppaMovimenti([{ item_id: 'tonica', type: 'unload', qty: 10, unit: 'pz', reason: 'ordine' }], [TONICA])
-    const [r] = conProdottiNuovi([], { items: [TONICA], raggruppati })
-    expect(r.dep).toBe(0)
+    const righe = conProdottiNuovi([], { items: [TONICA], raggruppati })
+    expect([righe[0].dep, righe[0].acq_alla_nascita]).toEqual([0, 0])
+    const [r] = righeInventario(righe, { raggruppati, items: [TONICA] }).lines
+    expect([r.dep, r.acq, r.cons]).toEqual([0, 0, 21])
   })
 
   it('il numero già contato e salvato torna sulla sua riga', () => {
