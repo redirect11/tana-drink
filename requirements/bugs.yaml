@@ -6266,7 +6266,7 @@ bugs:
       Daniele: la coda ordina i conti per `created_at`, e un conto appena
       battuto, con l'ora ancora vuota, finiva prima di tutti; arrivata
       l'ora del server saltava in fondo, dove sta un conto nuovo.
-      LA CAUSA è una sola, con BUG-152: i conti si leggevano da Firestore senza
+      LA CAUSA è una sola, con BUG-151: i conti si leggevano da Firestore senza
       chiedere la stima degli orari del server, e `created_at` di un conto
       appena scritto vale null finché la scrittura non arriva al server —
       offline, per tutta la durata della rete staccata.
