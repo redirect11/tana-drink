@@ -7,6 +7,9 @@
 - **In coda un conto appena nato ha subito il suo «da quanto», e sta al
   suo posto.** Prima restava senza ora finché il server non rispondeva, e
   compariva in cima per poi saltare in fondo (BUG-151, BUG-152).
+- **Nell'inventario in corso ci sono anche i prodotti creati dopo la sua
+  apertura**, con la giacenza di partenza ricostruita dai movimenti: prima
+  mancavano, e non si potevano contare (BUG-153).
 
 ### Per la Tana
 

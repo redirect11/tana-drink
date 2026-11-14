@@ -6281,3 +6281,40 @@ bugs:
     requisiti: [REQ-CODA-001]
     test_cases:
       - tests/unit/giroInLocale.test.js
+
+  - id: BUG-153
+    title: "Nell'inventario in corso mancano i prodotti creati dopo la sua apertura"
+    area: "src/lib/inventarioInCorso.js (conProdottiNuovi, rigaDiInventario), src/components/StockCountPanel.jsx, src/lib/api.js (mapStockCount)"
+    severity: alta
+    priority: P1
+    description: >
+      Flavio, vocale del 13/11/2026 sera: «all'interno dell'inventario mi
+      appaiono solo i prodotti che c'erano anche nell'inventario
+      precedente; tutto quello che ho acquistato, tipo le toniche a
+      pompelmo di Galvanina, la tonica mediterranea di Galvanina, non ci
+      sono». Le righe di un inventario sono la fotografia dei prodotti del
+      momento in cui si apre, e quello che riparte da sé alla chiusura del
+      precedente era aperto dal 05/10: verificato sul backup della
+      produzione del 14/11, 416 righe contro 428 prodotti, e i 13 mancanti
+      sono tutti creati fra l'08 e il 30/10 (le quattro Galvanina, Boem
+      Pompelmo, El Jimador Blanco, Jack Daniels e Honey, Kimbo, Crema
+      Cocco, Sifone Soda, Tisana Generica, Ararat). Non si potevano contare.
+      In più un numero contato per un prodotto senza riga si salvava
+      (rimanenze.<id>) ma la lettura dell'inventario lo perdeva.
+      ORA la schermata aggiunge in fondo i prodotti nati dopo l'apertura.
+      Il DEP non si indovina: è la giacenza di adesso meno quello che si è
+      mosso dall'apertura, così una giacenza scritta nella scheda alla
+      nascita conta come già presente e un carico come acquisto, e il
+      consumo torna (partendo da zero la Tisana Generica, 197 pezzi senza
+      carico, avrebbe dato un consumo di -197). Mai sotto zero. La lettura
+      dell'inventario restituisce anche i numeri contati senza riga, e la
+      chiusura porta le righe nuove con le altre.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, magazzino, inventario]
+    requisiti: [REQ-MAG-046]
+    test_cases:
+      - tests/unit/inventarioInCorso.test.js
+      - tests/component/StockCountPanel.test.jsx
+      - tests/unit/chiusuraInventario.test.js

@@ -121,7 +121,7 @@ import { ordina, vistaSezione, nomeGruppo, sezioneDaScrivere, voceDaScrivere, ma
 import { DEFAULT_MARKUP, DEFAULT_ROUND_STEP } from './pricing.js'
 import { notify } from './notify.js'
 import { bgWrite } from './sync.js'
-import { righeInventario } from './inventarioInCorso.js'
+import { righeInventario, rigaDiInventario, raggruppaMovimenti, conProdottiNuovi } from './inventarioInCorso.js'
 import { patchImpagato } from './impagato.js'
 import { ULTIMO_GIORNO_TILLER } from './venditeStoriche.js'
 import { caricaAllegatoFattura, eliminaAllegato } from './storage.js'
@@ -1516,6 +1516,11 @@ function mapStockCount(snap) {
     started_at: toIso(c.started_at),
     closed_at: toIso(c.closed_at),
     lines,
+    // Anche intere: un prodotto nato dopo l'apertura non ha una riga, e il
+    // suo numero contato si rimette sulla riga che gli compone
+    // conProdottiNuovi (BUG-153). Senza, riaprendo la pagina, sparirebbe.
+    rimanenze,
+    rimanenze_ora: ore,
     totals: c.totals ?? null,
   }
 }
@@ -1526,23 +1531,6 @@ export async function getOpenStockCount() {
     query(collection(db, 'stock_counts'), where('status', '==', 'open'), fbLimit(1))
   )
   return snap.empty ? null : mapStockCount(snap.docs[0])
-}
-
-// La riga di un prodotto in un inventario che si apre: la giacenza di
-// partenza (DEP) più costo e formato denormalizzati, per calcolare i valori
-// alla chiusura anche se nel frattempo il prodotto cambia.
-function rigaDiInventario(it, dep = it.stock) {
-  return {
-    item_id: it.id,
-    name: it.name,
-    unit: it.unit,
-    package_size: it.package_size ?? null,
-    cost: it.cost ?? null,
-    vat: it.vat ?? 22,
-    dep: Number(dep) || 0,
-    acq: 0,
-    rim: null,
-  }
 }
 
 // Apre una nuova conta fotografando la giacenza corrente (DEP) di ogni
@@ -1629,7 +1617,24 @@ export async function closeStockCount(id, { lines, riapri = false }) {
   const conta = mapStockCount(countSnap)
   if (conta.status !== 'open') throw new Error('Conta già chiusa')
   const movimenti = await fetchStockMovementsSince(conta.started_at)
-  const chiusa = righeInventario(lines, { movimenti, items: articoli, dal: conta.started_at })
+  const raggruppati = raggruppaMovimenti(movimenti, articoli)
+  // LE RIGHE LE COMPONE LA CHIUSURA, coi dati di adesso (come le
+  // differenze, BUG-112): quelle dell'apertura più i prodotti nati dopo
+  // (BUG-153), il cui DEP si ricostruisce qui dai movimenti appena letti.
+  // Dalla schermata arrivano solo i numeri contati: un DEP calcolato là su
+  // una lettura dei movimenti non riuscita finirebbe per sempre
+  // nell'inventario chiuso.
+  const contati = new Map((lines || []).map((l) => [l.item_id, l]))
+  const righe = conProdottiNuovi(conta.lines, {
+    items: articoli,
+    raggruppati,
+    rimanenze: conta.rimanenze,
+    ore: conta.rimanenze_ora,
+  }).map((l) => {
+    const s = contati.get(l.item_id)
+    return s && 'rim' in s ? { ...l, rim: s.rim, rim_at: s.rim_at ?? null } : l
+  })
+  const chiusa = righeInventario(righe, { raggruppati, items: articoli, dal: conta.started_at })
 
   // Tutti i controlli PRIMA di scrivere qualsiasi cosa: un prodotto ancora
   // nella forma vecchia ferma la chiusura intera, non la tronca a metà.
