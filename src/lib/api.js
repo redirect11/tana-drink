@@ -487,6 +487,24 @@ export async function createDrink(drink) {
   return mapDrink(snap)
 }
 
+// LO SWITCH PRODOTTO (REQ-MENU-043): il piano lo calcola switchProdotto.js
+// (pianoSwitch) e la schermata lo mostra prima; qui si scrivono SOLO le
+// righe di ricetta dei drink e le etichette delle voci del menù dei clienti,
+// in blocchi sotto il limite di Firestore. È il gestionale, e un rifiuto va
+// detto: si aspetta la conferma, come per gli altri salvataggi delle schede.
+export async function switchProdotto({ ricette = [], voci = [] }) {
+  const scritture = [
+    ...ricette.map((r) => [doc(db, 'drinks', r.id), { recipe_items: r.recipe_items }]),
+    ...voci.map((v) => [doc(db, 'carta_voci', v.id), { etichette: v.etichette }]),
+  ]
+  for (let i = 0; i < scritture.length; i += 400) {
+    const batch = writeBatch(db)
+    for (const [ref, patch] of scritture.slice(i, i + 400)) batch.update(ref, patch)
+    await batch.commit()
+  }
+  return { ricette: ricette.length, voci: voci.length }
+}
+
 export async function updateDrink(id, patch) {
   const ref = doc(db, 'drinks', id)
   await updateDoc(ref, patch)

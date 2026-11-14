@@ -2,6 +2,16 @@
 
 ## 1.10.49-beta — in lavorazione
 
+### Nel gestionale
+
+- **Switch prodotto**, in cima a Menù → Modifica menù: un prodotto di
+  magazzino si sostituisce con un altro in tutte le ricette che lo
+  contengono, a parità di quantità, e nelle etichette del menù dei clienti.
+  Prima di confermare si vedono le ricette e le voci che cambiano
+  (REQ-MENU-043).
+- **Nel dettaglio di un prodotto di magazzino**: in quante ricette del menù
+  è presente, e quali (REQ-MAG-056).
+
 ### Per la Tana
 
 - **«Area clienti» apre la pagina della regia**, in una scheda nuova: chi è

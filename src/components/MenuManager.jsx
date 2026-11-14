@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import SwitchProdotto from './SwitchProdotto.jsx'
 import SectionPanels from './SectionPanels.jsx'
 import {
   fetchDrinks,
@@ -463,6 +464,10 @@ export default function MenuManager() {
     <div>
       <Sottosezioni voci={sezioni} attiva={sezione} scegli={setSezione} />
 
+      {/* LO SWITCH PRODOTTO (REQ-MENU-043): in cima, come lo chiede Flavio
+          («aggiungere in alto a questa sezione»). Dopo lo switch si
+          rileggono drink e magazzino: le ricette sono cambiate. */}
+      <SwitchProdotto drinks={drinks} inventory={inventory} voci={carta.voci} onFatto={load} />
       <button
         className="btn block"
         disabled={!puoAggiungere}
