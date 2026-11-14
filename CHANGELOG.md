@@ -1,5 +1,7 @@
 # Cosa è cambiato
 
+## 1.10.49-beta — in lavorazione
+
 ## 1.10.48 — 14 novembre 2026 (produzione)
 
 Le correzioni provate sul test dalla 1.10.44-beta alla 1.10.48-beta.
