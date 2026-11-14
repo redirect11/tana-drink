@@ -208,7 +208,9 @@ export function RegistratiPage() {
       </form>
       <div className="row" style={{ gap: 8 }}>
         <Link className="btn ghost grow" to="/accedi">Ho già un account</Link>
-        <TornaAlMenu className="btn ghost grow">← Menù</TornaAlMenu>
+        <TornaAlMenu className="btn ghost grow" altrimenti="← Inizio">
+          ← Menù
+        </TornaAlMenu>
       </div>
     </div>
   )

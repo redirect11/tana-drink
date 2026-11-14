@@ -2901,8 +2901,9 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             {/* Si chiamava «Vista cliente» ma apriva il menù dello staff,
                 quello per gli ordini al tavolo (BUG-127). La vista cliente
                 vera sta nel ☰ ed è solo da guardare. */}
-            {/* Col menù dei clienti spento non c'è, come nel cassetto
-                (StaffDrawer, BUG-132): la pagina è la stessa del cliente. */}
+            {/* Col MODULO del menù spento non c'è, come nel cassetto
+                (StaffDrawer, BUG-132). Col menù solo nascosto ai clienti
+                (menu_clienti_visibile) resta: lo staff lo usa al tavolo. */}
             {menuDigitaleAttivo(settings) && (
               <Link className="btn ghost" to="/menu" style={{ flex: 1 }}>
                 <Icona nome="ordina-dal-menu" gruppo="tasti" /> Ordina dal menù

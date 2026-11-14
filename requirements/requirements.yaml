@@ -6153,7 +6153,7 @@ requirements:
       non in sola consultazione (`mieiOrdiniVisibili`, licenza.js), nella
       barra, nel menù laterale e nel profilo. I «Torna al menù» delle
       pagine dei clienti, col menù spento, tornano alla pagina iniziale
-      (TornaAlMenu); il personale non ha «Ordina dal menù». I link al menù
+      (TornaAlMenu). I link al menù
       restano finché la licenza non è arrivata (menuVisibile, BUG-142), così
       la riga dei tasti del telefono non compare dopo. E LO GARANTISCE IL
       SERVER: un ordine dal telefono non nasce se settings/bar ha il menù o
