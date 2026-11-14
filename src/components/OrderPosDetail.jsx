@@ -552,6 +552,10 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   useEffect(() => {
     return onAuthStateChanged(auth, async (u) => {
       if (!u) {
+        // Anche il ref: è lui che firma le righe all'invio, e con lo stato
+        // azzerato e il ref no la bozza si mostrerebbe senza firma e
+        // partirebbe firmata da chi è appena uscito (BUG-147).
+        staffRef.current = null
         setRuolo(null)
         return setStaff(null)
       }
@@ -565,6 +569,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           setStaff(io)
         }
       } catch {
+        staffRef.current = null
         setRuolo(null)
         setStaff(null)
       }
@@ -2730,9 +2735,11 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                       <span style={{ minWidth: 0, overflow: 'hidden' }}>
                         <span style={{ display: 'flex', alignItems: 'baseline', minWidth: 0 }}>
                           {/* Chi l'ha battuta, col suo colore (REQ-ORD-023).
-                              Una riga in bozza la firma chi sta guardando
-                              (firmaRiga, all'invio): il segno si mostra
-                              SUBITO col suo nome, non dopo l'invio (BUG-147). */}
+                              Una riga in bozza non ancora firmata la firma
+                              chi sta guardando (firmaRiga, all'invio): il
+                              segno si mostra SUBITO col suo nome, non dopo
+                              l'invio (BUG-147). Quella già firmata, rimessa
+                              in bozza da un invio non riuscito, tiene la sua. */}
                           {autore && (
                             <span className="riga-autore">
                               <OrderBy persona={autore} titolo="Aggiunto" />

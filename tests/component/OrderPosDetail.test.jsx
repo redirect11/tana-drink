@@ -2808,6 +2808,9 @@ describe('l’iniziale di chi ha battuto ogni riga', () => {
     expect(segno, 'la riga in bozza è senza iniziale').toBeTruthy()
     expect([segno.textContent, segno.title]).toEqual(['C', 'Aggiunto da Chi lavora'])
     await waitFor(() => expect(invio).toHaveBeenCalled(), { timeout: 3000 })
+    // Si lascia arrivare il conto che l'invio restituisce: da lì la riga è
+    // quella mandata, non più la bozza.
+    await act(async () => {})
     // Dopo l'invio: la stessa iniziale, e sullo stesso elemento — la riga
     // non cambia aspetto quando parte.
     const dopo = ginInLista().querySelector('.riga-autore .order-by')
@@ -2856,8 +2859,18 @@ describe('l’iniziale di chi ha battuto ogni riga', () => {
     mockSettings.firma_righe = false
     try {
       const user = userEvent.setup()
-      await mount(baseOrder())
+      // Comanda già partita: l'aggiunta passa dalla bozza (con una comanda
+      // ancora da fare ci entrerebbe dritta, e la bozza non si vedrebbe).
+      await mount(
+        baseOrder({
+          comande: [
+            { id: 'c1', seq: 1, status: 'ritirato', status_times: {}, items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }] },
+          ],
+        })
+      )
       await user.click(screen.getAllByText('Gin Tonic')[0])
+      expect(addComanda).not.toHaveBeenCalled()
+      expect(ginInLista(), 'la riga appena battuta non c’è').toBeTruthy()
       expect(autori()).toEqual([])
     } finally {
       delete mockSettings.firma_righe
