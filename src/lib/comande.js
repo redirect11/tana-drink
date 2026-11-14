@@ -182,6 +182,11 @@ export function orderIsClosed(order) {
 // firmaRigheAccesa): senza, nessuno vede di chi è una riga, e un tasto
 // spento senza un motivo a schermo è un tasto rotto.
 export const firmaRigheAccesa = (settings) => settings?.firma_righe !== false
+// La firma di una riga: chi, non da dove (niente dispositivo, a differenza
+// di `placed_by`). Una sola forma per la riga mandata e per quella ancora
+// in bozza, così il segno a schermo è lo stesso prima e dopo l'invio e la
+// riga non cambia aspetto quando parte (BUG-147).
+export const firmaDi = (io) => ({ name: io.name || null, email: io.email || null, role: io.role || null })
 export function rigaDiAltri(riga, io) {
   const a = riga?.added_by
   if (!a) return false

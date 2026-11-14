@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 13 novembre 2026.
+> Generato il 14 novembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -394,6 +394,8 @@ LA FIRMA: ogni riga porta `added_by` {name, email, role}. La mette il conto quan
 IL COLORE è della persona e viene dal nome (lib/colorePersona.js): lo stesso sulla card della coda, nella legenda, nel quadratino in alto e su ogni riga, su ogni terminale, senza configurarlo. Il seme del calcolo è scelto perché Flavio esca rosa e Alex azzurro, come nella richiesta. Il quadratino di chi ha aperto il conto resta sulla card.
 
 NON ANCORA: la finestra del conto nella coda, che legge le righe sommate per drink, e il dettaglio della comanda. DAL 09/11/2026 È UN'OPZIONE (Impostazioni, «Chi ha caricato la riga», `firma_righe`, accesa di partenza): spenta, le iniziali non si vedono, ma chi ha battuto la riga si registra lo stesso, e riaccendendo si vede anche sulle righe di quando era spenta. Con lei va il blocco del «+» e del «−» (REQ-ORD-024).
+
+LA RIGA IN BOZZA, non ancora mandata, mostra subito l'iniziale di chi la sta battendo — chi la firmerà all'invio — con la stessa firma (firmaDi in comande.js): niente attesa dell'invio, e la riga non cambia aspetto quando parte (BUG-147).
 
 **Dove**: `src/components/OrderPosDetail.jsx (firmaRiga), src/lib/api.js (autoreDellaRiga), src/components/OrderBy.jsx, src/lib/colorePersona.js, src/pages/BartenderPage.jsx (legenda), src/App.jsx` · **Serve**: [UR-012](#ur-012--su-un-conto-si-vede-chi-ha-battuto-cosa) · **Lo dimostrano**: `tests/unit/autoreDellaRiga.test.js`, `tests/unit/colorePersona.test.js`, `tests/component/OrderPosDetail.test.jsx`, `tests/sistema/chiHaBattuto.spec.js`
 

@@ -10410,6 +10410,10 @@ requirements:
       vedono, ma chi ha battuto la riga si registra lo stesso, e
       riaccendendo si vede anche sulle righe di quando era spenta. Con lei
       va il blocco del «+» e del «−» (REQ-ORD-024).
+      LA RIGA IN BOZZA, non ancora mandata, mostra subito l'iniziale di chi
+      la sta battendo — chi la firmerà all'invio — con la stessa firma
+      (firmaDi in comande.js): niente attesa dell'invio, e la riga non
+      cambia aspetto quando parte (BUG-147).
     status: implemented
     generate_issue: false
     labels: [ordini, pos, staff]

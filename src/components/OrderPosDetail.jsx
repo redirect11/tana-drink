@@ -64,6 +64,7 @@ import {
   ORDER_OPEN,
   rigaDiAltri,
   firmaRigheAccesa,
+  firmaDi,
 } from '../lib/comande.js'
 import { paidAmount, dettaglioIncassi, scontoTotale } from '../lib/pagamento.js'
 import { aggiunteInComandaNuova, isPersonale, puoGestireComande, puoSegnare } from '../lib/ruoli.js'
@@ -551,6 +552,10 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   useEffect(() => {
     return onAuthStateChanged(auth, async (u) => {
       if (!u) {
+        // Anche il ref: è lui che firma le righe all'invio, e con lo stato
+        // azzerato e il ref no la bozza si mostrerebbe senza firma e
+        // partirebbe firmata da chi è appena uscito (BUG-147).
+        staffRef.current = null
         setRuolo(null)
         return setStaff(null)
       }
@@ -564,6 +569,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           setStaff(io)
         }
       } catch {
+        staffRef.current = null
         setRuolo(null)
         setStaff(null)
       }
@@ -1598,7 +1604,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   const firmaRiga = (l) => {
     const io = staffRef.current
     if (l.added_by || !io) return l
-    return { ...l, added_by: { name: io.name || null, email: io.email || null, role: io.role || null } }
+    return { ...l, added_by: firmaDi(io) }
   }
   const draftToItems = (righe = draft) =>
     righe.map(firmaRiga).map((l) => ({
@@ -2673,6 +2679,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
               // lui (REQ-ORD-024). `staff` e non il ref: quando si scopre
               // chi sta usando il conto, i tasti si ridisegnano.
               const altrui = firmaRigheAccesa(settings) && !isDraft && rigaDiAltri(l, staff)
+              const autore = firmaRigheAccesa(settings) ? (l.added_by || (isDraft && staff ? firmaDi(staff) : null)) : null
               const canMinus = !closed && !isPaid && !altrui && (isDraft || l.removable)
               // A CHE PUNTO È QUESTA RIGA. Gli stati del servizio stanno sulle
               // COMANDE, non sul conto: con una comanda sola tutti i drink
@@ -2728,11 +2735,14 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                       <span style={{ minWidth: 0, overflow: 'hidden' }}>
                         <span style={{ display: 'flex', alignItems: 'baseline', minWidth: 0 }}>
                           {/* Chi l'ha battuta, col suo colore (REQ-ORD-023).
-                              Le righe in bozza non ce l'hanno ancora: sono
-                              di chi sta guardando, e si firmano all'invio. */}
-                          {l.added_by && firmaRigheAccesa(settings) && (
+                              Una riga in bozza non ancora firmata la firma
+                              chi sta guardando (firmaRiga, all'invio): il
+                              segno si mostra SUBITO col suo nome, non dopo
+                              l'invio (BUG-147). Quella già firmata, rimessa
+                              in bozza da un invio non riuscito, tiene la sua. */}
+                          {autore && (
                             <span className="riga-autore">
-                              <OrderBy persona={l.added_by} titolo="Aggiunto" />
+                              <OrderBy persona={autore} titolo="Aggiunto" />
                             </span>
                           )}
                           <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>

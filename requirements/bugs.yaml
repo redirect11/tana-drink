@@ -6100,3 +6100,34 @@ bugs:
     requisiti: [REQ-UI-005]
     test_cases:
       - tests/unit/css.test.js
+
+  - id: BUG-147
+    title: "Con l'iniziale accesa, la riga appena battuta compare senza e dopo un attimo cambia aspetto col pallino"
+    area: "src/components/OrderPosDetail.jsx (righe del conto), src/lib/comande.js (firmaDi)"
+    severity: media
+    priority: P1
+    description: >
+      Daniele, 14/11/2026, in produzione con la 1.10.43: con «Chi ha caricato
+      la riga» accesa, l'iniziale accanto al drink appena battuto arrivava
+      in ritardo, «come se chiedesse al server», e la riga «si ricaricava»
+      passando da normale a quella col pallino; anche il primo drink di un
+      conto nuovo. Le impostazioni non c'entravano (sono già ricordate sul
+      dispositivo, settingsIniziali): la riga resta IN BOZZA finché la bozza
+      non parte — 300 ms dopo l'ultimo tocco, di più battendo di seguito —
+      e il conto mostrava l'iniziale solo sulle righe già mandate, perché
+      la firma (`added_by`) si mette all'invio. Succedeva al primo drink di
+      un conto nuovo e alle aggiunte a un conto con la comanda già partita;
+      non a quelle che entrano dritte in una comanda ancora da fare, che
+      sono firmate subito.
+      ORA la riga in bozza mostra subito l'iniziale di chi la sta battendo,
+      cioè chi la firmerà all'invio, con la stessa firma (firmaDi): la
+      lettera e il colore sono gli stessi prima e dopo l'invio, e la riga
+      non cambia aspetto quando parte. Con l'iniziale spenta la bozza non la
+      mostra, come le altre righe.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, ordini, pos, local-first]
+    requisiti: [REQ-ORD-023]
+    test_cases:
+      - tests/component/OrderPosDetail.test.jsx
