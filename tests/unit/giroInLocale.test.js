@@ -191,10 +191,10 @@ describe('un conto nuovo, senza rete', () => {
     expect(nato.comande[0].items).toMatchObject([{ drink_id: 'negroni', qty: 1, line_id: 'l1' }])
     expect(nato.total).toBe(7)
     expect(nato.placed_by).toMatchObject({ email: 'banco@tana.it' })
-    // L'ora del server non la sa ancora nessuno; quella di qui sì, ed è
-    // quella che la barra in alto mostra intanto.
-    expect(nato.created_at).toBeNull()
-    expect(nato.tempi_conto.aperto).toBeTruthy()
+    // L'ora del server non la sa ancora nessuno: vale quella di qui, la
+    // stessa stima che Firestore dà per la scrittura in viaggio (BUG-151).
+    expect(nato.created_at).toBeTruthy()
+    expect(nato.created_at).toBe(nato.tempi_conto.aperto)
   })
 
   it('e la comanda aggiunta subito dopo parte da lì, non dalla cache che non ce l’ha', async () => {
@@ -203,6 +203,28 @@ describe('un conto nuovo, senza rete', () => {
     const dopo = await subito(api.addComanda(nato.id, [riga('Spritz', 1, 6)]))
     expect(dopo.comande).toHaveLength(2)
     expect(dopo.total).toBe(13)
+  })
+})
+
+// L'ORA DEL SERVER SUL CONTO APPENA SCRITTO (BUG-151, BUG-152). Finché la
+// scrittura non arriva, Firestore dà `created_at` null — a meno di chiedergli
+// la stima. Senza: la card in coda senza «da quanto», e il conto nuovo in
+// cima alla coda per un attimo, poi in fondo. Qui la cache fa come Firestore:
+// l'ora la dà solo a chi chiede la stima.
+describe('l’ora di un conto appena scritto', () => {
+  it('si legge già, stimata, invece di valere null finché non arriva il server', async () => {
+    const { getDoc } = await import('firebase/firestore')
+    const stimata = new Date('2026-11-14T20:15:00.000Z')
+    getDoc.mockImplementationOnce(async () => ({
+      exists: () => true,
+      id: 'ord-1',
+      data: (opzioni) => ({
+        ...contoConDue(),
+        created_at: opzioni?.serverTimestamps === 'estimate' ? { toDate: () => stimata } : null,
+      }),
+    }))
+    const conto = await subito(api.fetchOrder('ord-1'))
+    expect(conto.created_at).toBe(stimata.toISOString())
   })
 })
 

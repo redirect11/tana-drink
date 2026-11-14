@@ -360,3 +360,51 @@ describe('le rimanenze mentre si conta', () => {
 
 // Gli inventari chiusi si guardano nello Storico inventari (REQ-MAG-052,
 // tests/component/StoricoInventari.test.jsx): qui non ci sono più.
+
+// BUG-153, Flavio 13/11/2026: «all'interno dell'inventario mi appaiono solo
+// i prodotti che c'erano anche nell'inventario precedente… le toniche a
+// pompelmo di Galvanina non ci sono». Le righe dell'inventario aperto erano
+// la fotografia del giorno dell'apertura: i prodotti creati dopo non c'erano.
+describe('i prodotti nati dopo l’apertura', () => {
+  const JAGER = { id: 'jager', name: 'Jagermeister', unit: 'pz', package_size: 1000, content_unit: 'ml', stock: 2.8, cost: 13.8, vat: 22 }
+  const GALVANINA = { id: 'galv', name: 'Galvanina Pompelmo 20cl', unit: 'pz', package_size: 1, cost: 0.9, vat: 22, stock: 17 }
+  const aperta = (extra = {}) => ({
+    id: 'c1',
+    started_at: APERTA,
+    lines: [{ item_id: 'jager', name: 'Jagermeister', unit: 'pz', package_size: 1000, cost: 13.8, vat: 22, dep: 3.2, rim: null }],
+    rimanenze: {},
+    rimanenze_ora: {},
+    ...extra,
+  })
+  beforeEach(() => {
+    stato.articoli = [JAGER, GALVANINA]
+    stato.movimenti = [
+      { item_id: 'galv', type: 'load', qty: 24, unit: 'pz', reason: 'ordine fornitore', created_at: APERTA },
+      { item_id: 'galv', type: 'unload', qty: 7, unit: 'pz', reason: 'ordine', created_at: APERTA },
+    ]
+  })
+
+  it('ci sono, coi numeri giusti, e si contano come gli altri', async () => {
+    const user = userEvent.setup()
+    const api = await import('../../src/lib/api.js')
+    stato.aperta = aperta()
+    render(<StockCountPanel />)
+    await screen.findByText(/Inventario in corso/)
+    const riga = screen.getByText('Galvanina Pompelmo 20cl').closest('.inv-row').textContent
+    expect(riga).toMatch(/DEP 0 pz · ACQ 24 pz · CONS 7 pz · RIM 17 pz/)
+    await user.type(screen.getByLabelText('Rimanenza di Galvanina Pompelmo 20cl'), '15')
+    // Chiudendo, la sua riga parte con le altre: la giacenza diventa il contato.
+    await user.click(screen.getByRole('button', { name: /Chiudi l’inventario/ }))
+    await user.click((await screen.findAllByRole('button', { name: /^Chiudi/ })).at(-1))
+    const { lines } = api.closeStockCount.mock.calls.at(-1)[1]
+    expect(lines.map((l) => l.item_id)).toEqual(['jager', 'galv'])
+    expect(lines.find((l) => l.item_id === 'galv')).toMatchObject({ dep: 0, rim: '15' })
+  })
+
+  it('il numero già contato si ritrova riaprendo la pagina', async () => {
+    stato.aperta = aperta({ rimanenze: { galv: 15 }, rimanenze_ora: { galv: new Date().toISOString() } })
+    render(<StockCountPanel />)
+    await screen.findByText(/Inventario in corso/)
+    expect(screen.getByLabelText('Rimanenza di Galvanina Pompelmo 20cl').value).toBe('15')
+  })
+})

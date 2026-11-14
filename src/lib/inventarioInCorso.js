@@ -75,6 +75,60 @@ function mossoDopo(lista, rimAt) {
 
 const VUOTO = { acq: 0, lista: [] }
 
+// LA RIGA DI UN PRODOTTO IN UN INVENTARIO: quella che nasce all'apertura e
+// quella di un prodotto arrivato dopo (conProdottiNuovi) sono la stessa
+// forma, e la scrive una funzione sola.
+export function rigaDiInventario(it, dep = it.stock) {
+  return {
+    item_id: it.id,
+    name: it.name,
+    unit: it.unit,
+    package_size: it.package_size ?? null,
+    cost: it.cost ?? null,
+    vat: it.vat ?? 22,
+    dep: Number(dep) || 0,
+    acq: 0,
+    rim: null,
+  }
+}
+
+/**
+ * I PRODOTTI NATI DOPO L'APERTURA (BUG-153). Le righe di un inventario sono
+ * la fotografia dei prodotti del momento in cui si apre — e quello che
+ * riparte da sé alla chiusura del precedente può restare aperto settimane.
+ * Flavio, 13/11/2026: «mi appaiono solo i prodotti che c'erano anche
+ * nell'inventario precedente… le toniche di Galvanina non ci sono». Erano
+ * 13 prodotti creati dopo il 05/10, che non si potevano contare.
+ *
+ * Qui si aggiungono, in fondo. Il DEP non si indovina: è la giacenza di
+ * adesso meno tutto quello che si è mosso dall'apertura (vendite, carichi,
+ * correzioni). Così una giacenza scritta nella scheda alla nascita, senza
+ * un carico, conta come già presente, e un carico conta come acquisto: il
+ * consumo torna. Mai sotto zero: per un prodotto che all'apertura non
+ * esisteva un deposito negativo non ha senso (le righe dell'apertura invece
+ * lo possono avere, BUG-101: lì è la giacenza fotografata), e quello che
+ * non torna resta nel consumo, dove lo si vede.
+ *
+ * `rimanenze` / `ore`: i numeri contati salvati nell'inventario
+ * (salvaRimanenza), che per un prodotto nuovo non hanno una riga su cui
+ * stare finché non la si compone qui.
+ */
+export function conProdottiNuovi(lines, { items = [], raggruppati = new Map(), rimanenze = {}, ore = {} } = {}) {
+  const giaDentro = new Set((lines || []).map((l) => l.item_id))
+  const nuovi = []
+  for (const it of items || []) {
+    if (!it?.id || giaDentro.has(it.id)) continue
+    const mosso = (raggruppati.get(it.id) || VUOTO).lista.reduce((s, x) => s + x.q, 0)
+    const riga = rigaDiInventario(it, Math.max(0, arrotonda((Number(it.stock) || 0) - mosso)))
+    if (Object.prototype.hasOwnProperty.call(rimanenze, it.id)) {
+      riga.rim = rimanenze[it.id]
+      riga.rim_at = ore[it.id] ?? null
+    }
+    nuovi.push(riga)
+  }
+  return nuovi.length ? [...(lines || []), ...nuovi] : lines || []
+}
+
 /**
  * Le righe di un inventario, completate coi movimenti del periodo.
  *
