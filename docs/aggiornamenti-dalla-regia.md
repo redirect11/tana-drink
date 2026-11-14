@@ -1,5 +1,7 @@
 # Gli aggiornamenti decisi dalla regia: obbligatori o a scelta del titolare
 
+> **Il contratto con la regia** è in drink-regia, [`docs/contratto-regia-app.md`](https://github.com/redirect11/drink-regia/blob/develop/docs/contratto-regia-app.md): se non coincide con questo documento, vale quello. Qui restano i dettagli del lato dell'app.
+
 REQ-FLOTTA-020. Richiesta della regia (drink-regia, stesso id), 31/10/2026.
 Qui c'è quello che serve **all'app**; il lato regia (interruttori, ondate,
 rinnovi, dashboard) lo fa la regia e qui è raccontato solo per capire.

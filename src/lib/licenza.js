@@ -358,6 +358,26 @@ export const licenzaNota = (stato) => licenzaDi(stato) != null
 // Il menù digitale c'è? Il cliente può ordinare da lì? Ha un account?
 export const menuDigitaleAttivo = (stato) => moduloAttivo(stato, 'menu_tavoli')
 export const ordinazioneClientiAttiva = (stato) => moduloAttivo(stato, 'ordini_cliente')
+// IL MENÙ VISIBILE AI CLIENTI (REQ-LIC-002). Daniele, 14/11/2026: «Menù
+// digitale e tavoli serve ad attivare il modulo, ma nel modulo posso
+// decidere se visualizzare il menù o meno: non dovrebbe essere la stessa
+// cosa». Il modulo (Funzioni premium) dice se la funzione esiste; questa
+// scelta (`menu_clienti_visibile`, Impostazioni → Menù clienti) dice se i
+// CLIENTI ci arrivano. Spenta, il personale continua a usare il menù.
+export const menuClientiVisibile = (stato) => menuDigitaleAttivo(stato) && stato?.menu_clienti_visibile !== false
+// «I MIEI ORDINI» SOLO SE IL CLIENTE PUÒ ORDINARE DAVVERO. Daniele,
+// 14/11/2026: «I miei ordini non deve esserci se è attivo solo
+// consultazione. Ovviamente anche se il menù è disattivo». Ordinare dal
+// telefono vuole il menù (ordini_cliente richiede menu_tavoli), visibile
+// ai clienti, e non in sola consultazione (`menu_only`).
+export const mieiOrdiniVisibili = (stato) =>
+  ordinazioneClientiAttiva(stato) && stato?.menu_clienti_visibile !== false && stato?.menu_only !== true
+// I LINK AL MENÙ DEI CLIENTI (REQ-LIC-002): ci sono se il menù è attivo; e
+// finché la licenza non è arrivata restano (BUG-142: non si dice che il
+// menù manca prima di saperlo, e la riga dei tasti del telefono non deve
+// comparire dopo, spingendo giù la pagina mentre la si tocca). /menu,
+// comunque, è chiuso da sé.
+export const menuVisibile = (stato) => !licenzaNota(stato) || menuClientiVisibile(stato)
 // Gli account clienti: il modulo, E l'interruttore che il locale aveva già
 // (customer_accounts_enabled).
 export const accountClientiAttivi = (stato) => moduloAttivo(stato, 'clienti') && stato?.customer_accounts_enabled !== false

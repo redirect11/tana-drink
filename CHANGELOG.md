@@ -1,6 +1,41 @@
 # Cosa è cambiato
 
-## 1.10.49-beta — in lavorazione
+## 1.10.50-beta — in lavorazione
+
+### Il menù dei clienti
+
+- **«Menù visibile ai clienti»**, in Impostazioni → Menù clienti: spento, i
+  clienti non arrivano al menù in nessun modo — niente tasto nella pagina
+  iniziale, niente voce «Menù», la pagina del menù chiusa. Il personale
+  continua a usarlo; il modulo del menù si accende e si spegne a parte, in
+  Funzioni premium (REQ-LIC-002).
+- **«I miei ordini» solo se il cliente può ordinare**: sparisce col menù
+  spento e in sola consultazione (REQ-LIC-002).
+- Col menù spento, i «Torna al menù» delle pagine dei clienti portano alla
+  pagina iniziale, e il server non accetta ordini dal telefono, nemmeno in
+  sola consultazione (REQ-LIC-002).
+
+## 1.10.49 — 14 novembre 2026 (produzione)
+
+Provata sul test come 1.10.49-beta.
+
+### Nel gestionale
+
+- **Switch prodotto**, in cima a Menù → Modifica menù: un prodotto di
+  magazzino si sostituisce con un altro in tutte le ricette che lo
+  contengono, a parità di quantità, e nelle etichette del menù dei clienti.
+  Prima di confermare si vedono le ricette e le voci che cambiano; le
+  ricette che hanno solo il prodotto nuovo restano come sono (REQ-MENU-043).
+- **Nel dettaglio di un prodotto di magazzino**: in quante ricette del menù
+  è presente, e quali (REQ-MAG-056).
+
+### Per la Tana
+
+- **«Area clienti» apre la pagina della regia**, in una scheda nuova: chi è
+  già entrato nella regia su quel dispositivo si ritrova nella sua area
+  (REQ-FLOTTA-030).
+
+## 1.10.49-beta — 14/11/2026 (test)
 
 ### Nel gestionale
 

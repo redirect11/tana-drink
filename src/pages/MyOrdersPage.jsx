@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import TornaAlMenu from '../components/TornaAlMenu.jsx'
 import { fetchOrdersByIds, fetchOrdersByCustomer, subscribeOrder } from '../lib/api.js'
 import { getMyOrderIds } from '../lib/cart.js'
 import { useCustomer } from '../lib/customerAuth.js'
@@ -79,18 +80,16 @@ export default function MyOrdersPage() {
       <div className="empty">
         {testo('ordini.vuoto', 'Non hai ancora effettuato ordini da questo dispositivo.')}
         <br />
-        <Link className="btn block" to="/menu" style={{ marginTop: 16 }}>
+        <TornaAlMenu className="btn block" style={{ marginTop: 16 }}>
           Vai al menù
-        </Link>
+        </TornaAlMenu>
       </div>
     )
 
   return (
     <div>
       <h2 style={{ margin: '8px 4px' }}>I miei ordini</h2>
-      <Link className="btn ghost block" to="/menu">
-        ← Torna al menù
-      </Link>
+      <TornaAlMenu />
       {orders.map((o) => (
         <Link
           key={o.id}

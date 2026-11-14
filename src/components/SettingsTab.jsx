@@ -858,6 +858,21 @@ export default function SettingsTab({ role = null }) {
           <p className="muted small" style={{ margin: '0 0 10px' }}>
             La schermata che vedono i clienti sul telefono.
           </p>
+          {/* IL MENÙ SI NASCONDE AI CLIENTI DA QUI (REQ-LIC-002). Daniele,
+              14/11/2026: «se il menù clienti è disattivato non ci si può
+              arrivare in alcun modo»; e poi: il modulo («Menù digitale e
+              tavoli», Funzioni premium) «serve ad attivare il modulo, ma nel
+              modulo posso decidere se visualizzare il menù o meno: non
+              dovrebbe essere la stessa cosa». Quindi una scelta sua
+              (`menu_clienti_visibile`), che c'è solo col modulo acceso. */}
+          {moduloAttivo(settings, 'menu_tavoli') && (
+            <ToggleRow
+              label="Menù visibile ai clienti"
+              desc="Spento, i clienti non arrivano al menù: nessun tasto nella pagina iniziale, nessuna voce «Menù», la pagina del menù è chiusa e gli ordini dal telefono non vengono accettati. Il personale continua a usarlo."
+              checked={settings.menu_clienti_visibile !== false}
+              onChange={(v) => save({ menu_clienti_visibile: v })}
+            />
+          )}
           <ToggleRow
             label="Solo menù (consultazione)"
             desc="I clienti vedono il menù ma non possono ordinare."

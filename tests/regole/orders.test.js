@@ -444,3 +444,38 @@ describe('LA RISPOSTA DEL CLIENTE alle modifiche del banco', () => {
     )
   })
 })
+
+// Daniele, 14/11/2026: col menù dei clienti spento «non ci si può arrivare
+// in alcun modo». L'app lo nasconde; la regola lo garantisce anche a un
+// telefono con le impostazioni di prima, o a chi scrive a mano.
+describe('il locale che non accetta ordini dal telefono', () => {
+  const impostazioni = (patch) =>
+    env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'settings/bar'), patch)
+    })
+
+  it('col menù dei clienti spento, il conto dal telefono non nasce', async () => {
+    await impostazioni({ modulo_menu_tavoli_enabled: false })
+    await assertFails(setDoc(doc(CHI.anonimo(env), 'orders/spento-1'), contoDalMenu()))
+  })
+
+  it('col menù nascosto ai clienti nemmeno', async () => {
+    await impostazioni({ menu_clienti_visibile: false })
+    await assertFails(setDoc(doc(CHI.anonimo(env), 'orders/nascosto-1'), contoDalMenu()))
+  })
+
+  it('con gli ordini dal telefono spenti nemmeno', async () => {
+    await impostazioni({ modulo_ordini_cliente_enabled: false })
+    await assertFails(setDoc(doc(CHI.anonimo(env), 'orders/spento-2'), contoDalMenu()))
+  })
+
+  it('in sola consultazione nemmeno', async () => {
+    await impostazioni({ menu_only: true })
+    await assertFails(setDoc(doc(CHI.anonimo(env), 'orders/spento-3'), contoDalMenu()))
+  })
+
+  it('con le impostazioni accese passa, come sempre', async () => {
+    await impostazioni({ modulo_menu_tavoli_enabled: true, menu_only: false })
+    await assertSucceeds(setDoc(doc(CHI.anonimo(env), 'orders/acceso-1'), contoDalMenu()))
+  })
+})

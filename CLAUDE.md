@@ -344,6 +344,35 @@ aggiorna la sua voce (`REQ-*` o `BUG-*`), e codice, test e requisito
 viaggiano insieme, nello stesso commit. Se nasce una funzione, prima il
 requisito.
 
+## Le interfacce con la regia
+
+L'app e la regia (drink-regia) si parlano attraverso interfacce: la
+licenza, `settings/bar`, la presentazione, i passaggi, i cataloghi, i
+moduli, l'AI, i workflow e la build, identità e ruoli. **Il contratto sta
+nella regia**, in [`docs/contratto-regia-app.md`](https://github.com/redirect11/drink-regia/blob/develop/docs/contratto-regia-app.md),
+e lo tiene aggiornato la regia; i nostri documenti ci rimandano.
+
+**Prima di ogni modifica ci si chiede se tocca un'interfaccia con la
+regia.** Daniele, 14/11/2026: «l'unico modo per essere incompatibili è che
+tana drink o regia usino api vecchie».
+
+- **Cambio compatibile** (un campo nuovo facoltativo, un valore che la
+  regia può ignorare): si fa, e lo si dice alla regia, tramite Daniele,
+  nella stessa giornata: che cosa e da quale versione.
+- **Cambio incompatibile: mai sul posto.** La versione nuova va accanto
+  alla vecchia, si passa alla nuova, e la vecchia si toglie solo quando
+  nessun locale la usa più (esempio: «Area clienti» come collegamento dalla
+  1.10.49, mentre `passaggioVersoRegia` resta finché ci sono locali più
+  vecchi).
+- **Fanno parte del contratto anche se non sembra:** il formato dei titoli
+  del `CHANGELOG.md` (`## X.Y.Z — data`), che la regia legge per le note
+  degli aggiornamenti; gli script che i workflow della regia chiamano qui
+  dentro (`scripts/genera-cliente.mjs`, `scripts/controlla-build-senza-demo.mjs`)
+  coi loro argomenti; le copie da tenere allineate a mano (`LIMITI_FREE` in
+  `licenzaInVigore.js` con i piani della regia, `MODULI_PREMIUM`, il
+  vocabolario di temi e stili, `lib-titolare.js`, l'ora del taglio).
+  Cambiarne una senza l'altra è un cambio di interfaccia.
+
 ## Cose da sapere sull'infrastruttura
 
 **Non si scrive mai in produzione di propria iniziativa.** Gli script che

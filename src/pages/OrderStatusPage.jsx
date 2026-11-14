@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
+import TornaAlMenu from '../components/TornaAlMenu.jsx'
 import { useTestoStile } from '../lib/testiStile.js'
 import {
   fetchOrder,
@@ -435,9 +436,7 @@ export default function OrderStatusPage() {
             <div className="banner" style={{ marginTop: 12 }}>✖️ Ordine annullato</div>
           )}
         </div>
-        <Link className="btn ghost block" to="/menu">
-          ← Torna al menù
-        </Link>
+        <TornaAlMenu />
       </div>
     )
   }
@@ -757,9 +756,7 @@ export default function OrderStatusPage() {
         </div>
       )}
 
-      <Link className="btn ghost block" to="/menu">
-        ← Torna al menù
-      </Link>
+      <TornaAlMenu />
 
       {confirmCancel && (
         <ConfirmDialog

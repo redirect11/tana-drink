@@ -6131,6 +6131,34 @@ requirements:
       solo il numero stampato. E' da dire alla regia.
       Quando il locale compra, la regia toglie i limiti e ripubblica col
       profilo completo: l'app non fa niente di speciale.
+      IL MENÙ DEI CLIENTI SI SPEGNE DALLE IMPOSTAZIONI (14/11/2026). Daniele:
+      «se il menù clienti è disattivato non ci si può arrivare in alcun
+      modo. Quella cosa fissa va tolta», e «I miei ordini non deve esserci
+      se è attivo solo consultazione. Ovviamente anche se il menù è
+      disattivo». E subito dopo: il modulo («Menù digitale e tavoli» in
+      Funzioni premium) «serve ad attivare il modulo, ma nel modulo posso
+      decidere se visualizzare il menù o meno: non dovrebbe essere la
+      stessa cosa». Quindi, col modulo acceso, una scelta sua: «Menù
+      visibile ai clienti» in Impostazioni → Menù clienti
+      (`menu_clienti_visibile`, acceso di partenza; menuClientiVisibile in
+      licenza.js). Spento, per i clienti:
+      nessun tasto «Vai al menù» nella pagina iniziale (prima era scritto
+      fisso; finché la licenza non è arrivata resta, BUG-142), nessuna voce
+      «Menù» nella barra del telefono e nel menù laterale del cliente,
+      /menu chiuso con «non è disponibile» (non «non fa parte del piano»,
+      FunzioneNonInclusa con `spentoDalLocale`); per il PERSONALE il menù
+      resta aperto, e «Ordina dal menù» c'è. Spento il MODULO, invece, il
+      menù non c'è per nessuno. «I MIEI ORDINI» si vede
+      solo se il cliente può ordinare: menù e ordini dal telefono attivi e
+      non in sola consultazione (`mieiOrdiniVisibili`, licenza.js), nella
+      barra, nel menù laterale e nel profilo. I «Torna al menù» delle
+      pagine dei clienti, col menù spento, tornano alla pagina iniziale
+      (TornaAlMenu); il personale non ha «Ordina dal menù». I link al menù
+      restano finché la licenza non è arrivata (menuVisibile, BUG-142), così
+      la riga dei tasti del telefono non compare dopo. E LO GARANTISCE IL
+      SERVER: un ordine dal telefono non nasce se settings/bar ha il menù o
+      gli ordini dal telefono spenti, il menù nascosto ai clienti, o la sola
+      consultazione (firestore.rules, localeAccettaOrdiniDalTelefono).
     status: implemented
     generate_issue: false
     labels: [licenza, prodotto, infra]
@@ -6140,6 +6168,11 @@ requirements:
       - tests/component/PaymentScreen.test.jsx
       - tests/component/SettingsTab.test.jsx
       - tests/component/MenuManager.test.jsx
+      - tests/component/LandingPage.test.jsx
+      - tests/component/AppHeader.test.jsx
+      - tests/component/FunzioneNonInclusa.test.jsx
+      - tests/unit/licenza.test.js
+      - tests/component/TornaAlMenu.test.jsx
 
   - id: REQ-LIC-005
     title: "Il Free è una cassa semplice: si battono le righe e si incassa, senza comande"
@@ -7307,6 +7340,34 @@ requirements:
       - tests/unit/switchProdotto.test.js
       - tests/component/SwitchProdotto.test.jsx
       - tests/unit/switchProdottoScrittura.test.js
+
+
+  - id: REQ-MENU-044
+    title: "Il tema del locale veste anche la pagina iniziale, coi contatti, non solo il menù"
+    area: "docs/tema-del-sito.md (il concetto), src/pages/LandingPage.jsx, src/lib/stileMenu.js (pagine, vestePagine), src/lib/testiStile.js, src/lib/marketplaceTemi.js, src/index.css"
+    description: >
+      Daniele, 14/11/2026: «la home con i contatti e la front page dovrebbe
+      essere parte del tema. Nel senso il tema non dovrebbe valere solo per
+      il menù». Oggi solo «Meraviglie» veste anche le altre pagine dei
+      clienti (`pagine: true`, REQ-MENU-027); gli altri temi, «Carte» della
+      Tana compreso, cambiano solo il menù, e la pagina iniziale resta
+      quella di sempre. Ogni tema deve portare anche la sua pagina
+      iniziale (benvenuto, slogan, chi siamo, contatti, il tasto del menù
+      quando c'è), almeno nei colori, nei caratteri e nelle frasi, così chi
+      apre il sito vede già il locale e non un'app generica. Da decidere
+      con Daniele: se ogni tema ha una pagina iniziale sua (come il menù di
+      «Carte» ha una struttura sua) o una veste comune ai temi; e come si
+      lega ai temi modulari in discussione (manifest, interfacce).
+      DANIELE, STESSO GIORNO: il tema riguarda tutto; un tema per la home e
+      un tema per il menù; il sito ha pagine predefinite che il locale
+      sceglie (home, contatti…), le pagine libere sono da decidere; un sito
+      minimale già pubblicato, che può essere un modulo a parte. Il
+      concetto, con le domande aperte e il primo passo proposto, è in
+      docs/tema-del-sito.md.
+    status: todo
+    generate_issue: true
+    labels: [menu, temi, cliente]
+    test_cases: []
 
   - id: REQ-CLI-008
     title: "La scelta del cliente arriva nell'ordine, sulla comanda e nel magazzino"
@@ -17039,3 +17100,21 @@ requirements:
     priority: P2
     test_cases:
       - tests/unit/dipendenzeFunctions.test.js
+
+  - id: REQ-DEV-025
+    title: "I valori che stanno anche nella regia restano uguali nei due repository"
+    area: "src/lib/licenzaInVigore.js (LIMITI_FREE), src/lib/licenza.js (MODULI_PREMIUM), src/lib/themes.js, src/lib/stileMenu.js, src/lib/stiliRicetta.js, src/lib/marketplaceTemi.js, scripts/lib-titolare.js, l'ora del taglio"
+    description: >
+      Dalla regia, contratto delle interfacce del 14/11/2026: alcuni valori
+      stanno in tutti e due i repository e vanno tenuti allineati a mano —
+      LIMITI_FREE con piani.json della regia, MODULI_PREMIUM con l'elenco
+      della regia, il vocabolario di temi e stili con temi.js e stili.js,
+      lib-titolare.js con titolare.js, l'ora del taglio (5). Cambiarne una
+      senza l'altra è un cambio d'interfaccia (CLAUDE.md, «Le interfacce
+      con la regia»). Da decidere: un controllo automatico (un test che
+      confronta con una copia del contratto) o una fonte sola che la regia
+      pubblica e l'app legge.
+    status: todo
+    generate_issue: true
+    labels: [metodo, regia]
+    test_cases: []

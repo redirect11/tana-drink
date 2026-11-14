@@ -723,3 +723,21 @@ describe('la licenza in Impostazioni (REQ-LIC-007)', () => {
     expect(screen.getByRole('heading', { name: 'Funzioni premium' })).toBeInTheDocument()
   })
 })
+
+// IL MENÙ SI NASCONDE AI CLIENTI DALLE IMPOSTAZIONI (Daniele, 14/11/2026:
+// «se il menù clienti è disattivato non ci si può arrivare in alcun modo»;
+// e il modulo, in Funzioni premium, è un'altra cosa: «non dovrebbe essere la
+// stessa cosa»). Una scelta sua, che non tocca la chiave del modulo.
+describe('il menù visibile ai clienti', () => {
+  it('c’è in Menù clienti e si scrive da sola, senza spegnere il modulo', async () => {
+    const { updateSettings } = await import('../../src/lib/api.js')
+    updateSettings.mockClear()
+    const user = userEvent.setup()
+    mostra()
+    await user.click(screen.getByRole('button', { name: /Menù clienti/ }))
+    const interruttore = screen.getByRole('checkbox', { name: /Menù visibile ai clienti/ })
+    expect(interruttore).toBeChecked()
+    await user.click(interruttore)
+    expect(updateSettings).toHaveBeenCalledWith({ menu_clienti_visibile: false })
+  })
+})

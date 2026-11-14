@@ -25,13 +25,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 | ✅ | 300 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 9 | fatto a metà |
-| ⬜ | 25 | da fare |
+| ⬜ | 27 | da fare |
 | 🗑 | 8 | non più valido |
 
-**357 voci** in tutto. **324** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **25** sono lavori
+**359 voci** in tutto. **324** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **27** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
-cosa che l'app fa; **11** difetti noti sono ancora aperti.
+cosa che l'app fa; **16** difetti noti sono ancora aperti.
 
 Le voci ⚠️ sono la parte scomoda: funzionano, ma **nessun test le tiene**.
 Sono quelle che si rompono senza che nessuno se ne accorga, e vanno lette
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 39 | — | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 39 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 51 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 16 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 20 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -60,7 +60,7 @@ come «vero oggi», non come «garantito».
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | 6 | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 28 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
-| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 23 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
+| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 23 | 2 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 15 | 3 |  |
 | [VENUE](#venue) | 6 | — |  |
@@ -75,11 +75,11 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 11 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 183 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 184 |
 | Unità | il progetto di dettaglio: un modulo da solo | 184 |
 
-**17** bisogni del locale, **0** con un test di accettazione.
-**109** requisiti su 349 sono collegati a un bisogno;
+**18** bisogni del locale, **0** con un test di accettazione.
+**111** requisiti su 351 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -175,7 +175,7 @@ Ogni versione nuova va sul tablet del banco la sera stessa. Una correzione non d
 
 **Come si accetta**: Prima di ogni merge in develop la richiesta ha la sua V completa: il bisogno, il requisito, e i test di ogni livello che la riguardano, verdi in CI. Una richiesta senza bisogno o senza prove non passa il cancello.
 
-**Chi**: Gestore · **Lo realizzano**: [REQ-DEV-001](#req-dev-001--i-requisiti-restano-attaccati-ai-test), [REQ-DEV-002](#req-dev-002--si-sa-sempre-quale-versione-si-sta-guardando), [REQ-DEV-004](#req-dev-004--il-cancello-di-qualità-prima-del-merge-in-develop), [REQ-DEV-005](#req-dev-005--alzare-il-cricchetto-della-coverage-e-standard-di-complessità-nel-lint), [REQ-DEV-012](#req-dev-012--docssystemspecificationsmd-e-la-specifica-di-sistema-e-si-genera), [REQ-DEV-017](#req-dev-017--la-matrice-dei-moduli-ogni-modulo-premium-provato-da-solo-in-coppia-con-ogni-altro-tutti-e-nessuno), [REQ-DEV-018](#req-dev-018--il-modello-a-v-ogni-richiesta-scende-dal-bisogno-del-locale-al-codice-e-risale-coi-test-di-ogni-livello), [REQ-DEV-019](#req-dev-019--la-specifica-del-prodotto-per-casi-duso-e-ogni-caso-duso-provato-end-to-end-come-lo-farebbe-il-cliente), [REQ-DEV-020](#req-dev-020--la-squadra-di-stonebit-una-sezione-in-claudemd-agentsmd-e-i-sub-agenti-ruoli-superati-da-req-dev-022), [REQ-DEV-021](#req-dev-021--la-sezione-stonebit-e-gli-agenti-corretti-dove-contraddicono-il-repo-valgono-le-regole-del-repo-e-il-processo-è-storia-revisore-squadra-solo-per-i-lavori-grossi), [REQ-DEV-022](#req-dev-022--i-ruoli-la-sessione-sul-repo-è-il-tech-lead-e-lavora-come-sempre-il-pm-è-un-controllo-sui-requisiti-e-lagente-tech-lead-si-toglie), [REQ-DEV-023](#req-dev-023--il-merge-in-develop-aspetta-anche-le-regole-firestore-e-i-test-di-sistema-il-revisore-si-chiama-quando-serve), [REQ-DEV-024](#req-dev-024--le-dipendenze-con-un-avviso-di-sicurezza-si-aggiornano-nella-release-provate-non-dritte-su-main) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Gestore · **Lo realizzano**: [REQ-DEV-001](#req-dev-001--i-requisiti-restano-attaccati-ai-test), [REQ-DEV-002](#req-dev-002--si-sa-sempre-quale-versione-si-sta-guardando), [REQ-DEV-004](#req-dev-004--il-cancello-di-qualità-prima-del-merge-in-develop), [REQ-DEV-005](#req-dev-005--alzare-il-cricchetto-della-coverage-e-standard-di-complessità-nel-lint), [REQ-DEV-012](#req-dev-012--docssystemspecificationsmd-e-la-specifica-di-sistema-e-si-genera), [REQ-DEV-017](#req-dev-017--la-matrice-dei-moduli-ogni-modulo-premium-provato-da-solo-in-coppia-con-ogni-altro-tutti-e-nessuno), [REQ-DEV-018](#req-dev-018--il-modello-a-v-ogni-richiesta-scende-dal-bisogno-del-locale-al-codice-e-risale-coi-test-di-ogni-livello), [REQ-DEV-019](#req-dev-019--la-specifica-del-prodotto-per-casi-duso-e-ogni-caso-duso-provato-end-to-end-come-lo-farebbe-il-cliente), [REQ-DEV-020](#req-dev-020--la-squadra-di-stonebit-una-sezione-in-claudemd-agentsmd-e-i-sub-agenti-ruoli-superati-da-req-dev-022), [REQ-DEV-021](#req-dev-021--la-sezione-stonebit-e-gli-agenti-corretti-dove-contraddicono-il-repo-valgono-le-regole-del-repo-e-il-processo-è-storia-revisore-squadra-solo-per-i-lavori-grossi), [REQ-DEV-022](#req-dev-022--i-ruoli-la-sessione-sul-repo-è-il-tech-lead-e-lavora-come-sempre-il-pm-è-un-controllo-sui-requisiti-e-lagente-tech-lead-si-toglie), [REQ-DEV-023](#req-dev-023--il-merge-in-develop-aspetta-anche-le-regole-firestore-e-i-test-di-sistema-il-revisore-si-chiama-quando-serve), [REQ-DEV-024](#req-dev-024--le-dipendenze-con-un-avviso-di-sicurezza-si-aggiornano-nella-release-provate-non-dritte-su-main), [REQ-DEV-025](#req-dev-025--i-valori-che-stanno-anche-nella-regia-restano-uguali-nei-due-repository) · ⚠️ **Nessun test di accettazione, ancora.**
 
 #### UR-012 — Su un conto si vede chi ha battuto cosa
 
@@ -224,6 +224,14 @@ Flavio, 14/11/2026: «spesso i fornitori non hanno sempre il prodotto» — il C
 **Come si accetta**: In Magazzino, aprendo il Carpano Dry, si legge in quante ricette del menù è presente e quali. In Menù → Modifica menù, «Switch prodotto» con Carpano Dry in uscita e Noilly Prat in ingresso mostra le ricette che cambiano (quella che li ha già tutti e due segnalata) e le voci del menù dei clienti che nominano il Carpano; confermato, ogni ricetta ha il Noilly Prat con la stessa quantità, le ricette che avevano solo il Noilly Prat sono come prima, e il menù dei clienti dice Noilly Prat.
 
 **Chi**: Gestore · **Lo realizzano**: [REQ-MAG-056](#req-mag-056--nel-dettaglio-di-un-prodotto-di-magazzino-si-vede-in-quante-ricette-del-menù-è-presente), [REQ-MENU-043](#req-menu-043--lo-switch-prodotto-un-prodotto-si-sostituisce-con-un-altro-in-tutte-le-ricette-e-nelle-etichette-del-menù-dei-clienti) · ⚠️ **Nessun test di accettazione, ancora.**
+
+#### UR-018 — Il locale si presenta al cliente col suo stile, dalla prima pagina al menù
+
+Daniele, 14/11/2026: il tema che il locale sceglie non deve valere solo per il menù. Chi apre il sito del locale, dalla pagina iniziale coi contatti fino al menù, deve riconoscere lo stesso locale.
+
+**Come si accetta**: Con «Carte» come tema, la pagina iniziale della Tana (benvenuto, contatti, tasto del menù) ha i colori, i caratteri e le frasi di «Carte», come il menù; cambiando tema in Impostazioni cambiano insieme pagina iniziale e menù.
+
+**Chi**: Cliente, Gestore · **Lo realizzano**: [REQ-MENU-044](#req-menu-044--il-tema-del-locale-veste-anche-la-pagina-iniziale-coi-contatti-non-solo-il-menù) · ⚠️ **Nessun test di accettazione, ancora.**
 
 ## Cosa fa il sistema
 
@@ -4101,7 +4109,9 @@ COSA FA: staffAdmin non si chiama (gli elenchi dello staff tornano vuoti, la cre
 
 LE FUNCTIONS CHE L'APP NON CHIAMA: notifyNewOrder, notifyOrderUpdate e notifyStaffCall sono trigger del server, e senza di loro non parte la notifica push; l'app non se ne accorge. La cintura autoAdvancePaid (ritirato + pagato → chiuso) e' doppia: il client chiude da se' il conto pagato e servito (advanceComanda, registerPayment). paymentWebhook serve solo a SumUp. risolviNumeroDuplicato CON UN SOLO TERMINALE NON SERVE: il numero del conto lo assegna il dispositivo, che ricorda l'ultimo dato (lib/progressivi.js), quindi un terminale solo non si da' mai lo stesso numero due volte; il doppione nasce solo da due dispositivi che battono nello stesso istante. Un titolare Free con due dispositivi aperti insieme (telefono e tablet, stesso account) puo' ancora prendersi un doppione, raro, che resta: non cambia i soldi, solo il numero stampato. E' da dire alla regia. Quando il locale compra, la regia toglie i limiti e ripubblica col profilo completo: l'app non fa niente di speciale.
 
-**Dove**: `src/lib/limiti.js (profiloLeggero, senzaFunctions), src/lib/staffApi.js, src/lib/paymentsApi.js, src/lib/storage.js, src/lib/licenza.js (sumupDisponibile), src/components/PaymentScreen.jsx, src/pages/BartenderPage.jsx, src/components/SettingsTab.jsx, src/components/DrinkForm.jsx, src/lib/saveDrink.js` · **Lo dimostrano**: `tests/unit/profiloLeggero.test.js`, `tests/unit/limiti.test.js`, `tests/component/PaymentScreen.test.jsx`, `tests/component/SettingsTab.test.jsx`, `tests/component/MenuManager.test.jsx`
+IL MENÙ DEI CLIENTI SI SPEGNE DALLE IMPOSTAZIONI (14/11/2026). Daniele: «se il menù clienti è disattivato non ci si può arrivare in alcun modo. Quella cosa fissa va tolta», e «I miei ordini non deve esserci se è attivo solo consultazione. Ovviamente anche se il menù è disattivo». E subito dopo: il modulo («Menù digitale e tavoli» in Funzioni premium) «serve ad attivare il modulo, ma nel modulo posso decidere se visualizzare il menù o meno: non dovrebbe essere la stessa cosa». Quindi, col modulo acceso, una scelta sua: «Menù visibile ai clienti» in Impostazioni → Menù clienti (`menu_clienti_visibile`, acceso di partenza; menuClientiVisibile in licenza.js). Spento, per i clienti: nessun tasto «Vai al menù» nella pagina iniziale (prima era scritto fisso; finché la licenza non è arrivata resta, BUG-142), nessuna voce «Menù» nella barra del telefono e nel menù laterale del cliente, /menu chiuso con «non è disponibile» (non «non fa parte del piano», FunzioneNonInclusa con `spentoDalLocale`); per il PERSONALE il menù resta aperto, e «Ordina dal menù» c'è. Spento il MODULO, invece, il menù non c'è per nessuno. «I MIEI ORDINI» si vede solo se il cliente può ordinare: menù e ordini dal telefono attivi e non in sola consultazione (`mieiOrdiniVisibili`, licenza.js), nella barra, nel menù laterale e nel profilo. I «Torna al menù» delle pagine dei clienti, col menù spento, tornano alla pagina iniziale (TornaAlMenu); il personale non ha «Ordina dal menù». I link al menù restano finché la licenza non è arrivata (menuVisibile, BUG-142), così la riga dei tasti del telefono non compare dopo. E LO GARANTISCE IL SERVER: un ordine dal telefono non nasce se settings/bar ha il menù o gli ordini dal telefono spenti, il menù nascosto ai clienti, o la sola consultazione (firestore.rules, localeAccettaOrdiniDalTelefono).
+
+**Dove**: `src/lib/limiti.js (profiloLeggero, senzaFunctions), src/lib/staffApi.js, src/lib/paymentsApi.js, src/lib/storage.js, src/lib/licenza.js (sumupDisponibile), src/components/PaymentScreen.jsx, src/pages/BartenderPage.jsx, src/components/SettingsTab.jsx, src/components/DrinkForm.jsx, src/lib/saveDrink.js` · **Lo dimostrano**: `tests/unit/profiloLeggero.test.js`, `tests/unit/limiti.test.js`, `tests/component/PaymentScreen.test.jsx`, `tests/component/SettingsTab.test.jsx`, `tests/component/MenuManager.test.jsx`, `tests/component/LandingPage.test.jsx`, `tests/component/AppHeader.test.jsx`, `tests/component/FunzioneNonInclusa.test.jsx`, `tests/unit/licenza.test.js`, `tests/component/TornaAlMenu.test.jsx`
 
 #### REQ-LIC-005 — Il Free è una cassa semplice: si battono le righe e si incassa, senza comande
 
@@ -4445,6 +4455,16 @@ Nella vista «Ordina dal menù» dello staff si possono inserire NOME e numero d
 
 **Dove**: `src/pages/MenuPage.jsx, src/components/OrderSummary.jsx`
 
+### Menù e catalogo
+
+#### REQ-MENU-044 — Il tema del locale veste anche la pagina iniziale, coi contatti, non solo il menù
+
+Daniele, 14/11/2026: «la home con i contatti e la front page dovrebbe essere parte del tema. Nel senso il tema non dovrebbe valere solo per il menù». Oggi solo «Meraviglie» veste anche le altre pagine dei clienti (`pagine: true`, REQ-MENU-027); gli altri temi, «Carte» della Tana compreso, cambiano solo il menù, e la pagina iniziale resta quella di sempre. Ogni tema deve portare anche la sua pagina iniziale (benvenuto, slogan, chi siamo, contatti, il tasto del menù quando c'è), almeno nei colori, nei caratteri e nelle frasi, così chi apre il sito vede già il locale e non un'app generica. Da decidere con Daniele: se ogni tema ha una pagina iniziale sua (come il menù di «Carte» ha una struttura sua) o una veste comune ai temi; e come si lega ai temi modulari in discussione (manifest, interfacce).
+
+DANIELE, STESSO GIORNO: il tema riguarda tutto; un tema per la home e un tema per il menù; il sito ha pagine predefinite che il locale sceglie (home, contatti…), le pagine libere sono da decidere; un sito minimale già pubblicato, che può essere un modulo a parte. Il concetto, con le domande aperte e il primo passo proposto, è in docs/tema-del-sito.md.
+
+**Dove**: `docs/tema-del-sito.md (il concetto), src/pages/LandingPage.jsx, src/lib/stileMenu.js (pagine, vestePagine), src/lib/testiStile.js, src/lib/marketplaceTemi.js, src/index.css` · **Serve**: [UR-018](#ur-018--il-locale-si-presenta-al-cliente-col-suo-stile-dalla-prima-pagina-al-menù)
+
 ### Magazzino
 
 #### REQ-MAG-008 — Ricette da riagganciare agli articoli nuovi
@@ -4721,6 +4741,12 @@ Il cancello ora misura TUTTO il codice di prodotto, con una soglia per area tara
 
 **Dove**: `vitest.config.mjs, eslint.config.js` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera)
 
+#### REQ-DEV-025 — I valori che stanno anche nella regia restano uguali nei due repository
+
+Dalla regia, contratto delle interfacce del 14/11/2026: alcuni valori stanno in tutti e due i repository e vanno tenuti allineati a mano — LIMITI_FREE con piani.json della regia, MODULI_PREMIUM con l'elenco della regia, il vocabolario di temi e stili con temi.js e stili.js, lib-titolare.js con titolare.js, l'ora del taglio (5). Cambiarne una senza l'altra è un cambio d'interfaccia (CLAUDE.md, «Le interfacce con la regia»). Da decidere: un controllo automatico (un test che confronta con una copia del contratto) o una fonte sola che la regia pubblica e l'app legge.
+
+**Dove**: `src/lib/licenzaInVigore.js (LIMITI_FREE), src/lib/licenza.js (MODULI_PREMIUM), src/lib/themes.js, src/lib/stileMenu.js, src/lib/stiliRicetta.js, src/lib/marketplaceTemi.js, scripts/lib-titolare.js, l'ora del taglio` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera)
+
 ### LIC
 
 #### REQ-LIC-006 — Nel Free, una volta al giorno, l'invito a passare a un piano a pagamento
@@ -4844,6 +4870,11 @@ della correzione è il test citato nel requisito della sua area.
 | 🔴 | [BUG-097](#bug-097--il-conto-si-apre-senza-sapere-chi-lo-guarda-per-un-attimo-il-banco-vede-la-schermata-della-sala) — Il conto si apre senza sapere chi lo guarda: per un attimo il banco vede la schermata della sala | media | P2 |
 | · | [BUG-098](#bug-098--lo-scontrino-di-chiusura-cassa-spesso-non-esce-e-nessuno-se-ne-accorge) — Lo scontrino di chiusura cassa spesso non esce, e nessuno se ne accorge | media | P2 |
 | 🔴 | [BUG-123](#bug-123--al-banco-alcuni-gesti-aspettano-la-conferma-del-server-a-rete-spenta-restano-fermi) — Al banco alcuni gesti aspettano la conferma del server: a rete spenta restano fermi | media | P2 |
+| 🔴 | [BUG-154](#bug-154--i-moduli-dallapp-aspettano-un-indirizzo-di-pagamento-che-la-regia-non-manda-e-ignorano-la-scadenza-della-prova) — I moduli dall'app aspettano un indirizzo di pagamento che la regia non manda, e ignorano la scadenza della prova | bassa | P3 |
+| 🔴 | [BUG-155](#bug-155--il-credito-ai-scarta-il-link-di-ricarica-che-la-regia-manda) — Il credito AI scarta il link di ricarica che la regia manda | bassa | P3 |
+| 🔴 | [BUG-156](#bug-156--la-chat-dellai-non-legge-i-limiti-degli-strumenti-che-la-regia-manda) — La chat dell'AI non legge i limiti degli strumenti che la regia manda | bassa | P3 |
+| 🔴 | [BUG-157](#bug-157--la-licenza-della-tana-scritta-dal-deploy-è-più-povera-di-quella-che-scrive-la-regia) — La licenza della Tana scritta dal deploy è più povera di quella che scrive la regia | bassa | P3 |
+| 🔴 | [BUG-158](#bug-158--genera-clientemjs-non-conosce-il-tipo-di-locale-che-il-workflow-della-regia-gli-passa) — genera-cliente.mjs non conosce il tipo di locale che il workflow della regia gli passa | bassa | P3 |
 
 🔴 succede **in produzione**, cioè al banco. `·` no. `?` non si sa ancora.
 
@@ -4852,6 +4883,10 @@ della correzione è il test citato nel requisito della sua area.
 #### BUG-001 — In produzione l'admin vede «Missing or insufficient permissions» sulla coda
 
 Banner giallo d'errore in cima alla coda «In servizio» e coda vuota (0 aperti · 0 chiusi) per l'utente admin. Analisi del 14/08: il banner ha una sola sorgente, l'onError di subscribeActiveOrders — ma la collection orders è in lettura pubblica, quindi con le regole del repo quel deny è impossibile. Candidati, in ordine: (1) App Check/reCAPTCHA che non rilascia il gettone (incidente identico già documentato nei commenti di scripts/appcheck.js e scripts/recaptcha-domini.js: nega tutto, anche le collection pubbliche, e dipende dal dispositivo o dal dominio, non dal ruolo); (2) regole live in produzione diverse dal repo (prima del commit f8cd5ed il ruolo admin era rifiutato ovunque tranne che su orders); (3) banner che non si azzera mai una volta comparso, quindi basta una scrittura fallita per tenerlo fisso tutta la sessione. Verifiche in sola lettura: diagnostica-permessi.js (non passa da App Check: se lì è verde e il browser no, è App Check), appcheck.js e recaptcha-domini.js, confronto rules live/repo. Da chiedere: succede su tutti i dispositivi o solo su uno? Comunque vada, la fix collaterale è azzerare il banner al primo snapshot buono e loggare gli errori dei listener oggi silenziati.
+
+DI NUOVO IL 14/11/2026, con la 1.10.49 (Daniele, foto della coda su latanadelconiglio.it/bar). Verificato in sola lettura: l'account è admin, e con le regole della 1.10 l'elenco degli ordini gli è permesso; App Check è ACCESO su Firestore; negli ultimi due giorni 81.070 richieste con gettone valido e 72 senza (36 al giorno); il dominio latanadelconiglio.it è fra quelli della chiave reCAPTCHA. Quindi è il browser di chi guarda che non ottiene il gettone, quasi certamente un'estensione o un blocco della privacy che ferma reCAPTCHA: il locale, sugli altri dispositivi, lavora.
+
+DA FARE NELL'APP: un rifiuto di App Check deve dirsi in parole comuni («questo dispositivo non riesce a farsi riconoscere: un'estensione o il browser blocca la verifica di sicurezza»), e il banner deve sparire al primo caricamento riuscito.
 
 **Dove**: `src/lib/firebaseClient.js (App Check), firestore.rules, src/pages/BartenderPage.jsx`
 
@@ -4964,6 +4999,36 @@ NON SI CHIUDE LO STESSO. E' un'ipotesi che regge su tutti i fatti noti, non una 
 Trovato il 30/10/2026 facendo l'inventario per la demo (REQ-FLOTTA-019): 68 punti dell'app aspettano con `await` la conferma del server di una scrittura, e a rete spenta quella conferma non arriva mai. Quasi tutti sono nel gestionale (magazzino, menù, fornitori, impostazioni), dove si lavora con la rete. Ma alcuni stanno dove il local-first è la prima regola, e lì la schermata resterebbe ferma col locale senza linea: nella cassa, applicare un buono (applyVoucherDiscount), scrivere il codice lotteria (setOrderLotteryCode) ed emettere la fattura (createInvoice); nella creazione di un ordine di un cliente con account, il gruppo-cliente (ensureCustomerGroup dentro creaOrdine); il rimborso di un buono quando un conto cambia o si annulla (refundVoucher); un gruppo nuovo dal riepilogo dell'ordine e dal cassetto dello staff (createManualGroup); dal POS, la scheda di un prodotto (saveDrinkFromForm), una categoria nuova e «non disponibile» (PosProductPicker). Nella demo non succede: le scritture si confermano dalla cache. Nei locali veri va sistemato un punto alla volta, col modello dei test senza rete (tests/unit/giroInLocale.test.js), e senza mascherare gli errori veri, che è il motivo per cui la conferma locale della demo non va estesa ai locali veri.
 
 **Dove**: `src/components/PaymentScreen.jsx, src/lib/api.js (creaOrdine, refundVoucher), src/components/OrderSummary.jsx, src/components/StaffDrawer.jsx, src/components/OrderPosDetail.jsx, src/components/PosProductPicker.jsx`
+
+#### BUG-154 — I moduli dall'app aspettano un indirizzo di pagamento che la regia non manda, e ignorano la scadenza della prova
+
+Dalla regia, contratto delle interfacce del 14/11/2026 (drink-regia docs/contratto-regia-app.md, «incoerenze note»): l'app gestisce un `checkout_url` nella risposta del modulo e il ritorno con `?esito=`, ma la regia non risponde mai `checkout_url`; e ignora `scade_il` della prova. Da allineare al contratto quando si torna sui moduli (senza urgenza: oggi l'acquisto passa dall'area clienti della regia).
+
+**Dove**: `src/components/MarketplaceTab.jsx (SezioneModuli, esito del ritorno), src/lib/licenza.js (prove)` · **Tradisce**: [REQ-LIC-012](#req-lic-012--il-marketplace-dei-moduli-il-titolare-prova-aggiunge-e-disdice-i-moduli-dallapp-al-mese)
+
+#### BUG-155 — Il credito AI scarta il link di ricarica che la regia manda
+
+Dalla regia, contratto del 14/11/2026: la risposta del credito porta `ricaricabile` e `ricarica_url` (REQ-FLOTTA-091 della regia, chiesti da noi), ma ai-service.js nella 1.10.x li scarta, e in Impostazioni → Credito AI non c'è il tasto per ricaricare. È la parte «ricarica» di quello che restava della chat e del credito.
+
+**Dove**: `functions/lib/ai-service.js (risposta del credito), src/components/CreditoAI.jsx` · **Tradisce**: [REQ-AI-003](#req-ai-003--lai-a-consumo-chi-paga-con-quale-credito-e-con-quale-tetto)
+
+#### BUG-156 — La chat dell'AI non legge i limiti degli strumenti che la regia manda
+
+Dalla regia, contratto del 14/11/2026: la regia manda `limiti_strumenti`, ma strumentiChat.js usa LIMITI_RIGHE fisso. Se la regia cambia i limiti (quante righe uno strumento può restituire al modello), l'app non li segue.
+
+**Dove**: `src/lib/strumentiChat.js (LIMITI_RIGHE), src/components/PannelloChat.jsx` · **Tradisce**: [REQ-AI-006](#req-ai-006--un-assistente-ai-nel-gestionale-una-chat-che-sa-fare-le-cose-dellapp-che-lai-può-fare)
+
+#### BUG-157 — La licenza della Tana scritta dal deploy è più povera di quella che scrive la regia
+
+Dalla regia, contratto del 14/11/2026: la licenza della Tana non ha `piano`, `terminali`, `rinnovo_url`, `aggiornamenti` e `temi_su_misura`. L'app regge le assenze, ma è diversa dalla licenza che la regia scrive agli altri locali, e un comportamento che dipende da quei campi si vede sugli altri e non alla Tana. Da allineare al formato della regia (senza cambiare cosa la Tana può fare).
+
+**Dove**: `clienti/tana/licenza-iniziale.json, scripts/licenza-iniziale.mjs` · **Tradisce**: [REQ-LIC-009](#req-lic-009--senza-licenza-valida-lapp-non-parte-nemmeno-nelle-regole-lavviso-della-cancellazione-dei-dati)
+
+#### BUG-158 — genera-cliente.mjs non conosce il tipo di locale che il workflow della regia gli passa
+
+Dalla regia, contratto del 14/11/2026: lo script della 1.10.x non conosce `--sa tipo-locale` né `--tipo-locale`. Il workflow della regia ripiega, ma telefono, partita IVA, codice fiscale e sede legale arrivano solo da settings/bar. Lo script lo chiama la regia: i suoi argomenti sono contratto.
+
+**Dove**: `scripts/genera-cliente.mjs` · **Tradisce**: [REQ-VENUE-001](#req-venue-001--lidentità-del-locale-è-un-dato-clientislugvenuejson-in-build-settingsbar-venue-a-runtime)
 
 ## Non più valido
 

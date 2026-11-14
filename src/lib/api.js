@@ -6427,6 +6427,9 @@ export const DEFAULT_SETTINGS = {
   // Le scrive l'admin da Impostazioni → Il locale.
   ...VENUE_VUOTO,
   menu_only: false,
+  // Il menù visibile ai clienti (REQ-LIC-002): acceso di partenza. Spento,
+  // i clienti non ci arrivano; il modulo resta acceso e lo staff lo usa.
+  menu_clienti_visibile: true,
   // GIORNATA COMMERCIALE: ora a cui "gira" la giornata. Il locale lavora
   // oltre la mezzanotte, quindi la nottata resta contata nella giornata in
   // cui è cominciata. Raggruppa statistiche e fa ripartire il progressivo
