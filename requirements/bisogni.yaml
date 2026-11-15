@@ -370,6 +370,7 @@ bisogni:
     requisiti:
       - REQ-SIC-005
       - REQ-UI-033
+      - REQ-FLOTTA-033
     test_cases: []
 
   - id: UR-015

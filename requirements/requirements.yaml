@@ -15855,6 +15855,25 @@ requirements:
     test_cases:
       - tests/unit/temaLime.test.js
 
+  - id: REQ-FLOTTA-033
+    title: "Il locale della demo ha un nome credibile: «Bancone 21»"
+    area: "clienti/demo/venue.json"
+    description: >
+      Daniele, 15/11/2026, sulle schermate della demo da mettere nella
+      prima pagina della regia: «servirebbe un nome più credibile», e poi
+      «usa bancone 21 per ora». «Bar Demo» si legge come un segnaposto,
+      e nelle foto del prodotto fa sembrare finta l'app intera. Il nome
+      resta inventato: non è un locale vero, e la demo continua a dire
+      nella sua fascia che i dati sono di prova (REQ-FLOTTA-019).
+      CRITERIO: la build della demo si chiama «Bancone 21» nel titolo
+      della pagina e nel manifest (nome corto «Bancone 21»), e le frasi
+      che nominano il locale dicono «al Bancone 21».
+    status: todo
+    generate_issue: true
+    labels: [flotta]
+    priority: P2
+    test_cases: []
+
   - id: REQ-PAG-013
     title: "Lo sconto cade sui prodotti che si stanno riscuotendo, e gli sconti si accumulano"
     area: "src/lib/pagamento.js, src/components/PaymentScreen.jsx, src/lib/api.js, src/lib/printer.js, functions/lib/payment-core.js"
