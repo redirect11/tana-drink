@@ -80,11 +80,12 @@ export const FORME = {
     '--segno-prodotto': 'pallino',
   },
   // Lime - SmartOrders (REQ-UI-033): il vestito del prodotto, per i locali
-  // che non hanno il loro. Pulito come uno strumento, non un locale: tasti
-  // a campitura piatta nel verde lime (il colore è il marchio, e un
-  // gradiente lo sporcherebbe come sporcava Catppuccin), angoli tondi ma
-  // non da pillola, ombre tenui, titoli in un sans tondo di sistema — niente
-  // carattere da scaricare, perché la demo si apre anche senza rete.
+  // che non hanno il loro, con le forme del sito e del backoffice della
+  // regia (drink-regia DESIGN.md §4, 11/11/2026), perché il marchio è uno
+  // solo: tasti a campitura piatta nel lime (il colore è il marchio, e un
+  // gradiente lo sporcherebbe come sporcava Catppuccin), angoli da 14 e
+  // 10px, ombre tenui, titoli in Playfair come il marchio della regia (nel
+  // pacchetto dell'app, quindi anche senza rete).
   lime: {
     '--raggio-card': '14px',
     '--raggio-btn': '10px',
@@ -93,7 +94,7 @@ export const FORME = {
     '--btn-bg': 'var(--btn)',
     '--ombra-btn': 'none',
     '--ombra-card': '0 2px 12px rgba(0, 0, 0, 0.18)',
-    '--forma-titoli': "ui-rounded, 'SF Pro Rounded', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+    '--forma-titoli': "'Playfair Display', Georgia, 'Times New Roman', serif",
     // Tondo come una fetta di lime.
     '--segno-prodotto': 'pallino',
   },
@@ -225,39 +226,45 @@ export const THEME_PRESETS = {
     },
   },
   // LIME, IL TEMA DEL PRODOTTO (REQ-UI-033; Daniele, 15/11/2026). Lo scuro
-  // è quello di partenza dei locali nuovi e della demo: un nero appena
-  // verde a tre livelli e il lime come identità e azione insieme, come Pico
-  // fa col suo azzurro — un colore solo si riconosce di corsa.
+  // è quello di partenza dei locali nuovi e della demo. I colori sono quelli
+  // della regia (drink-regia src/index.css, «LA PALETTE LIME», 11/11/2026):
+  // Daniele, 15/11: il sito li ha già, e l'app non deve averne di suoi. Un
+  // nero appena verde a tre livelli, il lime pieno per i tasti e l'accento,
+  // la sua versione chiara per il testo in colore; sopra il lime il verde
+  // scurissimo della regia, non l'inchiostro bruno nato per l'oro.
   'lime-scuro': {
     forme: 'lime',
     label: '🌿 Lime scuro',
     vars: {
-      '--bg': '#0c110d',
-      '--bg-2': '#121a14',
-      '--card': '#18221a',
-      '--accent': '#a3e635',
-      '--accent-2': '#bef264',
-      '--btn': '#a3e635',
-      '--text': '#eef5e9',
-      '--muted': '#9aab95',
+      '--bg': '#0c0f0a',
+      '--bg-2': '#141911',
+      '--card': '#1c2318',
+      '--accent': '#b4ec2b',
+      '--accent-2': '#c6f25a',
+      '--btn': '#b4ec2b',
+      '--btn-ink': '#16210a',
+      '--accent-ink': '#16210a',
+      '--text': '#eef2e6',
+      '--muted': '#9aa38e',
     },
   },
-  // Il chiaro: il lime come testo sul bianco non si legge (1,5:1), quindi
-  // accento e link scendono a un verde oliva profondo (4,9:1 e 6,2:1 sul
-  // fondo); il tasto resta lime, un tono più pieno perché sul chiaro si
-  // stacchi, con l'inchiostro scuro sopra.
+  // Il chiaro, dalla versione chiara della regia: il lime sul bianco come
+  // testo non si legge (1,4:1), quindi resta un riempimento — i tasti, col
+  // verde scurissimo sopra (12:1) — e il testo in colore è il verde
+  // profondo della regia, #2f6b0f (6,1:1 sul fondo).
   'lime-chiaro': {
     forme: 'lime',
     label: '🍃 Lime chiaro',
     vars: {
-      '--bg': '#eef2ea',
-      '--bg-2': '#f7f9f4',
-      '--card': '#ffffff',
-      '--accent': '#467510',
-      '--accent-2': '#3f6212',
-      '--btn': '#84cc16',
-      '--text': '#1b2616',
-      '--muted': '#5a6a52',
+      '--bg': '#f7f9f1',
+      '--bg-2': '#fefffa',
+      '--card': '#fefffa',
+      '--accent': '#2f6b0f',
+      '--accent-2': '#2f6b0f',
+      '--btn': '#b4ec2b',
+      '--btn-ink': '#16210a',
+      '--text': '#161b10',
+      '--muted': '#525c47',
     },
   },
   // LE TAVOLOZZE CHE ARRIVANO CON UNO STILE (REQ-MENU-027). «Lavagna» e
@@ -364,11 +371,12 @@ export function applyTheme(vars) {
   // L'INCHIOSTRO SUL TASTO. Era cablato scuro (#1c1305, che è nato per
   // l'oro): su un tema con l'azione scura sarebbe nero su nero. Si decide
   // dal colore del tasto, non dal tema.
-  root.style.setProperty('--btn-ink', isLightColor(btn) ? '#1c1305' : '#ffffff')
+  // Un preset può dichiarare il suo (Lime: il verde scurissimo della regia).
+  root.style.setProperty('--btn-ink', vars['--btn-ink'] || (isLightColor(btn) ? '#1c1305' : '#ffffff'))
   // Lo stesso sopra l'accento pieno (il segno «staff», il numero sulla
   // campanella): era bianco fisso, e sul lime stava a 1,5:1 (dal revisore,
   // REQ-UI-033). Sul rosa della Tana resta bianco.
-  root.style.setProperty('--accent-ink', isLightColor(vars['--accent']) ? '#1c1305' : '#ffffff')
+  root.style.setProperty('--accent-ink', vars['--accent-ink'] || (isLightColor(vars['--accent']) ? '#1c1305' : '#ffffff'))
   const a2 = vars['--accent-2']
   if (a2) {
     root.style.setProperty(

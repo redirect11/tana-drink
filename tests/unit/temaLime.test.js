@@ -61,11 +61,13 @@ describe('il tema Lime', () => {
     }
   })
 
-  it('il tasto lime prende l\'inchiostro scuro, ben leggibile', () => {
+  // Sopra il lime l'inchiostro della regia, #16210a, non quello bruno nato
+  // per l'oro della Tana.
+  it('il tasto lime prende l\'inchiostro della regia, ben leggibile', () => {
     for (const id of ['lime-scuro', 'lime-chiaro']) {
       applyTheme(resolveThemeVars({ preset: id }))
-      expect(leggi('--btn-ink'), id).toBe('#1c1305')
-      expect(contrasto('#1c1305', THEME_PRESETS[id].vars['--btn']), id).toBeGreaterThanOrEqual(4.5)
+      expect(leggi('--btn-ink'), id).toBe('#16210a')
+      expect(contrasto('#16210a', THEME_PRESETS[id].vars['--btn']), id).toBeGreaterThanOrEqual(4.5)
       expect(document.documentElement.dataset.segno).toBe('pallino')
     }
   })
@@ -142,7 +144,7 @@ describe('niente oro della Tana scritto a mano fuori dagli stati', () => {
 describe('l\'inchiostro sopra l\'accento', () => {
   it('scuro sul lime, bianco sul rosa della Tana e sull\'oliva di Lime chiaro', () => {
     applyTheme(resolveThemeVars({ preset: 'lime-scuro' }))
-    expect(leggi('--accent-ink')).toBe('#1c1305')
+    expect(leggi('--accent-ink')).toBe('#16210a')
     applyTheme(resolveThemeVars({ preset: 'lime-chiaro' }))
     expect(leggi('--accent-ink')).toBe('#ffffff')
     applyTheme(resolveThemeVars({ preset: 'tana-scuro' }))

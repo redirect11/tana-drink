@@ -15788,9 +15788,13 @@ requirements:
       altro cliente parte da `lime-scuro`; i temi del catalogo che
       descrivono i colori della Tana restano sui colori della Tana.
       COME È FATTO (15/11/2026): FORME.lime (tasti piatti, 14/10px, ombra
-      tenue, titoli nel sans tondo di sistema, il pallino sulle card) e i
-      preset lime-scuro/lime-chiaro in src/lib/themes.js; sul chiaro il lime
-      resta solo sul tasto (#84cc16), accento e link in verde oliva.
+      tenue, titoli in Playfair, il pallino sulle card) e i preset
+      lime-scuro/lime-chiaro in src/lib/themes.js, con i COLORI DELLA REGIA
+      (drink-regia src/index.css, «LA PALETTE LIME», 11/11/2026; Daniele,
+      15/11: «il sito dovrebbe già averli e anche il backoffice in parte»):
+      lime #b4ec2b pieno, #c6f25a per il testo, #16210a sopra il lime (il
+      preset dichiara --btn-ink e --accent-ink); sul chiaro il lime resta
+      un riempimento e il testo in colore è #2f6b0f.
       `temaDiPartenza(cliente)` sceglie dal cliente della build, e lo usano
       DEFAULT_SETTINGS (theme_staff, theme_client), resolveThemeVars senza
       preset e il selettore in Aspetto. DEFAULT_THEME resta tana-scuro: è

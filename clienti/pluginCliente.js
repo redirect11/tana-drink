@@ -61,7 +61,7 @@ export function htmlPerCliente(html, venue) {
   return html
     .replace(/%VENUE_NAME%/g, scappa(venue.venue_name))
     .replace(/%VENUE_DESCRIPTION%/g, scappa(descrizione(venue)))
-    .replace(/%VENUE_THEME_COLOR%/g, scappa(venue.venue_theme_color || '#0c110d'))
+    .replace(/%VENUE_THEME_COLOR%/g, scappa(venue.venue_theme_color || '#0c0f0a'))
 }
 
 // Il manifest della PWA dal modello, col locale dentro. Il nome lo riscrive

@@ -5,9 +5,10 @@
 ### Aspetto
 
 - **Il tema «Lime»**, scuro e chiaro, in Impostazioni → Aspetto: il tema di
-  Lime - SmartOrders, con il verde lime sui tasti, angoli tondi e titoli in
-  un carattere senza grazie. È quello di partenza della demo e dei locali
-  nuovi; la Tana resta col suo (REQ-UI-033).
+  Lime - SmartOrders, con gli stessi colori del sito e del pannello della
+  regia: il verde lime sui tasti, angoli tondi, titoli in Playfair. È quello
+  di partenza della demo e dei locali nuovi; la Tana resta col suo
+  (REQ-UI-033).
 - Le evidenze che erano dorate per tutti i temi (il tab al passaggio, la
   voce attiva della barra, la ricerca nel menù, l'attesa del cliente, il
   totale del riepilogo) e il banner dei cookie prendono il colore del tema

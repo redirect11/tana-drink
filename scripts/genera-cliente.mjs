@@ -47,7 +47,7 @@ writeFileSync(
       venue_description: `Ordina da ${nome}`,
       // Il fondo di «Lime scuro», il tema con cui parte un locale nuovo
       // (REQ-UI-033): la barra del browser e lo splash con lo stesso colore.
-      venue_theme_color: '#0c110d',
+      venue_theme_color: '#0c0f0a',
       venue_socials: [],
     },
     null,

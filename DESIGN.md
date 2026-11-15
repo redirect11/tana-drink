@@ -95,7 +95,7 @@ da lontano: `--raggio-card`, `--raggio-btn`, `--raggio-pill`,
 | `tana` | 16/12px, pillole tonde | gradiente | alone sotto il tasto | serif Playfair |
 | `catppuccin` | 10/8px | campitura piatta | ombra tenue | come il testo |
 | `pico` | 4px ovunque | campitura piatta | nessuna | come il testo |
-| `lime` | 14/10px, pillole tonde | campitura piatta | ombra tenue | sans tondo di sistema (`ui-rounded`) |
+| `lime` | 14/10px, pillole tonde | campitura piatta | ombra tenue | serif Playfair, come il marchio della regia |
 
 Il segno del colore sulle card (`--segno-prodotto`) è `nastro` per `tana`,
 `pastiglia` per `catppuccin`, `pallino` per `pico` e per `lime`. `applyTheme` lo scrive anche come
@@ -142,27 +142,36 @@ tema di partenza della demo e dei locali nuovi (REQ-UI-033). La Tana non lo
 usa di partenza: la demo che si mostra a un locale nuovo non deve avere i
 colori di un locale vero (UR-014).
 
-| Variabile | Lime scuro | Lime chiaro |
-|---|---|---|
-| `--bg` | `#0c110d` | `#eef2ea` |
-| `--bg-2` | `#121a14` | `#f7f9f4` |
-| `--card` | `#18221a` | `#ffffff` |
-| `--accent` | `#a3e635` | `#467510` |
-| `--accent-2` | `#bef264` | `#3f6212` |
-| `--btn` | `#a3e635` | `#84cc16` |
-| `--text` | `#eef5e9` | `#1b2616` |
-| `--muted` | `#9aab95` | `#5a6a52` |
+**I colori sono quelli della regia**, non dell'app: la palette Lime del sito
+e del backoffice (drink-regia `DESIGN.md` §4 e `src/index.css`, «LA PALETTE
+LIME», 11/11/2026). Il marchio è uno solo (Daniele, 15/11/2026): se la
+regia cambia la palette, si cambia qui nello stesso modo (REQ-DEV-025).
+
+| Variabile | Lime scuro | Lime chiaro | Nella regia |
+|---|---|---|---|
+| `--bg` | `#0c0f0a` | `#f7f9f1` | `--bg` (scuro), `--bg` della vetrina chiara |
+| `--bg-2` | `#141911` | `#fefffa` | `--bg-2` |
+| `--card` | `#1c2318` | `#fefffa` | `--bg-3` (scuro), `--bg-2` (chiaro) |
+| `--accent` | `#b4ec2b` | `#2f6b0f` | il lime pieno; sul chiaro `--accent` |
+| `--accent-2` | `#c6f25a` | `#2f6b0f` | il lime per il testo |
+| `--btn` | `#b4ec2b` | `#b4ec2b` | `--lime` |
+| `--btn-ink` | `#16210a` | `#16210a` | `--su-lime` |
+| `--text` | `#eef2e6` | `#161b10` | `--text` |
+| `--muted` | `#9aa38e` | `#525c47` | `--muted` |
 
 Regole:
 
 - **Un colore solo, il lime**, per identità e azione, come Pico fa col suo
   azzurro: si riconosce di corsa. I tasti sono campiture piatte, perché un
   gradiente sporca il colore del marchio.
-- **Sul chiaro il lime non si scrive.** Come testo sul bianco sta a 1,5:1:
-  accento e link scendono a un verde oliva profondo (4,9:1 e 6,2:1 sul
-  fondo), il tasto resta lime, un tono più pieno, con `--btn-ink` scuro.
-- **Titoli senza caratteri da scaricare**: il sans tondo di sistema, perché
-  la demo si apre anche senza rete.
+- **Sul chiaro il lime non si scrive.** Come testo sul bianco sta a 1,4:1:
+  è un riempimento (i tasti), e il testo in colore è il verde profondo
+  `#2f6b0f` (6,1:1 sul fondo), come nella regia.
+- **Sopra il lime l'inchiostro è `#16210a`**, il `--su-lime` della regia
+  (12:1), non il bruno `#1c1305` nato per l'oro: un preset può dichiarare
+  `--btn-ink` e `--accent-ink`, e `applyTheme` li rispetta.
+- **Titoli in Playfair**, come il marchio nella barra della regia: è nel
+  pacchetto dell'app, quindi c'è anche senza rete.
 - I temi del catalogo che descrivono i colori della Tana («Classico»,
   «Notte», «Carte») restano su `tana-scuro` (`DEFAULT_THEME`, il tema di
   casa) anche nelle build degli altri locali.
