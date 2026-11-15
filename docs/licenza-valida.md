@@ -1,5 +1,7 @@
 # Senza licenza valida l'app non parte (REQ-LIC-009)
 
+> **Il contratto con la regia** è in drink-regia, [`docs/contratto-regia-app.md`](https://github.com/redirect11/drink-regia/blob/develop/docs/contratto-regia-app.md): se non coincide con questo documento, vale quello. Qui restano i dettagli del lato dell'app.
+
 Richiesta della regia (drink-regia, REQ-FLOTTA-025), 02/11/2026. La regia
 è già pronta: [drink-regia PR #38](https://github.com/redirect11/drink-regia/pull/38),
 ramo `feature/conservazione-dati`.

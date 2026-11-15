@@ -32,3 +32,33 @@ describe('le dipendenze delle Functions', () => {
     expect(Object.keys(blocco.packages).filter((k) => k.endsWith('/uuid'))).toEqual([])
   })
 })
+
+// 15/11/2026: tre avvisi di Dependabot sul package-lock della radice. Due su
+// `@grpc/grpc-js` < 1.13.6 (uno alto), arrivato col Firestore del browser,
+// che resta fermo a ~1.9 anche nella 12 e nella 13 di `firebase`; uno su
+// `uuid` < 11.1.1, sotto `firebase-admin` 13 degli script. Non si passa la
+// radice a `firebase-admin` 14 come le Functions: toglie `admin.firestore()`,
+// che seed.js e gli script mock-* usano ancora. Si forzano le due versioni
+// con gli `overrides` di package.json, e questo controllo le tiene ferme se
+// un aggiornamento le riporta indietro.
+describe('le dipendenze della radice', () => {
+  const radice = JSON.parse(readFileSync('package-lock.json', 'utf8'))
+  const versioni = (nome) =>
+    Object.entries(radice.packages)
+      .filter(([k]) => k.endsWith(`node_modules/${nome}`))
+      .map(([, v]) => v.version)
+  const almeno = (versione, minima) => {
+    const [a, b] = [versione, minima].map((v) => v.split('-')[0].split('.').map(Number))
+    for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i] > b[i]
+    return true
+  }
+
+  it.each([
+    ['@grpc/grpc-js', '1.13.6'],
+    ['uuid', '11.1.1'],
+  ])('%s è almeno alla %s, la prima senza l’avviso', (nome, minima) => {
+    const trovate = versioni(nome)
+    expect(trovate.length, `${nome} nel file dei pacchetti`).toBeGreaterThan(0)
+    expect(trovate.filter((v) => !almeno(v, minima))).toEqual([])
+  })
+})

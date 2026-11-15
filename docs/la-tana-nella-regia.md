@@ -1,5 +1,7 @@
 # La Tana nella regia di produzione: Flavio titolare, email e accesso unico
 
+> **Il contratto con la regia** è in drink-regia, [`docs/contratto-regia-app.md`](https://github.com/redirect11/drink-regia/blob/develop/docs/contratto-regia-app.md): se non coincide con questo documento, vale quello. Qui restano i dettagli del lato dell'app.
+
 Richiesta della regia, 04/11/2026. Completa
 [passaggio-dalla-regia.md](passaggio-dalla-regia.md) (REQ-FLOTTA-030): quello
 è il contratto tecnico del passaggio; qui c'è cosa serve all'app, e in che

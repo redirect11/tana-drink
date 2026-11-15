@@ -1,5 +1,7 @@
 # L'app si presenta alla regia (REQ-FLOTTA-026)
 
+> **Il contratto con la regia** è in drink-regia, [`docs/contratto-regia-app.md`](https://github.com/redirect11/drink-regia/blob/develop/docs/contratto-regia-app.md): se non coincide con questo documento, vale quello. Qui restano i dettagli del lato dell'app.
+
 Richiesta della regia (drink-regia, REQ-FLOTTA-026), 02/11/2026. La parte
 della regia è pronta: [drink-regia PR #40](https://github.com/redirect11/drink-regia/pull/40).
 
@@ -28,8 +30,19 @@ POST https://europe-west1-<VITE_REGIA_PROGETTO>.cloudfunctions.net/presentazione
 Authorization: Bearer <ID token dell'utente che ha fatto l'accesso>
 Content-Type: application/json
 
-{ "versione": "v1.10.4" }
+{ "versione": "v1.10.4", "dispositivo": "AbCdEfGhIjKlMnOpQrStUv" }
 ```
+
+- **Il dispositivo** (dalla 1.10.51, REQ-FLOTTA-031; regia REQ-FLOTTA-112):
+  un codice casuale di 16 byte in base64url senza padding, 22 caratteri
+  (`^[A-Za-z0-9_-]{22}$`), creato al primo avvio e tenuto in
+  `localStorage` (`drink:codice_regia`). Non contiene niente dell'utente né
+  del locale; se la memoria del browser si svuota, ne nasce uno nuovo. Con
+  questo la regia tiene una versione per dispositivo: `presentazione.versione`
+  è la più alta fra i dispositivi attivi, `presentazione.minima` la più
+  bassa, ed è quella che decide quando si può togliere un'interfaccia
+  deprecata. Le app fino alla 1.10.50 non lo mandano, e la regia le conta
+  come un dispositivo solo (`senza_codice`).
 
 - **Il token**: quello che Firebase dà all'app nel progetto del locale,
   come per la scelta degli aggiornamenti (`sceltaDallApp`). Va bene un
@@ -59,10 +72,16 @@ Risposte:
 
 Mai a tempo (l'utente: «ste cose in polling si portavano negli anni 90»).
 
-- **Una volta per versione**, dopo l'accesso: se la versione dell'app è
-  diversa dall'ultima presentata da questo dispositivo (basta
-  `localStorage`, con try/catch). Dieci tablet fanno dieci chiamate alla
-  prima apertura: la regia ne registra una.
+- **Al più una volta al giorno per dispositivo**, dopo l'accesso, anche a
+  versione invariata (dalla 1.10.51, REQ-FLOTTA-031): all'apertura e quando
+  l'app torna in primo piano, se questo dispositivo non ha presentato questa
+  versione nelle ultime 24 ore (`drink:presentata` e `drink:presentata_il`
+  in `localStorage`). Prima era una volta per versione, ma la regia dimentica
+  un dispositivo che non si presenta da 30 giorni: un tablet rimasto su una
+  versione vecchia e usato ogni sera sarebbe uscito dal conto mentre
+  chiamava ancora le interfacce vecchie. Il primo piano conta perché il
+  tablet del banco resta aperto per giorni senza essere ricaricato. La
+  regia scrive al più ogni 6 ore per dispositivo.
 - **Solo con qualcuno collegato**: senza sessione non si chiama (niente
   accessi anonimi). Nessun tasto «Riprova» nella schermata «non attivata».
 - Un errore di rete non blocca niente: si riprova alla prossima apertura.
@@ -77,10 +96,17 @@ le scriverà la licenza come agli altri locali, prima di ogni suo
 cambiamento, e il passo nel deploy si toglierà. La presentazione resterà
 quello che è: la versione che gira davvero.
 
-## Da fare qui
+## Dove sta, qui
 
-- La chiamata, con i tempi qui sopra, e l'indirizzo costruito da
-  `VITE_REGIA_PROGETTO` con il controllo su `PROGETTI_REGIA`.
-- `VITE_REGIA_PROGETTO` nel `deploy.yml`.
-- I test: la chiamata parte una volta per versione, solo con una sessione,
-  e non parte senza variabile o con un progetto non ammesso.
+- La logica (quando presentarsi, il codice del dispositivo, l'esito):
+  `src/lib/presentazione.js`; la chiamata vera: `presentaAllaRegia` in
+  `src/lib/api.js`; l'apertura e il ritorno in primo piano:
+  `src/lib/usePresentazione.js`, usato da `App.jsx`.
+- `VITE_REGIA_PROGETTO` nel `deploy.yml`: `drink-regia` in produzione,
+  `drink-regia-test` sul test.
+- I test: `tests/unit/presentazione.test.js`,
+  `tests/unit/presentazioneChiamata.test.js`,
+  `tests/unit/usePresentazione.test.jsx`.
+- Le anteprime degli e2e (canali `<sito>--<canale>`) si presentano come le
+  altre: è la regia a riconoscerle dall'origine della richiesta e a non
+  contarle come versione installata. L'app non fa niente di diverso.

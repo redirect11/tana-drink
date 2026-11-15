@@ -20,6 +20,9 @@ import { licenzaNota, STATI_LICENZA } from '../../src/lib/licenza.js'
 // Le impostazioni arrivano quando lo decide il test: è l'istante prima che
 // conta.
 let arrivano = null
+// Chi è collegato: di suo nessuno (il cliente al tavolo); una prova mette il
+// personale.
+let collegato = null
 
 vi.mock('../../src/lib/firebaseClient.js', () => ({
   isFirebaseConfigured: true,
@@ -28,7 +31,7 @@ vi.mock('../../src/lib/firebaseClient.js', () => ({
 }))
 vi.mock('firebase/auth', () => ({
   onAuthStateChanged: (_auth, cb) => {
-    cb(null)
+    cb(collegato)
     return () => {}
   },
 }))
@@ -98,6 +101,7 @@ const nonAttivo = () => screen.queryByRole('heading', { name: 'Il menù digitale
 
 beforeEach(() => {
   arrivano = null
+  collegato = null
   localStorage.clear()
 })
 
@@ -132,5 +136,51 @@ describe.each(['/menu', '/menu/special'])('%s, alla prima apertura', (percorso) 
     act(() => arrivano({ licenza: { moduli: {} } }))
     expect(nonAttivo()).toBeInTheDocument()
     expect(screen.queryByText('Carico il menù…')).toBeNull()
+  })
+})
+
+// IL MENÙ NASCOSTO AI CLIENTI (REQ-LIC-002, Daniele 14/11/2026): il modulo
+// resta acceso. Il cliente trova «non è disponibile»; il personale, che dal
+// menù batte gli ordini al tavolo, lo apre come sempre.
+describe('/menu col menù nascosto ai clienti', () => {
+  const nascosto = () => ({ licenza: LICENZA_TANA, menu_clienti_visibile: false })
+
+  it('al cliente dice che non è disponibile, senza parlare di piano', async () => {
+    await apri('/menu')
+    act(() => arrivano(nascosto()))
+    expect(screen.getByRole('heading', { name: 'Il menù digitale non è disponibile' })).toBeInTheDocument()
+    expect(screen.queryByText('PAGINA MENU')).toBeNull()
+  })
+
+  // Dalla revisione: il ruolo arriva dopo le impostazioni (il token si
+  // legge in un secondo tempo). Prima di saperlo non si dice al barista che
+  // il menù non c'è.
+  it('finché non si sa chi è collegato aspetta, invece di dire che non è disponibile', async () => {
+    let daiIlToken
+    collegato = {
+      uid: 's1',
+      email: 'banco@tana.local',
+      displayName: 'Banco',
+      getIdTokenResult: () => new Promise((r) => (daiIlToken = r)),
+    }
+    await apri('/menu')
+    act(() => arrivano(nascosto()))
+    expect(screen.queryByRole('heading', { name: /non è disponibile/ })).toBeNull()
+    expect(screen.getByText('Carico il menù…')).toBeInTheDocument()
+    await act(async () => daiIlToken({ claims: { role: 'bartender' } }))
+    expect(screen.getByText('PAGINA MENU')).toBeInTheDocument()
+  })
+
+  it('al personale si apre', async () => {
+    collegato = {
+      uid: 's1',
+      email: 'banco@tana.local',
+      displayName: 'Banco',
+      getIdTokenResult: async () => ({ claims: { role: 'bartender' } }),
+    }
+    await apri('/menu')
+    act(() => arrivano(nascosto()))
+    await act(async () => {})
+    expect(screen.getByText('PAGINA MENU')).toBeInTheDocument()
   })
 })

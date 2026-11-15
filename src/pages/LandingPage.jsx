@@ -2,6 +2,14 @@ import { useEffect } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useVenue } from '../lib/useVenue.js'
 import { useTestoStile } from '../lib/testiStile.js'
+import { useMenuCliente } from '../lib/useMenuCliente.js'
+
+// I TASTI E I LINK AL MENÙ SOLO SE IL MENÙ C'È (REQ-LIC-002). Daniele,
+// 14/11/2026: «se il menù clienti è disattivato non ci si può arrivare in
+// alcun modo. Quella cosa fissa va tolta». Erano scritti fissi — il tasto
+// in alto, la voce «Menù» della navigazione, il tasto in fondo — e col
+// menù spento portavano alla pagina che dice che il menù non c'è. La regola
+// (e l'attesa della licenza, BUG-142) è menuVisibile in licenza.js.
 
 // Box novità Karaoke × Ceres: messo a false per nasconderlo (riattivabile).
 const SHOW_KARAOKE_NEWS = false
@@ -14,6 +22,7 @@ export default function LandingPage() {
   const navigate = useNavigate()
   // Il locale (REQ-VENUE-002): titolo, slogan, «chi siamo» e contatti.
   const venue = useVenue()
+  const { menu } = useMenuCliente()
   // Le frasi dello stile del locale (REQ-MENU-027), o quelle di sempre.
   const testo = useTestoStile()
   const benvenuto = testo('home.benvenuto')
@@ -44,9 +53,11 @@ export default function LandingPage() {
           </div>
           {benvenuto && <p className="hero-epigrafe">{benvenuto}</p>}
           {venue.venue_tagline && <p className="hero-sub">{venue.venue_tagline}</p>}
-          <Link className="btn" to="/menu" style={{ marginTop: 14, minWidth: 200 }}>
-            🍸 Vai al menù
-          </Link>
+          {menu && (
+            <Link className="btn" to="/menu" style={{ marginTop: 14, minWidth: 200 }}>
+              🍸 Vai al menù
+            </Link>
+          )}
         </div>
       </div>
 
@@ -86,7 +97,7 @@ export default function LandingPage() {
       <nav className="landing-nav">
         <a href="#chi-siamo">Chi siamo</a>
         <a href="#contatti">Contatti</a>
-        <Link to="/menu">Menù</Link>
+        {menu && <Link to="/menu">Menù</Link>}
       </nav>
 
       {venue.venue_about && (
@@ -122,9 +133,11 @@ export default function LandingPage() {
         </section>
       )}
 
-      <Link className="btn block" to="/menu" style={{ marginTop: 4 }}>
-        🍸 Sfoglia il menù e ordina
-      </Link>
+      {menu && (
+        <Link className="btn block" to="/menu" style={{ marginTop: 4 }}>
+          🍸 Sfoglia il menù e ordina
+        </Link>
+      )}
     </div>
   )
 }

@@ -1,5 +1,7 @@
 # I temi su misura dalla regia, e la struttura del menù (REQ-MENU-030)
 
+> **Il contratto con la regia** è in drink-regia, [`docs/contratto-regia-app.md`](https://github.com/redirect11/drink-regia/blob/develop/docs/contratto-regia-app.md): se non coincide con questo documento, vale quello. Qui restano i dettagli del lato dell'app.
+
 Richiesta della regia (drink-regia, REQ-FLOTTA-040, `docs/temi-su-misura.md`),
 06/11/2026. Scritta dalla sessione della regia, da lavorare qui.
 

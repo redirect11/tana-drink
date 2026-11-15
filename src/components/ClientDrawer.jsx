@@ -16,7 +16,10 @@ import { useVenue } from '../lib/useVenue.js'
 // gruppi, nuovo ordine, ruoli e tab del gestionale, e piegarlo avrebbe
 // voluto dire condizioni ovunque. Le classi CSS sono le stesse, così il
 // menu si apre e si comporta identico da tutte e due le parti.
-export default function ClientDrawer({ user, profile, accountsOn = false }) {
+// IL MENÙ E «I MIEI ORDINI» SOLO SE CI SONO (REQ-LIC-002): col menù dei
+// clienti spento non ci si arriva in nessun modo, e «I miei ordini» c'è
+// solo se il cliente può ordinare (licenza.js, mieiOrdiniVisibili).
+export default function ClientDrawer({ user, profile, accountsOn = false, menuVisibile = true, mieiOrdini = true }) {
   const venue = useVenue()
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
@@ -59,14 +62,19 @@ export default function ClientDrawer({ user, profile, accountsOn = false }) {
           {venue.venue_name}
         </div>
 
-        <div className={`bar-nav-item${attivo('/menu')}`} onClick={() => vai('/menu')}>
-          <span>🍸</span> Menù
-        </div>
+        {menuVisibile && (
+          <div className={`bar-nav-item${attivo('/menu')}`} onClick={() => vai('/menu')}>
+            <span>🍸</span> Menù
+          </div>
+        )}
         {/* "I miei ordini" resta anche a chi non ne ha ancora: è la sua
-            sezione, e trovarla vuota è meglio che non trovarla. */}
-        <div className={`bar-nav-item${attivo('/ordini')}`} onClick={() => vai('/ordini')}>
-          <span>🧾</span> I miei ordini
-        </div>
+            sezione, e trovarla vuota è meglio che non trovarla. Ma solo se
+            si può ordinare. */}
+        {mieiOrdini && (
+          <div className={`bar-nav-item${attivo('/ordini')}`} onClick={() => vai('/ordini')}>
+            <span>🧾</span> I miei ordini
+          </div>
+        )}
 
         <div className="bar-nav-sep" />
 

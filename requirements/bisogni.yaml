@@ -283,6 +283,8 @@ bisogni:
       - REQ-DEV-022
       - REQ-DEV-023
       - REQ-DEV-024
+      - REQ-DEV-025
+      - REQ-FLOTTA-031
     test_cases: []
 
   - id: UR-012
@@ -435,4 +437,20 @@ bisogni:
     requisiti:
       - REQ-MAG-056
       - REQ-MENU-043
+    test_cases: []
+
+  - id: UR-018
+    title: "Il locale si presenta al cliente col suo stile, dalla prima pagina al menù"
+    area: "Cliente, Gestore"
+    description: >
+      Daniele, 14/11/2026: il tema che il locale sceglie non deve valere
+      solo per il menù. Chi apre il sito del locale, dalla pagina iniziale
+      coi contatti fino al menù, deve riconoscere lo stesso locale.
+    accettazione: >
+      Con «Carte» come tema, la pagina iniziale della Tana (benvenuto,
+      contatti, tasto del menù) ha i colori, i caratteri e le frasi di
+      «Carte», come il menù; cambiando tema in Impostazioni cambiano
+      insieme pagina iniziale e menù.
+    requisiti:
+      - REQ-MENU-044
     test_cases: []

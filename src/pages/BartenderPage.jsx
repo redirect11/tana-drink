@@ -137,7 +137,7 @@ import { paidAmount, orderTotal, scontoTotale } from '../lib/pagamento.js'
 import { businessDayKey, businessDayLabel, businessDayShort } from '../lib/businessDay.js'
 import { isAwaitingPayment } from '../lib/payments.js'
 import { readerCheckout, readerTerminate } from '../lib/paymentsApi.js'
-import { sumupAttivo } from '../lib/licenza.js'
+import { sumupAttivo, menuDigitaleAttivo } from '../lib/licenza.js'
 import { ensureNotificationPermission, notify } from '../lib/notify.js'
 import { showToast, toastError } from '../lib/toast.js'
 import { beep, installAudioUnlock } from '../lib/beep.js'
@@ -2901,9 +2901,14 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             {/* Si chiamava «Vista cliente» ma apriva il menù dello staff,
                 quello per gli ordini al tavolo (BUG-127). La vista cliente
                 vera sta nel ☰ ed è solo da guardare. */}
-            <Link className="btn ghost" to="/menu" style={{ flex: 1 }}>
-              <Icona nome="ordina-dal-menu" gruppo="tasti" /> Ordina dal menù
-            </Link>
+            {/* Col MODULO del menù spento non c'è, come nel cassetto
+                (StaffDrawer, BUG-132). Col menù solo nascosto ai clienti
+                (menu_clienti_visibile) resta: lo staff lo usa al tavolo. */}
+            {menuDigitaleAttivo(settings) && (
+              <Link className="btn ghost" to="/menu" style={{ flex: 1 }}>
+                <Icona nome="ordina-dal-menu" gruppo="tasti" /> Ordina dal menù
+              </Link>
+            )}
           </div>
         </>
       )}
