@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 301 | fatto e coperto dai test |
+| ✅ | 303 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 9 | fatto a metà |
 | ⬜ | 27 | da fare |
 | 🗑 | 8 | non più valido |
 
-**360 voci** in tutto. **325** descrivono il sistema com'è oggi e
+**362 voci** in tutto. **327** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **27** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **16** difetti noti sono ancora aperti.
@@ -59,12 +59,12 @@ come «vero oggi», non come «garantito».
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | 6 | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
-| [Interfaccia](#interfaccia) | 28 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
+| [Interfaccia](#interfaccia) | 29 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 23 | 2 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 15 | 3 |  |
 | [VENUE](#venue) | 6 | — |  |
-| [FLOTTA](#flotta) | 9 | — |  |
+| [FLOTTA](#flotta) | 10 | — |  |
 
 ### Le prove, livello per livello
 
@@ -76,10 +76,10 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 11 |
 | Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 184 |
-| Unità | il progetto di dettaglio: un modulo da solo | 185 |
+| Unità | il progetto di dettaglio: un modulo da solo | 187 |
 
 **18** bisogni del locale, **0** con un test di accettazione.
-**112** requisiti su 352 sono collegati a un bisogno;
+**114** requisiti su 354 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -175,7 +175,7 @@ Ogni versione nuova va sul tablet del banco la sera stessa. Una correzione non d
 
 **Come si accetta**: Prima di ogni merge in develop la richiesta ha la sua V completa: il bisogno, il requisito, e i test di ogni livello che la riguardano, verdi in CI. Una richiesta senza bisogno o senza prove non passa il cancello.
 
-**Chi**: Gestore · **Lo realizzano**: [REQ-DEV-001](#req-dev-001--i-requisiti-restano-attaccati-ai-test), [REQ-DEV-002](#req-dev-002--si-sa-sempre-quale-versione-si-sta-guardando), [REQ-DEV-004](#req-dev-004--il-cancello-di-qualità-prima-del-merge-in-develop), [REQ-DEV-005](#req-dev-005--alzare-il-cricchetto-della-coverage-e-standard-di-complessità-nel-lint), [REQ-DEV-012](#req-dev-012--docssystemspecificationsmd-e-la-specifica-di-sistema-e-si-genera), [REQ-DEV-017](#req-dev-017--la-matrice-dei-moduli-ogni-modulo-premium-provato-da-solo-in-coppia-con-ogni-altro-tutti-e-nessuno), [REQ-DEV-018](#req-dev-018--il-modello-a-v-ogni-richiesta-scende-dal-bisogno-del-locale-al-codice-e-risale-coi-test-di-ogni-livello), [REQ-DEV-019](#req-dev-019--la-specifica-del-prodotto-per-casi-duso-e-ogni-caso-duso-provato-end-to-end-come-lo-farebbe-il-cliente), [REQ-DEV-020](#req-dev-020--la-squadra-di-stonebit-una-sezione-in-claudemd-agentsmd-e-i-sub-agenti-ruoli-superati-da-req-dev-022), [REQ-DEV-021](#req-dev-021--la-sezione-stonebit-e-gli-agenti-corretti-dove-contraddicono-il-repo-valgono-le-regole-del-repo-e-il-processo-è-storia-revisore-squadra-solo-per-i-lavori-grossi), [REQ-DEV-022](#req-dev-022--i-ruoli-la-sessione-sul-repo-è-il-tech-lead-e-lavora-come-sempre-il-pm-è-un-controllo-sui-requisiti-e-lagente-tech-lead-si-toglie), [REQ-DEV-023](#req-dev-023--il-merge-in-develop-aspetta-anche-le-regole-firestore-e-i-test-di-sistema-il-revisore-si-chiama-quando-serve), [REQ-DEV-024](#req-dev-024--le-dipendenze-con-un-avviso-di-sicurezza-si-aggiornano-nella-release-provate-non-dritte-su-main), [REQ-DEV-025](#req-dev-025--i-valori-che-stanno-anche-nella-regia-restano-uguali-nei-due-repository), [REQ-FLOTTA-031](#req-flotta-031--la-presentazione-alla-regia-dice-anche-quale-dispositivo-si-presenta-e-si-ripete-una-volta-al-giorno) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Gestore · **Lo realizzano**: [REQ-DEV-001](#req-dev-001--i-requisiti-restano-attaccati-ai-test), [REQ-DEV-002](#req-dev-002--si-sa-sempre-quale-versione-si-sta-guardando), [REQ-DEV-004](#req-dev-004--il-cancello-di-qualità-prima-del-merge-in-develop), [REQ-DEV-005](#req-dev-005--alzare-il-cricchetto-della-coverage-e-standard-di-complessità-nel-lint), [REQ-DEV-012](#req-dev-012--docssystemspecificationsmd-e-la-specifica-di-sistema-e-si-genera), [REQ-DEV-017](#req-dev-017--la-matrice-dei-moduli-ogni-modulo-premium-provato-da-solo-in-coppia-con-ogni-altro-tutti-e-nessuno), [REQ-DEV-018](#req-dev-018--il-modello-a-v-ogni-richiesta-scende-dal-bisogno-del-locale-al-codice-e-risale-coi-test-di-ogni-livello), [REQ-DEV-019](#req-dev-019--la-specifica-del-prodotto-per-casi-duso-e-ogni-caso-duso-provato-end-to-end-come-lo-farebbe-il-cliente), [REQ-DEV-020](#req-dev-020--la-squadra-di-stonebit-una-sezione-in-claudemd-agentsmd-e-i-sub-agenti-ruoli-superati-da-req-dev-022), [REQ-DEV-021](#req-dev-021--la-sezione-stonebit-e-gli-agenti-corretti-dove-contraddicono-il-repo-valgono-le-regole-del-repo-e-il-processo-è-storia-revisore-squadra-solo-per-i-lavori-grossi), [REQ-DEV-022](#req-dev-022--i-ruoli-la-sessione-sul-repo-è-il-tech-lead-e-lavora-come-sempre-il-pm-è-un-controllo-sui-requisiti-e-lagente-tech-lead-si-toglie), [REQ-DEV-023](#req-dev-023--il-merge-in-develop-aspetta-anche-le-regole-firestore-e-i-test-di-sistema-il-revisore-si-chiama-quando-serve), [REQ-DEV-024](#req-dev-024--le-dipendenze-con-un-avviso-di-sicurezza-si-aggiornano-nella-release-provate-non-dritte-su-main), [REQ-DEV-025](#req-dev-025--i-valori-che-stanno-anche-nella-regia-restano-uguali-nei-due-repository), [REQ-FLOTTA-031](#req-flotta-031--la-presentazione-alla-regia-dice-anche-quale-dispositivo-si-presenta-e-si-ripete-una-volta-al-giorno), [REQ-FLOTTA-032](#req-flotta-032--il-giro-e2e-dice-alla-regia-quando-le-prove-iniziano-e-finiscono) · ⚠️ **Nessun test di accettazione, ancora.**
 
 #### UR-012 — Su un conto si vede chi ha battuto cosa
 
@@ -199,7 +199,7 @@ La demo pubblica si fa provare a chi ancora non è cliente, senza account. Non d
 
 **Come si accetta**: Aperta la demo da un browser qualunque, nella pagina non c'è niente della Tana (nomi, foto, fornitori, informativa privacy) e nessuna richiesta parte verso la regia o verso Firebase; un link social scritto con «javascript:» non diventa un link.
 
-**Chi**: Gestore · **Lo realizzano**: [REQ-SIC-005](#req-sic-005--la-demo-pubblica-in-sicurezza-lo-script-dei-clienti-niente-regia-configurazione-finta-informativa-per-cliente) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Gestore · **Lo realizzano**: [REQ-SIC-005](#req-sic-005--la-demo-pubblica-in-sicurezza-lo-script-dei-clienti-niente-regia-configurazione-finta-informativa-per-cliente), [REQ-UI-033](#req-ui-033--il-tema-lime-scuro-e-chiaro-di-lime---smartorders-ed-è-quello-di-partenza-dei-locali-nuovi) · ⚠️ **Nessun test di accettazione, ancora.**
 
 #### UR-015 — Il piano del locale decide cosa si usa, e chi ha tutto non se ne accorge
 
@@ -3689,6 +3689,16 @@ Richiesta dell'08/11/2026: «rimuovere gli aiuti sopra tutti i campi compilabili
 
 **Dove**: `src/components/AiutoCampo.jsx, src/lib/aiutiCampi.js, src/components/ThemeSettings.jsx (Aspetto), src/App.jsx, src/components/DrinkForm.jsx, src/components/InventoryManager.jsx, src/components/ListinoFornitore.jsx, src/components/AltreSpesePanel.jsx, src/components/StrutturaMenu.jsx, src/components/SupplierInvoicesPanel.jsx` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/component/AiutiCampi.test.jsx`, `tests/component/MenuManager.test.jsx`, `tests/sistema/aiutiCampi.spec.js`
 
+#### REQ-UI-033 — Il tema «Lime», scuro e chiaro, di Lime - SmartOrders, ed è quello di partenza dei locali nuovi
+
+Daniele, 15/11/2026: «dobbiamo fare il tema lime di Lime SmartOrders». Scelte sue, lo stesso giorno: tavolozza e forme (un tema vero dell'app, non solo colori), in due varianti, scura e chiara, e di partenza per la demo e per i locali che genera la regia, al posto di «Tana scuro». La Tana resta col suo. La demo che si mostra a un locale nuovo aveva i colori della Tana: rosa, oro e la notte del locale (UR-014).
+
+CRITERIO: i preset `lime-scuro` e `lime-chiaro` con la famiglia di forme `lime` reggono le soglie di contrasto di DESIGN.md; una build senza cliente o col cliente `tana` parte da `tana-scuro`, una con un altro cliente parte da `lime-scuro`; i temi del catalogo che descrivono i colori della Tana restano sui colori della Tana.
+
+COME È FATTO (15/11/2026): FORME.lime (tasti piatti, 14/10px, ombra tenue, titoli in Playfair, il pallino sulle card) e i preset lime-scuro/lime-chiaro in src/lib/themes.js, con i COLORI DELLA REGIA (drink-regia src/index.css, «LA PALETTE LIME», 11/11/2026; Daniele, 15/11: «il sito dovrebbe già averli e anche il backoffice in parte»): lime #b4ec2b pieno, #c6f25a per il testo, #16210a sopra il lime (il preset dichiara --btn-ink e --accent-ink); sul chiaro il lime resta un riempimento e il testo in colore è #2f6b0f. `temaDiPartenza(cliente)` sceglie dal cliente della build, e lo usano DEFAULT_SETTINGS (theme_staff, theme_client), resolveThemeVars senza preset e il selettore in Aspetto. DEFAULT_THEME resta tana-scuro: è il tema di casa del catalogo. Il colore della barra del browser della demo e dei locali generati (venue_theme_color) è il fondo di Lime scuro. Tocca il vocabolario dei temi condiviso con la regia (REQ-DEV-025): due id nuovi, da comunicarle. Daniele, lo stesso giorno: «sia per vista cliente sia per il gestionale». Le velature dorate scritte a mano nel foglio (24 punti: tab, voce attiva, ricerca del menù, attesa del cliente, totale del riepilogo) e il banner dei cookie prendono i token del tema; restano fissi solo gli stati (pagato, sincronizzazione) e il riquadro Ceres. Il theme-color della pagina d'ingresso viene da venue_theme_color.
+
+**Dove**: `src/lib/themes.js (FORME.lime, lime-scuro, lime-chiaro, temaDiPartenza), src/lib/api.js (DEFAULT_SETTINGS), src/components/ThemeSettings.jsx, src/index.css, src/lib/cookieConsent.js, src/components/GroupView.jsx, index.html, src/lib/venue.js, clienti/demo/venue.json, clienti/pluginCliente.js, scripts/genera-cliente.mjs, DESIGN.md` · **Serve**: [UR-014](#ur-014--la-demo-che-si-mostra-a-un-locale-nuovo-non-espone-niente-di-un-locale-vero) · **Lo dimostrano**: `tests/unit/temaLime.test.js`
+
 ### Come si lavora al progetto
 
 Non è comportamento dell’app: è il metodo con cui la si costruisce.
@@ -4382,6 +4392,16 @@ Il 14/11/2026 la Tana di test si è presentata due volte in pochi decimi di seco
 COME È FATTO (15/11/2026): codiceDispositivo e il limite delle 24 ore (`drink:presentata_il`) in src/lib/presentazione.js; il quando in src/lib/usePresentazione.js (all'apertura e su visibilitychange); presentaAllaRegia in api.js mette `dispositivo` nel corpo.
 
 **Dove**: `src/lib/presentazione.js, src/lib/api.js, src/App.jsx, docs/presentazione-alla-regia.md` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera) · **Lo dimostrano**: `tests/unit/usePresentazione.test.jsx`
+
+#### REQ-FLOTTA-032 — Il giro e2e dice alla regia quando le prove iniziano e finiscono
+
+Daniele, 15/11/2026: nel backoffice della regia `drinkpos-prova-e2e` deve risultare «Disattivata» quando gli e2e non girano. La regia ha aperto l'interfaccia 15 (drink-regia REQ-FLOTTA-114, contratto paragrafo 15, sul test dalla regia 0.5.0-beta.5): POST `istanzaDiProva` sulla regia di test, corpo { attiva: true } all'inizio del giro e { attiva: false } alla fine, anche se le prove falliscono. È solo uno stato della regia: spenta non cambia licenza né presentazione, e le prove funzionano uguale anche se la chiamata fallisce (finché il progetto non è segnato di prova risponde 403).
+
+CHI CHIAMA: l'account di deploy del progetto di prova (E2E_SERVICE_ACCOUNT, deploy@drinkpos-prova-e2e), con un gettone d'identità di Google, destinatario `regia-prova:drink-regia-test`, con email ed email_verified. Non un utente del locale: Daniele ha deciso che nessun utente di un locale può cambiare qualcosa nella regia (contratto, «La sicurezza delle interfacce», regia REQ-FLOTTA-115). La prima stesura coniava un utente `e2e-regia` e ne scambiava l'ID token con Identity Toolkit: scartata lo stesso giorno.
+
+COME È FATTO: il gettone lo dà google-auth-library (getIdTokenClient, fetchIdToken) dalla chiave che il giro ha già, ed è chiesto di nuovo a ogni chiamata, perché dura un'ora. Il passo di fine giro sta in `if: always()` PRIMA dello smontaggio. Lo script esce sempre con 0: un errore è un avviso nel log, mai un giro fermo. I due passi in e2e.yml col via libera di Daniele, lo stesso giorno («ok cambialo»): «La regia sa che le prove iniziano» dopo la chiave e prima del deploy, «… sono finite» in always() prima dello smontaggio e di «Via la chiave». La prova vera del gettone è il primo giro e2e, perché la chiave dell'account di deploy sta solo nei segreti.
+
+**Dove**: `scripts/lib-istanza-di-prova.js, scripts/istanza-di-prova.mjs, package.json (google-auth-library), .github/workflows/e2e.yml` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera) · **Lo dimostrano**: `tests/unit/istanzaDiProva.test.js`
 
 #### REQ-FLOTTA-021 — Le porte e gli adattatori: l'app parla con interfacce nostre, Firebase è un adattatore
 

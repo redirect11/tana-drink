@@ -10,7 +10,7 @@ import { CHIAVE_AIUTI_CAMPI, aiutiCampiAccesi } from '../lib/aiutiCampi.js'
 import {
   THEME_FIELDS,
   THEME_PRESETS,
-  DEFAULT_THEME,
+  TEMA_DI_PARTENZA,
   resolveThemeVars,
   applyTheme,
 } from '../lib/themes.js'
@@ -289,7 +289,7 @@ export function StileMenuClienti({ settings, onSave }) {
 }
 
 function ThemeEditor({ title, hint, value, onSave, livePreview = false }) {
-  const current = value || { preset: DEFAULT_THEME, custom: null }
+  const current = value || { preset: TEMA_DI_PARTENZA, custom: null }
   const [customizing, setCustomizing] = useState(false)
   // Bozza degli override colore mentre si personalizza (non ancora salvata).
   const [draft, setDraft] = useState(null)
@@ -319,7 +319,7 @@ function ThemeEditor({ title, hint, value, onSave, livePreview = false }) {
   }
 
   function saveCustom() {
-    onSave({ preset: current.preset || DEFAULT_THEME, custom: draft })
+    onSave({ preset: current.preset || TEMA_DI_PARTENZA, custom: draft })
     setCustomizing(false)
     setDraft(null)
   }
@@ -327,7 +327,7 @@ function ThemeEditor({ title, hint, value, onSave, livePreview = false }) {
   function resetCustom() {
     setDraft(null)
     setCustomizing(false)
-    const next = { preset: current.preset || DEFAULT_THEME, custom: null }
+    const next = { preset: current.preset || TEMA_DI_PARTENZA, custom: null }
     onSave(next)
     if (livePreview) applyTheme(resolveThemeVars(next))
   }
@@ -347,7 +347,7 @@ function ThemeEditor({ title, hint, value, onSave, livePreview = false }) {
       {/* A TENDINA, non a chip: con otto preset (e cresceranno) la fila
           di bottoni si mangiava la pagina due volte, gestionale e cliente. */}
       <select
-        value={current.preset || DEFAULT_THEME}
+        value={current.preset || TEMA_DI_PARTENZA}
         onChange={(e) => pickPreset(e.target.value)}
         style={{ width: '100%', margin: '2px 0 8px', padding: '10px 12px', fontSize: '1rem' }}
       >

@@ -1,6 +1,54 @@
 # Cosa è cambiato
 
-## 1.10.51-beta — in lavorazione
+## 1.10.52-beta — in lavorazione
+
+### Aspetto
+
+- **Il tema «Lime»**, scuro e chiaro, in Impostazioni → Aspetto: il tema di
+  Lime - SmartOrders, con gli stessi colori del sito e del pannello della
+  regia: il verde lime sui tasti, angoli tondi, titoli in Playfair. È quello
+  di partenza della demo e dei locali nuovi; la Tana resta col suo
+  (REQ-UI-033).
+- Le evidenze che erano dorate per tutti i temi (il tab al passaggio, la
+  voce attiva della barra, la ricerca nel menù, l'attesa del cliente, il
+  totale del riepilogo) e il banner dei cookie prendono il colore del tema
+  scelto. Con «Tana scuro» restano come prima; con gli altri temi seguono
+  i loro colori, e con «Chiaro» e «Crema» il banner dei cookie diventa
+  chiaro (REQ-UI-033).
+- Il testo sopra il colore d'accento (il segno «staff», il numero delle
+  notifiche, l'avviso di aggiornamento) diventa scuro quando l'accento è
+  chiaro, e resta leggibile (REQ-UI-033).
+
+## 1.10.51 — 15 novembre 2026 (produzione)
+
+Provata sul test come 1.10.50-beta e 1.10.51-beta.
+
+### Il menù dei clienti
+
+- **«Menù visibile ai clienti»**, in Impostazioni → Menù clienti: spento, i
+  clienti non arrivano al menù in nessun modo — niente tasto nella pagina
+  iniziale, niente voce «Menù», la pagina del menù chiusa. Il personale
+  continua a usarlo; il modulo del menù si accende e si spegne a parte, in
+  Funzioni premium (REQ-LIC-002).
+- **«I miei ordini» solo se il cliente può ordinare**: sparisce col menù
+  spento e in sola consultazione (REQ-LIC-002).
+- Col menù spento, i «Torna al menù» delle pagine dei clienti portano alla
+  pagina iniziale, e il server non accetta ordini dal telefono, nemmeno in
+  sola consultazione (REQ-LIC-002).
+
+### Con la regia
+
+- Ogni dispositivo si presenta alla regia col suo codice, al più una volta
+  al giorno: la scheda del locale mostra la versione di ogni dispositivo, e
+  un tablet rimasto indietro non viene più coperto da quelli aggiornati
+  (REQ-FLOTTA-031).
+
+### Sicurezza
+
+- Chiusi tre avvisi di sicurezza su due dipendenze, `@grpc/grpc-js` e
+  `uuid` (REQ-DEV-024). Nessun cambiamento visibile.
+
+## 1.10.51-beta — 15/11/2026 (test)
 
 ### Con la regia
 

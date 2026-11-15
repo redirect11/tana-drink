@@ -29,6 +29,7 @@ import {
 } from '../porte/dati.js'
 import { auth } from './firebaseClient.js'
 import { VENUE_VUOTO } from './venue.js'
+import { TEMA_DI_PARTENZA } from './themes.js'
 import { ORDER_STATUSES } from './orderStatus.js'
 import {
   COLLEZIONE as DIAGNOSTICA_STAMPANTE,
@@ -6660,7 +6661,7 @@ export const DEFAULT_SETTINGS = {
   groups_in_queue: true,
   // Temi: preset + eventuali override colore, separati per gestionale
   // (staff/bartender) e vista cliente. Vedi src/lib/themes.js.
-  theme_staff: { preset: 'tana-scuro', custom: null },
+  theme_staff: { preset: TEMA_DI_PARTENZA, custom: null },
   // Le icone del gestionale (REQ-UI-031), un tema per gruppo (lib/icone.js):
   // «silhouette», monocrome, di partenza per tutti (decisione dell'utente,
   // 07/11/2026); «emoji» rimette quelle di prima. Le pagine del cliente non
@@ -6668,7 +6669,7 @@ export const DEFAULT_SETTINGS = {
   tema_icone_navigazione: 'silhouette',
   tema_icone_tasti: 'silhouette',
   tema_icone_segnali: 'silhouette',
-  theme_client: { preset: 'tana-scuro', custom: null },
+  theme_client: { preset: TEMA_DI_PARTENZA, custom: null },
 }
 
 // IMPOSTAZIONI IN CACHE. Le scritture sugli ordini devono sapere che sconto

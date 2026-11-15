@@ -8184,6 +8184,44 @@ requirements:
     test_cases:
       - tests/unit/usePresentazione.test.jsx
 
+  - id: REQ-FLOTTA-032
+    title: "Il giro e2e dice alla regia quando le prove iniziano e finiscono"
+    area: "scripts/lib-istanza-di-prova.js, scripts/istanza-di-prova.mjs, package.json (google-auth-library), .github/workflows/e2e.yml"
+    description: >
+      Daniele, 15/11/2026: nel backoffice della regia `drinkpos-prova-e2e`
+      deve risultare «Disattivata» quando gli e2e non girano. La regia ha
+      aperto l'interfaccia 15 (drink-regia REQ-FLOTTA-114, contratto
+      paragrafo 15, sul test dalla regia 0.5.0-beta.5): POST
+      `istanzaDiProva` sulla regia di test, corpo { attiva: true }
+      all'inizio del giro e { attiva: false } alla fine, anche se le prove
+      falliscono. È solo uno stato della regia: spenta non cambia licenza
+      né presentazione, e le prove funzionano uguale anche se la chiamata
+      fallisce (finché il progetto non è segnato di prova risponde 403).
+      CHI CHIAMA: l'account di deploy del progetto di prova
+      (E2E_SERVICE_ACCOUNT, deploy@drinkpos-prova-e2e), con un gettone
+      d'identità di Google, destinatario `regia-prova:drink-regia-test`,
+      con email ed email_verified. Non un utente del locale: Daniele ha
+      deciso che nessun utente di un locale può cambiare qualcosa nella
+      regia (contratto, «La sicurezza delle interfacce», regia
+      REQ-FLOTTA-115). La prima stesura coniava un utente `e2e-regia` e ne
+      scambiava l'ID token con Identity Toolkit: scartata lo stesso giorno.
+      COME È FATTO: il gettone lo dà google-auth-library
+      (getIdTokenClient, fetchIdToken) dalla chiave che il giro ha già, ed
+      è chiesto di nuovo a ogni chiamata, perché dura un'ora. Il passo di
+      fine giro sta in `if: always()` PRIMA dello smontaggio. Lo script
+      esce sempre con 0: un errore è un avviso nel log, mai un giro fermo.
+      I due passi in e2e.yml col via libera di Daniele, lo stesso giorno
+      («ok cambialo»): «La regia sa che le prove iniziano» dopo la chiave e
+      prima del deploy, «… sono finite» in always() prima dello smontaggio
+      e di «Via la chiave». La prova vera del gettone è il primo giro e2e,
+      perché la chiave dell'account di deploy sta solo nei segreti.
+    status: implemented
+    generate_issue: false
+    labels: [flotta, regia, ci]
+    priority: P3
+    test_cases:
+      - tests/unit/istanzaDiProva.test.js
+
   - id: REQ-FLOTTA-021
     title: "Le porte e gli adattatori: l'app parla con interfacce nostre, Firebase è un adattatore"
     area: "src/porte/configurazione.js, src/porte/dati.js, src/adattatori/firebase/, src/lib/firebaseClient.js, src/lib/api.js, src/lib/storage.js, src/lib/push.js, public/sw.js, functions/index.js, functions/lib/, docs/porte-e-adattatori.md"
@@ -15737,6 +15775,50 @@ requirements:
       - tests/component/AiutiCampi.test.jsx
       - tests/component/MenuManager.test.jsx
       - tests/sistema/aiutiCampi.spec.js
+
+  - id: REQ-UI-033
+    title: "Il tema «Lime», scuro e chiaro, di Lime - SmartOrders, ed è quello di partenza dei locali nuovi"
+    area: "src/lib/themes.js (FORME.lime, lime-scuro, lime-chiaro, temaDiPartenza), src/lib/api.js (DEFAULT_SETTINGS), src/components/ThemeSettings.jsx, src/index.css, src/lib/cookieConsent.js, src/components/GroupView.jsx, index.html, src/lib/venue.js, clienti/demo/venue.json, clienti/pluginCliente.js, scripts/genera-cliente.mjs, DESIGN.md"
+    description: >
+      Daniele, 15/11/2026: «dobbiamo fare il tema lime di Lime
+      SmartOrders». Scelte sue, lo stesso giorno: tavolozza e forme (un
+      tema vero dell'app, non solo colori), in due varianti, scura e
+      chiara, e di partenza per la demo e per i locali che genera la
+      regia, al posto di «Tana scuro». La Tana resta col suo.
+      La demo che si mostra a un locale nuovo aveva i colori della Tana:
+      rosa, oro e la notte del locale (UR-014).
+      CRITERIO: i preset `lime-scuro` e `lime-chiaro` con la famiglia di
+      forme `lime` reggono le soglie di contrasto di DESIGN.md; una build
+      senza cliente o col cliente `tana` parte da `tana-scuro`, una con un
+      altro cliente parte da `lime-scuro`; i temi del catalogo che
+      descrivono i colori della Tana restano sui colori della Tana.
+      COME È FATTO (15/11/2026): FORME.lime (tasti piatti, 14/10px, ombra
+      tenue, titoli in Playfair, il pallino sulle card) e i preset
+      lime-scuro/lime-chiaro in src/lib/themes.js, con i COLORI DELLA REGIA
+      (drink-regia src/index.css, «LA PALETTE LIME», 11/11/2026; Daniele,
+      15/11: «il sito dovrebbe già averli e anche il backoffice in parte»):
+      lime #b4ec2b pieno, #c6f25a per il testo, #16210a sopra il lime (il
+      preset dichiara --btn-ink e --accent-ink); sul chiaro il lime resta
+      un riempimento e il testo in colore è #2f6b0f.
+      `temaDiPartenza(cliente)` sceglie dal cliente della build, e lo usano
+      DEFAULT_SETTINGS (theme_staff, theme_client), resolveThemeVars senza
+      preset e il selettore in Aspetto. DEFAULT_THEME resta tana-scuro: è
+      il tema di casa del catalogo. Il colore della barra del browser della
+      demo e dei locali generati (venue_theme_color) è il fondo di Lime
+      scuro. Tocca il vocabolario dei temi condiviso con la regia
+      (REQ-DEV-025): due id nuovi, da comunicarle.
+      Daniele, lo stesso giorno: «sia per vista cliente sia per il
+      gestionale». Le velature dorate scritte a mano nel foglio (24 punti:
+      tab, voce attiva, ricerca del menù, attesa del cliente, totale del
+      riepilogo) e il banner dei cookie prendono i token del tema; restano
+      fissi solo gli stati (pagato, sincronizzazione) e il riquadro Ceres.
+      Il theme-color della pagina d'ingresso viene da venue_theme_color.
+    status: implemented
+    generate_issue: false
+    labels: [ui, flotta]
+    priority: P2
+    test_cases:
+      - tests/unit/temaLime.test.js
 
   - id: REQ-PAG-013
     title: "Lo sconto cade sui prodotti che si stanno riscuotendo, e gli sconti si accumulano"

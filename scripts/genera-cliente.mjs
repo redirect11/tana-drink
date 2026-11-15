@@ -45,7 +45,9 @@ writeFileSync(
       venue_address: '',
       venue_postal_city: '',
       venue_description: `Ordina da ${nome}`,
-      venue_theme_color: '#0e0e15',
+      // Il fondo di «Lime scuro», il tema con cui parte un locale nuovo
+      // (REQ-UI-033): la barra del browser e lo splash con lo stesso colore.
+      venue_theme_color: '#0c0f0a',
       venue_socials: [],
     },
     null,

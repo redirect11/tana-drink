@@ -28,8 +28,6 @@ const MARCHIO = /Tana\b|Coniglio|latanadelconiglio|EFFEVI|\btana[:_-]/g
 const WHITELIST = {
   // Il seed di sviluppo coi drink della Tana (piano, Fase 2.4).
   'src/dev/seedData.js': 6,
-  // Il tema predefinito «tana-scuro» nelle impostazioni: un alias (vedi themes.js).
-  'src/lib/api.js': 2,
   // La migrazione delle chiavi vecchie (REQ-VENUE-005): deve conoscerle.
   'src/lib/migrazioneChiavi.js': 2,
   // Il tema «Tana scuro» resta come alias (piano, Fase 2.6).
