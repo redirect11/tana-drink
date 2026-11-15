@@ -1,5 +1,7 @@
 # Cosa è cambiato
 
+## 1.10.52-beta — in lavorazione
+
 ## 1.10.51 — 15 novembre 2026 (produzione)
 
 Provata sul test come 1.10.50-beta e 1.10.51-beta.
