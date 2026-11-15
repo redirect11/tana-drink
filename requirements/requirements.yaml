@@ -8148,6 +8148,37 @@ requirements:
       - tests/unit/presentazioneChiamata.test.js
       - tests/component/InstallazioneSospesa.test.jsx
 
+  - id: REQ-FLOTTA-031
+    title: "La presentazione alla regia dice anche quale dispositivo si presenta, e si ripete una volta al giorno"
+    area: "src/lib/presentazione.js, src/lib/api.js, src/App.jsx, docs/presentazione-alla-regia.md"
+    description: >
+      Il 14/11/2026 la Tana di test si è presentata due volte in pochi
+      decimi di secondo: un dispositivo con la 1.10.49-beta e uno rimasto
+      alla 1.10.40-beta. La regia tiene l'ultima presentazione, e la
+      scheda è tornata indietro di dieci versioni. Daniele, 15/11/2026:
+      «tenere una versione per dispositivo». La regia lo ha confermato lo
+      stesso giorno (drink-regia REQ-FLOTTA-112, contratto, interfaccia 4).
+      Il corpo della presentazione diventa { versione, dispositivo }:
+      `dispositivo` è un codice casuale di 16 byte in base64url senza
+      padding (22 caratteri, ^[A-Za-z0-9_-]{22}$), creato al primo avvio
+      e tenuto in memoria locale (`drink:dispositivo`). Non contiene
+      niente dell'utente né del locale (REQ-FLOTTA-051 della regia).
+      La correzione chiesta dalla regia: un tablet che resta su una
+      versione e si usa ogni giorno non si ripresentava mai, e con la
+      scadenza di 30 giorni della regia uscirebbe dal conto mentre chiama
+      ancora le interfacce vecchie. Quindi l'app si ripresenta anche a
+      versione invariata, al massimo una volta ogni 24 ore: all'apertura
+      e quando torna in primo piano (un tablet del banco resta aperto per
+      giorni senza essere ricaricato). La regia segna un dispositivo al
+      più ogni 6 ore. È un cambio compatibile: la regia ignora un codice
+      di forma diversa, e le app fino alla 1.10.50 contano come un
+      dispositivo solo, `senza_codice`.
+    status: todo
+    generate_issue: false
+    labels: [flotta, regia]
+    priority: P2
+    test_cases: []
+
   - id: REQ-FLOTTA-021
     title: "Le porte e gli adattatori: l'app parla con interfacce nostre, Firebase è un adattatore"
     area: "src/porte/configurazione.js, src/porte/dati.js, src/adattatori/firebase/, src/lib/firebaseClient.js, src/lib/api.js, src/lib/storage.js, src/lib/push.js, public/sw.js, functions/index.js, functions/lib/, docs/porte-e-adattatori.md"
