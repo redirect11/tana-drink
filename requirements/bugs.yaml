@@ -6429,3 +6429,24 @@ bugs:
     priority: P3
     requisiti: [REQ-VENUE-001]
     test_cases: []
+
+  - id: BUG-159
+    title: "«Nuovo ordine» squilla al primo drink battuto, anche se poi il conto si svuota e si annulla"
+    area: "functions/lib/push-core.js (decideNewOrderStaffPush)"
+    description: >
+      Daniele, 15/11/2026: «io l'ordine ricevuto, la notifica la vedo»,
+      battendo un drink e togliendolo subito. Dal 14/11 (BUG-148) il conto
+      nasce al primo tocco, e `notifyNewOrder` avvisa gli altri dispositivi
+      appena il documento esiste, senza guardare `in_creazione`. La stampa
+      quel segno lo rispetta: la comanda esce quando chi batte esce dal
+      conto, completa. La notifica no: partiva a metà composizione, e
+      annullare dopo non la ritira. Un ripensamento faceva squillare il
+      banco per un conto che non esiste.
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, notifiche, pos]
+    severity: media
+    priority: P2
+    requisiti: [REQ-NOTIF-002]
+    test_cases: []

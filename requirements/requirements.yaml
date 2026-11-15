@@ -10677,6 +10677,30 @@ requirements:
       - tests/unit/rigaDiAltri.test.js
       - tests/sistema/piuSoloSulleProprie.spec.js
 
+  - id: REQ-ORD-025
+    title: "Il conto svuotato si chiude da solo o resta aperto: lo sceglie chi lavora, sul suo dispositivo"
+    area: "src/lib/impostazioniLocali.js (contoVuotoSiChiude), src/components/OrderPosDetail.jsx, src/pages/StaffProfilePage.jsx"
+    description: >
+      Daniele, 15/11/2026: togliendo l'ultima riga il conto si annulla dopo
+      400 ms e si torna alla coda (REQ-ORD-004); a chi sostituisce un drink
+      con calma la schermata si chiudeva in mano. «Facciamolo così ma
+      opzionale. Per utente, a Flavio piace a Vittorio no. Quindi mettiamolo
+      configurabile per chi sta usando il terminale».
+      La scelta sta nel profilo («Il mio profilo», `/profilo-staff`), come
+      gli avvisi: vale per l'account e per il dispositivo, e due persone che
+      si passano lo stesso tablet non se la cambiano a vicenda. Accesa di
+      partenza, che è il comportamento di sempre. Spenta, il conto svuotato
+      resta aperto a schermo e si può continuare a battere; se all'uscita è
+      ancora vuoto si annulla allora, con le stesse regole: niente annullo
+      se qualcosa è già stato incassato, e il conto annullato esce subito
+      dalla coda. Annullare all'uscita chiude anche la composizione nella
+      stessa scrittura (BUG-071): l'uscita non toglie `in_creazione` per
+      conto suo, e del conto vuoto non esce carta né notifica.
+    status: todo
+    generate_issue: false
+    labels: [ordini, pos, staff]
+    test_cases: []
+
   - id: REQ-STAMPA-011
     title: "Il logo sugli scontrini si sceglie: quale, e su quali stampe"
     area: "src/lib/campiStampa.js, src/lib/printer.js (stampaLogo, logoPerStampa), src/components/CampiStampa.jsx"

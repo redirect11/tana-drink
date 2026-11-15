@@ -97,6 +97,7 @@ bisogni:
     requisiti:
       - REQ-POS-003
       - REQ-POS-004
+      - REQ-ORD-025
     test_cases: []
 
   - id: UR-004
