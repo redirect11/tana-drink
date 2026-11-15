@@ -19,6 +19,24 @@
   notifiche, l'avviso di aggiornamento) diventa scuro quando l'accento è
   chiaro, e resta leggibile (REQ-UI-033).
 
+### Il conto
+
+- **Conto svuotato: si chiude da solo o resta aperto**, a scelta di chi
+  lavora, in «Il mio profilo» → «Conto vuoto». Vale per l'account su quel
+  dispositivo. Acceso, come finora, togliendo l'ultima riga il conto si
+  annulla e si torna alla coda. Spento, il conto resta aperto e si può
+  continuare a battere; se all'uscita è ancora vuoto si annulla allora
+  (REQ-ORD-025).
+- Uscendo subito da un conto appena svuotato, il conto si annulla: prima
+  restava aperto e vuoto in coda (REQ-ORD-025).
+
+### Notifiche
+
+- **«Nuovo ordine» arriva quando il conto è composto**, cioè quando chi lo
+  batte esce dal conto: non più al primo drink. Vale sia per la notifica
+  sul telefono sia per il suono della coda. Battere un drink e toglierlo
+  non fa più squillare gli altri dispositivi (BUG-159).
+
 ## 1.10.51 — 15 novembre 2026 (produzione)
 
 Provata sul test come 1.10.50-beta e 1.10.51-beta.

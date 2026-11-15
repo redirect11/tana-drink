@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 303 | fatto e coperto dai test |
+| ✅ | 304 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 9 | fatto a metà |
 | ⬜ | 27 | da fare |
 | 🗑 | 8 | non più valido |
 
-**362 voci** in tutto. **327** descrivono il sistema com'è oggi e
+**363 voci** in tutto. **328** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **27** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **16** difetti noti sono ancora aperti.
@@ -41,7 +41,7 @@ come «vero oggi», non come «garantito».
 
 | Area | Fatto | Previsto | Di cosa parla |
 |---|---|---|---|
-| [Ordini e comande](#ordini-e-comande) | 20 | 1 | Il conto e le sue comande: come nascono, come cambiano stato, come arrivano al banco. |
+| [Ordini e comande](#ordini-e-comande) | 21 | 1 | Il conto e le sue comande: come nascono, come cambiano stato, come arrivano al banco. |
 | [Cassa e POS](#cassa-e-pos) | 18 | 2 | La schermata più usata della serata: si compone un conto, si corregge, si chiude. |
 | [Pagamenti](#pagamenti) | 14 | 1 | Come si incassa: contanti, carta, SumUp, pagamenti parziali e separati. |
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
@@ -75,11 +75,11 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 11 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 184 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 185 |
 | Unità | il progetto di dettaglio: un modulo da solo | 187 |
 
 **18** bisogni del locale, **0** con un test di accettazione.
-**114** requisiti su 354 sono collegati a un bisogno;
+**115** requisiti su 355 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -111,7 +111,7 @@ Chi batte un conto viene interrotto di continuo: si cambia schermata, si rispond
 
 **Come si accetta**: Si mettono tre righe in un conto nuovo senza confermarlo, si torna alla coda e si ricarica la pagina. Riaprendo il nuovo ordine le tre righe ci sono. Lo stesso in modifica di un conto esistente. Dopo la conferma la bozza è vuota.
 
-**Chi**: Banco, Sala · **Lo realizzano**: [REQ-POS-003](#req-pos-003--la-bozza-non-si-perde-uscendo-dalla-schermata), [REQ-POS-004](#req-pos-004--un-ricaricamento-non-fa-perdere-il-conto-in-corso) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Banco, Sala · **Lo realizzano**: [REQ-POS-003](#req-pos-003--la-bozza-non-si-perde-uscendo-dalla-schermata), [REQ-POS-004](#req-pos-004--un-ricaricamento-non-fa-perdere-il-conto-in-corso), [REQ-ORD-025](#req-ord-025--il-conto-svuotato-si-chiude-da-solo-o-resta-aperto-lo-sceglie-chi-lavora-sul-suo-dispositivo) · ⚠️ **Nessun test di accettazione, ancora.**
 
 #### UR-004 — La comanda arriva a chi deve preparare
 
@@ -263,7 +263,7 @@ Gli aumenti confluiscono nella comanda ancora modificabile (ricevuta o in prepar
 
 #### REQ-ORD-004 — Un conto rimasto senza righe si annulla da solo
 
-Togliendo tutte le righe di un conto appena aperto, il conto viene annullato e si torna alla coda: un conto vuoto in lista è solo un ingombro. Non succede se qualcosa è già stato incassato — lì il conto esiste davvero e va chiuso a mano.
+Togliendo tutte le righe di un conto appena aperto, il conto viene annullato e si torna alla coda: un conto vuoto in lista è solo un ingombro. Non succede se qualcosa è già stato incassato — lì il conto esiste davvero e va chiuso a mano. Chi preferisce restare sul conto svuotato lo sceglie nel suo profilo, e allora l'annullo avviene all'uscita (REQ-ORD-025).
 
 **Dove**: `src/components/OrderPosDetail.jsx` · **Serve**: [UR-002](#ur-002--quello-che-si-vede-a-schermo-è-il-conto-vero) · **Lo dimostrano**: `tests/component/OrderPosDetail.test.jsx`
 
@@ -420,6 +420,12 @@ LA RIGA IN BOZZA, non ancora mandata, mostra subito l'iniziale di chi la sta bat
 Flavio, 09/11/2026: «ora che è stata aggiunta l'icona vicino a ogni item all'interno di un ordine viene disabilitata la funzione del +1, +2, +3 […] se Alex da fuori vuole aggiungere una Tennent's non può fare +1, deve caricarla lui, perché altrimenti che mette lì? Due Tennent's, una caricata da me e una caricata da lui?». L'utente: il «−» segue la stessa regola; l'admin non fa eccezione («l'iniziale segnata poi che ne sappiamo chi ha caricato effettivamente»); la regola vale solo se l'iniziale è accesa nelle impostazioni. Sul conto, su una riga firmata da un altro, il «+» e il «−» sono spenti, e il «+» dice «Caricato da …: per aggiungerne, toccare il prodotto». Chi ne vuole un altro lo batte dalla griglia e fa una riga sua. Il confronto è sull'email dell'account, il nome solo se manca. Le righe senza iniziale (del cliente dal menù, e quelle battute prima della 1.10.30) restano a tutti: di chi siano non si sa. La bozza è sempre di chi la sta battendo. Con l'iniziale spenta i tasti sono di tutti, come prima: un tasto spento senza un motivo a schermo sarebbe un tasto rotto.
 
 **Dove**: `src/lib/comande.js (rigaDiAltri, firmaRigheAccesa), src/components/OrderPosDetail.jsx (altruiPerMe), src/components/SettingsTab.jsx, src/lib/api.js (firma_righe)` · **Serve**: [UR-012](#ur-012--su-un-conto-si-vede-chi-ha-battuto-cosa) · **Lo dimostrano**: `tests/unit/rigaDiAltri.test.js`, `tests/sistema/piuSoloSulleProprie.spec.js`
+
+#### REQ-ORD-025 — Il conto svuotato si chiude da solo o resta aperto: lo sceglie chi lavora, sul suo dispositivo
+
+Daniele, 15/11/2026: togliendo l'ultima riga il conto si annulla dopo 400 ms e si torna alla coda (REQ-ORD-004); a chi sostituisce un drink con calma la schermata si chiudeva in mano. «Facciamolo così ma opzionale. Per utente, a Flavio piace a Vittorio no. Quindi mettiamolo configurabile per chi sta usando il terminale». La scelta sta nel profilo («Il mio profilo», `/profilo-staff`), come gli avvisi: vale per l'account e per il dispositivo, e due persone che si passano lo stesso tablet non se la cambiano a vicenda. Accesa di partenza, che è il comportamento di sempre. Spenta, il conto svuotato resta aperto a schermo e si può continuare a battere; se all'uscita è ancora vuoto si annulla allora, con le stesse regole: niente annullo se qualcosa è già stato incassato, e il conto annullato esce subito dalla coda. Annullare all'uscita chiude anche la composizione nella stessa scrittura (BUG-071): l'uscita non toglie `in_creazione` per conto suo, e del conto vuoto non esce carta né notifica. Uscire da un conto vuoto prima dei 400 ms lo annulla comunque, con la scelta accesa o spenta: prima restava aperto e vuoto in coda. Uscendo da un conto vuoto non si chiede il nome: sta per essere annullato. La scelta si legge allo scadere dei 400 ms, non all'apertura: aprendo un conto già vuoto l'accesso può non aver ancora risposto.
+
+**Dove**: `src/lib/impostazioniLocali.js (contoVuotoSiChiude), src/components/OrderPosDetail.jsx, src/pages/StaffProfilePage.jsx` · **Serve**: [UR-003](#ur-003--niente-di-quello-che-si-sta-battendo-va-perso) · **Lo dimostrano**: `tests/unit/impostazioniLocali.test.js`, `tests/component/OrderPosDetail.test.jsx`, `tests/component/StaffProfilePage.test.jsx`, `tests/unit/giroInLocale.test.js`
 
 ### Cassa e POS
 

@@ -6432,7 +6432,7 @@ bugs:
 
   - id: BUG-159
     title: "«Nuovo ordine» squilla al primo drink battuto, anche se poi il conto si svuota e si annulla"
-    area: "functions/lib/push-core.js (decideNewOrderStaffPush)"
+    area: "functions/lib/push-core.js (decideNewOrderStaffPush), src/pages/BartenderPage.jsx (avviso in coda)"
     description: >
       Daniele, 15/11/2026: «io l'ordine ricevuto, la notifica la vedo»,
       battendo un drink e togliendolo subito. Dal 14/11 (BUG-148) il conto
@@ -6442,11 +6442,28 @@ bugs:
       conto, completa. La notifica no: partiva a metà composizione, e
       annullare dopo non la ritira. Un ripensamento faceva squillare il
       banco per un conto che non esiste.
+      ORA un conto `in_creazione` non è un ordine nuovo: l'avviso parte
+      quando il segno si toglie (notifyOrderUpdate), cioè all'uscita di chi
+      lo batte, nello stesso momento in cui esce la comanda; un conto
+      annullato non ha più niente da fare e tace. Una comanda senza righe
+      non conta come lavoro da fare, ma solo nel conto dopo: svuotata e
+      riempita, la stessa comanda non riavvisa. Lo stesso per l'avviso in
+      pagina della coda (suono e notifica del browser), che suonava anch'esso
+      al primo drink e, con la sola push corretta, avrebbe suonato due volte:
+      il conto in composizione si mette da parte e si annuncia quando il
+      segno cade.
+      IL PREZZO, dalla revisione: gli altri dispositivi sanno del conto
+      quando è composto, non al primo drink. Un conto il cui segno non cade
+      mai — telefono bloccato o app chiusa prima di uscire dal conto — non
+      si annuncia, come già non stampa da solo. E un conto battuto e
+      incassato senza uscire, con «Riscuoti e servi» o col servizio spento,
+      quando il segno cade ha le comande già servite: non avvisa. Da
+      confermare con chi lavora al banco.
     in_produzione: true
-    status: todo
+    status: fixed
     generate_issue: true
     labels: [bug, notifiche, pos]
     severity: media
     priority: P2
     requisiti: [REQ-NOTIF-002]
-    test_cases: []
+    test_cases: [tests/bdd/notify-order.test.js, tests/component/AvvisiRipristino.test.jsx]

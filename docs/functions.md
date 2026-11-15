@@ -124,7 +124,9 @@ stessi tre gesti quando a pagare è un gruppo di conti insieme.
 - `notifyOrderUpdate` — trigger su `orders/{orderId}`: avvisa il **cliente**
   quando il drink è pronto o l'ordine è annullato.
 - `notifyNewOrder` — trigger su `orders/{orderId}`: avvisa il **personale** di
-  un ordine appena arrivato.
+  un ordine appena arrivato. Un conto battuto al POS nasce `in_creazione` e
+  non avvisa: lo annuncia `notifyOrderUpdate` quando il segno si toglie,
+  cioè quando chi lo batte esce dal conto (BUG-159).
 - `notifyStaffCall` — trigger su `staff_calls/{callId}`: la chiamata al tavolo.
 
 ## Il menù dei clienti — voci non disponibili (REQ-MENU-017)

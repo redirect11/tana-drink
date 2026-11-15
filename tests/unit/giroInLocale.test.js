@@ -154,6 +154,28 @@ describe('modificare un conto senza rete', () => {
   })
 })
 
+// IL CONTO SVUOTATO E ANNULLATO ALL'USCITA, SENZA RETE (REQ-ORD-025). Chi
+// tiene il conto vuoto aperto lo vede annullare quando esce: la rimozione
+// dell'ultima riga parte, e l'annullo le va subito dietro. Con la cache che
+// non conferma niente, l'annullo deve comporre sopra la rimozione appena
+// mandata — rileggendo, riscriverebbe il conto con le righe di prima, ed era
+// il conto annullato che in coda diceva ancora «2 prodotti». E deve chiudere
+// la composizione nella stessa scrittura, o il conto vuoto sembrerebbe da
+// stampare e da annunciare (BUG-071, BUG-159).
+describe('svuotare un conto e annullarlo all’uscita, senza rete', () => {
+  it('l’annullo torna subito, vuoto e con la composizione chiusa', async () => {
+    stato.ordine = { ...contoConDue(), in_creazione: true }
+    api.bartenderUpdateComanda('ord-1', 'c1', { items: [] })
+    const annullato = await subito(api.cancelOrder('ord-1', { by: 'bartender' }))
+    expect(annullato.status).toBe('annullato')
+    expect(annullato.total).toBe(0)
+    expect(annullato.comande.flatMap((c) => c.items || [])).toEqual([])
+    const annullo = stato.scritture.at(-1).patch
+    expect(annullo.in_creazione).toBe(false)
+    expect(annullo.comande.flatMap((c) => c.items || [])).toEqual([])
+  })
+})
+
 describe('aggiungere una comanda a un conto aperto, senza rete', () => {
   it('il conto che torna ha già la comanda nuova e il totale rifatto', async () => {
     const dopo = await subito(api.addComanda('ord-1', [riga('Spritz', 3, 6)]))

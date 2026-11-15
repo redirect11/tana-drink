@@ -884,6 +884,14 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   useEffect(() => {
     let primed = false
     const awaiting = new Set() // ordini in attesa di pagamento obbligatorio
+    // CONTI CHE SI STANNO ANCORA BATTENDO (BUG-159). Al POS il conto nasce
+    // al primo tocco e resta `in_creazione` finché chi lo batte non esce:
+    // annunciarlo lì faceva suonare il banco a metà composizione, e per un
+    // drink battuto e tolto. Si mette da parte come quelli in attesa di
+    // pagamento, e si annuncia quando il segno cade. Serve l'insieme: il
+    // conto a quel punto risulta già visto (statoPrec), e senza non
+    // suonerebbe mai.
+    const inComposizione = new Set()
     const unsub = subscribeActiveOrders(
       (data) => {
         // Notifica i nuovi ordini "ricevuti" comparsi dopo il primo
@@ -898,7 +906,10 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             // insieme per sempre: ripristinandolo veniva annunciato come
             // «nuovo ordine» — ed era il secondo avviso, quello di troppo,
             // che il banco ha visto sull'ordine #5 (BUG-072).
-            if (o.workflow_status === ORDER_STATUSES.ANNULLATO) awaiting.delete(o.id)
+            if (o.workflow_status === ORDER_STATUSES.ANNULLATO) {
+              awaiting.delete(o.id)
+              inComposizione.delete(o.id)
+            }
             // C'È QUALCOSA DA FARE? Un ordine battuto alla cassa nasce già
             // «in preparazione» — chi lo batte sta facendo il drink —
             // mentre quelli dal menù nascono «ricevuto». Guardando i soli
@@ -907,21 +918,36 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             if (
               o.workflow_status !== ORDER_STATUSES.RICEVUTO &&
               o.workflow_status !== ORDER_STATUSES.IN_PREPARAZIONE
-            )
+            ) {
+              // Uscito dalla composizione già servito o annullato: non c'è
+              // più niente da annunciare.
+              inComposizione.delete(o.id)
               continue
+            }
             // NIENTE AVVISO SOLO A CHI L'HA MANDATO. Prima si tacevano tutti
             // gli ordini battuti da un gestore, su QUALUNQUE dispositivo:
             // col telefono in mano a un admin, al banco non suonava niente.
             // Il metro giusto non è il ruolo, è il terminale — lo stesso
             // account sta su tablet, telefono e portatile insieme.
             if (battutoDaQui(o.placed_by)) continue
-            if (isAwaitingPayment(o)) {
-              if (isNew) awaiting.add(o.id)
+            if (o.in_creazione === true) {
+              if (isNew) inComposizione.add(o.id)
               continue
             }
-            if (isNew || awaiting.has(o.id)) {
+            if (isAwaitingPayment(o)) {
+              if (isNew || inComposizione.has(o.id)) awaiting.add(o.id)
+              inComposizione.delete(o.id)
+              continue
+            }
+            if (isNew || awaiting.has(o.id) || inComposizione.has(o.id)) {
               awaiting.delete(o.id)
-              if (avvisoAttivo(avvisi.current, 'nuovo_ordine')) {
+              // Il segno l'ha tolto QUESTO terminale prendendo in mano la
+              // comanda (advanceComanda): il conto lo conosce già, perché ci
+              // ha appena messo le mani.
+              const presoDaQui =
+                inComposizione.has(o.id) && o.avanzamento_device === idDispositivo()
+              inComposizione.delete(o.id)
+              if (!presoDaQui && avvisoAttivo(avvisi.current, 'nuovo_ordine')) {
                 beep() // su iPad in primo piano il banner di sistema è soppresso
                 // STESSO NOME della notifica che manda il server (sw.js):
                 // così il sistema le fonde in una invece di mostrarne due —

@@ -166,7 +166,8 @@ requirements:
       Togliendo tutte le righe di un conto appena aperto, il conto viene annullato
       e si torna alla coda: un conto vuoto in lista è solo un ingombro. Non
       succede se qualcosa è già stato incassato — lì il conto esiste davvero e va
-      chiuso a mano.
+      chiuso a mano. Chi preferisce restare sul conto svuotato lo sceglie nel
+      suo profilo, e allora l'annullo avviene all'uscita (REQ-ORD-025).
     status: implemented
     generate_issue: false
     labels: [ordini, pos]
@@ -10696,10 +10697,19 @@ requirements:
       dalla coda. Annullare all'uscita chiude anche la composizione nella
       stessa scrittura (BUG-071): l'uscita non toglie `in_creazione` per
       conto suo, e del conto vuoto non esce carta né notifica.
-    status: todo
+      Uscire da un conto vuoto prima dei 400 ms lo annulla comunque, con la
+      scelta accesa o spenta: prima restava aperto e vuoto in coda. Uscendo
+      da un conto vuoto non si chiede il nome: sta per essere annullato. La
+      scelta si legge allo scadere dei 400 ms, non all'apertura: aprendo un
+      conto già vuoto l'accesso può non aver ancora risposto.
+    status: implemented
     generate_issue: false
     labels: [ordini, pos, staff]
-    test_cases: []
+    test_cases:
+      - tests/unit/impostazioniLocali.test.js
+      - tests/component/OrderPosDetail.test.jsx
+      - tests/component/StaffProfilePage.test.jsx
+      - tests/unit/giroInLocale.test.js
 
   - id: REQ-STAMPA-011
     title: "Il logo sugli scontrini si sceglie: quale, e su quali stampe"
