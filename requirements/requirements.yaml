@@ -8184,6 +8184,39 @@ requirements:
     test_cases:
       - tests/unit/usePresentazione.test.jsx
 
+  - id: REQ-FLOTTA-032
+    title: "Il giro e2e dice alla regia quando le prove iniziano e finiscono"
+    area: "scripts/lib-istanza-di-prova.js, scripts/istanza-di-prova.mjs, .github/workflows/e2e.yml"
+    description: >
+      Daniele, 15/11/2026: nel backoffice della regia `drinkpos-prova-e2e`
+      deve risultare «Disattivata» quando gli e2e non girano. La regia ha
+      aperto l'interfaccia 15 (drink-regia REQ-FLOTTA-114, PR #287,
+      contratto paragrafo 15): POST `istanzaDiProva` sulla regia di test
+      con l'ID token di un utente qualunque del progetto di prova, corpo
+      { attiva: true } all'inizio del giro e { attiva: false } alla fine,
+      anche se le prove falliscono. La regia controlla solo firma, aud, iss
+      e scadenza del token, non ruoli, documenti o esistenza dell'utente.
+      È solo uno stato della regia: spenta non cambia licenza né
+      presentazione, e le prove funzionano uguale anche se la chiamata
+      fallisce (finché il progetto non è segnato di prova risponde 403).
+      COME È FATTO: un custom token per l'utente fisso `e2e-regia`, coniato
+      con la chiave del service account del giro e scambiato con Identity
+      Toolkit usando la chiave web del progetto. Le utenze dei casi d'uso
+      non vanno bene: ogni test le semina da zero e lo smontaggio le
+      cancella tutte. Lo scambio si rifà a ogni chiamata, perché il token
+      dura un'ora. Il passo di fine giro sta in `if: always()` PRIMA dello
+      smontaggio, che poi cancella anche `e2e-regia`. Lo script esce sempre
+      con 0: un errore è un avviso nel log, mai un giro fermo.
+      MANCA (15/11/2026): i due passi in e2e.yml, che aspettano il via
+      libera di Daniele (la CI non si tocca senza). Script, logica e test
+      ci sono già.
+    status: todo
+    generate_issue: false
+    labels: [flotta, regia, ci]
+    priority: P3
+    test_cases:
+      - tests/unit/istanzaDiProva.test.js
+
   - id: REQ-FLOTTA-021
     title: "Le porte e gli adattatori: l'app parla con interfacce nostre, Firebase è un adattatore"
     area: "src/porte/configurazione.js, src/porte/dati.js, src/adattatori/firebase/, src/lib/firebaseClient.js, src/lib/api.js, src/lib/storage.js, src/lib/push.js, public/sw.js, functions/index.js, functions/lib/, docs/porte-e-adattatori.md"
