@@ -36,7 +36,7 @@ Content-Type: application/json
 - **Il dispositivo** (dalla 1.10.51, REQ-FLOTTA-031; regia REQ-FLOTTA-112):
   un codice casuale di 16 byte in base64url senza padding, 22 caratteri
   (`^[A-Za-z0-9_-]{22}$`), creato al primo avvio e tenuto in
-  `localStorage` (`drink:dispositivo`). Non contiene niente dell'utente né
+  `localStorage` (`drink:codice_regia`). Non contiene niente dell'utente né
   del locale; se la memoria del browser si svuota, ne nasce uno nuovo. Con
   questo la regia tiene una versione per dispositivo: `presentazione.versione`
   è la più alta fra i dispositivi attivi, `presentazione.minima` la più

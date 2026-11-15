@@ -8161,7 +8161,7 @@ requirements:
       Il corpo della presentazione diventa { versione, dispositivo }:
       `dispositivo` è un codice casuale di 16 byte in base64url senza
       padding (22 caratteri, ^[A-Za-z0-9_-]{22}$), creato al primo avvio
-      e tenuto in memoria locale (`drink:dispositivo`). Non contiene
+      e tenuto in memoria locale (`drink:codice_regia`). Non contiene
       niente dell'utente né del locale (REQ-FLOTTA-051 della regia).
       La correzione chiesta dalla regia: un tablet che resta su una
       versione e si usa ogni giorno non si ripresentava mai, e con la

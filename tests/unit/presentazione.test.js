@@ -106,14 +106,26 @@ describe('il codice del dispositivo', () => {
   it('resta lo stesso da un\'apertura all\'altra: è scritto sul dispositivo', () => {
     const primo = codiceDispositivo()
     expect(codiceDispositivo()).toBe(primo)
-    expect(localStorage.getItem('drink:dispositivo')).toBe(primo)
+    expect(localStorage.getItem('drink:codice_regia')).toBe(primo)
   })
 
   it('un codice di forma sbagliata in memoria si sostituisce: la regia lo ignorerebbe', () => {
-    localStorage.setItem('drink:dispositivo', 'mario@tana.it')
+    localStorage.setItem('drink:codice_regia', 'mario@tana.it')
     const codice = codiceDispositivo()
     expect(codice).toMatch(/^[A-Za-z0-9_-]{22}$/)
-    expect(localStorage.getItem('drink:dispositivo')).toBe(codice)
+    expect(localStorage.getItem('drink:codice_regia')).toBe(codice)
+  })
+
+  // La prima stesura usava la chiave di idDispositivo (lib/dispositivo.js)
+  // e la sovrascriveva: gli avvisi degli ordini e i token del personale
+  // avrebbero cambiato dispositivo. E quell'id sta nel database del locale:
+  // alla regia non deve arrivare.
+  it('non tocca e non riusa l\'identificativo degli avvisi', async () => {
+    const { idDispositivo } = await import('../../src/lib/dispositivo.js')
+    const avvisi = idDispositivo()
+    const codice = codiceDispositivo()
+    expect(codice).not.toBe(avvisi)
+    expect(localStorage.getItem('drink:dispositivo')).toBe(avvisi)
   })
 
   it('due dispositivi, due codici: nasce da byte casuali', async () => {

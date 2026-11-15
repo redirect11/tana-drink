@@ -65,7 +65,14 @@ export function segnaPresentata(versione, adesso = Date.now()) {
 // versione ciascuno. Sedici byte casuali in base64url senza padding, la
 // forma concordata (^[A-Za-z0-9_-]{22}$): niente dell'utente né del locale,
 // e un codice nuovo se la memoria del browser si svuota.
-const CHIAVE_DISPOSITIVO = 'drink:dispositivo'
+// NON È idDispositivo (lib/dispositivo.js), e non ne condivide la chiave:
+// quello finisce negli ordini e nei token degli avvisi, dentro il database
+// del locale. Mandarlo alla regia le permetterebbe di legare i dati del
+// locale a un dispositivo, contro la regola di non portarle niente del
+// locale (REQ-FLOTTA-051 della regia). La prima stesura usava la stessa
+// chiave e l'avrebbe sovrascritto: gli avvisi «l'ho mandato io» e i token
+// del personale avrebbero cambiato dispositivo da un giorno all'altro.
+const CHIAVE_DISPOSITIVO = 'drink:codice_regia'
 const FORMA_CODICE = /^[A-Za-z0-9_-]{22}$/
 let codiceDiSessione = null // se la memoria locale è negata, vale per la sessione
 
