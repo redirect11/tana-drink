@@ -157,6 +157,28 @@ describe('una volta al giorno anche a versione invariata', () => {
     expect(c.mock.calls[1][2]).toBe(c.mock.calls[0][2])
   })
 
+  // Dal revisore: con `adesso - il < 24h` un'ora futura dava sempre «già
+  // presentata», e il tablet taceva fino a quella data.
+  it('un\'ora segnata nel futuro (data del tablet avanti, poi corretta) non lo zittisce', async () => {
+    localStorage.setItem('drink:presentata', '1.10.40-beta')
+    localStorage.setItem('drink:presentata_il', String(ORA + 365 * 24 * 60 * 60 * 1000))
+    const c = chiama()
+    await presentaSeServe({ ...base, chiama: c, adesso: ORA })
+    expect(c).toHaveBeenCalledTimes(1)
+    await presentaSeServe({ ...base, chiama: c, adesso: ORA + 1000 })
+    expect(c).toHaveBeenCalledTimes(1)
+  })
+
+  it('apertura e primo piano insieme: una chiamata sola, non due in volo', async () => {
+    let rispondi
+    const c = vi.fn(() => new Promise((r) => (rispondi = r)))
+    const prima = presentaSeServe({ ...base, chiama: c, adesso: ORA })
+    expect(await presentaSeServe({ ...base, chiama: c, adesso: ORA })).toBeNull()
+    rispondi(RIUSCITA)
+    expect(await prima).toEqual(RIUSCITA)
+    expect(c).toHaveBeenCalledTimes(1)
+  })
+
   it('un dispositivo con la memoria di prima (versione senza ora) si ripresenta una volta', async () => {
     localStorage.setItem('drink:presentata', '1.10.40-beta')
     const c = chiama()

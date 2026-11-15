@@ -47,10 +47,13 @@ export const RIPRESENTA_DOPO = 24 * 60 * 60 * 1000
 // Questo dispositivo ha presentato questa versione nelle ultime 24 ore?
 // Senza l'ora (dispositivi con la memoria di prima della 1.10.51) la
 // risposta è no: si ripresenta una volta, e da lì l'ora c'è.
+// Un'ora segnata nel futuro (un tablet presentato con la data avanti, poi
+// rimessa giusta) vale come mai presentata: altrimenti resterebbe muto
+// fino a quella data, e la regia intanto lo dimenticherebbe (dal revisore).
 export function giaPresentata(versione, adesso = Date.now()) {
   if (leggi(CHIAVE, (v) => v, null) !== numero(versione)) return false
-  const il = leggi(CHIAVE_IL, Number, NaN)
-  return adesso - il < RIPRESENTA_DOPO
+  const trascorso = adesso - leggi(CHIAVE_IL, Number, NaN)
+  return trascorso >= 0 && trascorso < RIPRESENTA_DOPO
 }
 export function segnaPresentata(versione, adesso = Date.now()) {
   scrivi(CHIAVE, numero(versione))
@@ -102,11 +105,20 @@ export function esitoPresentazione(status, corpo) {
 // chiamata vera (api.js), che torna l'esito. Con `licenzaMancante` si
 // chiama anche se la versione è già stata presentata: è il modo di
 // farsela riscrivere. Torna l'esito, o null se non si è chiamato.
+// Una presentazione alla volta: l'apertura e il ritorno in primo piano
+// arrivano spesso a pochi istanti (e StrictMode, in sviluppo, monta due
+// volte), e la seconda partirebbe prima che la prima abbia segnato l'ora.
+let inCorso = false
 export async function presentaSeServe({ versione, collegato, licenzaMancante = false, chiama, progetto, adesso = Date.now() }) {
   const url = urlPresentazione(progetto)
-  if (!url || !collegato || !versione) return null
+  if (!url || !collegato || !versione || inCorso) return null
   if (!licenzaMancante && giaPresentata(versione, adesso)) return null
-  const esito = await chiama(url, versione, codiceDispositivo())
-  if (esito?.ok) segnaPresentata(versione, adesso)
-  return esito
+  inCorso = true
+  try {
+    const esito = await chiama(url, versione, codiceDispositivo())
+    if (esito?.ok) segnaPresentata(versione, adesso)
+    return esito
+  } finally {
+    inCorso = false
+  }
 }
