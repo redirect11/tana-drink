@@ -9,6 +9,11 @@
   un tablet rimasto indietro non viene più coperto da quelli aggiornati
   (REQ-FLOTTA-031).
 
+### Sicurezza
+
+- Chiusi tre avvisi di sicurezza su due dipendenze, `@grpc/grpc-js` e
+  `uuid` (REQ-DEV-024). Nessun cambiamento visibile.
+
 ## 1.10.50-beta — 14/11/2026 (test)
 
 ### Il menù dei clienti
