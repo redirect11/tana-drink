@@ -2,6 +2,22 @@
 
 ## 1.10.52-beta — in lavorazione
 
+### Aspetto
+
+- **Il tema «Lime»**, scuro e chiaro, in Impostazioni → Aspetto: il tema di
+  Lime - SmartOrders, con il verde lime sui tasti, angoli tondi e titoli in
+  un carattere senza grazie. È quello di partenza della demo e dei locali
+  nuovi; la Tana resta col suo (REQ-UI-033).
+- Le evidenze che erano dorate per tutti i temi (il tab al passaggio, la
+  voce attiva della barra, la ricerca nel menù, l'attesa del cliente, il
+  totale del riepilogo) e il banner dei cookie prendono il colore del tema
+  scelto. Con «Tana scuro» restano come prima; con gli altri temi seguono
+  i loro colori, e con «Chiaro» e «Crema» il banner dei cookie diventa
+  chiaro (REQ-UI-033).
+- Il testo sopra il colore d'accento (il segno «staff», il numero delle
+  notifiche, l'avviso di aggiornamento) diventa scuro quando l'accento è
+  chiaro, e resta leggibile (REQ-UI-033).
+
 ## 1.10.51 — 15 novembre 2026 (produzione)
 
 Provata sul test come 1.10.50-beta e 1.10.51-beta.

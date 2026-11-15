@@ -302,7 +302,7 @@ export default function GroupView({ groupId, onClose }) {
           const ids = unpaid.map((o) => o.id)
           const defaultN = node.childGroups.length > 1 ? node.childGroups.length : Math.max(2, unpaid.length)
           return (
-            <div className="card" style={{ marginTop: 14, background: 'rgba(245,185,74,0.06)' }}>
+            <div className="card" style={{ marginTop: 14, background: 'color-mix(in srgb, var(--btn) 6%, transparent)' }}>
               <div className="row between">
                 <strong>Conto: {formatPrice(s.remaining)}</strong>
                 <span className="muted small">{ids.length} da pagare</span>

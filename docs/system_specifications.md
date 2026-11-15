@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 301 | fatto e coperto dai test |
+| ✅ | 302 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 9 | fatto a metà |
-| ⬜ | 29 | da fare |
+| ⬜ | 28 | da fare |
 | 🗑 | 8 | non più valido |
 
-**362 voci** in tutto. **325** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **29** sono lavori
+**362 voci** in tutto. **326** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **28** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **16** difetti noti sono ancora aperti.
 
@@ -59,7 +59,7 @@ come «vero oggi», non come «garantito».
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | 6 | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
-| [Interfaccia](#interfaccia) | 28 | 4 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
+| [Interfaccia](#interfaccia) | 29 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 23 | 2 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 15 | 3 |  |
@@ -76,7 +76,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 11 |
 | Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 184 |
-| Unità | il progetto di dettaglio: un modulo da solo | 186 |
+| Unità | il progetto di dettaglio: un modulo da solo | 187 |
 
 **18** bisogni del locale, **0** con un test di accettazione.
 **114** requisiti su 354 sono collegati a un bisogno;
@@ -3689,6 +3689,16 @@ Richiesta dell'08/11/2026: «rimuovere gli aiuti sopra tutti i campi compilabili
 
 **Dove**: `src/components/AiutoCampo.jsx, src/lib/aiutiCampi.js, src/components/ThemeSettings.jsx (Aspetto), src/App.jsx, src/components/DrinkForm.jsx, src/components/InventoryManager.jsx, src/components/ListinoFornitore.jsx, src/components/AltreSpesePanel.jsx, src/components/StrutturaMenu.jsx, src/components/SupplierInvoicesPanel.jsx` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/component/AiutiCampi.test.jsx`, `tests/component/MenuManager.test.jsx`, `tests/sistema/aiutiCampi.spec.js`
 
+#### REQ-UI-033 — Il tema «Lime», scuro e chiaro, di Lime - SmartOrders, ed è quello di partenza dei locali nuovi
+
+Daniele, 15/11/2026: «dobbiamo fare il tema lime di Lime SmartOrders». Scelte sue, lo stesso giorno: tavolozza e forme (un tema vero dell'app, non solo colori), in due varianti, scura e chiara, e di partenza per la demo e per i locali che genera la regia, al posto di «Tana scuro». La Tana resta col suo. La demo che si mostra a un locale nuovo aveva i colori della Tana: rosa, oro e la notte del locale (UR-014).
+
+CRITERIO: i preset `lime-scuro` e `lime-chiaro` con la famiglia di forme `lime` reggono le soglie di contrasto di DESIGN.md; una build senza cliente o col cliente `tana` parte da `tana-scuro`, una con un altro cliente parte da `lime-scuro`; i temi del catalogo che descrivono i colori della Tana restano sui colori della Tana.
+
+COME È FATTO (15/11/2026): FORME.lime (tasti piatti, 14/10px, ombra tenue, titoli nel sans tondo di sistema, il pallino sulle card) e i preset lime-scuro/lime-chiaro in src/lib/themes.js; sul chiaro il lime resta solo sul tasto (#84cc16), accento e link in verde oliva. `temaDiPartenza(cliente)` sceglie dal cliente della build, e lo usano DEFAULT_SETTINGS (theme_staff, theme_client), resolveThemeVars senza preset e il selettore in Aspetto. DEFAULT_THEME resta tana-scuro: è il tema di casa del catalogo. Il colore della barra del browser della demo e dei locali generati (venue_theme_color) è il fondo di Lime scuro. Tocca il vocabolario dei temi condiviso con la regia (REQ-DEV-025): due id nuovi, da comunicarle. Daniele, lo stesso giorno: «sia per vista cliente sia per il gestionale». Le velature dorate scritte a mano nel foglio (24 punti: tab, voce attiva, ricerca del menù, attesa del cliente, totale del riepilogo) e il banner dei cookie prendono i token del tema; restano fissi solo gli stati (pagato, sincronizzazione) e il riquadro Ceres. Il theme-color della pagina d'ingresso viene da venue_theme_color.
+
+**Dove**: `src/lib/themes.js (FORME.lime, lime-scuro, lime-chiaro, temaDiPartenza), src/lib/api.js (DEFAULT_SETTINGS), src/components/ThemeSettings.jsx, src/index.css, src/lib/cookieConsent.js, src/components/GroupView.jsx, index.html, src/lib/venue.js, clienti/demo/venue.json, clienti/pluginCliente.js, scripts/genera-cliente.mjs, DESIGN.md` · **Serve**: [UR-014](#ur-014--la-demo-che-si-mostra-a-un-locale-nuovo-non-espone-niente-di-un-locale-vero) · **Lo dimostrano**: `tests/unit/temaLime.test.js`
+
 ### Come si lavora al progetto
 
 Non è comportamento dell’app: è il metodo con cui la si costruisce.
@@ -4740,14 +4750,6 @@ Flavio, vocale del 22/10/2026: «la cosa piu' importante sarebbe sempre sempre s
 DA FARE: passare le altre schermate con elenchi una per una (statistiche, magazzino, movimenti, ordini ai fornitori, inventario) e dividere quelle che oggi mescolano, senza riscritture di massa: una schermata per volta, ognuna col suo test.
 
 **Dove**: `DESIGN.md (guardrail 8), tutte le schermate con elenchi`
-
-#### REQ-UI-033 — Il tema «Lime», scuro e chiaro, di Lime - SmartOrders, ed è quello di partenza dei locali nuovi
-
-Daniele, 15/11/2026: «dobbiamo fare il tema lime di Lime SmartOrders». Scelte sue, lo stesso giorno: tavolozza e forme (un tema vero dell'app, non solo colori), in due varianti, scura e chiara, e di partenza per la demo e per i locali che genera la regia, al posto di «Tana scuro». La Tana resta col suo. La demo che si mostra a un locale nuovo aveva i colori della Tana: rosa, oro e la notte del locale (UR-014).
-
-CRITERIO: i preset `lime-scuro` e `lime-chiaro` con la famiglia di forme `lime` reggono le soglie di contrasto di DESIGN.md; una build senza cliente o col cliente `tana` parte da `tana-scuro`, una con un altro cliente parte da `lime-scuro`; i temi del catalogo che descrivono i colori della Tana restano sui colori della Tana.
-
-**Dove**: `src/lib/themes.js (FORME.lime, lime-scuro, lime-chiaro, temaDiPartenza), src/lib/api.js (DEFAULT_SETTINGS), src/lib/venue.js, clienti/demo/venue.json, DESIGN.md` · **Serve**: [UR-014](#ur-014--la-demo-che-si-mostra-a-un-locale-nuovo-non-espone-niente-di-un-locale-vero)
 
 ### Come si lavora al progetto
 

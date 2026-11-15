@@ -15773,7 +15773,7 @@ requirements:
 
   - id: REQ-UI-033
     title: "Il tema «Lime», scuro e chiaro, di Lime - SmartOrders, ed è quello di partenza dei locali nuovi"
-    area: "src/lib/themes.js (FORME.lime, lime-scuro, lime-chiaro, temaDiPartenza), src/lib/api.js (DEFAULT_SETTINGS), src/lib/venue.js, clienti/demo/venue.json, DESIGN.md"
+    area: "src/lib/themes.js (FORME.lime, lime-scuro, lime-chiaro, temaDiPartenza), src/lib/api.js (DEFAULT_SETTINGS), src/components/ThemeSettings.jsx, src/index.css, src/lib/cookieConsent.js, src/components/GroupView.jsx, index.html, src/lib/venue.js, clienti/demo/venue.json, clienti/pluginCliente.js, scripts/genera-cliente.mjs, DESIGN.md"
     description: >
       Daniele, 15/11/2026: «dobbiamo fare il tema lime di Lime
       SmartOrders». Scelte sue, lo stesso giorno: tavolozza e forme (un
@@ -15787,11 +15787,29 @@ requirements:
       senza cliente o col cliente `tana` parte da `tana-scuro`, una con un
       altro cliente parte da `lime-scuro`; i temi del catalogo che
       descrivono i colori della Tana restano sui colori della Tana.
-    status: todo
+      COME È FATTO (15/11/2026): FORME.lime (tasti piatti, 14/10px, ombra
+      tenue, titoli nel sans tondo di sistema, il pallino sulle card) e i
+      preset lime-scuro/lime-chiaro in src/lib/themes.js; sul chiaro il lime
+      resta solo sul tasto (#84cc16), accento e link in verde oliva.
+      `temaDiPartenza(cliente)` sceglie dal cliente della build, e lo usano
+      DEFAULT_SETTINGS (theme_staff, theme_client), resolveThemeVars senza
+      preset e il selettore in Aspetto. DEFAULT_THEME resta tana-scuro: è
+      il tema di casa del catalogo. Il colore della barra del browser della
+      demo e dei locali generati (venue_theme_color) è il fondo di Lime
+      scuro. Tocca il vocabolario dei temi condiviso con la regia
+      (REQ-DEV-025): due id nuovi, da comunicarle.
+      Daniele, lo stesso giorno: «sia per vista cliente sia per il
+      gestionale». Le velature dorate scritte a mano nel foglio (24 punti:
+      tab, voce attiva, ricerca del menù, attesa del cliente, totale del
+      riepilogo) e il banner dei cookie prendono i token del tema; restano
+      fissi solo gli stati (pagato, sincronizzazione) e il riquadro Ceres.
+      Il theme-color della pagina d'ingresso viene da venue_theme_color.
+    status: implemented
     generate_issue: false
     labels: [ui, flotta]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/temaLime.test.js
 
   - id: REQ-PAG-013
     title: "Lo sconto cade sui prodotti che si stanno riscuotendo, e gli sconti si accumulano"

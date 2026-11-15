@@ -3,6 +3,8 @@
 // separato per gestionale (theme_staff) e vista cliente (theme_client).
 // I temi agiscono sulle variabili CSS di :root (index.css).
 
+import { CLIENTE } from './venue.js'
+
 // Campi personalizzabili: chiave CSS → etichetta mostrata nelle impostazioni.
 export const THEME_FIELDS = [
   { key: '--bg', label: 'Sfondo' },
@@ -75,6 +77,24 @@ export const FORME = {
     '--forma-titoli': 'inherit',
     // Pico è il look documento: una bandiera colorata larga mezza card
     // sarebbe la cosa più rumorosa della pagina.
+    '--segno-prodotto': 'pallino',
+  },
+  // Lime - SmartOrders (REQ-UI-033): il vestito del prodotto, per i locali
+  // che non hanno il loro. Pulito come uno strumento, non un locale: tasti
+  // a campitura piatta nel verde lime (il colore è il marchio, e un
+  // gradiente lo sporcherebbe come sporcava Catppuccin), angoli tondi ma
+  // non da pillola, ombre tenui, titoli in un sans tondo di sistema — niente
+  // carattere da scaricare, perché la demo si apre anche senza rete.
+  lime: {
+    '--raggio-card': '14px',
+    '--raggio-btn': '10px',
+    '--raggio-pill': '999px',
+    '--raggio-campo': '10px',
+    '--btn-bg': 'var(--btn)',
+    '--ombra-btn': 'none',
+    '--ombra-card': '0 2px 12px rgba(0, 0, 0, 0.18)',
+    '--forma-titoli': "ui-rounded, 'SF Pro Rounded', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+    // Tondo come una fetta di lime.
     '--segno-prodotto': 'pallino',
   },
 }
@@ -204,6 +224,42 @@ export const THEME_PRESETS = {
       '--muted': '#6f6353',
     },
   },
+  // LIME, IL TEMA DEL PRODOTTO (REQ-UI-033; Daniele, 15/11/2026). Lo scuro
+  // è quello di partenza dei locali nuovi e della demo: un nero appena
+  // verde a tre livelli e il lime come identità e azione insieme, come Pico
+  // fa col suo azzurro — un colore solo si riconosce di corsa.
+  'lime-scuro': {
+    forme: 'lime',
+    label: '🌿 Lime scuro',
+    vars: {
+      '--bg': '#0c110d',
+      '--bg-2': '#121a14',
+      '--card': '#18221a',
+      '--accent': '#a3e635',
+      '--accent-2': '#bef264',
+      '--btn': '#a3e635',
+      '--text': '#eef5e9',
+      '--muted': '#9aab95',
+    },
+  },
+  // Il chiaro: il lime come testo sul bianco non si legge (1,5:1), quindi
+  // accento e link scendono a un verde oliva profondo (4,9:1 e 6,2:1 sul
+  // fondo); il tasto resta lime, un tono più pieno perché sul chiaro si
+  // stacchi, con l'inchiostro scuro sopra.
+  'lime-chiaro': {
+    forme: 'lime',
+    label: '🍃 Lime chiaro',
+    vars: {
+      '--bg': '#eef2ea',
+      '--bg-2': '#f7f9f4',
+      '--card': '#ffffff',
+      '--accent': '#467510',
+      '--accent-2': '#3f6212',
+      '--btn': '#84cc16',
+      '--text': '#1b2616',
+      '--muted': '#5a6a52',
+    },
+  },
   // LE TAVOLOZZE CHE ARRIVANO CON UNO STILE (REQ-MENU-027). «Lavagna» e
   // «Meraviglie» si scelgono, dal marketplace, insieme ai loro colori; ma i
   // colori restano una tavolozza come le altre, e si cambiano (l'utente,
@@ -244,7 +300,17 @@ export const THEME_PRESETS = {
   },
 }
 
+// Il tema DI CASA: quello della Tana. Non è più per forza quello con cui
+// parte un locale (sotto): resta il riferimento dei temi del catalogo che
+// ne descrivono i colori («Classico»: notte scura, rosa e oro).
 export const DEFAULT_THEME = 'tana-scuro'
+
+// IL TEMA DI PARTENZA (REQ-UI-033). La Tana parte dal suo; la demo e i
+// locali che genera la regia da Lime, il tema del prodotto: la demo che si
+// mostra a un locale nuovo aveva il rosa e l'oro della Tana (UR-014). Si
+// decide dal cliente della build; senza cliente la build è la Tana.
+export const temaDiPartenza = (cliente = CLIENTE) => (!cliente || cliente === 'tana' ? DEFAULT_THEME : 'lime-scuro')
+export const TEMA_DI_PARTENZA = temaDiPartenza()
 
 function hexToRgba(hex, alpha) {
   const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim())
@@ -256,7 +322,7 @@ function hexToRgba(hex, alpha) {
 // Risolve un'impostazione tema { preset, custom } nelle variabili CSS finali:
 // parte dal preset (fallback al default) e applica gli override custom.
 export function resolveThemeVars(setting) {
-  const presetId = setting?.preset && THEME_PRESETS[setting.preset] ? setting.preset : DEFAULT_THEME
+  const presetId = setting?.preset && THEME_PRESETS[setting.preset] ? setting.preset : TEMA_DI_PARTENZA
   const base = THEME_PRESETS[presetId].vars
   const custom = setting?.custom && typeof setting.custom === 'object' ? setting.custom : {}
   // Le forme della famiglia stanno SOTTO ai colori del preset: un preset
@@ -299,6 +365,10 @@ export function applyTheme(vars) {
   // l'oro): su un tema con l'azione scura sarebbe nero su nero. Si decide
   // dal colore del tasto, non dal tema.
   root.style.setProperty('--btn-ink', isLightColor(btn) ? '#1c1305' : '#ffffff')
+  // Lo stesso sopra l'accento pieno (il segno «staff», il numero sulla
+  // campanella): era bianco fisso, e sul lime stava a 1,5:1 (dal revisore,
+  // REQ-UI-033). Sul rosa della Tana resta bianco.
+  root.style.setProperty('--accent-ink', isLightColor(vars['--accent']) ? '#1c1305' : '#ffffff')
   const a2 = vars['--accent-2']
   if (a2) {
     root.style.setProperty(

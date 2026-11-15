@@ -49,7 +49,8 @@ export const VENUE_NEUTRO = Object.freeze({
   venue_tax_code: '',
   venue_legal_address: '',
   venue_description: '',
-  venue_theme_color: '#0e0e15',
+  // Il fondo di «Lime scuro», il tema di partenza dei locali (REQ-UI-033).
+  venue_theme_color: '#0c110d',
   venue_socials: [],
 })
 

@@ -65,6 +65,11 @@
   --raggio-campo: 10px;
   --btn-bg: linear-gradient(135deg, var(--btn-1), var(--btn-2));
   --btn-ink: #1c1305;
+  /* L'inchiostro sopra l'accento pieno (il segno «staff», il numero sulla
+     campanella, l'avviso di aggiornamento): bianco sul rosa della Tana,
+     scuro su un accento chiaro come il lime, dove il bianco sta a 1,5:1.
+     Lo riscrive applyTheme dal colore dell'accento (REQ-UI-033). */
+  --accent-ink: #fff;
   --ombra-btn: 0 4px 14px color-mix(in srgb, var(--btn) 25%, transparent);
   --ombra-card: 0 4px 18px rgba(0, 0, 0, 0.25);
   --forma-titoli: 'Playfair Display', Georgia, 'Times New Roman', serif;
@@ -1560,7 +1565,7 @@ label {
   font-size: 0.9rem;
   cursor: pointer;
 }
-.section-tab:hover { border-color: rgba(245, 185, 74, 0.5); }
+.section-tab:hover { border-color: color-mix(in srgb, var(--btn) 50%, transparent); }
 .section-tab.active {
   background: var(--btn-bg);
   border-color: transparent;
@@ -1568,7 +1573,7 @@ label {
 }
 .section-panel {
   margin-bottom: 12px;
-  border-color: rgba(245, 185, 74, 0.45);
+  border-color: color-mix(in srgb, var(--btn) 45%, transparent);
 }
 @media (pointer: coarse) {
   .section-tab { padding: 12px 16px; font-size: 0.95rem; }
@@ -1695,7 +1700,7 @@ label {
   inset: 0;
   border-radius: var(--radius);
   padding: 1.5px;
-  background: linear-gradient(135deg, rgba(245, 185, 74, 0.8), rgba(245, 185, 74, 0.2));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--btn) 80%, transparent), color-mix(in srgb, var(--btn) 20%, transparent));
   opacity: 0.7;
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
@@ -1792,8 +1797,8 @@ a.order-mini {
   display: flex;
   text-decoration: none;
   color: inherit;
-  border-color: rgba(245, 185, 74, 0.45);
-  background: linear-gradient(135deg, var(--card), rgba(245, 185, 74, 0.08));
+  border-color: color-mix(in srgb, var(--btn) 45%, transparent);
+  background: linear-gradient(135deg, var(--card), color-mix(in srgb, var(--btn) 8%, transparent));
 }
 
 .order-mini .pill {
@@ -2097,7 +2102,7 @@ a.order-mini {
 .bar-nav-item.active {
   border-left-color: var(--accent-2);
   color: var(--accent-2);
-  background: rgba(245, 185, 74, 0.07);
+  background: color-mix(in srgb, var(--btn) 7%, transparent);
 }
 
 .bar-nav-sep {
@@ -2901,7 +2906,7 @@ body.fullbleed .bar-content {
 }
 .order-by.staff {
   background: var(--accent, #b47a3c);
-  color: #fff;
+  color: var(--accent-ink);
 }
 .order-by.client {
   background: rgba(150, 150, 150, 0.22);
@@ -3981,7 +3986,7 @@ body.bar-wide .app {
   top: -2px;
   right: -2px;
   background: var(--accent, #e52e71);
-  color: #fff;
+  color: var(--accent-ink);
   font-size: 0.6rem;
   font-weight: 700;
   min-width: 15px;
@@ -4113,7 +4118,7 @@ body.drawer-open .status-bell-float { display: none; }
 /* Lampo di conferma quando si aggiunge un item all'ordine: la riga toccata
    si illumina un istante, così si vede che è stata inserita. */
 @keyframes flash-added {
-  0% { background: rgba(245, 185, 74, 0.55); }
+  0% { background: color-mix(in srgb, var(--btn) 55%, transparent); }
   100% { background: transparent; }
 }
 .draft-line.flash-added {
@@ -4566,8 +4571,8 @@ body.drawer-open .status-bell-float { display: none; }
 
 /* Nota dell'ordine sulla card del bartender */
 .order-note {
-  background: rgba(245, 185, 74, 0.1);
-  border: 1px solid rgba(245, 185, 74, 0.3);
+  background: color-mix(in srgb, var(--btn) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--btn) 30%, transparent);
   border-radius: 10px;
   padding: 8px 12px;
   margin: 0 0 10px;
@@ -4577,7 +4582,7 @@ body.drawer-open .status-bell-float { display: none; }
 /* Tabellone "stiamo servendo / pronti al ritiro" */
 .serving-box {
   text-align: center;
-  border-color: rgba(245, 185, 74, 0.35);
+  border-color: color-mix(in srgb, var(--btn) 35%, transparent);
 }
 
 .serving-nums {
@@ -4605,7 +4610,7 @@ body.drawer-open .status-bell-float { display: none; }
 
 .menu-search:focus {
   outline: none;
-  border-color: rgba(245, 185, 74, 0.5);
+  border-color: color-mix(in srgb, var(--btn) 50%, transparent);
 }
 
 /* Riga tempo stimato nel menù */
@@ -4614,8 +4619,8 @@ body.drawer-open .status-bell-float { display: none; }
   padding: 8px 14px;
   font-size: 0.88rem;
   color: var(--accent-2);
-  background: rgba(245, 185, 74, 0.08);
-  border: 1px solid rgba(245, 185, 74, 0.25);
+  background: color-mix(in srgb, var(--btn) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--btn) 25%, transparent);
   border-radius: 12px;
   text-align: center;
 }
@@ -5113,7 +5118,7 @@ button.cat-chip {
   height: 56px;
   border-radius: 50%;
   margin-bottom: 8px;
-  box-shadow: 0 0 0 1.5px rgba(245, 185, 74, 0.55), 0 4px 14px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--btn) 55%, transparent), 0 4px 14px rgba(0, 0, 0, 0.45);
 }
 
 .summary-rows {
@@ -5139,7 +5144,7 @@ button.cat-chip {
   font-size: 1.25rem;
   font-weight: 800;
   color: var(--accent-2);
-  border-top: 2px solid rgba(245, 185, 74, 0.55);
+  border-top: 2px solid color-mix(in srgb, var(--btn) 55%, transparent);
   border-bottom: none;
   margin-top: 6px;
   padding-top: 14px;
@@ -5384,8 +5389,8 @@ button.cat-chip {
 }
 
 @keyframes pager-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 185, 74, 0.5); }
-  50% { box-shadow: 0 0 0 16px rgba(245, 185, 74, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--btn) 50%, transparent); }
+  50% { box-shadow: 0 0 0 16px color-mix(in srgb, var(--btn) 0%, transparent); }
 }
 
 @keyframes pager-shake {
@@ -5879,7 +5884,7 @@ body.fullbleed,
   text-align: left;
   min-height: 56px;
 }
-.group-tile:hover { border-color: rgba(245, 185, 74, 0.5); }
+.group-tile:hover { border-color: color-mix(in srgb, var(--btn) 50%, transparent); }
 .group-tile-ic { font-size: 1.1rem; }
 .group-tile-name {
   font-size: 0.82rem;
@@ -6519,7 +6524,7 @@ body.fullbleed,
 }
 .ore-cal-cell.has {
   cursor: pointer;
-  border-color: rgba(245, 185, 74, 0.5);
+  border-color: color-mix(in srgb, var(--btn) 50%, transparent);
 }
 .ore-cal-cell.out {
   opacity: 0.4;
@@ -6620,7 +6625,7 @@ body.fullbleed,
   border-radius: 999px;
   padding: 10px 18px;
   background: var(--accent, #b47a3c);
-  color: #fff;
+  color: var(--accent-ink);
   font-weight: 700;
   font-size: 0.9rem;
   cursor: pointer;
@@ -7404,7 +7409,7 @@ body.fullbleed .cat-rail {
 }
 .rend-riga.aperta td,
 .rend-riga.aperta .rowhead {
-  background: rgba(245, 185, 74, 0.12);
+  background: color-mix(in srgb, var(--btn) 12%, transparent);
 }
 .rend-caret {
   display: inline-block;
@@ -7521,7 +7526,7 @@ body.fullbleed .cat-rail {
 }
 .sconto-scelta.active {
   border-color: var(--accent-2, #f5b94a);
-  background: rgba(245, 185, 74, 0.12);
+  background: color-mix(in srgb, var(--btn) 12%, transparent);
 }
 .sconto-scelta span {
   line-height: 1.4;
@@ -8616,7 +8621,7 @@ body.pagina-piena .pagina-inventario .inv-scroll {
     margin: 0 0 4px;
     padding: 2px 0 4px;
     border-left: 3px solid var(--accent-2);
-    background: rgba(245, 185, 74, 0.06);
+    background: color-mix(in srgb, var(--btn) 6%, transparent);
   }
   body.drawer-agganciato .bar-sidebar.agganciata .bar-nav-sottovoce {
     padding: 0.36em 0.75em 0.36em 1.6em;
@@ -8722,7 +8727,7 @@ body.pagina-piena .pagina-inventario .inv-scroll {
   opacity: 0.62;
 }
 a.storico-notifica:hover {
-  background: rgba(245, 185, 74, 0.06);
+  background: color-mix(in srgb, var(--btn) 6%, transparent);
 }
 /* Le tre azioni di un prodotto in magazzino: modifica, duplica, elimina.
    In riga da tre stanno larghe uguali; sul telefono vanno a capo da se'
@@ -8847,7 +8852,7 @@ a.storico-notifica:hover {
 }
 .periodo-giorno.estremo {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
   border-radius: 8px;
   font-weight: 600;
 }

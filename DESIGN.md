@@ -19,7 +19,11 @@ Il preset di riferimento per il gestionale è **Catppuccin** — palette
 ufficiale — sopra la struttura a tre livelli di profondità che l'app già
 usa: **Mocha** per lo scuro, **Latte** per il chiaro, stessi ruoli e
 stessa gerarchia. Il preset storico `tana-scuro` resta disponibile e
-predefinito finché il locale non sceglie diversamente dalle impostazioni.
+predefinito **per la Tana** finché il locale non sceglie diversamente dalle
+impostazioni. La demo e i locali che genera la regia partono invece da
+**`lime-scuro`**, il tema del prodotto Lime - SmartOrders (REQ-UI-033): il
+tema di partenza si decide dal cliente della build (`temaDiPartenza` in
+`src/lib/themes.js`). Vedi «Lime, il tema del prodotto» più sotto.
 
 ## Palette (ruoli semantici)
 
@@ -91,9 +95,10 @@ da lontano: `--raggio-card`, `--raggio-btn`, `--raggio-pill`,
 | `tana` | 16/12px, pillole tonde | gradiente | alone sotto il tasto | serif Playfair |
 | `catppuccin` | 10/8px | campitura piatta | ombra tenue | come il testo |
 | `pico` | 4px ovunque | campitura piatta | nessuna | come il testo |
+| `lime` | 14/10px, pillole tonde | campitura piatta | ombra tenue | sans tondo di sistema (`ui-rounded`) |
 
 Il segno del colore sulle card (`--segno-prodotto`) è `nastro` per `tana`,
-`pastiglia` per `catppuccin`, `pallino` per `pico`. `applyTheme` lo scrive anche come
+`pastiglia` per `catppuccin`, `pallino` per `pico` e per `lime`. `applyTheme` lo scrive anche come
 `data-segno` sul documento, perché una variabile CSS non basta a scegliere
 fra due geometrie: serve un aggancio nel selettore.
 
@@ -114,6 +119,13 @@ Regole:
   dozzina di posti (il tab acceso, il «+», i tasti dei pannelli) e quelli
   ignoravano il tema: c'è un test in `tests/unit/css.test.js` che boccia
   `#f7c45e`, `#e8a32e` e `#1c1305` fuori dalla dichiarazione dei token.
+  Lo stesso per le **velature dorate** (`rgba(245, 185, 74, …)`: bordi al
+  passaggio, voce attiva, evidenze) e per il **banner dei cookie**: si
+  scrivono `color-mix(in srgb, var(--btn) N%, transparent)` e i token del
+  tema, così arrivano anche a Lime (REQ-UI-033). Restano fissi solo i colori
+  di stato e di marchio — la pill «pagato», il conto pagato, la campanella
+  che sincronizza, i raggi del riquadro Ceres — e lo controlla
+  `tests/unit/temaLime.test.js`.
 
 Oltre alla coppia Catppuccin esiste la coppia **Pico** (`pico-scuro` /
 `pico-chiaro`): la palette di Pico CSS v2 — ardesia blu, azzurro tecnico
@@ -121,6 +133,48 @@ Oltre alla coppia Catppuccin esiste la coppia **Pico** (`pico-scuro` /
 nostri token. Dei design system esterni si importano i **colori nei
 preset**, mai i fogli di stile: un CSS estraneo si sovrapporrebbe al
 nostro e i guardrail smetterebbero di valere.
+
+### Lime, il tema del prodotto
+
+La coppia **Lime** (`lime-scuro` / `lime-chiaro`, famiglia di forme `lime`)
+è il vestito di Lime - SmartOrders per i locali che non hanno il loro, e il
+tema di partenza della demo e dei locali nuovi (REQ-UI-033). La Tana non lo
+usa di partenza: la demo che si mostra a un locale nuovo non deve avere i
+colori di un locale vero (UR-014).
+
+| Variabile | Lime scuro | Lime chiaro |
+|---|---|---|
+| `--bg` | `#0c110d` | `#eef2ea` |
+| `--bg-2` | `#121a14` | `#f7f9f4` |
+| `--card` | `#18221a` | `#ffffff` |
+| `--accent` | `#a3e635` | `#467510` |
+| `--accent-2` | `#bef264` | `#3f6212` |
+| `--btn` | `#a3e635` | `#84cc16` |
+| `--text` | `#eef5e9` | `#1b2616` |
+| `--muted` | `#9aab95` | `#5a6a52` |
+
+Regole:
+
+- **Un colore solo, il lime**, per identità e azione, come Pico fa col suo
+  azzurro: si riconosce di corsa. I tasti sono campiture piatte, perché un
+  gradiente sporca il colore del marchio.
+- **Sul chiaro il lime non si scrive.** Come testo sul bianco sta a 1,5:1:
+  accento e link scendono a un verde oliva profondo (4,9:1 e 6,2:1 sul
+  fondo), il tasto resta lime, un tono più pieno, con `--btn-ink` scuro.
+- **Titoli senza caratteri da scaricare**: il sans tondo di sistema, perché
+  la demo si apre anche senza rete.
+- I temi del catalogo che descrivono i colori della Tana («Classico»,
+  «Notte», «Carte») restano su `tana-scuro` (`DEFAULT_THEME`, il tema di
+  casa) anche nelle build degli altri locali.
+
+Le soglie di contrasto le controlla `tests/unit/temaLime.test.js` su tutti
+e tre i livelli di fondo.
+
+**L'inchiostro sopra l'accento pieno è `--accent-ink`**, come `--btn-ink`
+per i tasti: `applyTheme` lo decide dal colore dell'accento, scuro sul lime
+e bianco sul rosa della Tana. Il segno «staff», il numero sulla campanella,
+l'avviso di aggiornamento e gli estremi del periodo avevano il bianco fisso,
+che sul lime stava a 1,5:1.
 
 Colori di stato (fissi, fuori tema): `--ok #2ecc71`, `--warn #f39c12`;
 gli stati degli ordini hanno le loro pill (ricevuto/in preparazione/
