@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 302 | fatto e coperto dai test |
+| ✅ | 303 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 9 | fatto a metà |
-| ⬜ | 28 | da fare |
+| ⬜ | 27 | da fare |
 | 🗑 | 8 | non più valido |
 
-**362 voci** in tutto. **326** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **28** sono lavori
+**362 voci** in tutto. **327** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **27** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **16** difetti noti sono ancora aperti.
 
@@ -64,7 +64,7 @@ come «vero oggi», non come «garantito».
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 15 | 3 |  |
 | [VENUE](#venue) | 6 | — |  |
-| [FLOTTA](#flotta) | 9 | 1 |  |
+| [FLOTTA](#flotta) | 10 | — |  |
 
 ### Le prove, livello per livello
 
@@ -4393,6 +4393,16 @@ COME È FATTO (15/11/2026): codiceDispositivo e il limite delle 24 ore (`drink:p
 
 **Dove**: `src/lib/presentazione.js, src/lib/api.js, src/App.jsx, docs/presentazione-alla-regia.md` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera) · **Lo dimostrano**: `tests/unit/usePresentazione.test.jsx`
 
+#### REQ-FLOTTA-032 — Il giro e2e dice alla regia quando le prove iniziano e finiscono
+
+Daniele, 15/11/2026: nel backoffice della regia `drinkpos-prova-e2e` deve risultare «Disattivata» quando gli e2e non girano. La regia ha aperto l'interfaccia 15 (drink-regia REQ-FLOTTA-114, contratto paragrafo 15, sul test dalla regia 0.5.0-beta.5): POST `istanzaDiProva` sulla regia di test, corpo { attiva: true } all'inizio del giro e { attiva: false } alla fine, anche se le prove falliscono. È solo uno stato della regia: spenta non cambia licenza né presentazione, e le prove funzionano uguale anche se la chiamata fallisce (finché il progetto non è segnato di prova risponde 403).
+
+CHI CHIAMA: l'account di deploy del progetto di prova (E2E_SERVICE_ACCOUNT, deploy@drinkpos-prova-e2e), con un gettone d'identità di Google, destinatario `regia-prova:drink-regia-test`, con email ed email_verified. Non un utente del locale: Daniele ha deciso che nessun utente di un locale può cambiare qualcosa nella regia (contratto, «La sicurezza delle interfacce», regia REQ-FLOTTA-115). La prima stesura coniava un utente `e2e-regia` e ne scambiava l'ID token con Identity Toolkit: scartata lo stesso giorno.
+
+COME È FATTO: il gettone lo dà google-auth-library (getIdTokenClient, fetchIdToken) dalla chiave che il giro ha già, ed è chiesto di nuovo a ogni chiamata, perché dura un'ora. Il passo di fine giro sta in `if: always()` PRIMA dello smontaggio. Lo script esce sempre con 0: un errore è un avviso nel log, mai un giro fermo. I due passi in e2e.yml col via libera di Daniele, lo stesso giorno («ok cambialo»): «La regia sa che le prove iniziano» dopo la chiave e prima del deploy, «… sono finite» in always() prima dello smontaggio e di «Via la chiave». La prova vera del gettone è il primo giro e2e, perché la chiave dell'account di deploy sta solo nei segreti.
+
+**Dove**: `scripts/lib-istanza-di-prova.js, scripts/istanza-di-prova.mjs, package.json (google-auth-library), .github/workflows/e2e.yml` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera) · **Lo dimostrano**: `tests/unit/istanzaDiProva.test.js`
+
 #### REQ-FLOTTA-021 — Le porte e gli adattatori: l'app parla con interfacce nostre, Firebase è un adattatore
 
 🟡 **Fatto a metà**: la descrizione dice anche cosa manca.
@@ -4800,20 +4810,6 @@ DECISO IL 02/11/2026: niente abbonamento sui temi («i temi in abbonamento non s
 RESTA DA FARE il primo stile a pagamento: «Compra» nell'app, pagamento una tantum, e la regia che scrive lo stile in `licenza.temi` dopo il pagamento.
 
 **Dove**: `drink-regia (catalogo, acquisto, licenza.temi), Impostazioni → Menù clienti («Altri stili»), docs/catalogo-temi.md`
-
-### FLOTTA
-
-#### REQ-FLOTTA-032 — Il giro e2e dice alla regia quando le prove iniziano e finiscono
-
-Daniele, 15/11/2026: nel backoffice della regia `drinkpos-prova-e2e` deve risultare «Disattivata» quando gli e2e non girano. La regia ha aperto l'interfaccia 15 (drink-regia REQ-FLOTTA-114, contratto paragrafo 15, sul test dalla regia 0.5.0-beta.5): POST `istanzaDiProva` sulla regia di test, corpo { attiva: true } all'inizio del giro e { attiva: false } alla fine, anche se le prove falliscono. È solo uno stato della regia: spenta non cambia licenza né presentazione, e le prove funzionano uguale anche se la chiamata fallisce (finché il progetto non è segnato di prova risponde 403).
-
-CHI CHIAMA: l'account di deploy del progetto di prova (E2E_SERVICE_ACCOUNT, deploy@drinkpos-prova-e2e), con un gettone d'identità di Google, destinatario `regia-prova:drink-regia-test`, con email ed email_verified. Non un utente del locale: Daniele ha deciso che nessun utente di un locale può cambiare qualcosa nella regia (contratto, «La sicurezza delle interfacce», regia REQ-FLOTTA-115). La prima stesura coniava un utente `e2e-regia` e ne scambiava l'ID token con Identity Toolkit: scartata lo stesso giorno.
-
-COME È FATTO: il gettone lo dà google-auth-library (getIdTokenClient, fetchIdToken) dalla chiave che il giro ha già, ed è chiesto di nuovo a ogni chiamata, perché dura un'ora. Il passo di fine giro sta in `if: always()` PRIMA dello smontaggio. Lo script esce sempre con 0: un errore è un avviso nel log, mai un giro fermo.
-
-MANCA (15/11/2026): i due passi in e2e.yml, che aspettano il via libera di Daniele (la CI non si tocca senza). Script, logica e test ci sono già; la prova vera del gettone è il primo giro e2e con i passi, perché la chiave dell'account di deploy sta solo nei segreti.
-
-**Dove**: `scripts/lib-istanza-di-prova.js, scripts/istanza-di-prova.mjs, package.json (google-auth-library), .github/workflows/e2e.yml` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera)
 
 ## L'architettura e le sue prove
 

@@ -74,6 +74,13 @@ jobs:
           fi
           echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/sa.json" >> "$GITHUB_ENV"
 
+      # Nel backoffice della regia il progetto di prova risulta attivo solo
+      # mentre il giro gira (REQ-FLOTTA-032, interfaccia 15): chiama
+      # l'account di deploy, con la chiave appena preparata. Non ferma mai
+      # niente: uno sbaglio qui è un avviso, e le prove vanno avanti.
+      - name: La regia sa che le prove iniziano
+        run: node scripts/istanza-di-prova.mjs --attiva true --project "$E2E_PROGETTO"
+
       # La configurazione web non si copia nei segreti: la si legge dal
       # progetto, così resta quella giusta anche se il Terraform la rifà.
       - name: Configurazione web del progetto di prova
@@ -137,6 +144,15 @@ jobs:
             rapporto-e2e/
             test-results/
           retention-days: 14
+
+      # Anche se le prove falliscono, e prima dello smontaggio e di «Via la
+      # chiave»: serve la chiave dell'account di deploy. Lo script chiede un
+      # gettone nuovo: quello dell'inizio, su un giro lungo, sarebbe scaduto.
+      - name: La regia sa che le prove sono finite
+        if: always()
+        run: |
+          [ -f "$RUNNER_TEMP/sa.json" ] || exit 0
+          node scripts/istanza-di-prova.mjs --attiva false --project "$E2E_PROGETTO"
 
       # SI SMONTA SEMPRE. Dati e utenze, il canale, le Functions: quello che
       # resta è il progetto vuoto, pronto per il giro dopo. Ogni passo va

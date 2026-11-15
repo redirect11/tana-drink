@@ -103,3 +103,36 @@ describe('lo stato del progetto di prova alla regia', () => {
     })
   })
 })
+
+// I due passi nel giro (e2e.yml): l'inizio dopo la chiave e prima del
+// deploy; la fine SEMPRE, anche con le prove rosse, e prima che la chiave
+// se ne vada e che l'ambiente si smonti.
+describe('i due passi in e2e.yml', () => {
+  const passi = async () => {
+    const { readFileSync } = await import('node:fs')
+    const yml = readFileSync('.github/workflows/e2e.yml', 'utf8')
+    return yml.split(/\r?\n(?=      - )/).map((p) => ({
+      nome: /- name: (.+)/.exec(p)?.[1]?.trim() ?? '',
+      testo: p,
+    }))
+  }
+  const indice = (elenco, nome) => elenco.findIndex((p) => p.nome === nome)
+
+  it('l\'inizio parte con la chiave pronta e prima del deploy', async () => {
+    const p = await passi()
+    const inizio = indice(p, 'La regia sa che le prove iniziano')
+    expect(inizio).toBeGreaterThan(indice(p, 'Credenziali e guardia'))
+    expect(inizio).toBeLessThan(indice(p, 'Regole, indici e Functions'))
+    expect(p[inizio].testo).toContain('istanza-di-prova.mjs --attiva true')
+  })
+
+  it('la fine c\'è sempre, prima dello smontaggio e prima di togliere la chiave', async () => {
+    const p = await passi()
+    const fine = indice(p, 'La regia sa che le prove sono finite')
+    expect(fine).toBeGreaterThan(indice(p, 'I casi d\'uso'))
+    expect(fine).toBeLessThan(indice(p, 'Smonta l\'ambiente'))
+    expect(fine).toBeLessThan(indice(p, 'Via la chiave'))
+    expect(p[fine].testo).toMatch(/if: always\(\)/)
+    expect(p[fine].testo).toContain('istanza-di-prova.mjs --attiva false')
+  })
+})

@@ -8210,11 +8210,12 @@ requirements:
       è chiesto di nuovo a ogni chiamata, perché dura un'ora. Il passo di
       fine giro sta in `if: always()` PRIMA dello smontaggio. Lo script
       esce sempre con 0: un errore è un avviso nel log, mai un giro fermo.
-      MANCA (15/11/2026): i due passi in e2e.yml, che aspettano il via
-      libera di Daniele (la CI non si tocca senza). Script, logica e test
-      ci sono già; la prova vera del gettone è il primo giro e2e con i
-      passi, perché la chiave dell'account di deploy sta solo nei segreti.
-    status: todo
+      I due passi in e2e.yml col via libera di Daniele, lo stesso giorno
+      («ok cambialo»): «La regia sa che le prove iniziano» dopo la chiave e
+      prima del deploy, «… sono finite» in always() prima dello smontaggio
+      e di «Via la chiave». La prova vera del gettone è il primo giro e2e,
+      perché la chiave dell'account di deploy sta solo nei segreti.
+    status: implemented
     generate_issue: false
     labels: [flotta, regia, ci]
     priority: P3
