@@ -4805,13 +4805,15 @@ RESTA DA FARE il primo stile a pagamento: «Compra» nell'app, pagamento una tan
 
 #### REQ-FLOTTA-032 — Il giro e2e dice alla regia quando le prove iniziano e finiscono
 
-Daniele, 15/11/2026: nel backoffice della regia `drinkpos-prova-e2e` deve risultare «Disattivata» quando gli e2e non girano. La regia ha aperto l'interfaccia 15 (drink-regia REQ-FLOTTA-114, PR #287, contratto paragrafo 15): POST `istanzaDiProva` sulla regia di test con l'ID token di un utente qualunque del progetto di prova, corpo { attiva: true } all'inizio del giro e { attiva: false } alla fine, anche se le prove falliscono. La regia controlla solo firma, aud, iss e scadenza del token, non ruoli, documenti o esistenza dell'utente. È solo uno stato della regia: spenta non cambia licenza né presentazione, e le prove funzionano uguale anche se la chiamata fallisce (finché il progetto non è segnato di prova risponde 403).
+Daniele, 15/11/2026: nel backoffice della regia `drinkpos-prova-e2e` deve risultare «Disattivata» quando gli e2e non girano. La regia ha aperto l'interfaccia 15 (drink-regia REQ-FLOTTA-114, contratto paragrafo 15, sul test dalla regia 0.5.0-beta.5): POST `istanzaDiProva` sulla regia di test, corpo { attiva: true } all'inizio del giro e { attiva: false } alla fine, anche se le prove falliscono. È solo uno stato della regia: spenta non cambia licenza né presentazione, e le prove funzionano uguale anche se la chiamata fallisce (finché il progetto non è segnato di prova risponde 403).
 
-COME È FATTO: un custom token per l'utente fisso `e2e-regia`, coniato con la chiave del service account del giro e scambiato con Identity Toolkit usando la chiave web del progetto. Le utenze dei casi d'uso non vanno bene: ogni test le semina da zero e lo smontaggio le cancella tutte. Lo scambio si rifà a ogni chiamata, perché il token dura un'ora. Il passo di fine giro sta in `if: always()` PRIMA dello smontaggio, che poi cancella anche `e2e-regia`. Lo script esce sempre con 0: un errore è un avviso nel log, mai un giro fermo.
+CHI CHIAMA: l'account di deploy del progetto di prova (E2E_SERVICE_ACCOUNT, deploy@drinkpos-prova-e2e), con un gettone d'identità di Google, destinatario `regia-prova:drink-regia-test`, con email ed email_verified. Non un utente del locale: Daniele ha deciso che nessun utente di un locale può cambiare qualcosa nella regia (contratto, «La sicurezza delle interfacce», regia REQ-FLOTTA-115). La prima stesura coniava un utente `e2e-regia` e ne scambiava l'ID token con Identity Toolkit: scartata lo stesso giorno.
 
-MANCA (15/11/2026): i due passi in e2e.yml, che aspettano il via libera di Daniele (la CI non si tocca senza). Script, logica e test ci sono già.
+COME È FATTO: il gettone lo dà google-auth-library (getIdTokenClient, fetchIdToken) dalla chiave che il giro ha già, ed è chiesto di nuovo a ogni chiamata, perché dura un'ora. Il passo di fine giro sta in `if: always()` PRIMA dello smontaggio. Lo script esce sempre con 0: un errore è un avviso nel log, mai un giro fermo.
 
-**Dove**: `scripts/lib-istanza-di-prova.js, scripts/istanza-di-prova.mjs, .github/workflows/e2e.yml` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera)
+MANCA (15/11/2026): i due passi in e2e.yml, che aspettano il via libera di Daniele (la CI non si tocca senza). Script, logica e test ci sono già; la prova vera del gettone è il primo giro e2e con i passi, perché la chiave dell'account di deploy sta solo nei segreti.
+
+**Dove**: `scripts/lib-istanza-di-prova.js, scripts/istanza-di-prova.mjs, package.json (google-auth-library), .github/workflows/e2e.yml` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera)
 
 ## L'architettura e le sue prove
 
