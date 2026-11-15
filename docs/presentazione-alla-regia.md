@@ -96,10 +96,17 @@ le scriverà la licenza come agli altri locali, prima di ogni suo
 cambiamento, e il passo nel deploy si toglierà. La presentazione resterà
 quello che è: la versione che gira davvero.
 
-## Da fare qui
+## Dove sta, qui
 
-- La chiamata, con i tempi qui sopra, e l'indirizzo costruito da
-  `VITE_REGIA_PROGETTO` con il controllo su `PROGETTI_REGIA`.
-- `VITE_REGIA_PROGETTO` nel `deploy.yml`.
-- I test: la chiamata parte una volta per versione, solo con una sessione,
-  e non parte senza variabile o con un progetto non ammesso.
+- La logica (quando presentarsi, il codice del dispositivo, l'esito):
+  `src/lib/presentazione.js`; la chiamata vera: `presentaAllaRegia` in
+  `src/lib/api.js`; l'apertura e il ritorno in primo piano:
+  `src/lib/usePresentazione.js`, usato da `App.jsx`.
+- `VITE_REGIA_PROGETTO` nel `deploy.yml`: `drink-regia` in produzione,
+  `drink-regia-test` sul test.
+- I test: `tests/unit/presentazione.test.js`,
+  `tests/unit/presentazioneChiamata.test.js`,
+  `tests/unit/usePresentazione.test.jsx`.
+- Le anteprime degli e2e (canali `<sito>--<canale>`) si presentano come le
+  altre: è la regia a riconoscerle dall'origine della richiesta e a non
+  contarle come versione installata. L'app non fa niente di diverso.
