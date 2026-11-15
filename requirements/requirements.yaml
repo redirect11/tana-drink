@@ -15771,6 +15771,28 @@ requirements:
       - tests/component/MenuManager.test.jsx
       - tests/sistema/aiutiCampi.spec.js
 
+  - id: REQ-UI-033
+    title: "Il tema «Lime», scuro e chiaro, di Lime - SmartOrders, ed è quello di partenza dei locali nuovi"
+    area: "src/lib/themes.js (FORME.lime, lime-scuro, lime-chiaro, temaDiPartenza), src/lib/api.js (DEFAULT_SETTINGS), src/lib/venue.js, clienti/demo/venue.json, DESIGN.md"
+    description: >
+      Daniele, 15/11/2026: «dobbiamo fare il tema lime di Lime
+      SmartOrders». Scelte sue, lo stesso giorno: tavolozza e forme (un
+      tema vero dell'app, non solo colori), in due varianti, scura e
+      chiara, e di partenza per la demo e per i locali che genera la
+      regia, al posto di «Tana scuro». La Tana resta col suo.
+      La demo che si mostra a un locale nuovo aveva i colori della Tana:
+      rosa, oro e la notte del locale (UR-014).
+      CRITERIO: i preset `lime-scuro` e `lime-chiaro` con la famiglia di
+      forme `lime` reggono le soglie di contrasto di DESIGN.md; una build
+      senza cliente o col cliente `tana` parte da `tana-scuro`, una con un
+      altro cliente parte da `lime-scuro`; i temi del catalogo che
+      descrivono i colori della Tana restano sui colori della Tana.
+    status: todo
+    generate_issue: false
+    labels: [ui, flotta]
+    priority: P2
+    test_cases: []
+
   - id: REQ-PAG-013
     title: "Lo sconto cade sui prodotti che si stanno riscuotendo, e gli sconti si accumulano"
     area: "src/lib/pagamento.js, src/components/PaymentScreen.jsx, src/lib/api.js, src/lib/printer.js, functions/lib/payment-core.js"

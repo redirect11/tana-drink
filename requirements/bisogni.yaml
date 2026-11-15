@@ -367,6 +367,7 @@ bisogni:
       scritto con «javascript:» non diventa un link.
     requisiti:
       - REQ-SIC-005
+      - REQ-UI-033
     test_cases: []
 
   - id: UR-015
