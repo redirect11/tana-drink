@@ -6795,8 +6795,9 @@ async function chiamaRegiaConEsito(url, dati, esito, etichetta) {
 // lib/presentazione.js; qui solo la chiamata. Non è un gesto della serata:
 // parte in sottofondo e nessuno la aspetta. Senza rete, o senza risposta,
 // torna un esito non riuscito e si riprova alla prossima apertura.
-export const presentaAllaRegia = (url, versione) =>
-  chiamaRegiaConEsito(url, { versione }, esitoPresentazione, 'presentazione')
+// `dispositivo` è il codice casuale del dispositivo (REQ-FLOTTA-031).
+export const presentaAllaRegia = (url, versione, dispositivo) =>
+  chiamaRegiaConEsito(url, dispositivo ? { versione, dispositivo } : { versione }, esitoPresentazione, 'presentazione')
 
 // IL MARKETPLACE DEI MODULI (REQ-LIC-012): prova, acquisto, disdetta di un
 // modulo, decisi dal titolare. Come la scelta sugli aggiornamenti, qui

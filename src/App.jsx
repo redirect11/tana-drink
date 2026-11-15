@@ -25,7 +25,7 @@ import {
   saveStaffToken,
   presentaAllaRegia,
 } from './lib/api.js'
-import { presentaSeServe } from './lib/presentazione.js'
+import { usePresentazione } from './lib/usePresentazione.js'
 import { precaricaMenu } from './lib/menuCache.js'
 import { getPushToken } from './lib/push.js'
 import { idDispositivo } from './lib/dispositivo.js'
@@ -417,20 +417,18 @@ export default function App() {
   )
   // Sospesa o chiusa dalla regia (REQ-FLOTTA-008): si ferma e lo dice.
   const bloccata = installazioneBloccata(settings)
-  // L'APP SI PRESENTA ALLA REGIA (REQ-FLOTTA-026): una volta per versione,
-  // dopo l'accesso, e di nuovo se la licenza manca e qualcuno è ancora
-  // collegato (la regia la riscrive). Non è l'attivazione: la licenza c'è
-  // prima dell'app. In sottofondo: nessuno la aspetta, e un errore si
-  // riprova alla prossima apertura.
+  // L'APP SI PRESENTA ALLA REGIA (REQ-FLOTTA-026, REQ-FLOTTA-031): dopo
+  // l'accesso, al più una volta al giorno per dispositivo, e di nuovo se la
+  // licenza manca e qualcuno è ancora collegato (la regia la riscrive). Non
+  // è l'attivazione: la licenza c'è prima dell'app. Il quando sta in
+  // usePresentazione.
   const nonAttivata = statoLicenza(settings) === STATI_LICENZA.NON_ATTIVATA
-  useEffect(() => {
-    presentaSeServe({
-      versione: VERSIONE,
-      collegato: Boolean(uidCollegato),
-      licenzaMancante: nonAttivata,
-      chiama: presentaAllaRegia,
-    })
-  }, [uidCollegato, nonAttivata])
+  usePresentazione({
+    versione: VERSIONE,
+    collegato: Boolean(uidCollegato),
+    licenzaMancante: nonAttivata,
+    chiama: presentaAllaRegia,
+  })
   // Il menù digitale è un modulo (REQ-LIC-002), e le sue due pagine (/menu e
   // /menu/special) lo seguono insieme: senza, la stessa pagina che lo dice.
   const menuDigitale = menuDigitaleAttivo(settings)

@@ -8148,6 +8148,42 @@ requirements:
       - tests/unit/presentazioneChiamata.test.js
       - tests/component/InstallazioneSospesa.test.jsx
 
+  - id: REQ-FLOTTA-031
+    title: "La presentazione alla regia dice anche quale dispositivo si presenta, e si ripete una volta al giorno"
+    area: "src/lib/presentazione.js, src/lib/api.js, src/App.jsx, docs/presentazione-alla-regia.md"
+    description: >
+      Il 14/11/2026 la Tana di test si è presentata due volte in pochi
+      decimi di secondo: un dispositivo con la 1.10.49-beta e uno rimasto
+      alla 1.10.40-beta. La regia tiene l'ultima presentazione, e la
+      scheda è tornata indietro di dieci versioni. Daniele, 15/11/2026:
+      «tenere una versione per dispositivo». La regia lo ha confermato lo
+      stesso giorno (drink-regia REQ-FLOTTA-112, contratto, interfaccia 4).
+      Il corpo della presentazione diventa { versione, dispositivo }:
+      `dispositivo` è un codice casuale di 16 byte in base64url senza
+      padding (22 caratteri, ^[A-Za-z0-9_-]{22}$), creato al primo avvio
+      e tenuto in memoria locale (`drink:codice_regia`). Non contiene
+      niente dell'utente né del locale (REQ-FLOTTA-051 della regia).
+      La correzione chiesta dalla regia: un tablet che resta su una
+      versione e si usa ogni giorno non si ripresentava mai, e con la
+      scadenza di 30 giorni della regia uscirebbe dal conto mentre chiama
+      ancora le interfacce vecchie. Quindi l'app si ripresenta anche a
+      versione invariata, al massimo una volta ogni 24 ore: all'apertura
+      e quando torna in primo piano (un tablet del banco resta aperto per
+      giorni senza essere ricaricato). La regia segna un dispositivo al
+      più ogni 6 ore. È un cambio compatibile: la regia ignora un codice
+      di forma diversa, e le app fino alla 1.10.50 contano come un
+      dispositivo solo, `senza_codice`.
+      COME È FATTO (15/11/2026): codiceDispositivo e il limite delle 24
+      ore (`drink:presentata_il`) in src/lib/presentazione.js; il quando in
+      src/lib/usePresentazione.js (all'apertura e su visibilitychange);
+      presentaAllaRegia in api.js mette `dispositivo` nel corpo.
+    status: implemented
+    generate_issue: false
+    labels: [flotta, regia]
+    priority: P2
+    test_cases:
+      - tests/unit/usePresentazione.test.jsx
+
   - id: REQ-FLOTTA-021
     title: "Le porte e gli adattatori: l'app parla con interfacce nostre, Firebase è un adattatore"
     area: "src/porte/configurazione.js, src/porte/dati.js, src/adattatori/firebase/, src/lib/firebaseClient.js, src/lib/api.js, src/lib/storage.js, src/lib/push.js, public/sw.js, functions/index.js, functions/lib/, docs/porte-e-adattatori.md"
@@ -17077,7 +17113,7 @@ requirements:
 
   - id: REQ-DEV-024
     title: "Le dipendenze con un avviso di sicurezza si aggiornano nella release, provate, non dritte su main"
-    area: "functions/package.json, functions/package-lock.json, package.json; tests/unit/dipendenzeFunctions.test.js"
+    area: "functions/package.json, functions/package-lock.json, package.json (overrides), package-lock.json; tests/unit/dipendenzeFunctions.test.js"
     description: >
       13/11/2026, a 1.10.42 appena su main. Dependabot apre le sue pull
       request verso `main` (nel repository non c'è una configurazione che
@@ -17095,8 +17131,18 @@ requirements:
       quel Node, mentre CI e Google usano l'ultima 22. La prova del
       caricamento vero è il deploy sul test. Quando `main` ha la 14,
       Dependabot chiude da sé la sua pull request.
+      15/11/2026, la radice (1.10.51-beta): tre avvisi sul package-lock
+      principale, `@grpc/grpc-js` < 1.13.6 (alto e basso) dal Firestore del
+      browser, che lo tiene a ~1.9 anche nelle versioni nuove di `firebase`,
+      e `uuid` < 11.1.1 sotto `firebase-admin` 13 degli script. La radice
+      non passa a `firebase-admin` 14: toglie l'API `admin.firestore()` che
+      seed.js e gli script mock-* usano ancora. Le due versioni si forzano
+      con gli `overrides` di package.json; la prova vera di grpc-js 1.14
+      sotto il Firestore è la suite di sistema, che gira sugli emulatori.
       CRITERIO: il Node delle Functions basta a `firebase-admin`, e `uuid`
-      non torna fra le loro dipendenze (tests/unit/dipendenzeFunctions.test.js).
+      non torna fra le loro dipendenze; nella radice `@grpc/grpc-js` e
+      `uuid` stanno sopra le versioni degli avvisi
+      (tests/unit/dipendenzeFunctions.test.js).
     status: implemented
     generate_issue: false
     labels: [dev, sicurezza, functions]

@@ -284,6 +284,7 @@ bisogni:
       - REQ-DEV-023
       - REQ-DEV-024
       - REQ-DEV-025
+      - REQ-FLOTTA-031
     test_cases: []
 
   - id: UR-012

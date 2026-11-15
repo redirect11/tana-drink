@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 14 novembre 2026.
+> Generato il 15 novembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 300 | fatto e coperto dai test |
+| ✅ | 301 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 9 | fatto a metà |
 | ⬜ | 27 | da fare |
 | 🗑 | 8 | non più valido |
 
-**359 voci** in tutto. **324** descrivono il sistema com'è oggi e
+**360 voci** in tutto. **325** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **27** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **16** difetti noti sono ancora aperti.
@@ -64,7 +64,7 @@ come «vero oggi», non come «garantito».
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 15 | 3 |  |
 | [VENUE](#venue) | 6 | — |  |
-| [FLOTTA](#flotta) | 8 | — |  |
+| [FLOTTA](#flotta) | 9 | — |  |
 
 ### Le prove, livello per livello
 
@@ -76,10 +76,10 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 11 |
 | Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 184 |
-| Unità | il progetto di dettaglio: un modulo da solo | 184 |
+| Unità | il progetto di dettaglio: un modulo da solo | 185 |
 
 **18** bisogni del locale, **0** con un test di accettazione.
-**111** requisiti su 351 sono collegati a un bisogno;
+**112** requisiti su 352 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -175,7 +175,7 @@ Ogni versione nuova va sul tablet del banco la sera stessa. Una correzione non d
 
 **Come si accetta**: Prima di ogni merge in develop la richiesta ha la sua V completa: il bisogno, il requisito, e i test di ogni livello che la riguardano, verdi in CI. Una richiesta senza bisogno o senza prove non passa il cancello.
 
-**Chi**: Gestore · **Lo realizzano**: [REQ-DEV-001](#req-dev-001--i-requisiti-restano-attaccati-ai-test), [REQ-DEV-002](#req-dev-002--si-sa-sempre-quale-versione-si-sta-guardando), [REQ-DEV-004](#req-dev-004--il-cancello-di-qualità-prima-del-merge-in-develop), [REQ-DEV-005](#req-dev-005--alzare-il-cricchetto-della-coverage-e-standard-di-complessità-nel-lint), [REQ-DEV-012](#req-dev-012--docssystemspecificationsmd-e-la-specifica-di-sistema-e-si-genera), [REQ-DEV-017](#req-dev-017--la-matrice-dei-moduli-ogni-modulo-premium-provato-da-solo-in-coppia-con-ogni-altro-tutti-e-nessuno), [REQ-DEV-018](#req-dev-018--il-modello-a-v-ogni-richiesta-scende-dal-bisogno-del-locale-al-codice-e-risale-coi-test-di-ogni-livello), [REQ-DEV-019](#req-dev-019--la-specifica-del-prodotto-per-casi-duso-e-ogni-caso-duso-provato-end-to-end-come-lo-farebbe-il-cliente), [REQ-DEV-020](#req-dev-020--la-squadra-di-stonebit-una-sezione-in-claudemd-agentsmd-e-i-sub-agenti-ruoli-superati-da-req-dev-022), [REQ-DEV-021](#req-dev-021--la-sezione-stonebit-e-gli-agenti-corretti-dove-contraddicono-il-repo-valgono-le-regole-del-repo-e-il-processo-è-storia-revisore-squadra-solo-per-i-lavori-grossi), [REQ-DEV-022](#req-dev-022--i-ruoli-la-sessione-sul-repo-è-il-tech-lead-e-lavora-come-sempre-il-pm-è-un-controllo-sui-requisiti-e-lagente-tech-lead-si-toglie), [REQ-DEV-023](#req-dev-023--il-merge-in-develop-aspetta-anche-le-regole-firestore-e-i-test-di-sistema-il-revisore-si-chiama-quando-serve), [REQ-DEV-024](#req-dev-024--le-dipendenze-con-un-avviso-di-sicurezza-si-aggiornano-nella-release-provate-non-dritte-su-main), [REQ-DEV-025](#req-dev-025--i-valori-che-stanno-anche-nella-regia-restano-uguali-nei-due-repository) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Gestore · **Lo realizzano**: [REQ-DEV-001](#req-dev-001--i-requisiti-restano-attaccati-ai-test), [REQ-DEV-002](#req-dev-002--si-sa-sempre-quale-versione-si-sta-guardando), [REQ-DEV-004](#req-dev-004--il-cancello-di-qualità-prima-del-merge-in-develop), [REQ-DEV-005](#req-dev-005--alzare-il-cricchetto-della-coverage-e-standard-di-complessità-nel-lint), [REQ-DEV-012](#req-dev-012--docssystemspecificationsmd-e-la-specifica-di-sistema-e-si-genera), [REQ-DEV-017](#req-dev-017--la-matrice-dei-moduli-ogni-modulo-premium-provato-da-solo-in-coppia-con-ogni-altro-tutti-e-nessuno), [REQ-DEV-018](#req-dev-018--il-modello-a-v-ogni-richiesta-scende-dal-bisogno-del-locale-al-codice-e-risale-coi-test-di-ogni-livello), [REQ-DEV-019](#req-dev-019--la-specifica-del-prodotto-per-casi-duso-e-ogni-caso-duso-provato-end-to-end-come-lo-farebbe-il-cliente), [REQ-DEV-020](#req-dev-020--la-squadra-di-stonebit-una-sezione-in-claudemd-agentsmd-e-i-sub-agenti-ruoli-superati-da-req-dev-022), [REQ-DEV-021](#req-dev-021--la-sezione-stonebit-e-gli-agenti-corretti-dove-contraddicono-il-repo-valgono-le-regole-del-repo-e-il-processo-è-storia-revisore-squadra-solo-per-i-lavori-grossi), [REQ-DEV-022](#req-dev-022--i-ruoli-la-sessione-sul-repo-è-il-tech-lead-e-lavora-come-sempre-il-pm-è-un-controllo-sui-requisiti-e-lagente-tech-lead-si-toglie), [REQ-DEV-023](#req-dev-023--il-merge-in-develop-aspetta-anche-le-regole-firestore-e-i-test-di-sistema-il-revisore-si-chiama-quando-serve), [REQ-DEV-024](#req-dev-024--le-dipendenze-con-un-avviso-di-sicurezza-si-aggiornano-nella-release-provate-non-dritte-su-main), [REQ-DEV-025](#req-dev-025--i-valori-che-stanno-anche-nella-regia-restano-uguali-nei-due-repository), [REQ-FLOTTA-031](#req-flotta-031--la-presentazione-alla-regia-dice-anche-quale-dispositivo-si-presenta-e-si-ripete-una-volta-al-giorno) · ⚠️ **Nessun test di accettazione, ancora.**
 
 #### UR-012 — Su un conto si vede chi ha battuto cosa
 
@@ -3931,11 +3931,11 @@ CRITERIO DI ACCETTAZIONE: su GitHub una pull request verso `develop` non si può
 
 13/11/2026, a 1.10.42 appena su main. Dependabot apre le sue pull request verso `main` (nel repository non c'è una configurazione che gli dica altro): una per `firebase-admin` 14 nelle Functions, che chiude un avviso di sicurezza moderato su `uuid`, già in conflitto e con un salto di versione maggiore nel codice che gira sul server. Daniele: si riporta tutto nella release, si prova, si fa una versione nuova e si rilascia quella. Lo stesso era successo con happy-dom 21 e fast-xml-parser 5.12, uniti su main prima del rilascio della 1.10.42 e riportati nella release con la suite intera verde.
 
-FATTO (1.10.43-beta): `firebase-admin` ^14.5.1 nelle Functions; `uuid` non c'è più. La 14 vuole Node 22, che è il runtime delle Functions; e si porta dietro `jose`, solo modulo ES, che `require` carica da Node 22.12 in su: in locale le Functions (e l'emulatore) vogliono almeno quel Node, mentre CI e Google usano l'ultima 22. La prova del caricamento vero è il deploy sul test. Quando `main` ha la 14, Dependabot chiude da sé la sua pull request.
+FATTO (1.10.43-beta): `firebase-admin` ^14.5.1 nelle Functions; `uuid` non c'è più. La 14 vuole Node 22, che è il runtime delle Functions; e si porta dietro `jose`, solo modulo ES, che `require` carica da Node 22.12 in su: in locale le Functions (e l'emulatore) vogliono almeno quel Node, mentre CI e Google usano l'ultima 22. La prova del caricamento vero è il deploy sul test. Quando `main` ha la 14, Dependabot chiude da sé la sua pull request. 15/11/2026, la radice (1.10.51-beta): tre avvisi sul package-lock principale, `@grpc/grpc-js` < 1.13.6 (alto e basso) dal Firestore del browser, che lo tiene a ~1.9 anche nelle versioni nuove di `firebase`, e `uuid` < 11.1.1 sotto `firebase-admin` 13 degli script. La radice non passa a `firebase-admin` 14: toglie l'API `admin.firestore()` che seed.js e gli script mock-* usano ancora. Le due versioni si forzano con gli `overrides` di package.json; la prova vera di grpc-js 1.14 sotto il Firestore è la suite di sistema, che gira sugli emulatori.
 
-CRITERIO: il Node delle Functions basta a `firebase-admin`, e `uuid` non torna fra le loro dipendenze (tests/unit/dipendenzeFunctions.test.js).
+CRITERIO: il Node delle Functions basta a `firebase-admin`, e `uuid` non torna fra le loro dipendenze; nella radice `@grpc/grpc-js` e `uuid` stanno sopra le versioni degli avvisi (tests/unit/dipendenzeFunctions.test.js).
 
-**Dove**: `functions/package.json, functions/package-lock.json, package.json; tests/unit/dipendenzeFunctions.test.js` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera) · **Lo dimostrano**: `tests/unit/dipendenzeFunctions.test.js`
+**Dove**: `functions/package.json, functions/package-lock.json, package.json (overrides), package-lock.json; tests/unit/dipendenzeFunctions.test.js` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera) · **Lo dimostrano**: `tests/unit/dipendenzeFunctions.test.js`
 
 ### STAT
 
@@ -4374,6 +4374,14 @@ COME È FATTO (02/11/2026): src/lib/presentazione.js decide QUANDO (presentaSeSe
 DA SAPERE: l'app non fa accessi anonimi, quindi la chiamata parte solo con qualcuno collegato. Su un'installazione nuova, senza licenza e senza nessuno collegato, la schermata «non attivata» copre anche l'accesso: lì la licenza deve già esserci (la regia la scrive all'attivazione, prima dell'app).
 
 **Dove**: `src/lib/ (la chiamata), la schermata «Installazione non attivata», .github/workflows/deploy.yml (VITE_REGIA_PROGETTO), docs/presentazione-alla-regia.md` · **Lo dimostrano**: `tests/unit/presentazione.test.js`, `tests/unit/presentazioneChiamata.test.js`, `tests/component/InstallazioneSospesa.test.jsx`
+
+#### REQ-FLOTTA-031 — La presentazione alla regia dice anche quale dispositivo si presenta, e si ripete una volta al giorno
+
+Il 14/11/2026 la Tana di test si è presentata due volte in pochi decimi di secondo: un dispositivo con la 1.10.49-beta e uno rimasto alla 1.10.40-beta. La regia tiene l'ultima presentazione, e la scheda è tornata indietro di dieci versioni. Daniele, 15/11/2026: «tenere una versione per dispositivo». La regia lo ha confermato lo stesso giorno (drink-regia REQ-FLOTTA-112, contratto, interfaccia 4). Il corpo della presentazione diventa { versione, dispositivo }: `dispositivo` è un codice casuale di 16 byte in base64url senza padding (22 caratteri, ^[A-Za-z0-9_-]{22}$), creato al primo avvio e tenuto in memoria locale (`drink:codice_regia`). Non contiene niente dell'utente né del locale (REQ-FLOTTA-051 della regia). La correzione chiesta dalla regia: un tablet che resta su una versione e si usa ogni giorno non si ripresentava mai, e con la scadenza di 30 giorni della regia uscirebbe dal conto mentre chiama ancora le interfacce vecchie. Quindi l'app si ripresenta anche a versione invariata, al massimo una volta ogni 24 ore: all'apertura e quando torna in primo piano (un tablet del banco resta aperto per giorni senza essere ricaricato). La regia segna un dispositivo al più ogni 6 ore. È un cambio compatibile: la regia ignora un codice di forma diversa, e le app fino alla 1.10.50 contano come un dispositivo solo, `senza_codice`.
+
+COME È FATTO (15/11/2026): codiceDispositivo e il limite delle 24 ore (`drink:presentata_il`) in src/lib/presentazione.js; il quando in src/lib/usePresentazione.js (all'apertura e su visibilitychange); presentaAllaRegia in api.js mette `dispositivo` nel corpo.
+
+**Dove**: `src/lib/presentazione.js, src/lib/api.js, src/App.jsx, docs/presentazione-alla-regia.md` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera) · **Lo dimostrano**: `tests/unit/usePresentazione.test.jsx`
 
 #### REQ-FLOTTA-021 — Le porte e gli adattatori: l'app parla con interfacce nostre, Firebase è un adattatore
 

@@ -1,6 +1,20 @@
 # Cosa è cambiato
 
-## 1.10.50-beta — in lavorazione
+## 1.10.51-beta — in lavorazione
+
+### Con la regia
+
+- Ogni dispositivo si presenta alla regia col suo codice, al più una volta
+  al giorno: la scheda del locale mostra la versione di ogni dispositivo, e
+  un tablet rimasto indietro non viene più coperto da quelli aggiornati
+  (REQ-FLOTTA-031).
+
+### Sicurezza
+
+- Chiusi tre avvisi di sicurezza su due dipendenze, `@grpc/grpc-js` e
+  `uuid` (REQ-DEV-024). Nessun cambiamento visibile.
+
+## 1.10.50-beta — 14/11/2026 (test)
 
 ### Il menù dei clienti
 

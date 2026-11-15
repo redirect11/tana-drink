@@ -68,6 +68,18 @@ describe('presentaAllaRegia', () => {
     expect(JSON.parse(opzioni.body)).toEqual({ versione: 'v1.10.4' })
   })
 
+  // REQ-FLOTTA-031: il codice del dispositivo va nel corpo, accanto alla
+  // versione. Senza codice il corpo resta quello di prima.
+  it('manda il codice del dispositivo, quando c\'è', async () => {
+    const fetch = vi.fn(() => Promise.resolve({ status: 200, json: () => Promise.resolve({ ok: true }) }))
+    vi.stubGlobal('fetch', fetch)
+    await presentaAllaRegia(URL_REGIA, '1.10.51-beta', 'AbCdEfGhIjKlMnOpQrStUv')
+    expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({
+      versione: '1.10.51-beta',
+      dispositivo: 'AbCdEfGhIjKlMnOpQrStUv',
+    })
+  })
+
   it('senza accesso non chiama', async () => {
     st.token = null
     const fetch = vi.fn()
