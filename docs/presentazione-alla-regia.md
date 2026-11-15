@@ -30,8 +30,19 @@ POST https://europe-west1-<VITE_REGIA_PROGETTO>.cloudfunctions.net/presentazione
 Authorization: Bearer <ID token dell'utente che ha fatto l'accesso>
 Content-Type: application/json
 
-{ "versione": "v1.10.4" }
+{ "versione": "v1.10.4", "dispositivo": "AbCdEfGhIjKlMnOpQrStUv" }
 ```
+
+- **Il dispositivo** (dalla 1.10.51, REQ-FLOTTA-031; regia REQ-FLOTTA-112):
+  un codice casuale di 16 byte in base64url senza padding, 22 caratteri
+  (`^[A-Za-z0-9_-]{22}$`), creato al primo avvio e tenuto in
+  `localStorage` (`drink:dispositivo`). Non contiene niente dell'utente né
+  del locale; se la memoria del browser si svuota, ne nasce uno nuovo. Con
+  questo la regia tiene una versione per dispositivo: `presentazione.versione`
+  è la più alta fra i dispositivi attivi, `presentazione.minima` la più
+  bassa, ed è quella che decide quando si può togliere un'interfaccia
+  deprecata. Le app fino alla 1.10.50 non lo mandano, e la regia le conta
+  come un dispositivo solo (`senza_codice`).
 
 - **Il token**: quello che Firebase dà all'app nel progetto del locale,
   come per la scelta degli aggiornamenti (`sceltaDallApp`). Va bene un
@@ -61,10 +72,16 @@ Risposte:
 
 Mai a tempo (l'utente: «ste cose in polling si portavano negli anni 90»).
 
-- **Una volta per versione**, dopo l'accesso: se la versione dell'app è
-  diversa dall'ultima presentata da questo dispositivo (basta
-  `localStorage`, con try/catch). Dieci tablet fanno dieci chiamate alla
-  prima apertura: la regia ne registra una.
+- **Al più una volta al giorno per dispositivo**, dopo l'accesso, anche a
+  versione invariata (dalla 1.10.51, REQ-FLOTTA-031): all'apertura e quando
+  l'app torna in primo piano, se questo dispositivo non ha presentato questa
+  versione nelle ultime 24 ore (`drink:presentata` e `drink:presentata_il`
+  in `localStorage`). Prima era una volta per versione, ma la regia dimentica
+  un dispositivo che non si presenta da 30 giorni: un tablet rimasto su una
+  versione vecchia e usato ogni sera sarebbe uscito dal conto mentre
+  chiamava ancora le interfacce vecchie. Il primo piano conta perché il
+  tablet del banco resta aperto per giorni senza essere ricaricato. La
+  regia scrive al più ogni 6 ore per dispositivo.
 - **Solo con qualcuno collegato**: senza sessione non si chiama (niente
   accessi anonimi). Nessun tasto «Riprova» nella schermata «non attivata».
 - Un errore di rete non blocca niente: si riprova alla prossima apertura.

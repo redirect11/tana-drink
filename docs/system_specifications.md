@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 300 | fatto e coperto dai test |
+| ✅ | 301 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 9 | fatto a metà |
-| ⬜ | 28 | da fare |
+| ⬜ | 27 | da fare |
 | 🗑 | 8 | non più valido |
 
-**360 voci** in tutto. **324** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **28** sono lavori
+**360 voci** in tutto. **325** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **27** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **16** difetti noti sono ancora aperti.
 
@@ -64,7 +64,7 @@ come «vero oggi», non come «garantito».
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 15 | 3 |  |
 | [VENUE](#venue) | 6 | — |  |
-| [FLOTTA](#flotta) | 8 | 1 |  |
+| [FLOTTA](#flotta) | 9 | — |  |
 
 ### Le prove, livello per livello
 
@@ -76,7 +76,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 11 |
 | Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 184 |
-| Unità | il progetto di dettaglio: un modulo da solo | 184 |
+| Unità | il progetto di dettaglio: un modulo da solo | 185 |
 
 **18** bisogni del locale, **0** con un test di accettazione.
 **112** requisiti su 352 sono collegati a un bisogno;
@@ -4375,6 +4375,14 @@ DA SAPERE: l'app non fa accessi anonimi, quindi la chiamata parte solo con qualc
 
 **Dove**: `src/lib/ (la chiamata), la schermata «Installazione non attivata», .github/workflows/deploy.yml (VITE_REGIA_PROGETTO), docs/presentazione-alla-regia.md` · **Lo dimostrano**: `tests/unit/presentazione.test.js`, `tests/unit/presentazioneChiamata.test.js`, `tests/component/InstallazioneSospesa.test.jsx`
 
+#### REQ-FLOTTA-031 — La presentazione alla regia dice anche quale dispositivo si presenta, e si ripete una volta al giorno
+
+Il 14/11/2026 la Tana di test si è presentata due volte in pochi decimi di secondo: un dispositivo con la 1.10.49-beta e uno rimasto alla 1.10.40-beta. La regia tiene l'ultima presentazione, e la scheda è tornata indietro di dieci versioni. Daniele, 15/11/2026: «tenere una versione per dispositivo». La regia lo ha confermato lo stesso giorno (drink-regia REQ-FLOTTA-112, contratto, interfaccia 4). Il corpo della presentazione diventa { versione, dispositivo }: `dispositivo` è un codice casuale di 16 byte in base64url senza padding (22 caratteri, ^[A-Za-z0-9_-]{22}$), creato al primo avvio e tenuto in memoria locale (`drink:dispositivo`). Non contiene niente dell'utente né del locale (REQ-FLOTTA-051 della regia). La correzione chiesta dalla regia: un tablet che resta su una versione e si usa ogni giorno non si ripresentava mai, e con la scadenza di 30 giorni della regia uscirebbe dal conto mentre chiama ancora le interfacce vecchie. Quindi l'app si ripresenta anche a versione invariata, al massimo una volta ogni 24 ore: all'apertura e quando torna in primo piano (un tablet del banco resta aperto per giorni senza essere ricaricato). La regia segna un dispositivo al più ogni 6 ore. È un cambio compatibile: la regia ignora un codice di forma diversa, e le app fino alla 1.10.50 contano come un dispositivo solo, `senza_codice`.
+
+COME È FATTO (15/11/2026): codiceDispositivo e il limite delle 24 ore (`drink:presentata_il`) in src/lib/presentazione.js; il quando in src/lib/usePresentazione.js (all'apertura e su visibilitychange); presentaAllaRegia in api.js mette `dispositivo` nel corpo.
+
+**Dove**: `src/lib/presentazione.js, src/lib/api.js, src/App.jsx, docs/presentazione-alla-regia.md` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera) · **Lo dimostrano**: `tests/unit/usePresentazione.test.jsx`
+
 #### REQ-FLOTTA-021 — Le porte e gli adattatori: l'app parla con interfacce nostre, Firebase è un adattatore
 
 🟡 **Fatto a metà**: la descrizione dice anche cosa manca.
@@ -4782,14 +4790,6 @@ DECISO IL 02/11/2026: niente abbonamento sui temi («i temi in abbonamento non s
 RESTA DA FARE il primo stile a pagamento: «Compra» nell'app, pagamento una tantum, e la regia che scrive lo stile in `licenza.temi` dopo il pagamento.
 
 **Dove**: `drink-regia (catalogo, acquisto, licenza.temi), Impostazioni → Menù clienti («Altri stili»), docs/catalogo-temi.md`
-
-### FLOTTA
-
-#### REQ-FLOTTA-031 — La presentazione alla regia dice anche quale dispositivo si presenta, e si ripete una volta al giorno
-
-Il 14/11/2026 la Tana di test si è presentata due volte in pochi decimi di secondo: un dispositivo con la 1.10.49-beta e uno rimasto alla 1.10.40-beta. La regia tiene l'ultima presentazione, e la scheda è tornata indietro di dieci versioni. Daniele, 15/11/2026: «tenere una versione per dispositivo». La regia lo ha confermato lo stesso giorno (drink-regia REQ-FLOTTA-112, contratto, interfaccia 4). Il corpo della presentazione diventa { versione, dispositivo }: `dispositivo` è un codice casuale di 16 byte in base64url senza padding (22 caratteri, ^[A-Za-z0-9_-]{22}$), creato al primo avvio e tenuto in memoria locale (`drink:dispositivo`). Non contiene niente dell'utente né del locale (REQ-FLOTTA-051 della regia). La correzione chiesta dalla regia: un tablet che resta su una versione e si usa ogni giorno non si ripresentava mai, e con la scadenza di 30 giorni della regia uscirebbe dal conto mentre chiama ancora le interfacce vecchie. Quindi l'app si ripresenta anche a versione invariata, al massimo una volta ogni 24 ore: all'apertura e quando torna in primo piano (un tablet del banco resta aperto per giorni senza essere ricaricato). La regia segna un dispositivo al più ogni 6 ore. È un cambio compatibile: la regia ignora un codice di forma diversa, e le app fino alla 1.10.50 contano come un dispositivo solo, `senza_codice`.
-
-**Dove**: `src/lib/presentazione.js, src/lib/api.js, src/App.jsx, docs/presentazione-alla-regia.md` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera)
 
 ## L'architettura e le sue prove
 

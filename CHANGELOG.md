@@ -2,6 +2,13 @@
 
 ## 1.10.51-beta — in lavorazione
 
+### Con la regia
+
+- Ogni dispositivo si presenta alla regia col suo codice, al più una volta
+  al giorno: la scheda del locale mostra la versione di ogni dispositivo, e
+  un tablet rimasto indietro non viene più coperto da quelli aggiornati
+  (REQ-FLOTTA-031).
+
 ## 1.10.50-beta — 14/11/2026 (test)
 
 ### Il menù dei clienti

@@ -8173,11 +8173,16 @@ requirements:
       più ogni 6 ore. È un cambio compatibile: la regia ignora un codice
       di forma diversa, e le app fino alla 1.10.50 contano come un
       dispositivo solo, `senza_codice`.
-    status: todo
+      COME È FATTO (15/11/2026): codiceDispositivo e il limite delle 24
+      ore (`drink:presentata_il`) in src/lib/presentazione.js; il quando in
+      src/lib/usePresentazione.js (all'apertura e su visibilitychange);
+      presentaAllaRegia in api.js mette `dispositivo` nel corpo.
+    status: implemented
     generate_issue: false
     labels: [flotta, regia]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/usePresentazione.test.jsx
 
   - id: REQ-FLOTTA-021
     title: "Le porte e gli adattatori: l'app parla con interfacce nostre, Firebase è un adattatore"

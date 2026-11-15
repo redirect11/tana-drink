@@ -16,6 +16,8 @@ import {
   presentaSeServe,
   esitoPresentazione,
   giaPresentata,
+  codiceDispositivo,
+  RIPRESENTA_DOPO,
 } from '../../src/lib/presentazione.js'
 
 const RIUSCITA = { ok: true, licenza: 'non_dalla_regia' }
@@ -47,7 +49,11 @@ describe('quando si chiama', () => {
   it('una volta per versione: la seconda apertura non chiama', async () => {
     const c = chiama()
     expect(await presentaSeServe({ ...base, chiama: c })).toEqual(RIUSCITA)
-    expect(c).toHaveBeenCalledWith('https://europe-west1-drink-regia.cloudfunctions.net/presentazione', 'v1.10.4')
+    expect(c).toHaveBeenCalledWith(
+      'https://europe-west1-drink-regia.cloudfunctions.net/presentazione',
+      'v1.10.4',
+      expect.stringMatching(/^[A-Za-z0-9_-]{22}$/)
+    )
     expect(giaPresentata('1.10.4')).toBe(true)
     expect(await presentaSeServe({ ...base, chiama: c })).toBeNull()
     expect(c).toHaveBeenCalledTimes(1)
@@ -82,6 +88,69 @@ describe('quando si chiama', () => {
     expect(await presentaSeServe({ ...base, progetto: undefined, chiama: c })).toBeNull()
     expect(await presentaSeServe({ ...base, progetto: 'altro-progetto', chiama: c })).toBeNull()
     expect(c).not.toHaveBeenCalled()
+  })
+})
+
+// ── UNA VERSIONE PER DISPOSITIVO (REQ-FLOTTA-031) ─────────────────────
+//
+// Il 14/11/2026 la Tana di test si è presentata da due dispositivi a pochi
+// decimi di secondo, uno con la 1.10.49-beta e uno con la 1.10.40-beta, e la
+// regia, che teneva l'ultima, è tornata indietro di dieci versioni. Daniele,
+// 15/11: «tenere una versione per dispositivo». La forma del codice è quella
+// concordata con la regia (contratto, interfaccia 4).
+describe('il codice del dispositivo', () => {
+  it('16 byte casuali in base64url senza padding: 22 caratteri', () => {
+    expect(codiceDispositivo()).toMatch(/^[A-Za-z0-9_-]{22}$/)
+  })
+
+  it('resta lo stesso da un\'apertura all\'altra: è scritto sul dispositivo', () => {
+    const primo = codiceDispositivo()
+    expect(codiceDispositivo()).toBe(primo)
+    expect(localStorage.getItem('drink:dispositivo')).toBe(primo)
+  })
+
+  it('un codice di forma sbagliata in memoria si sostituisce: la regia lo ignorerebbe', () => {
+    localStorage.setItem('drink:dispositivo', 'mario@tana.it')
+    const codice = codiceDispositivo()
+    expect(codice).toMatch(/^[A-Za-z0-9_-]{22}$/)
+    expect(localStorage.getItem('drink:dispositivo')).toBe(codice)
+  })
+
+  it('due dispositivi, due codici: nasce da byte casuali', async () => {
+    vi.resetModules()
+    const a = await import('../../src/lib/presentazione.js')
+    const primo = a.codiceDispositivo()
+    localStorage.clear()
+    vi.resetModules()
+    const b = await import('../../src/lib/presentazione.js')
+    expect(b.codiceDispositivo()).not.toBe(primo)
+  })
+})
+
+// La correzione chiesta dalla regia: un tablet che resta su una versione e
+// si usa ogni giorno non si ripresentava mai, e dopo 30 giorni la regia lo
+// avrebbe dimenticato mentre chiamava ancora le interfacce vecchie.
+describe('una volta al giorno anche a versione invariata', () => {
+  const base = { versione: 'v1.10.40-beta', collegato: true, progetto: 'drink-regia-test' }
+  const chiama = () => vi.fn(() => Promise.resolve(RIUSCITA))
+  const ORA = Date.UTC(2026, 10, 15, 20, 0)
+
+  it('nelle 24 ore non si ripresenta; dopo sì, con lo stesso codice', async () => {
+    const c = chiama()
+    await presentaSeServe({ ...base, chiama: c, adesso: ORA })
+    await presentaSeServe({ ...base, chiama: c, adesso: ORA + RIPRESENTA_DOPO - 1 })
+    expect(c).toHaveBeenCalledTimes(1)
+    await presentaSeServe({ ...base, chiama: c, adesso: ORA + RIPRESENTA_DOPO })
+    expect(c).toHaveBeenCalledTimes(2)
+    expect(c.mock.calls[1][2]).toBe(c.mock.calls[0][2])
+  })
+
+  it('un dispositivo con la memoria di prima (versione senza ora) si ripresenta una volta', async () => {
+    localStorage.setItem('drink:presentata', '1.10.40-beta')
+    const c = chiama()
+    await presentaSeServe({ ...base, chiama: c, adesso: ORA })
+    await presentaSeServe({ ...base, chiama: c, adesso: ORA + 1000 })
+    expect(c).toHaveBeenCalledTimes(1)
   })
 })
 
