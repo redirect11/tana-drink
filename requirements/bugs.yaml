@@ -6632,3 +6632,33 @@ bugs:
     priority: P2
     requisiti: [REQ-LIC-003]
     test_cases: [tests/unit/utenze.test.js]
+
+  - id: BUG-166
+    title: "Col tema Lime la categoria scelta nel conto e il numero sulle card hanno il testo bianco sul lime"
+    area: "src/lib/posStyles.js (catBtnStyle), src/components/PosBits.jsx (il numero degli ordinati)"
+    description: >
+      Daniele, 17/11/2026: «sulla palette lime scuro stavo vedendo quanto
+      il bianco sul verde lime che abbiamo scelto non è il massimo».
+      Misurato sulla demo col tema Lime scuro, schermata per schermata: la
+      categoria scelta nella colonna del conto («Tutti») ha il testo
+      bianco sul lime, 1,4:1 contro i 4,5:1 di DESIGN.md; lo stesso il
+      numero degli ordinati sulla card di un prodotto. Tutto il resto del
+      lime (tasti, opzioni attive, la fascia della demo) ha già il testo
+      scuro, fra 11,9 e 14,9:1.
+      CAUSA: i due stili scrivono `#fff` a mano sopra `var(--accent)`.
+      Andava bene finché l'accento era scuro (il rosa della Tana); su un
+      accento chiaro sparisce. Il tema ha già l'inchiostro giusto,
+      `--accent-ink`, che applyTheme calcola dal colore dell'accento
+      (bianco su quelli scuri, scuro su quelli chiari) e che quattro regole
+      del foglio usano già.
+      CORREZIONE: i due stili prendono `var(--accent-ink, #fff)`. Con la
+      Tana non cambia niente; con Lime e con ogni accento chiaro il testo
+      diventa scuro.
+    in_produzione: false
+    status: todo
+    generate_issue: true
+    labels: [bug, ui]
+    severity: lieve
+    priority: P1
+    requisiti: [REQ-UI-033]
+    test_cases: []
