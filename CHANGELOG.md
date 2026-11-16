@@ -60,6 +60,9 @@
   che non lo aspetta: un pagamento rifiutato e ripetuto ore dopo non
   riporta a «parziale» un conto già pagato in contanti, e un pagamento
   riuscito e ripetuto non si registra due volte (BUG-162).
+- Le utenze dello staff rispettano il numero massimo del piano anche
+  quando si creano dal server: sul piano Free non si aggiungono persone
+  oltre il titolare. Le utenze già presenti restano (BUG-165).
 
 ## 1.10.51 — 15 novembre 2026 (produzione)
 

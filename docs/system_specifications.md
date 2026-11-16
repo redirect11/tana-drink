@@ -31,7 +31,7 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 **368 voci** in tutto. **330** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
-cosa che l'app fa; **19** difetti noti sono ancora aperti.
+cosa che l'app fa; **18** difetti noti sono ancora aperti.
 
 Le voci ⚠️ sono la parte scomoda: funzionano, ma **nessun test le tiene**.
 Sono quelle che si rompono senza che nessuno se ne accorga, e vanno lette
@@ -4993,7 +4993,6 @@ della correzione è il test citato nel requisito della sua area.
 | 🔴 | [BUG-158](#bug-158--genera-clientemjs-non-conosce-il-tipo-di-locale-che-il-workflow-della-regia-gli-passa) — genera-cliente.mjs non conosce il tipo di locale che il workflow della regia gli passa | bassa | P3 |
 | 🔴 | [BUG-163](#bug-163--un-rifiuto-del-pagamento-online-che-sumup-rimanda-in-ritardo-segna-fallito-un-conto-passato-nel-frattempo-al-lettore) — Un rifiuto del pagamento online che SumUp rimanda in ritardo segna «fallito» un conto passato nel frattempo al lettore | media | P2 |
 | 🔴 | [BUG-164](#bug-164--il-tempo-di-lavorazione-in-ricetta-non-entra-nel-costo-del-drink-57-righe-lo-dosano-in-grammi) — Il tempo di lavorazione in ricetta non entra nel costo del drink: 57 righe lo dosano in grammi | media | P2 |
-| 🔴 | [BUG-165](#bug-165--su-un-free-col-profilo-completo-staffadmin-crea-utenze-oltre-il-limite-del-piano) — Su un Free col profilo completo, `staffAdmin` crea utenze oltre il limite del piano | media | P2 |
 
 🔴 succede **in produzione**, cioè al banco. `·` no. `?` non si sa ancora.
 
@@ -5164,12 +5163,6 @@ CORREZIONE: uno script riscrive in U quelle righe, con la stessa quantità («1,
 SUL TEST (16/11/2026): riscritte 57 ricette, tutte del «Tempo di Lavorazione»; rilanciato, lo script non trova più niente. In produzione: da fare, col via libera.
 
 **Dove**: `dati: drinks.recipe_items del «Tempo di Lavorazione»; scripts/lavorazione-in-u.js, scripts/lib-lavorazione.js` · **Tradisce**: [REQ-MENU-034](#req-menu-034--ogni-riga-della-ricetta-mostra-quanto-costa)
-
-#### BUG-165 — Su un Free col profilo completo, `staffAdmin` crea utenze oltre il limite del piano
-
-Dalla regia, 16/11/2026 (REQ-FLOTTA-122): ogni locale nuovo nasce col profilo completo anche se è Free, e chi paga può scendere al Free a fine periodo. Fino a ieri il Free era leggero — niente Functions — e il limite `utenti_max: 1` reggeva da sé: `staffAdmin` non c'era. L'app nasconde la gestione delle utenze sul Free (limiti.js, `staffConsentito`), ma la Function, ora pubblicata, non guardava la licenza: chiamata a mano dalla console del browser, un admin di un Free creava quante utenze voleva. ORA `staffAdmin` legge la licenza e non porta le utenze attive dello staff oltre `utenti_max`: niente utenze nuove, nessun cliente promosso a un ruolo dello staff, nessuna utenza dello staff riattivata oltre il tetto. Una licenza scaduta vale come Free. Le utenze che ci sono già NON si toccano: chi scende al Free con più persone le tiene, e il limite ferma solo le aggiunte, come per i prodotti (limiti.js, puoCreareProdotto).
-
-**Dove**: `functions/lib/staff-service.js, functions/lib/licenza-core.js, functions/index.js (staffAdmin)` · **Tradisce**: [REQ-LIC-003](#req-lic-003--i-limiti-del-piano-free-si-fanno-rispettare-solo-se-la-licenza-li-scrive-senza-nessun-limite)
 
 ## Non più valido
 

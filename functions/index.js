@@ -79,7 +79,12 @@ const OPTS_PUBBLICO = { ...OPTS, maxInstances: 3 }
 // (custom claim). La logica vive in lib/staff-service.js (testata).
 exports.staffAdmin = onCall(OPTS, async (request) => {
   try {
-    return await staffAdmin(getAuth(), request.auth, request.data)
+    // La licenza, per il tetto di utenze del piano (BUG-165).
+    const leggiLicenza = async () => {
+      const snap = await db.doc('licenza/attuale').get()
+      return snap.exists ? snap.data() : null
+    }
+    return await staffAdmin(getAuth(), request.auth, request.data, { leggiLicenza })
   } catch (e) {
     if (e?.code && e?.message) throw new HttpsError(e.code, e.message)
     throw new HttpsError('internal', e?.message || 'Errore interno.')

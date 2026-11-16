@@ -14,6 +14,8 @@
 // Il ruolo è un custom claim: le regole di Firestore leggono quello, quindi
 // assegnarlo qui è a tutti gli effetti dare le chiavi del locale.
 
+const { limitiInVigore } = require('./licenza-core')
+
 const RUOLI = ['admin', 'bartender', 'staff']
 const ASSEGNABILI = [...RUOLI, 'cliente']
 
@@ -77,9 +79,30 @@ async function vietaSeUltimoAdmin(adminAuth, uid, cosa) {
   }
 }
 
+// IL PIANO TIENE UN NUMERO DI UTENZE (BUG-165). Sul Free col profilo
+// completo `staffAdmin` è pubblicata, e l'app che nasconde la gestione delle
+// utenze non basta: chiamandola a mano se ne creavano quante si voleva. Si
+// contano le utenze ATTIVE dello staff, e il tetto ferma solo le aggiunte —
+// crearne una, promuovere un cliente, riattivarne una spenta. Quelle che ci
+// sono restano: chi scende al Free con più persone non perde nessuno.
+// `leggiLicenza` manca solo nei test che non parlano di piani.
+async function vietaOltreIlPiano(adminAuth, leggiLicenza) {
+  if (!leggiLicenza) return
+  const max = Number(limitiInVigore(await leggiLicenza())?.utenti_max)
+  if (!(max > 0)) return
+  const attive = (await tutteLeUtenze(adminAuth)).filter((u) => RUOLI.includes(u.customClaims?.role) && !u.disabled)
+  if (attive.length >= max) {
+    throw {
+      code: 'failed-precondition',
+      message: `Il piano del locale comprende al massimo ${max === 1 ? 'un utente' : `${max} utenti`}.`,
+    }
+  }
+}
+
 // Esegue un'azione di amministrazione utenze. Lancia { code, message }
 // compatibile con HttpsError. `adminAuth` = firebase-admin/auth.
-async function staffAdmin(adminAuth, auth, data) {
+// `deps.leggiLicenza`: () => la licenza del locale (licenza/attuale), o null.
+async function staffAdmin(adminAuth, auth, data, { leggiLicenza } = {}) {
   const chiamante = callerRole(auth)
   const action = data?.action
 
@@ -101,6 +124,7 @@ async function staffAdmin(adminAuth, auth, data) {
       invalido('Email e password (min 6 caratteri) obbligatorie.')
     }
     if (!RUOLI.includes(role)) invalido(`Ruolo non valido: ${role}`)
+    await vietaOltreIlPiano(adminAuth, leggiLicenza)
     const user = await adminAuth.createUser({
       email,
       password,
@@ -117,6 +141,11 @@ async function staffAdmin(adminAuth, auth, data) {
       throw { code: 'failed-precondition', message: 'Non puoi cambiare il tuo stesso ruolo.' }
     }
     if (role !== 'admin') await vietaSeUltimoAdmin(adminAuth, uid, 'cambiargli ruolo')
+    // Un cliente che diventa staff è un'utenza dello staff in più.
+    if (RUOLI.includes(role)) {
+      const prima = (await tutteLeUtenze(adminAuth)).find((u) => u.uid === uid)
+      if (!RUOLI.includes(prima?.customClaims?.role)) await vietaOltreIlPiano(adminAuth, leggiLicenza)
+    }
     // "cliente" non è un claim: è l'assenza di claim.
     await adminAuth.setCustomUserClaims(uid, role === 'cliente' ? null : { role })
     return { uid, role }
@@ -129,6 +158,11 @@ async function staffAdmin(adminAuth, auth, data) {
       throw { code: 'failed-precondition', message: 'Non puoi disattivare il tuo stesso account.' }
     }
     if (disabled) await vietaSeUltimoAdmin(adminAuth, uid, 'disattivarlo')
+    else {
+      // Riattivare un'utenza dello staff spenta la rimette nel conto.
+      const prima = (await tutteLeUtenze(adminAuth)).find((u) => u.uid === uid)
+      if (prima?.disabled && RUOLI.includes(prima?.customClaims?.role)) await vietaOltreIlPiano(adminAuth, leggiLicenza)
+    }
     await adminAuth.updateUser(uid, { disabled })
     return { uid, disabled }
   }

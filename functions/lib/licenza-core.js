@@ -53,4 +53,20 @@ async function richiediModulo(db, id, adesso = Date.now()) {
   }
 }
 
-module.exports = { moduloInLicenza, richiediModulo }
+// I LIMITI DEL FREE CHE LE FUNCTIONS FANNO RISPETTARE (BUG-165). Copia, per
+// le sole voci che servono qui, di LIMITI_FREE in src/lib/licenzaInVigore.js
+// (functions/ non importa da src/): tests/unit/utenze.test.js le confronta.
+const LIMITI_FREE = Object.freeze({ utenti_max: 1 })
+
+// I limiti in vigore adesso, o null (nessun limite). Come l'app: valgono
+// quelli scritti nella licenza; una licenza scaduta vale come Free; senza
+// licenza, o senza la voce `limiti`, nessun limite — un limite non è mai il
+// comportamento di partenza (src/lib/limiti.js).
+function limitiInVigore(licenza, adesso = Date.now()) {
+  if (!licenza || typeof licenza !== 'object') return null
+  const fino = inMillisecondi(licenza.valida_fino_ts)
+  if (fino !== null && adesso >= fino) return LIMITI_FREE
+  return licenza.limiti && typeof licenza.limiti === 'object' ? licenza.limiti : null
+}
+
+module.exports = { moduloInLicenza, richiediModulo, limitiInVigore, LIMITI_FREE }

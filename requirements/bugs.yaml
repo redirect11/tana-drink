@@ -6613,12 +6613,13 @@ bugs:
       riattivata oltre il tetto. Una licenza scaduta vale come Free. Le
       utenze che ci sono già NON si toccano: chi scende al Free con più
       persone le tiene, e il limite ferma solo le aggiunte, come per i
-      prodotti (limiti.js, puoCreareProdotto).
+      prodotti (limiti.js, puoCreareProdotto). La copia dei limiti del Free
+      nelle Functions (licenza-core.js) si confronta con quella dell'app.
     in_produzione: true
-    status: todo
+    status: fixed
     generate_issue: true
     labels: [bug, licenza, staff]
     severity: media
     priority: P2
     requisiti: [REQ-LIC-003]
-    test_cases: []
+    test_cases: [tests/unit/utenze.test.js]
