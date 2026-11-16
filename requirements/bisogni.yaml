@@ -341,6 +341,7 @@ bisogni:
       - REQ-MAG-054
       - REQ-MENU-033
       - REQ-MENU-034
+      - REQ-UI-035
       - REQ-MENU-035
       - REQ-MENU-036
       - REQ-MENU-037
@@ -458,6 +459,12 @@ bisogni:
       insieme pagina iniziale e menù.
     requisiti:
       - REQ-MENU-044
+      - REQ-SITO-001
+      - REQ-SITO-002
+      - REQ-SITO-003
+      - REQ-SITO-004
+      - REQ-SITO-005
+      - REQ-UI-034
     test_cases: []
 
   - id: UR-019

@@ -7369,6 +7369,15 @@ requirements:
       minimale già pubblicato, che può essere un modulo a parte. Il
       concetto, con le domande aperte e il primo passo proposto, è in
       docs/tema-del-sito.md.
+      DANIELE, 17/11/2026, decide e scende nei requisiti: le sezioni del
+      sito (Chi siamo, Contatti, Menù, altre da decidere) sempre
+      raggiungibili dal menu laterale della vista cliente (REQ-SITO-001);
+      il tema del menù si propaga alle pagine del sito, e per la Tana
+      «Carte» veste Chi siamo e Contatti (REQ-SITO-002); la foto del banner
+      della Home si sceglie (REQ-SITO-003); la home è un modulo a parte,
+      e senza il modulo l'indirizzo del locale apre il menù o una pagina
+      di cortesia (REQ-SITO-004); l'editor della home mostra o nasconde le
+      sezioni fisse (REQ-SITO-005). Niente pagine libere.
     status: todo
     generate_issue: true
     labels: [menu, temi, cliente]
@@ -17484,5 +17493,142 @@ requirements:
     status: todo
     generate_issue: true
     labels: [licenza, ristorante, regia]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-SITO-001
+    title: "Le sezioni del sito del locale, sempre raggiungibili dal menu laterale della vista cliente"
+    area: "src/components/ClientDrawer.jsx, src/pages/LandingPage.jsx, pagine nuove (Chi siamo, Contatti), src/App.jsx (rotte)"
+    description: >
+      Daniele, 17/11/2026: «Nella vista cliente, nel menu laterale ci
+      devono essere le sezioni del sito raggiungibili sempre (Chi siamo,
+      contatti, menu e altre sezioni da decidere). Il gestionale vede
+      queste pagine solo nella vista cliente».
+      Oggi «chi siamo» e i contatti stanno dentro la pagina iniziale, e il
+      menu laterale del cliente ha solo Menù e I miei ordini. Diventano
+      sezioni con un indirizzo ciascuna, e il menu laterale del cliente
+      elenca sempre quelle mostrate (REQ-SITO-005): Home, Chi siamo,
+      Contatti, Menù (quando è visibile ai clienti). Il personale le vede
+      passando alla vista cliente, non dal menu del gestionale. I dati
+      vengono da Identità del locale (`venue_*`, REQ-VENUE-002). Altre
+      sezioni (orari, eventi) da decidere: docs/tema-del-sito.md.
+    status: todo
+    generate_issue: true
+    labels: [sito, cliente, navigazione]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-SITO-002
+    title: "Il tema del menù veste anche le pagine del sito: la Tana ha «Carte» anche in Chi siamo e Contatti"
+    area: "src/lib/stileMenu.js (pagine, vestePagine), src/lib/testiStile.js, src/pages/LandingPage.jsx, pagine del sito, src/index.css"
+    description: >
+      Daniele, 17/11/2026: «Dobbiamo iniziare a propagare il tema del menu
+      cliente anche alle altre pagine della home del locale … Nel caso
+      della tana, io estenderei il tema carte anche alle pagine chi siamo e
+      contatti». È il primo passo di REQ-MENU-044: il tema del menù veste
+      Home, Chi siamo e Contatti nei colori, nei caratteri e nelle frasi;
+      «Carte» in più nella forma (i contenuti scritti su una carta), come
+      «Meraviglie» fa già con `pagine: true`. Un tema che non porta le
+      pagine del sito le lascia al disegno di base. Il tema del sito come
+      scelta separata dal tema del menù resta per dopo
+      (docs/tema-del-sito.md, punto 2).
+    status: todo
+    generate_issue: true
+    labels: [sito, temi, cliente]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-SITO-003
+    title: "La foto del banner della pagina iniziale la sceglie il locale"
+    area: "src/pages/LandingPage.jsx, src/components/IdentitaLocale.jsx, src/lib/storage.js, storage.rules"
+    description: >
+      Daniele, 17/11/2026: «Anche la foto nel banner del tema attuale della
+      home del locale dovrebbe poter essere customizzata». Oggi la foto in
+      apertura della pagina iniziale è quella del tema. Il gestore ne
+      carica una sua da Identità del locale; senza, resta quella del tema.
+      Va su Storage (sul profilo leggero resta quella del tema) e la carica
+      chi gestisce il locale, come le foto dei prodotti (BUG-160).
+    status: todo
+    generate_issue: true
+    labels: [sito, cliente, temi]
+    priority: P3
+    test_cases: []
+
+  - id: REQ-SITO-004
+    title: "La home del locale è un modulo: senza, l'indirizzo del locale apre il menù o una pagina di cortesia"
+    area: "src/lib/licenza.js (MODULI_PREMIUM), src/App.jsx (la rotta /), pagina di cortesia nuova, la regia (piani.json, elenco dei moduli)"
+    description: >
+      Daniele, 17/11/2026: «la home del locale è un modulo a parte … Disabilitando
+      il modulo home la home diventa il menu se il locale sceglie così,
+      altrimenti una pagina di cortesia con il nome e le info base del
+      canale. In pratica se non c'è home allora menu altrimenti pagina di
+      cortesia».
+      CON IL MODULO: la home con le sue sezioni (REQ-SITO-001, REQ-SITO-005).
+      SENZA: all'indirizzo del locale si apre il menù dei clienti, se il
+      locale lo sceglie e il menù è visibile; altrimenti una pagina di
+      cortesia col nome del locale e le informazioni di base (indirizzo,
+      telefono, orari), vestita dal tema.
+      INTERFACCIA CON LA REGIA: un modulo nuovo cambia l'elenco dei moduli
+      tenuto allineato a mano (REQ-DEV-025): va detto alla regia prima di
+      rilasciarlo, con l'id (proposta: `home`), cosa resta senza modulo e
+      in quale piano sta. Da decidere con Daniele: il piano, e se la Tana
+      lo ha (oggi la home ce l'ha: senza modulo nella licenza la
+      perderebbe).
+    status: todo
+    generate_issue: true
+    labels: [sito, licenza, regia]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-SITO-005
+    title: "L'editor della home: le sezioni fisse si mostrano o si nascondono"
+    area: "Impostazioni (sito del locale), settings/bar (sezioni del sito), src/pages/LandingPage.jsx, src/components/ClientDrawer.jsx"
+    description: >
+      Daniele, 17/11/2026: «l'editor della home abbiamo detto consente di
+      cambiare invece le sezioni visualizzate. Avremo delle sezioni fisse
+      che possono essere mostrate o meno». Le sezioni le diamo noi (Chi
+      siamo, Contatti, Menù, poi quelle da decidere); il gestore sceglie
+      quali mostrare. Una sezione nascosta sparisce dalla home e dal menu
+      laterale, e il suo indirizzo rimanda alla home. Niente pagine libere.
+      La scelta sta in `settings/bar`, come proposto in
+      docs/tema-del-sito.md (punto 1).
+    status: todo
+    generate_issue: true
+    labels: [sito, cliente, impostazioni]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-UI-034
+    title: "Gli avvisi del menù dei clienti si vedono, e vestono il tema"
+    area: "src/pages/MenuPage.jsx (avvisi: sola consultazione, posizione, errori), src/index.css, src/lib/stileMenu.js"
+    description: >
+      Daniele, 17/11/2026: «Gli avvisi che escono nel menu dovrebbero
+      essere più visibili e più integrati con il tema». Sono le strisce del
+      menù dei clienti — «Solo consultazione», «Verifico che sei al
+      locale», «Devi essere al locale per ordinare», gli errori — che oggi
+      usano il `.banner` generico, uguale in ogni tema e poco visibile sul
+      fondo del menù. Diventano un avviso del menù: colori e caratteri del
+      tema, un contrasto che si legge su ogni fondo, e in «Carte» la forma
+      del tema. Il testo non cambia.
+    status: todo
+    generate_issue: true
+    labels: [menu, temi, cliente]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-UI-035
+    title: "Nel gestionale, in alto, il marchio «LIME - SmartOrders» col suo logo"
+    area: "src/App.jsx (topbar), un componente del marchio nuovo, src/index.css"
+    description: >
+      Daniele, 17/11/2026: nel gestionale il titolo in alto diventa il logo
+      LIME - SmartOrders, «lo trovi nella regia». Il logo è quello della
+      regia (drink-regia, src/components/Logo.jsx e public/favicon.svg: una
+      fetta di lime che sembra un grafico a torta, decisione del
+      09/11/2026), copiato com'è: è un'altra copia tenuta allineata a mano
+      con la regia (REQ-DEV-025). Solo nel gestionale: le pagine dei
+      clienti restano col logo e il nome del locale.
+    status: todo
+    generate_issue: true
+    labels: [ui, marchio, gestionale]
     priority: P2
     test_cases: []

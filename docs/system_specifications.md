@@ -25,11 +25,11 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 | ✅ | 306 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 9 | fatto a metà |
-| ⬜ | 30 | da fare |
+| ⬜ | 37 | da fare |
 | 🗑 | 8 | non più valido |
 
-**368 voci** in tutto. **330** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
+**375 voci** in tutto. **330** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **37** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **17** difetti noti sono ancora aperti.
 
@@ -59,12 +59,13 @@ come «vero oggi», non come «garantito».
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | 6 | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
-| [Interfaccia](#interfaccia) | 29 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
+| [Interfaccia](#interfaccia) | 29 | 5 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 24 | 2 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 15 | 4 |  |
 | [VENUE](#venue) | 6 | — |  |
 | [FLOTTA](#flotta) | 10 | — |  |
+| [SITO](#sito) | — | 5 |  |
 
 ### Le prove, livello per livello
 
@@ -79,7 +80,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Unità | il progetto di dettaglio: un modulo da solo | 188 |
 
 **20** bisogni del locale, **0** con un test di accettazione.
-**120** requisiti su 360 sono collegati a un bisogno;
+**127** requisiti su 367 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -191,7 +192,7 @@ Listino, schede, magazzino e impostazioni si usano tutti i giorni da chi li cono
 
 **Come si accetta**: Dal PC, in Menù → Marginalità listino, ogni numero sta sotto la sua intestazione; toccando «Birre» a sinistra restano solo le birre, con i filtri che contano lì dentro. Aprendo la scheda di un drink non ci sono righe d'aiuto fra un campo e l'altro; accendendo «Aiuti sotto i campi» in Aspetto tornano, scritti in frasi piane. Aggiungendo un gin alla ricetta del Negroni la riga parte in ml, come le altre; in Impostazioni → Prezzo consigliato, scritto un drink cost del 20%, il ricarico diventa ×5 (vocali del 09/11/2026). Nella ricetta del Gold Rush, accanto a 60 ml di Jim Beam si legge 1,14 € (10/11/2026). Nel menù dei clienti copiato dalla cassa le sezioni sono le categorie, chiuse in un indice; i gin selezionati in «Distillati» passano insieme in «Gin», e i prodotti senza categoria stanno in «Non categorizzati». Un drink che in cassa non c'è si crea dalla sua sezione, e appena salvato è lì.
 
-**Chi**: Gestore · **Lo realizzano**: [REQ-MENU-002](#req-menu-002--marginalità-del-listino-in-tabella-e-divisa-per-categorie), [REQ-MENU-032](#req-menu-032--marginalità-del-listino-le-categorie-a-sinistra-per-vederne-una-sola), [REQ-UI-032](#req-ui-032--gli-aiuti-sotto-i-campi-delle-schede-si-nascondono-e-i-testi-sono-riscritti), [REQ-MAG-054](#req-mag-054--un-ingrediente-nuovo-in-ricetta-parte-in-millilitri), [REQ-MENU-033](#req-menu-033--il-ricarico-del-prezzo-consigliato-si-imposta-anche-come-drink-cost), [REQ-MENU-034](#req-menu-034--ogni-riga-della-ricetta-mostra-quanto-costa), [REQ-MENU-035](#req-menu-035--leditor-del-menù-dei-clienti-è-compatto-sezioni-che-si-aprono-una-riga-per-voce-voci-spostate-insieme), [REQ-MENU-036](#req-menu-036--dal-menù-dei-clienti-si-crea-un-prodotto-della-cassa-che-non-cè-e-diventa-subito-una-voce-della-sezione), [REQ-MENU-037](#req-menu-037--le-sezioni-di-soli-special-stanno-fuori-dal-menù-e-si-aprono-dal-carosello-e-dal-qr-è-la-stessa-carta), [REQ-MENU-038](#req-menu-038--il-formato-dei-prezzi-nel-menù-dei-clienti-si-sceglie-di-partenza-il-numero-senza-simbolo-delleuro-e-senza-decimali-inutili), [REQ-MENU-039](#req-menu-039--la-foto-di-un-prodotto-si-ritaglia-nella-sua-scheda-prima-di-caricarla-tutte-nella-stessa-cornice-quadrata), [REQ-AI-005](#req-ai-005--ogni-foto-caricata-si-può-far-modificare-allai-la-proposta-accanto-alloriginale-da-accettare-scartare-o-richiedere), [REQ-AI-006](#req-ai-006--un-assistente-ai-nel-gestionale-una-chat-che-sa-fare-le-cose-dellapp-che-lai-può-fare), [REQ-AI-007](#req-ai-007--lai-nellapp-ha-tre-stati-assente-senza-credito-attiva), [REQ-MENU-040](#req-menu-040--gli-ingredienti-di-una-voce-del-menù-dei-clienti-sono-etichette-proposte-dalla-ricetta-del-prodotto-collegato), [REQ-MENU-041](#req-menu-041--la-voce-del-menù-dei-clienti-ha-una-categoria-e-le-sezioni-e-i-gruppi-possono-nascere-da-sole-dalle-categorie) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Gestore · **Lo realizzano**: [REQ-MENU-002](#req-menu-002--marginalità-del-listino-in-tabella-e-divisa-per-categorie), [REQ-MENU-032](#req-menu-032--marginalità-del-listino-le-categorie-a-sinistra-per-vederne-una-sola), [REQ-UI-032](#req-ui-032--gli-aiuti-sotto-i-campi-delle-schede-si-nascondono-e-i-testi-sono-riscritti), [REQ-MAG-054](#req-mag-054--un-ingrediente-nuovo-in-ricetta-parte-in-millilitri), [REQ-MENU-033](#req-menu-033--il-ricarico-del-prezzo-consigliato-si-imposta-anche-come-drink-cost), [REQ-MENU-034](#req-menu-034--ogni-riga-della-ricetta-mostra-quanto-costa), [REQ-UI-035](#req-ui-035--nel-gestionale-in-alto-il-marchio-lime---smartorders-col-suo-logo), [REQ-MENU-035](#req-menu-035--leditor-del-menù-dei-clienti-è-compatto-sezioni-che-si-aprono-una-riga-per-voce-voci-spostate-insieme), [REQ-MENU-036](#req-menu-036--dal-menù-dei-clienti-si-crea-un-prodotto-della-cassa-che-non-cè-e-diventa-subito-una-voce-della-sezione), [REQ-MENU-037](#req-menu-037--le-sezioni-di-soli-special-stanno-fuori-dal-menù-e-si-aprono-dal-carosello-e-dal-qr-è-la-stessa-carta), [REQ-MENU-038](#req-menu-038--il-formato-dei-prezzi-nel-menù-dei-clienti-si-sceglie-di-partenza-il-numero-senza-simbolo-delleuro-e-senza-decimali-inutili), [REQ-MENU-039](#req-menu-039--la-foto-di-un-prodotto-si-ritaglia-nella-sua-scheda-prima-di-caricarla-tutte-nella-stessa-cornice-quadrata), [REQ-AI-005](#req-ai-005--ogni-foto-caricata-si-può-far-modificare-allai-la-proposta-accanto-alloriginale-da-accettare-scartare-o-richiedere), [REQ-AI-006](#req-ai-006--un-assistente-ai-nel-gestionale-una-chat-che-sa-fare-le-cose-dellapp-che-lai-può-fare), [REQ-AI-007](#req-ai-007--lai-nellapp-ha-tre-stati-assente-senza-credito-attiva), [REQ-MENU-040](#req-menu-040--gli-ingredienti-di-una-voce-del-menù-dei-clienti-sono-etichette-proposte-dalla-ricetta-del-prodotto-collegato), [REQ-MENU-041](#req-menu-041--la-voce-del-menù-dei-clienti-ha-una-categoria-e-le-sezioni-e-i-gruppi-possono-nascere-da-sole-dalle-categorie) · ⚠️ **Nessun test di accettazione, ancora.**
 
 #### UR-014 — La demo che si mostra a un locale nuovo non espone niente di un locale vero
 
@@ -231,7 +232,7 @@ Daniele, 14/11/2026: il tema che il locale sceglie non deve valere solo per il m
 
 **Come si accetta**: Con «Carte» come tema, la pagina iniziale della Tana (benvenuto, contatti, tasto del menù) ha i colori, i caratteri e le frasi di «Carte», come il menù; cambiando tema in Impostazioni cambiano insieme pagina iniziale e menù.
 
-**Chi**: Cliente, Gestore · **Lo realizzano**: [REQ-MENU-044](#req-menu-044--il-tema-del-locale-veste-anche-la-pagina-iniziale-coi-contatti-non-solo-il-menù) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Cliente, Gestore · **Lo realizzano**: [REQ-MENU-044](#req-menu-044--il-tema-del-locale-veste-anche-la-pagina-iniziale-coi-contatti-non-solo-il-menù), [REQ-SITO-001](#req-sito-001--le-sezioni-del-sito-del-locale-sempre-raggiungibili-dal-menu-laterale-della-vista-cliente), [REQ-SITO-002](#req-sito-002--il-tema-del-menù-veste-anche-le-pagine-del-sito-la-tana-ha-carte-anche-in-chi-siamo-e-contatti), [REQ-SITO-003](#req-sito-003--la-foto-del-banner-della-pagina-iniziale-la-sceglie-il-locale), [REQ-SITO-004](#req-sito-004--la-home-del-locale-è-un-modulo-senza-lindirizzo-del-locale-apre-il-menù-o-una-pagina-di-cortesia), [REQ-SITO-005](#req-sito-005--leditor-della-home-le-sezioni-fisse-si-mostrano-o-si-nascondono), [REQ-UI-034](#req-ui-034--gli-avvisi-del-menù-dei-clienti-si-vedono-e-vestono-il-tema) · ⚠️ **Nessun test di accettazione, ancora.**
 
 #### UR-019 — Il locale non paga i servizi che fanno girare l'app oltre quello che usa davvero
 
@@ -4553,6 +4554,8 @@ Daniele, 14/11/2026: «la home con i contatti e la front page dovrebbe essere pa
 
 DANIELE, STESSO GIORNO: il tema riguarda tutto; un tema per la home e un tema per il menù; il sito ha pagine predefinite che il locale sceglie (home, contatti…), le pagine libere sono da decidere; un sito minimale già pubblicato, che può essere un modulo a parte. Il concetto, con le domande aperte e il primo passo proposto, è in docs/tema-del-sito.md.
 
+DANIELE, 17/11/2026, decide e scende nei requisiti: le sezioni del sito (Chi siamo, Contatti, Menù, altre da decidere) sempre raggiungibili dal menu laterale della vista cliente (REQ-SITO-001); il tema del menù si propaga alle pagine del sito, e per la Tana «Carte» veste Chi siamo e Contatti (REQ-SITO-002); la foto del banner della Home si sceglie (REQ-SITO-003); la home è un modulo a parte, e senza il modulo l'indirizzo del locale apre il menù o una pagina di cortesia (REQ-SITO-004); l'editor della home mostra o nasconde le sezioni fisse (REQ-SITO-005). Niente pagine libere.
+
 **Dove**: `docs/tema-del-sito.md (il concetto), src/pages/LandingPage.jsx, src/lib/stileMenu.js (pagine, vestePagine), src/lib/testiStile.js, src/lib/marketplaceTemi.js, src/index.css` · **Serve**: [UR-018](#ur-018--il-locale-si-presenta-al-cliente-col-suo-stile-dalla-prima-pagina-al-menù)
 
 ### Magazzino
@@ -4841,6 +4844,18 @@ DA FARE: passare le altre schermate con elenchi una per una (statistiche, magazz
 
 **Dove**: `DESIGN.md (guardrail 8), tutte le schermate con elenchi`
 
+#### REQ-UI-034 — Gli avvisi del menù dei clienti si vedono, e vestono il tema
+
+Daniele, 17/11/2026: «Gli avvisi che escono nel menu dovrebbero essere più visibili e più integrati con il tema». Sono le strisce del menù dei clienti — «Solo consultazione», «Verifico che sei al locale», «Devi essere al locale per ordinare», gli errori — che oggi usano il `.banner` generico, uguale in ogni tema e poco visibile sul fondo del menù. Diventano un avviso del menù: colori e caratteri del tema, un contrasto che si legge su ogni fondo, e in «Carte» la forma del tema. Il testo non cambia.
+
+**Dove**: `src/pages/MenuPage.jsx (avvisi: sola consultazione, posizione, errori), src/index.css, src/lib/stileMenu.js` · **Serve**: [UR-018](#ur-018--il-locale-si-presenta-al-cliente-col-suo-stile-dalla-prima-pagina-al-menù)
+
+#### REQ-UI-035 — Nel gestionale, in alto, il marchio «LIME - SmartOrders» col suo logo
+
+Daniele, 17/11/2026: nel gestionale il titolo in alto diventa il logo LIME - SmartOrders, «lo trovi nella regia». Il logo è quello della regia (drink-regia, src/components/Logo.jsx e public/favicon.svg: una fetta di lime che sembra un grafico a torta, decisione del 09/11/2026), copiato com'è: è un'altra copia tenuta allineata a mano con la regia (REQ-DEV-025). Solo nel gestionale: le pagine dei clienti restano col logo e il nome del locale.
+
+**Dove**: `src/App.jsx (topbar), un componente del marchio nuovo, src/index.css` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica)
+
 ### Come si lavora al progetto
 
 #### REQ-DEV-005 — Alzare il cricchetto della coverage, e standard di complessità nel lint
@@ -4898,6 +4913,44 @@ Daniele, 16/11/2026: «la vista dei tavoli è un'opzione per la versione per ris
 INTERFACCIA CON LA REGIA: l'elenco dei moduli è una copia tenuta allineata a mano (REQ-DEV-025). Va detto alla regia prima di rilasciarlo: id del modulo, la scelta «ristorante» che lo porta con sé, e da quali moduli dipende (la Sala richiede l'anagrafica dei tavoli, quindi probabilmente `menu_tavoli`). Da decidere con la regia se «ristorante» è un piano, un tipo di locale o un pacchetto di moduli.
 
 **Dove**: `src/lib/licenza.js (MODULI_PREMIUM), firestore.rules (modulo()), la regia (piani.json, elenco dei moduli)` · **Serve**: [UR-020](#ur-020--un-ristorante-lavora-coi-suoi-tavoli-e-coi-suoi-prodotti-freschi)
+
+### SITO
+
+#### REQ-SITO-001 — Le sezioni del sito del locale, sempre raggiungibili dal menu laterale della vista cliente
+
+Daniele, 17/11/2026: «Nella vista cliente, nel menu laterale ci devono essere le sezioni del sito raggiungibili sempre (Chi siamo, contatti, menu e altre sezioni da decidere). Il gestionale vede queste pagine solo nella vista cliente». Oggi «chi siamo» e i contatti stanno dentro la pagina iniziale, e il menu laterale del cliente ha solo Menù e I miei ordini. Diventano sezioni con un indirizzo ciascuna, e il menu laterale del cliente elenca sempre quelle mostrate (REQ-SITO-005): Home, Chi siamo, Contatti, Menù (quando è visibile ai clienti). Il personale le vede passando alla vista cliente, non dal menu del gestionale. I dati vengono da Identità del locale (`venue_*`, REQ-VENUE-002). Altre sezioni (orari, eventi) da decidere: docs/tema-del-sito.md.
+
+**Dove**: `src/components/ClientDrawer.jsx, src/pages/LandingPage.jsx, pagine nuove (Chi siamo, Contatti), src/App.jsx (rotte)` · **Serve**: [UR-018](#ur-018--il-locale-si-presenta-al-cliente-col-suo-stile-dalla-prima-pagina-al-menù)
+
+#### REQ-SITO-002 — Il tema del menù veste anche le pagine del sito: la Tana ha «Carte» anche in Chi siamo e Contatti
+
+Daniele, 17/11/2026: «Dobbiamo iniziare a propagare il tema del menu cliente anche alle altre pagine della home del locale … Nel caso della tana, io estenderei il tema carte anche alle pagine chi siamo e contatti». È il primo passo di REQ-MENU-044: il tema del menù veste Home, Chi siamo e Contatti nei colori, nei caratteri e nelle frasi; «Carte» in più nella forma (i contenuti scritti su una carta), come «Meraviglie» fa già con `pagine: true`. Un tema che non porta le pagine del sito le lascia al disegno di base. Il tema del sito come scelta separata dal tema del menù resta per dopo (docs/tema-del-sito.md, punto 2).
+
+**Dove**: `src/lib/stileMenu.js (pagine, vestePagine), src/lib/testiStile.js, src/pages/LandingPage.jsx, pagine del sito, src/index.css` · **Serve**: [UR-018](#ur-018--il-locale-si-presenta-al-cliente-col-suo-stile-dalla-prima-pagina-al-menù)
+
+#### REQ-SITO-003 — La foto del banner della pagina iniziale la sceglie il locale
+
+Daniele, 17/11/2026: «Anche la foto nel banner del tema attuale della home del locale dovrebbe poter essere customizzata». Oggi la foto in apertura della pagina iniziale è quella del tema. Il gestore ne carica una sua da Identità del locale; senza, resta quella del tema. Va su Storage (sul profilo leggero resta quella del tema) e la carica chi gestisce il locale, come le foto dei prodotti (BUG-160).
+
+**Dove**: `src/pages/LandingPage.jsx, src/components/IdentitaLocale.jsx, src/lib/storage.js, storage.rules` · **Serve**: [UR-018](#ur-018--il-locale-si-presenta-al-cliente-col-suo-stile-dalla-prima-pagina-al-menù)
+
+#### REQ-SITO-004 — La home del locale è un modulo: senza, l'indirizzo del locale apre il menù o una pagina di cortesia
+
+Daniele, 17/11/2026: «la home del locale è un modulo a parte … Disabilitando il modulo home la home diventa il menu se il locale sceglie così, altrimenti una pagina di cortesia con il nome e le info base del canale. In pratica se non c'è home allora menu altrimenti pagina di cortesia».
+
+CON IL MODULO: la home con le sue sezioni (REQ-SITO-001, REQ-SITO-005).
+
+SENZA: all'indirizzo del locale si apre il menù dei clienti, se il locale lo sceglie e il menù è visibile; altrimenti una pagina di cortesia col nome del locale e le informazioni di base (indirizzo, telefono, orari), vestita dal tema.
+
+INTERFACCIA CON LA REGIA: un modulo nuovo cambia l'elenco dei moduli tenuto allineato a mano (REQ-DEV-025): va detto alla regia prima di rilasciarlo, con l'id (proposta: `home`), cosa resta senza modulo e in quale piano sta. Da decidere con Daniele: il piano, e se la Tana lo ha (oggi la home ce l'ha: senza modulo nella licenza la perderebbe).
+
+**Dove**: `src/lib/licenza.js (MODULI_PREMIUM), src/App.jsx (la rotta /), pagina di cortesia nuova, la regia (piani.json, elenco dei moduli)` · **Serve**: [UR-018](#ur-018--il-locale-si-presenta-al-cliente-col-suo-stile-dalla-prima-pagina-al-menù)
+
+#### REQ-SITO-005 — L'editor della home: le sezioni fisse si mostrano o si nascondono
+
+Daniele, 17/11/2026: «l'editor della home abbiamo detto consente di cambiare invece le sezioni visualizzate. Avremo delle sezioni fisse che possono essere mostrate o meno». Le sezioni le diamo noi (Chi siamo, Contatti, Menù, poi quelle da decidere); il gestore sceglie quali mostrare. Una sezione nascosta sparisce dalla home e dal menu laterale, e il suo indirizzo rimanda alla home. Niente pagine libere. La scelta sta in `settings/bar`, come proposto in docs/tema-del-sito.md (punto 1).
+
+**Dove**: `Impostazioni (sito del locale), settings/bar (sezioni del sito), src/pages/LandingPage.jsx, src/components/ClientDrawer.jsx` · **Serve**: [UR-018](#ur-018--il-locale-si-presenta-al-cliente-col-suo-stile-dalla-prima-pagina-al-menù)
 
 ## L'architettura e le sue prove
 
