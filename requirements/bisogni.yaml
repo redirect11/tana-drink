@@ -395,6 +395,7 @@ bisogni:
       - REQ-LIC-016
       - REQ-LIC-017
       - REQ-LIC-018
+      - REQ-SIC-006
     test_cases: []
 
   - id: UR-016

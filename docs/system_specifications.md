@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 306 | fatto e coperto dai test |
+| ✅ | 307 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 9 | fatto a metà |
-| ⬜ | 37 | da fare |
+| ⬜ | 38 | da fare |
 | 🗑 | 8 | non più valido |
 
-**375 voci** in tutto. **330** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **37** sono lavori
+**377 voci** in tutto. **331** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **38** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **17** difetti noti sono ancora aperti.
 
@@ -55,7 +55,7 @@ come «vero oggi», non come «garantito».
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
 | [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 14 | 2 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
-| [Sicurezza](#sicurezza) | 3 | 2 | Regole di accesso, App Check, e cosa protegge cosa. |
+| [Sicurezza](#sicurezza) | 3 | 3 | Regole di accesso, App Check, e cosa protegge cosa. |
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | 6 | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
@@ -64,7 +64,7 @@ come «vero oggi», non come «garantito».
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 15 | 4 |  |
 | [VENUE](#venue) | 6 | — |  |
-| [FLOTTA](#flotta) | 10 | — |  |
+| [FLOTTA](#flotta) | 11 | — |  |
 | [SITO](#sito) | — | 5 |  |
 
 ### Le prove, livello per livello
@@ -80,7 +80,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Unità | il progetto di dettaglio: un modulo da solo | 188 |
 
 **20** bisogni del locale, **0** con un test di accettazione.
-**127** requisiti su 367 sono collegati a un bisogno;
+**129** requisiti su 369 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -200,7 +200,7 @@ La demo pubblica si fa provare a chi ancora non è cliente, senza account. Non d
 
 **Come si accetta**: Aperta la demo da un browser qualunque, nella pagina non c'è niente della Tana (nomi, foto, fornitori, informativa privacy) e nessuna richiesta parte verso la regia o verso Firebase; un link social scritto con «javascript:» non diventa un link.
 
-**Chi**: Gestore · **Lo realizzano**: [REQ-SIC-005](#req-sic-005--la-demo-pubblica-in-sicurezza-lo-script-dei-clienti-niente-regia-configurazione-finta-informativa-per-cliente), [REQ-UI-033](#req-ui-033--il-tema-lime-scuro-e-chiaro-di-lime---smartorders-ed-è-quello-di-partenza-dei-locali-nuovi) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Gestore · **Lo realizzano**: [REQ-SIC-005](#req-sic-005--la-demo-pubblica-in-sicurezza-lo-script-dei-clienti-niente-regia-configurazione-finta-informativa-per-cliente), [REQ-UI-033](#req-ui-033--il-tema-lime-scuro-e-chiaro-di-lime---smartorders-ed-è-quello-di-partenza-dei-locali-nuovi), [REQ-FLOTTA-033](#req-flotta-033--il-locale-della-demo-ha-un-nome-credibile-bancone-21) · ⚠️ **Nessun test di accettazione, ancora.**
 
 #### UR-015 — Il piano del locale decide cosa si usa, e chi ha tutto non se ne accorge
 
@@ -208,7 +208,7 @@ Un locale col piano Free prova l'app con una cassa semplice; uno con un piano a 
 
 **Come si accetta**: Su un locale Free con `stampa: false` nei limiti si batte un conto, lo si incassa e si chiude la cassa senza che esca niente dalla stampante, senza tasti «Stampa» e senza le impostazioni della stampante; dove si cercherebbero c'è la frase del piano. Sulla Tana, con la stessa versione, comanda e scontrino escono come sempre.
 
-**Chi**: Gestore · **Lo realizzano**: [REQ-LIC-005](#req-lic-005--il-free-è-una-cassa-semplice-si-battono-le-righe-e-si-incassa-senza-comande), [REQ-LIC-016](#req-lic-016--nel-free-non-si-stampa-niente-né-comande-né-scontrini-né-il-resto), [REQ-LIC-017](#req-lic-017--nel-free-non-cè-lai-niente-tasti-ai-chat-né-credito), [REQ-LIC-018](#req-lic-018--il-locale-fermo-si-mostra-secondo-chi-apre-pagina-neutra-al-pubblico-il-titolare-al-rinnovo-e-ai-suoi-dati) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Gestore · **Lo realizzano**: [REQ-LIC-005](#req-lic-005--il-free-è-una-cassa-semplice-si-battono-le-righe-e-si-incassa-senza-comande), [REQ-LIC-016](#req-lic-016--nel-free-non-si-stampa-niente-né-comande-né-scontrini-né-il-resto), [REQ-LIC-017](#req-lic-017--nel-free-non-cè-lai-niente-tasti-ai-chat-né-credito), [REQ-LIC-018](#req-lic-018--il-locale-fermo-si-mostra-secondo-chi-apre-pagina-neutra-al-pubblico-il-titolare-al-rinnovo-e-ai-suoi-dati), [REQ-SIC-006](#req-sic-006--lo-storage-segue-la-licenza-le-foto-dove-il-piano-le-comprende-gli-allegati-delle-fatture-col-loro-modulo) · ⚠️ **Nessun test di accettazione, ancora.**
 
 #### UR-016 — Il cliente ordina il drink come lo vuole, e paga quello che ha accettato
 
@@ -4474,6 +4474,16 @@ DA FARE: accesso, file, server, notifiche e l'ospite Firebase delle Functions.
 
 **Dove**: `src/porte/configurazione.js, src/porte/dati.js, src/adattatori/firebase/, src/lib/firebaseClient.js, src/lib/api.js, src/lib/storage.js, src/lib/push.js, public/sw.js, functions/index.js, functions/lib/, docs/porte-e-adattatori.md` · **Lo dimostrano**: `tests/unit/configurazione.test.js`, `tests/unit/confineFirebase.test.js`, `tests/unit/portaDati.test.js`, `tests/regole/contrattoDati.test.js`, `tests/regole/permessi.test.js`
 
+#### REQ-FLOTTA-033 — Il locale della demo ha un nome credibile: «Bancone 21»
+
+Daniele, 15/11/2026, sulle schermate della demo da mettere nella prima pagina della regia: «servirebbe un nome più credibile», e poi «usa bancone 21 per ora». «Bar Demo» si legge come un segnaposto, e nelle foto del prodotto fa sembrare finta l'app intera. Il nome resta inventato: non è un locale vero, e la demo continua a dire nella sua fascia che i dati sono di prova (REQ-FLOTTA-019).
+
+CRITERIO: la build della demo si chiama «Bancone 21» nel titolo della pagina e nel manifest (nome corto «Bancone 21»), e le frasi che nominano il locale dicono «al Bancone 21».
+
+COME È FATTO (17/11/2026): clienti/demo/venue.json (nome, nome corto, «al Bancone 21», la descrizione del manifest); il logo della demo resta quello neutro di prima.
+
+**Dove**: `clienti/demo/venue.json` · **Serve**: [UR-014](#ur-014--la-demo-che-si-mostra-a-un-locale-nuovo-non-espone-niente-di-un-locale-vero) · **Lo dimostrano**: `tests/unit/clienteBuild.test.js`
+
 ## Lavori previsti
 
 Roba decisa e non ancora scritta. **Non è quello che il sistema fa**: sta
@@ -4797,6 +4807,14 @@ Oggi test gira senza App Check e con la chiave reCAPTCHA della produzione, che p
 Richiesta della regia (drink-regia REQ-FLOTTA-019), 02/11/2026. L'utente: «incarica un agente di verificare la sicurezza della demo», e letti i risultati, «dobbiamo risolvere anche tutte queste cose». Il disegno della modalità demo regge (nessuna demo nel pacchetto della Tana, nessuna richiesta verso Firebase, nessun dato personale nei dati di prova), ma: genera-cliente.mjs rifiuta la cartella «demo» prima di vedere che esiste, e la demo vecchia (un'app vera) restava online; la demo chiama la regia di produzione (presentazione, catalogo) a ogni apertura; con la configurazione vera e disableNetwork che fallisce in silenzio la rete resterebbe accesa; l'informativa privacy della Tana finisce in ogni build, demo e locali della flotta; nel pacchetto della demo restano nomi, foto e un fornitore della Tana; i link dei social accettano javascript:; la stampante finta non scapa il logo. Il dettaglio, coi file e le righe, in docs/sicurezza-demo.md. La regia ha già messo la sua difesa (PR #69): configurazione finta, niente indirizzo della regia, CSP con connect-src 'self', Storage chiuso.
 
 **Dove**: `scripts/genera-cliente.mjs, src/lib/funzioniRegia.js, src/lib/presentazione.js, src/App.jsx, src/porte/configurazione.js, src/lib/firebaseClient.js, public/privacy-policy.html, public/cookie-policy.html, clienti/pluginCliente.js, src/demo/, src/lib/venue.js, src/lib/stampanteFinta.js, docs/sicurezza-demo.md` · **Serve**: [UR-014](#ur-014--la-demo-che-si-mostra-a-un-locale-nuovo-non-espone-niente-di-un-locale-vero)
+
+#### REQ-SIC-006 — Lo Storage segue la licenza: le foto dove il piano le comprende, gli allegati delle fatture col loro modulo
+
+Daniele, 17/11/2026, alla domanda della regia «Le regole di Storage leggono la licenza?»: sì. Col Free col profilo completo (REQ-FLOTTA-122 della regia) lo Storage c'è anche dove il piano non lo comprende: l'app nasconde le foto sul Free (limiti.js, `fotoConsentite`), ma le regole di Storage non leggevano la licenza, e un admin di un Free poteva caricare foto chiamando lo Storage a mano, a spese di Stonebit. ORA le regole di Storage leggono `licenza/attuale` da Firestore, con la stessa domanda delle regole di Firestore (licenza valida, scaduta, al Free, moduli): le foto dei prodotti si caricano solo con una licenza valida e non Free; gli allegati delle fatture solo col modulo `scadenzario` o `magazzino`, come la loro collezione. Cancellare e leggere non chiedono la licenza: un locale fermo deve poter fare pulizia e vedere i suoi documenti.
+
+IL PREZZO, INFRASTRUTTURA: le regole che leggono Firestore dallo Storage vogliono il ruolo `roles/firebaserules.firestoreServiceAgent` al service agent dello Storage del progetto (service-<numero>@gcp-sa-firebasestorage.iam.gserviceaccount.com). Senza, la lettura fallisce e nessuno carica più foto. Va dato prima del deploy su tana-drink-test, tana-drink (col via libera di Daniele) e nei locali della flotta (il Terraform della regia). Le prove girano anche in CI: il job delle regole accende anche lo Storage (Daniele, 17/11/2026: sì).
+
+**Dove**: `storage.rules, tests/regole/storage.test.js, .github/workflows/test.yml (job delle regole), IAM dei progetti (service agent dello Storage)` · **Serve**: [UR-015](#ur-015--il-piano-del-locale-decide-cosa-si-usa-e-chi-ha-tutto-non-se-ne-accorge)
 
 ### Intelligenza artificiale
 

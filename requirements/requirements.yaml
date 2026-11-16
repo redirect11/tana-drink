@@ -17636,3 +17636,36 @@ requirements:
     labels: [ui, marchio, gestionale]
     priority: P2
     test_cases: []
+
+  - id: REQ-SIC-006
+    title: "Lo Storage segue la licenza: le foto dove il piano le comprende, gli allegati delle fatture col loro modulo"
+    area: "storage.rules, tests/regole/storage.test.js, .github/workflows/test.yml (job delle regole), IAM dei progetti (service agent dello Storage)"
+    description: >
+      Daniele, 17/11/2026, alla domanda della regia «Le regole di Storage
+      leggono la licenza?»: sì. Col Free col profilo completo
+      (REQ-FLOTTA-122 della regia) lo Storage c'è anche dove il piano non
+      lo comprende: l'app nasconde le foto sul Free (limiti.js,
+      `fotoConsentite`), ma le regole di Storage non leggevano la licenza,
+      e un admin di un Free poteva caricare foto chiamando lo Storage a
+      mano, a spese di Stonebit.
+      ORA le regole di Storage leggono `licenza/attuale` da Firestore, con
+      la stessa domanda delle regole di Firestore (licenza valida, scaduta,
+      al Free, moduli): le foto dei prodotti si caricano solo con una
+      licenza valida e non Free; gli allegati delle fatture solo col modulo
+      `scadenzario` o `magazzino`, come la loro collezione. Cancellare e
+      leggere non chiedono la licenza: un locale fermo deve poter fare
+      pulizia e vedere i suoi documenti.
+      IL PREZZO, INFRASTRUTTURA: le regole che leggono Firestore dallo
+      Storage vogliono il ruolo `roles/firebaserules.firestoreServiceAgent`
+      al service agent dello Storage del progetto
+      (service-<numero>@gcp-sa-firebasestorage.iam.gserviceaccount.com).
+      Senza, la lettura fallisce e nessuno carica più foto. Va dato prima
+      del deploy su tana-drink-test, tana-drink (col via libera di Daniele)
+      e nei locali della flotta (il Terraform della regia).
+      Le prove girano anche in CI: il job delle regole accende anche lo
+      Storage (Daniele, 17/11/2026: sì).
+    status: todo
+    generate_issue: true
+    labels: [sicurezza, licenza, costi]
+    priority: P1
+    test_cases: []
