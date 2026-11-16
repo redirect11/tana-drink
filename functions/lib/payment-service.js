@@ -14,6 +14,7 @@ const {
   mapCheckoutStatus,
   mapTransactionStatus,
   decidePaymentPatch,
+  esitoLettoreDaApplicare,
   groupOrderPaidPatch,
   orderDue,
 } = require('./payment-core')
@@ -366,6 +367,17 @@ async function handleReaderWebhook(deps, { clientTransactionId } = {}) {
 
   if (!snap.empty) {
     const orderSnap = snap.docs[0]
+    // Un esito rimandato da SumUp non riscrive un conto che non lo aspetta
+    // più (BUG-162, esitoLettoreDaApplicare).
+    if (!esitoLettoreDaApplicare(orderSnap.data(), { status, transactionId: txId })) {
+      // Un rifiuto che il conto non aspetta più (si è incassato a parte,
+      // in contanti, mentre la carta era sul lettore): lo stato è già
+      // giusto e non si tocca, ma l'importo in volo non vola più.
+      if (status === 'fallito' && Number(orderSnap.data().sumup_pending_amount) > 0) {
+        await orderSnap.ref.update({ sumup_pending_amount: null, sumup_pending_items: null, sumup_pending_sconto: null })
+      }
+      return { status: 200 }
+    }
     const patch = decidePaymentPatch(orderSnap.data(), { status, transactionId: txId, now: now() })
     if (patch) await orderSnap.ref.update(patch)
     return { status: 200 }

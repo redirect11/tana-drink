@@ -246,6 +246,36 @@ function parseCheckoutWebhookBody(body) {
   }
 }
 
+// UN ESITO DEL LETTORE SI APPLICA UNA VOLTA SOLA (BUG-162). SumUp ritenta
+// una notifica non riuscita dopo 1, 5, 20 minuti e 2 ore, e una Function
+// lenta o un'istanza piena bastano a farla rimandare: lo stesso esito può
+// arrivare più volte, anche ore dopo. E il conto tiene il suo
+// `sumup_client_transaction_id` anche dopo, perché un incasso in contanti
+// non lo toglie: un «fallito» rimandato ritrovava il conto già pagato in
+// contanti e lo riportava a «parziale».
+//   · «fallito» vale solo per un conto che aspetta ancora il lettore;
+//   · «pagato» non si riapplica se quella transazione è già fra gli
+//     incassi del conto — ma si applica anche dopo un annullo dal banco:
+//     se SumUp dice che i soldi sono stati presi, il conto risulta pagato.
+//     (Con acconti già presi, in quel caso l'importo non entra negli
+//     incassi: l'annullo ha azzerato quello in volo. Limite di prima.)
+function esitoLettoreDaApplicare(order, { status, transactionId = null } = {}) {
+  if (!order) return false
+  if (status === 'fallito') {
+    return order.payment_status === 'in_attesa' && order.payment_method === 'lettore'
+  }
+  if (status !== 'pagato') return false
+  if (transactionId) {
+    const giaIncassata =
+      order.sumup_transaction_id === transactionId ||
+      (order.payments || []).some((p) => p?.transaction_id === transactionId)
+    return !giaIncassata
+  }
+  // Senza l'id della transazione: un conto già pagato e senza importo in
+  // volo non ha niente da ricevere.
+  return !(order.payment_status === 'pagato' && !(Number(order.sumup_pending_amount) > 0))
+}
+
 module.exports = {
   isServed,
   orderDue,
@@ -256,6 +286,7 @@ module.exports = {
   mapCheckoutStatus,
   mapTransactionStatus,
   decidePaymentPatch,
+  esitoLettoreDaApplicare,
   groupOrderPaidPatch,
   decideAutoAdvance,
   parseReaderWebhookBody,

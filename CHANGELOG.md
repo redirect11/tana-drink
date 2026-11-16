@@ -48,6 +48,10 @@
   (REQ-DEV-026).
 - Il controllo dei numeri doppi, a ogni conto nuovo, legge solo i conti
   con lo stesso numero invece di tutta la cassa (BUG-161).
+- Un esito del lettore SumUp rimandato in ritardo non cambia più un conto
+  che non lo aspetta: un pagamento rifiutato e ripetuto ore dopo non
+  riporta a «parziale» un conto già pagato in contanti, e un pagamento
+  riuscito e ripetuto non si registra due volte (BUG-162).
 
 ## 1.10.51 — 15 novembre 2026 (produzione)
 

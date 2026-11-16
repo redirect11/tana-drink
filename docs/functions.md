@@ -119,7 +119,21 @@ stato **si rilegge sempre dall'API**: quello che dice il browser non basta.
 Riceve gli esiti (checkout online e `return_url` del lettore) e smista per
 forma del payload. L'esito viene **sempre ri-verificato via API SumUp**,
 quindi un payload malformato è innocuo — ed è per questo che non serve una
-firma. Risponde sempre `200`: un errore farebbe ritentare SumUp per un'ora.
+firma. Risponde sempre `200`: SumUp tratta come non riuscita ogni risposta
+che non sia `2xx`, e anche una risposta troppo lenta, e ritenta dopo 1
+minuto, 5 minuti, 20 minuti e 2 ore (documentazione dei webhook di SumUp,
+https://developer.sumup.com/online-payments/webhooks/, letta dalla regia il
+16/11/2026; scritta per il checkout online, per il lettore non è detto).
+
+Quindi **lo stesso esito può arrivare più volte**, anche ore dopo, e il
+webhook lo deve reggere:
+- checkout online: `verifyCheckoutStatus` scrive solo se lo stato cambia, e
+  non tocca un conto già pagato. Resta un buco: un rifiuto online rimandato
+  quando il conto è passato al lettore lo segna «fallito» (BUG-163, da fare);
+- lettore: `esitoLettoreDaApplicare` (in `payment-core.js`) applica un
+  «fallito» solo a un conto che aspetta ancora il lettore, e un «pagato» solo
+  se quella transazione non è già fra gli incassi (BUG-162);
+- gruppi: `settleGroupPayment` non tocca un pagamento già saldato.
 
 ### `autoAdvancePaid` — trigger su `orders/{orderId}`
 

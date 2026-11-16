@@ -6537,10 +6537,31 @@ bugs:
       pagato e non c'è un importo in volo). Il «pagato» che arriva dopo un
       annullo dal banco si applica ancora: i soldi sono stati presi.
     in_produzione: true
-    status: todo
+    status: fixed
     generate_issue: true
     labels: [bug, pagamenti, sumup]
     severity: alta
     priority: P1
     requisiti: [REQ-PAG-004, REQ-DEV-026]
+    test_cases: [tests/bdd/payment-reader.test.js]
+  - id: BUG-163
+    title: "Un rifiuto del pagamento online che SumUp rimanda in ritardo segna «fallito» un conto passato nel frattempo al lettore"
+    area: "functions/lib/payment-service.js (verifyCheckoutStatus, handleOnlineWebhook)"
+    description: >
+      Trovato dal revisore il 16/11/2026, correggendo BUG-162: è lo stesso
+      difetto, sul checkout online. Il cliente paga online e la carta viene
+      rifiutata; il conto passa al lettore del banco (`in_attesa`, metodo
+      `lettore`). Se SumUp rimanda il rifiuto online (ritenta dopo 1, 5,
+      20 minuti e 2 ore), `verifyCheckoutStatus` vede uno stato diverso da
+      quello del conto, scrive «fallito» e azzera l'importo in volo del
+      lettore: il pagamento al banco, se poi riesce, arriva su un conto che
+      non lo aspetta più. Da correggere come BUG-162: l'esito online si
+      applica solo a un conto che aspetta ancora quel checkout.
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, pagamenti, sumup]
+    severity: media
+    priority: P2
+    requisiti: [REQ-PAG-005, REQ-DEV-026]
     test_cases: []
