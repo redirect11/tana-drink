@@ -76,7 +76,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 11 |
 | Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 187 |
-| Unità | il progetto di dettaglio: un modulo da solo | 187 |
+| Unità | il progetto di dettaglio: un modulo da solo | 188 |
 
 **20** bisogni del locale, **0** con un test di accettazione.
 **120** requisiti su 360 sono collegati a un bisogno;
@@ -1221,7 +1221,7 @@ L'utente, 10/11/2026, davanti alla copia del listino della Tana nell'editor (cen
 
 Flavio, 10/11/2026, con la foto del Gold Rush modificato al POS: il riquadro dava il prezzo reale della ricetta (1,72 €) ma non quanto pesa ciascun ingrediente («jim beam 60 ml 1,14 €»). Nel prodotto modificato al POS e nella scheda del drink a menù ogni riga di ricetta mostra, dopo quantità e unità, il suo costo al dettaglio: quantità × costo dell'articolo nell'unità scritta, IVA inclusa, con lo stesso calcolo del prezzo reale, così le righe sommate fanno il totale. Senza quantità la riga non mostra niente; con un articolo senza costo in magazzino mostra un trattino, e il riquadro del prezzo dice già quale manca.
 
-**Dove**: `src/lib/pricing.js (costoRiga), src/components/CostoRiga.jsx, CustomDrinkForm.jsx, DrinkForm.jsx` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/component/costoRigheRicetta.test.jsx`
+**Dove**: `src/lib/pricing.js (costoRiga), src/components/CostoRiga.jsx, CustomDrinkForm.jsx, DrinkForm.jsx` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/component/costoRigheRicetta.test.jsx`, `tests/unit/lavorazioneInU.test.js`
 
 #### REQ-MENU-023 — Il marketplace dei temi, una pagina sua: un tema è una tavolozza più uno stile, si sfoglia, si prova, si installa e si usa
 

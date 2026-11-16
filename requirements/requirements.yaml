@@ -6746,6 +6746,7 @@ requirements:
     labels: [menu, magazzino]
     test_cases:
       - tests/component/costoRigheRicetta.test.jsx
+      - tests/unit/lavorazioneInU.test.js
 
   - id: REQ-MENU-023
     title: "Il marketplace dei temi, una pagina sua: un tema è una tavolozza più uno stile, si sfoglia, si prova, si installa e si usa"
