@@ -17283,3 +17283,42 @@ requirements:
     generate_issue: true
     labels: [metodo, regia]
     test_cases: []
+
+  - id: REQ-DEV-026
+    title: "La spesa dei servizi Google ha un tetto: istanze limitate e indirizzi pubblici che non lavorano a vuoto"
+    area: "functions/index.js (setGlobalOptions, OPTS_PUBBLICO), functions/lib/payment-service.js (handleReaderWebhook)"
+    description: >
+      Daniele, 15/11/2026: «non voglio trovarmi a pagare migliaia di euro».
+      I progetti dei locali nascono sull'account di fatturazione di Stonebit:
+      quello che consumano Functions, Firestore e Storage lo paga Stonebit.
+      Controllo dei costi chiesto dalla regia il 15/11 (messaggio «un
+      controllo dei costi delle vostre Functions»), risposto il 16/11 con
+      otto punti; questa voce copre i primi.
+      PRIMA nessuna delle venti Functions aveva `maxInstances`: Google ne
+      accende fino a 100 per Function, e un indirizzo pubblico bombardato
+      apposta moltiplica la spesa senza un tetto. ADESSO il tetto è 10 per
+      tutte, impostato una volta in `setGlobalOptions` così vale anche per
+      le Functions che arriveranno; 3 per le quattro chiamabili che il
+      cliente usa senza account (checkout online e verifica, singolo e di
+      gruppo), dove l'id del conto fa da lasciapassare e ogni chiamata
+      legge Firestore prima di qualunque controllo.
+      IL WEBHOOK DEI PAGAMENTI RESTA A 10, non a 3 (regia, 16/11/2026):
+      finché non si sa se SumUp ritenta una notifica rifiutata con 429, un
+      tetto basso può far perdere un pagamento confermato. E SUI TRIGGER
+      NIENTE SOTTO 10: per la seconda generazione Google non scrive cosa
+      succede a un evento che trova le istanze piene, e senza nuovi
+      tentativi (il predefinito) può perdersi; 10 un bar non li riempie.
+      La prova la fa la regia sul suo progetto di test.
+      IL WEBHOOK DEL LETTORE chiedeva l'esito a SumUp prima di sapere se la
+      transazione era di un conto del locale: un POST con un id inventato
+      costava due query e una chiamata a SumUp. Ora si chiama SumUp solo se
+      un conto o un pagamento di gruppo con quell'id esiste.
+      NON QUI: App Check imposto sulle chiamabili (oggi non c'è nei
+      progetti dei locali, ed è una decisione di Daniele, REQ-SIC-002); la
+      coda pagata due volte e il riassunto per le pagine del cliente (punti
+      5 e 6 del controllo), che toccano la coda e vanno provati senza rete.
+    status: todo
+    generate_issue: true
+    labels: [dev, functions, costi]
+    priority: P1
+    test_cases: []

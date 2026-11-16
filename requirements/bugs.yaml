@@ -6467,3 +6467,50 @@ bugs:
     priority: P2
     requisiti: [REQ-NOTIF-002]
     test_cases: [tests/bdd/notify-order.test.js, tests/component/AvvisiRipristino.test.jsx]
+  - id: BUG-160
+    title: "Le foto del menù le può caricare e cancellare qualunque account, anche un cliente registrato"
+    area: "storage.rules (drinks/)"
+    description: >
+      Trovato nel controllo dei costi del 16/11/2026 (REQ-DEV-026). La
+      cartella `drinks/` di Storage chiedeva solo di aver fatto l'accesso
+      (`request.auth != null`), e i clienti possono registrarsi
+      (src/lib/customerAuth.js): un cliente registrato poteva caricare file
+      da 5 MB senza limite di numero, a spese del locale, e cancellare le
+      foto dei prodotti del menù. Nessun flusso del cliente carica lì: la
+      foto la mette la scheda prodotto (src/lib/saveDrink.js), e scrivere
+      un prodotto richiede già banco o admin nelle regole del database.
+      ORA creare e cancellare in `drinks/` vuole banco o admin, come le
+      fatture; restano il tetto di 5 MB e il solo tipo immagine. La
+      lettura resta libera: il menù del cliente le mostra.
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, sicurezza, costi]
+    severity: alta
+    priority: P1
+    requisiti: [REQ-SIC-001, REQ-DEV-026]
+    test_cases: []
+  - id: BUG-161
+    title: "A ogni conto nuovo il server rilegge tutti i conti della cassa per cercare un numero doppio"
+    area: "functions/index.js (risolviNumeroDuplicato), functions/lib/numerazione.js"
+    description: >
+      Trovato nel controllo dei costi del 16/11/2026 (REQ-DEV-026).
+      `risolviNumeroDuplicato` scatta a ogni conto creato e, per sapere se
+      il suo numero è conteso, leggeva tutti i conti della sessione di
+      cassa: la spesa cresce col quadrato dei conti, e con 200 conti in una
+      sera sono circa 20.000 letture solo per questo.
+      ORA si chiedono prima i soli conti della cassa con lo stesso numero —
+      di solito uno, il conto stesso. Tutta la cassa si legge solo quando
+      il numero è conteso E il conto nuovo ha perso, perché serve il più
+      alto per dargli il primo libero. Se la query stretta fallisce (un
+      indice che manca o non è ancora costruito), si torna alla lettura
+      completa di prima: un numero doppio non risolto costa più di qualche
+      lettura (regia, 16/11/2026).
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, functions, costi]
+    severity: media
+    priority: P2
+    requisiti: [REQ-ORD-016, REQ-DEV-026]
+    test_cases: []

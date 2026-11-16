@@ -457,3 +457,22 @@ bisogni:
     requisiti:
       - REQ-MENU-044
     test_cases: []
+
+  - id: UR-019
+    title: "Il locale non paga i servizi che fanno girare l'app oltre quello che usa davvero"
+    area: "Gestore"
+    description: >
+      Daniele, 15/11/2026: «non voglio trovarmi a pagare migliaia di euro».
+      I progetti dei locali stanno sull'account di fatturazione di Stonebit:
+      un indirizzo pubblico bombardato, un trigger che si riaccende da solo
+      o una lettura che cresce col numero dei conti diventano una fattura
+      vera. La spesa deve seguire il lavoro del locale, e avere un tetto
+      dove qualcuno da fuori può farla salire.
+    accettazione: >
+      Ogni Function ha un tetto di istanze, più basso dove si chiama senza
+      account; una chiamata con un id inventato non arriva a SumUp; una
+      sera da 200 conti non rilegge la cassa a ogni conto; un cliente
+      registrato non riesce a caricare file nello Storage del locale.
+    requisiti:
+      - REQ-DEV-026
+    test_cases: []

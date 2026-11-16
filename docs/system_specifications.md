@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 15 novembre 2026.
+> Generato il 16 novembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -25,13 +25,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 | ✅ | 304 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 9 | fatto a metà |
-| ⬜ | 27 | da fare |
+| ⬜ | 28 | da fare |
 | 🗑 | 8 | non più valido |
 
-**363 voci** in tutto. **328** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **27** sono lavori
+**364 voci** in tutto. **328** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **28** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
-cosa che l'app fa; **16** difetti noti sono ancora aperti.
+cosa che l'app fa; **18** difetti noti sono ancora aperti.
 
 Le voci ⚠️ sono la parte scomoda: funzionano, ma **nessun test le tiene**.
 Sono quelle che si rompono senza che nessuno se ne accorga, e vanno lette
@@ -60,7 +60,7 @@ come «vero oggi», non come «garantito».
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | 6 | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 29 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
-| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 23 | 2 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
+| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 23 | 3 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 15 | 3 |  |
 | [VENUE](#venue) | 6 | — |  |
@@ -78,8 +78,8 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 185 |
 | Unità | il progetto di dettaglio: un modulo da solo | 187 |
 
-**18** bisogni del locale, **0** con un test di accettazione.
-**115** requisiti su 355 sono collegati a un bisogno;
+**19** bisogni del locale, **0** con un test di accettazione.
+**116** requisiti su 356 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -232,6 +232,14 @@ Daniele, 14/11/2026: il tema che il locale sceglie non deve valere solo per il m
 **Come si accetta**: Con «Carte» come tema, la pagina iniziale della Tana (benvenuto, contatti, tasto del menù) ha i colori, i caratteri e le frasi di «Carte», come il menù; cambiando tema in Impostazioni cambiano insieme pagina iniziale e menù.
 
 **Chi**: Cliente, Gestore · **Lo realizzano**: [REQ-MENU-044](#req-menu-044--il-tema-del-locale-veste-anche-la-pagina-iniziale-coi-contatti-non-solo-il-menù) · ⚠️ **Nessun test di accettazione, ancora.**
+
+#### UR-019 — Il locale non paga i servizi che fanno girare l'app oltre quello che usa davvero
+
+Daniele, 15/11/2026: «non voglio trovarmi a pagare migliaia di euro». I progetti dei locali stanno sull'account di fatturazione di Stonebit: un indirizzo pubblico bombardato, un trigger che si riaccende da solo o una lettura che cresce col numero dei conti diventano una fattura vera. La spesa deve seguire il lavoro del locale, e avere un tetto dove qualcuno da fuori può farla salire.
+
+**Come si accetta**: Ogni Function ha un tetto di istanze, più basso dove si chiama senza account; una chiamata con un id inventato non arriva a SumUp; una sera da 200 conti non rilegge la cassa a ogni conto; un cliente registrato non riesce a caricare file nello Storage del locale.
+
+**Chi**: Gestore · **Lo realizzano**: [REQ-DEV-026](#req-dev-026--la-spesa-dei-servizi-google-ha-un-tetto-istanze-limitate-e-indirizzi-pubblici-che-non-lavorano-a-vuoto) · ⚠️ **Nessun test di accettazione, ancora.**
 
 ## Cosa fa il sistema
 
@@ -4781,6 +4789,22 @@ Dalla regia, contratto delle interfacce del 14/11/2026: alcuni valori stanno in 
 
 **Dove**: `src/lib/licenzaInVigore.js (LIMITI_FREE), src/lib/licenza.js (MODULI_PREMIUM), src/lib/themes.js, src/lib/stileMenu.js, src/lib/stiliRicetta.js, src/lib/marketplaceTemi.js, scripts/lib-titolare.js, l'ora del taglio` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera)
 
+#### REQ-DEV-026 — La spesa dei servizi Google ha un tetto: istanze limitate e indirizzi pubblici che non lavorano a vuoto
+
+Daniele, 15/11/2026: «non voglio trovarmi a pagare migliaia di euro». I progetti dei locali nascono sull'account di fatturazione di Stonebit: quello che consumano Functions, Firestore e Storage lo paga Stonebit. Controllo dei costi chiesto dalla regia il 15/11 (messaggio «un controllo dei costi delle vostre Functions»), risposto il 16/11 con otto punti; questa voce copre i primi.
+
+PRIMA nessuna delle venti Functions aveva `maxInstances`: Google ne accende fino a 100 per Function, e un indirizzo pubblico bombardato apposta moltiplica la spesa senza un tetto.
+
+ADESSO il tetto è 10 per tutte, impostato una volta in `setGlobalOptions` così vale anche per le Functions che arriveranno; 3 per le quattro chiamabili che il cliente usa senza account (checkout online e verifica, singolo e di gruppo), dove l'id del conto fa da lasciapassare e ogni chiamata legge Firestore prima di qualunque controllo.
+
+IL WEBHOOK DEI PAGAMENTI RESTA A 10, non a 3 (regia, 16/11/2026): finché non si sa se SumUp ritenta una notifica rifiutata con 429, un tetto basso può far perdere un pagamento confermato. E SUI TRIGGER NIENTE SOTTO 10: per la seconda generazione Google non scrive cosa succede a un evento che trova le istanze piene, e senza nuovi tentativi (il predefinito) può perdersi; 10 un bar non li riempie. La prova la fa la regia sul suo progetto di test.
+
+IL WEBHOOK DEL LETTORE chiedeva l'esito a SumUp prima di sapere se la transazione era di un conto del locale: un POST con un id inventato costava due query e una chiamata a SumUp. Ora si chiama SumUp solo se un conto o un pagamento di gruppo con quell'id esiste.
+
+NON QUI: App Check imposto sulle chiamabili (oggi non c'è nei progetti dei locali, ed è una decisione di Daniele, REQ-SIC-002); la coda pagata due volte e il riassunto per le pagine del cliente (punti 5 e 6 del controllo), che toccano la coda e vanno provati senza rete.
+
+**Dove**: `functions/index.js (setGlobalOptions, OPTS_PUBBLICO), functions/lib/payment-service.js (handleReaderWebhook)` · **Serve**: [UR-019](#ur-019--il-locale-non-paga-i-servizi-che-fanno-girare-lapp-oltre-quello-che-usa-davvero)
+
 ### LIC
 
 #### REQ-LIC-006 — Nel Free, una volta al giorno, l'invito a passare a un piano a pagamento
@@ -4909,6 +4933,8 @@ della correzione è il test citato nel requisito della sua area.
 | 🔴 | [BUG-156](#bug-156--la-chat-dellai-non-legge-i-limiti-degli-strumenti-che-la-regia-manda) — La chat dell'AI non legge i limiti degli strumenti che la regia manda | bassa | P3 |
 | 🔴 | [BUG-157](#bug-157--la-licenza-della-tana-scritta-dal-deploy-è-più-povera-di-quella-che-scrive-la-regia) — La licenza della Tana scritta dal deploy è più povera di quella che scrive la regia | bassa | P3 |
 | 🔴 | [BUG-158](#bug-158--genera-clientemjs-non-conosce-il-tipo-di-locale-che-il-workflow-della-regia-gli-passa) — genera-cliente.mjs non conosce il tipo di locale che il workflow della regia gli passa | bassa | P3 |
+| 🔴 | [BUG-160](#bug-160--le-foto-del-menù-le-può-caricare-e-cancellare-qualunque-account-anche-un-cliente-registrato) — Le foto del menù le può caricare e cancellare qualunque account, anche un cliente registrato | alta | P1 |
+| 🔴 | [BUG-161](#bug-161--a-ogni-conto-nuovo-il-server-rilegge-tutti-i-conti-della-cassa-per-cercare-un-numero-doppio) — A ogni conto nuovo il server rilegge tutti i conti della cassa per cercare un numero doppio | media | P2 |
 
 🔴 succede **in produzione**, cioè al banco. `·` no. `?` non si sa ancora.
 
@@ -5063,6 +5089,18 @@ Dalla regia, contratto del 14/11/2026: la licenza della Tana non ha `piano`, `te
 Dalla regia, contratto del 14/11/2026: lo script della 1.10.x non conosce `--sa tipo-locale` né `--tipo-locale`. Il workflow della regia ripiega, ma telefono, partita IVA, codice fiscale e sede legale arrivano solo da settings/bar. Lo script lo chiama la regia: i suoi argomenti sono contratto.
 
 **Dove**: `scripts/genera-cliente.mjs` · **Tradisce**: [REQ-VENUE-001](#req-venue-001--lidentità-del-locale-è-un-dato-clientislugvenuejson-in-build-settingsbar-venue-a-runtime)
+
+#### BUG-160 — Le foto del menù le può caricare e cancellare qualunque account, anche un cliente registrato
+
+Trovato nel controllo dei costi del 16/11/2026 (REQ-DEV-026). La cartella `drinks/` di Storage chiedeva solo di aver fatto l'accesso (`request.auth != null`), e i clienti possono registrarsi (src/lib/customerAuth.js): un cliente registrato poteva caricare file da 5 MB senza limite di numero, a spese del locale, e cancellare le foto dei prodotti del menù. Nessun flusso del cliente carica lì: la foto la mette la scheda prodotto (src/lib/saveDrink.js), e scrivere un prodotto richiede già banco o admin nelle regole del database. ORA creare e cancellare in `drinks/` vuole banco o admin, come le fatture; restano il tetto di 5 MB e il solo tipo immagine. La lettura resta libera: il menù del cliente le mostra.
+
+**Dove**: `storage.rules (drinks/)` · **Tradisce**: [REQ-SIC-001](#req-sic-001--le-regole-del-database-seguono-i-ruoli), [REQ-DEV-026](#req-dev-026--la-spesa-dei-servizi-google-ha-un-tetto-istanze-limitate-e-indirizzi-pubblici-che-non-lavorano-a-vuoto)
+
+#### BUG-161 — A ogni conto nuovo il server rilegge tutti i conti della cassa per cercare un numero doppio
+
+Trovato nel controllo dei costi del 16/11/2026 (REQ-DEV-026). `risolviNumeroDuplicato` scatta a ogni conto creato e, per sapere se il suo numero è conteso, leggeva tutti i conti della sessione di cassa: la spesa cresce col quadrato dei conti, e con 200 conti in una sera sono circa 20.000 letture solo per questo. ORA si chiedono prima i soli conti della cassa con lo stesso numero — di solito uno, il conto stesso. Tutta la cassa si legge solo quando il numero è conteso E il conto nuovo ha perso, perché serve il più alto per dargli il primo libero. Se la query stretta fallisce (un indice che manca o non è ancora costruito), si torna alla lettura completa di prima: un numero doppio non risolto costa più di qualche lettura (regia, 16/11/2026).
+
+**Dove**: `functions/index.js (risolviNumeroDuplicato), functions/lib/numerazione.js` · **Tradisce**: [REQ-ORD-016](#req-ord-016--battere-un-conto-non-aspetta-la-rete-e-non-ne-nascono-due), [REQ-DEV-026](#req-dev-026--la-spesa-dei-servizi-google-ha-un-tetto-istanze-limitate-e-indirizzi-pubblici-che-non-lavorano-a-vuoto)
 
 ## Non più valido
 
