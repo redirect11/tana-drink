@@ -6595,3 +6595,30 @@ bugs:
     priority: P2
     requisiti: [REQ-MENU-034]
     test_cases: [tests/unit/lavorazioneInU.test.js]
+  - id: BUG-165
+    title: "Su un Free col profilo completo, `staffAdmin` crea utenze oltre il limite del piano"
+    area: "functions/lib/staff-service.js, functions/lib/licenza-core.js, functions/index.js (staffAdmin)"
+    description: >
+      Dalla regia, 16/11/2026 (REQ-FLOTTA-122): ogni locale nuovo nasce col
+      profilo completo anche se è Free, e chi paga può scendere al Free a
+      fine periodo. Fino a ieri il Free era leggero — niente Functions — e
+      il limite `utenti_max: 1` reggeva da sé: `staffAdmin` non c'era.
+      L'app nasconde la gestione delle utenze sul Free (limiti.js,
+      `staffConsentito`), ma la Function, ora pubblicata, non guardava la
+      licenza: chiamata a mano dalla console del browser, un admin di un
+      Free creava quante utenze voleva.
+      ORA `staffAdmin` legge la licenza e non porta le utenze attive dello
+      staff oltre `utenti_max`: niente utenze nuove, nessun cliente
+      promosso a un ruolo dello staff, nessuna utenza dello staff
+      riattivata oltre il tetto. Una licenza scaduta vale come Free. Le
+      utenze che ci sono già NON si toccano: chi scende al Free con più
+      persone le tiene, e il limite ferma solo le aggiunte, come per i
+      prodotti (limiti.js, puoCreareProdotto).
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, licenza, staff]
+    severity: media
+    priority: P2
+    requisiti: [REQ-LIC-003]
+    test_cases: []
