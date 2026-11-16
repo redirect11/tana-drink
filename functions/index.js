@@ -9,6 +9,7 @@
 // nel repo:
 //   firebase functions:secrets:set SUMUP_API_KEY
 
+const { setGlobalOptions } = require('firebase-functions/v2')
 const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https')
 const { onDocumentUpdated, onDocumentCreated, onDocumentWritten } = require('firebase-functions/v2/firestore')
 const disponibilita = require('./lib/disponibilita')
@@ -18,7 +19,7 @@ const { getFirestore, FieldValue } = require('firebase-admin/firestore')
 const { getMessaging } = require('firebase-admin/messaging')
 const { getAuth } = require('firebase-admin/auth')
 
-const { numeroDaRiassegnare } = require('./lib/numerazione')
+const { numeroDaRiassegnareInCassa } = require('./lib/numerazione')
 const {
   decideOrderPush,
   decideStaffCallPush,
@@ -52,7 +53,26 @@ const {
 initializeApp()
 const db = getFirestore()
 
+// ── IL TETTO ALLE ISTANZE (REQ-DEV-026) ─────────────────────────────────────
+// Senza `maxInstances` Google accende fino a 100 istanze per Function, e la
+// spesa la paga Stonebit (Daniele, 15/11/2026: «non voglio trovarmi a pagare
+// migliaia di euro»). Il tetto sta qui, una volta, così vale anche per le
+// Functions che arriveranno.
+// 10 PER TUTTE, NON MENO: per i trigger di seconda generazione Google non
+// scrive cosa succede a un evento che trova le istanze piene, e senza nuovi
+// tentativi può perdersi — una «Nuovo ordine» mancata, un numero doppio non
+// risolto. Un bar 10 istanze non le riempie. Lo stesso per il webhook dei
+// pagamenti: finché non si sa se SumUp ritenta una notifica respinta, un
+// tetto basso può far perdere un pagamento confermato (regia, 16/11/2026).
+const TETTO_ISTANZE = 10
+setGlobalOptions({ region: 'europe-west1', maxInstances: TETTO_ISTANZE })
+
 const OPTS = { region: 'europe-west1' }
+// 3 PER LE CHIAMABILI DEL CLIENTE SENZA ACCOUNT: l'id del conto fa da
+// lasciapassare, quindi chiunque può chiamarle, e ogni chiamata legge
+// Firestore prima di qualunque controllo. Il cliente ne fa una o due per
+// pagamento: 3 istanze bastano, e chi le bombarda trova il muro presto.
+const OPTS_PUBBLICO = { ...OPTS, maxInstances: 3 }
 
 // ── Gestione utenze staff (solo bartender) ────────────────────────────────────
 // Crea/elenca/modifica/elimina gli account dello staff con il ruolo
@@ -398,18 +418,24 @@ exports.risolviNumeroDuplicato = onDocumentCreated(
     const valore = nuovo.cash_session_id || nuovo.order_date
     if (!valore) return
 
-    const snap = await db.collection('orders').where(campo, '==', valore).get()
-    const fratelli = snap.docs.map((d) => ({
-      id: d.id,
-      created_at: d.get('created_at'),
-      daily_number: d.get('daily_number'),
-    }))
+    const fratelli = (snap) =>
+      snap.docs.map((d) => ({
+        id: d.id,
+        created_at: d.get('created_at'),
+        daily_number: d.get('daily_number'),
+      }))
+    const cassa = db.collection('orders').where(campo, '==', valore)
     const conto = {
       id: event.params.orderId,
       created_at: nuovo.created_at,
       daily_number: nuovo.daily_number,
     }
-    const numero = numeroDaRiassegnare(conto, fratelli)
+    // Prima i soli conti con lo stesso numero; tutta la cassa solo se serve
+    // (BUG-161, lib/numerazione.js).
+    const numero = await numeroDaRiassegnareInCassa(conto, {
+      stessoNumero: async () => fratelli(await cassa.where('daily_number', '==', nuovo.daily_number).get()),
+      tuttaLaCassa: async () => fratelli(await cassa.get()),
+    })
     if (numero == null) return
 
     await db.collection('orders').doc(conto.id).update({
@@ -550,7 +576,7 @@ function toHttpsError(e) {
 
 // Checkout online: chiamabile anche da clienti anonimi (l'id ordine fa
 // da capability token, come per la pagina ordine pubblica).
-exports.createPaymentCheckout = onCall({ ...OPTS, secrets: [SUMUP_API_KEY] }, async (request) => {
+exports.createPaymentCheckout = onCall({ ...OPTS_PUBBLICO, secrets: [SUMUP_API_KEY] }, async (request) => {
   try {
     return await createCheckout(paymentDeps(), request.data || {})
   } catch (e) {
@@ -558,7 +584,7 @@ exports.createPaymentCheckout = onCall({ ...OPTS, secrets: [SUMUP_API_KEY] }, as
   }
 })
 
-exports.getPaymentStatus = onCall({ ...OPTS, secrets: [SUMUP_API_KEY] }, async (request) => {
+exports.getPaymentStatus = onCall({ ...OPTS_PUBBLICO, secrets: [SUMUP_API_KEY] }, async (request) => {
   try {
     return await verifyCheckoutStatus(paymentDeps(), request.data || {})
   } catch (e) {
@@ -633,7 +659,7 @@ exports.readerTerminate = onCall({ ...OPTS, secrets: [SUMUP_API_KEY] }, async (r
 })
 
 // ── Pagamento di un GRUPPO via SumUp (online + lettore) ───────────────────────
-exports.createGroupCheckout = onCall({ ...OPTS, secrets: [SUMUP_API_KEY] }, async (request) => {
+exports.createGroupCheckout = onCall({ ...OPTS_PUBBLICO, secrets: [SUMUP_API_KEY] }, async (request) => {
   try {
     return await createGroupCheckout(paymentDeps(), request.data || {})
   } catch (e) {
@@ -641,7 +667,7 @@ exports.createGroupCheckout = onCall({ ...OPTS, secrets: [SUMUP_API_KEY] }, asyn
   }
 })
 
-exports.getGroupPaymentStatus = onCall({ ...OPTS, secrets: [SUMUP_API_KEY] }, async (request) => {
+exports.getGroupPaymentStatus = onCall({ ...OPTS_PUBBLICO, secrets: [SUMUP_API_KEY] }, async (request) => {
   try {
     return await verifyGroupPayment(paymentDeps(), request.data || {})
   } catch (e) {

@@ -341,6 +341,19 @@ async function handleReaderWebhook(deps, { clientTransactionId } = {}) {
     .where('sumup_client_transaction_id', '==', clientTransactionId)
     .limit(1)
     .get()
+  // Non è un ordine singolo: forse un pagamento di gruppo sul lettore.
+  const psnap = snap.empty
+    ? await db
+        .collection('payments')
+        .where('sumup_client_transaction_id', '==', clientTransactionId)
+        .limit(1)
+        .get()
+    : null
+  // A SUMUP SI CHIEDE SOLO PER UNA TRANSAZIONE NOSTRA (REQ-DEV-026). Il
+  // webhook è un indirizzo pubblico: prima si chiedeva l'esito a SumUp
+  // anche per un id inventato, e chi lo bombardava faceva lavorare la
+  // Function, Firestore e l'API di SumUp a spese del locale.
+  if (snap.empty && psnap.empty) return { status: 200 }
 
   // Verifica l'esito reale dalla Transactions API (mai dal payload).
   const tx = await paymentsFetch(
@@ -358,12 +371,6 @@ async function handleReaderWebhook(deps, { clientTransactionId } = {}) {
     return { status: 200 }
   }
 
-  // Non è un ordine singolo: forse un pagamento di gruppo sul lettore.
-  const psnap = await db
-    .collection('payments')
-    .where('sumup_client_transaction_id', '==', clientTransactionId)
-    .limit(1)
-    .get()
   if (!psnap.empty && status === 'pagato') {
     await settleGroupPayment(deps, psnap.docs[0].id, { transactionId: txId })
   }

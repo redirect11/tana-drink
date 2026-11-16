@@ -11,14 +11,17 @@ service firebase.storage {
         && request.auth.token.role in ['admin', 'bartender'];
     }
 
-    // Foto dei drink: lettura pubblica (mostrate nel menù cliente),
-    // scrittura/eliminazione solo da utenti autenticati (backoffice bartender).
+    // Foto dei drink: lettura pubblica (mostrate nel menù cliente).
+    // CARICARE E CANCELLARE È DEL BANCO, non di chiunque abbia un account
+    // (BUG-160): i clienti si registrano, e con `request.auth != null` un
+    // cliente caricava file da 5 MB a spese del locale e cancellava le foto
+    // del menù. La foto la mette solo la scheda prodotto, e il prodotto lo
+    // scrivono banco e admin (firestore.rules, `drinks`).
     match /drinks/{file} {
       allow read: if true;
-      // Eliminazione: solo autenticati.
-      allow delete: if request.auth != null;
-      // Caricamento/aggiornamento: solo autenticati, solo immagini < 5 MB.
-      allow create, update: if request.auth != null
+      allow delete: if isBartender();
+      // Solo immagini, sotto i 5 MB.
+      allow create, update: if isBartender()
                             && request.resource.size < 5 * 1024 * 1024
                             && request.resource.contentType.matches('image/.*');
     }

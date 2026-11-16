@@ -72,8 +72,8 @@ export const fotoDiFatturaLeggibile = (file) =>
   tipoAllegato(file?.type) === 'immagine' ? downscaleImage(file, { lato: LATO_MASSIMO, qualita: QUALITA }) : Promise.resolve(file)
 
 // Carica la foto di un drink su Firebase Storage e restituisce l'URL pubblico.
-// Le immagini sono salvate sotto `drinks/` (lette pubblicamente, scritte solo
-// da utenti autenticati — vedi storage.rules).
+// Le immagini sono salvate sotto `drinks/`: lette pubblicamente, scritte e
+// cancellate solo da banco e admin (storage.rules, BUG-160).
 export async function uploadDrinkImage(file) {
   if (senzaStorage()) throw new Error(MESSAGGI_PIANO.foto)
   const processed = await downscaleImage(file)

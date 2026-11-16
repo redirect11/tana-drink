@@ -235,8 +235,12 @@ describe('Feature: webhook del lettore (verifica via Transactions API)', () => {
     expect(store.orders.o1.payment_status).toBe('fallito')
   })
 
-  it('transazione sconosciuta → 200 senza effetti', async () => {
-    const { deps } = makeDeps({ seed: { orders: {} } })
+  it('transazione sconosciuta → 200 senza effetti, e senza chiedere niente a SumUp', async () => {
+    // REQ-DEV-026: il webhook è un indirizzo pubblico. Prima un id
+    // inventato arrivava fino all'API di SumUp: chi lo bombardava faceva
+    // lavorare Function, Firestore e SumUp a spese del locale.
+    const { deps } = makeDeps({ seed: { orders: {}, payments: {} } })
     expect(await handleReaderWebhook(deps, { clientTransactionId: 'boh' })).toEqual({ status: 200 })
+    expect(deps.paymentsFetch).not.toHaveBeenCalled()
   })
 })

@@ -36,6 +36,24 @@ personale) e **amministrare** (account dello staff, numerazione dei conti).
 Le dipendenze (`db`, `fetch`, `isConfigured`, `serverTimestamp`…) sono
 iniettate in `index.js` e sostituite da mock nei test.
 
+## Il tetto alla spesa (REQ-DEV-026)
+
+- **Istanze:** `setGlobalOptions` in `index.js` mette il tetto a 10 per
+  tutte le Functions, comprese quelle che arriveranno. Le quattro
+  chiamabili che il cliente usa senza account (`createPaymentCheckout`,
+  `getPaymentStatus`, `createGroupCheckout`, `getGroupPaymentStatus`)
+  usano `OPTS_PUBBLICO`, con tetto 3.
+- **Niente sotto 10 sui trigger e sul webhook:** un evento che trova le
+  istanze piene può perdersi (seconda generazione, senza nuovi tentativi),
+  e un webhook respinto può far perdere un pagamento confermato.
+- **Prima di SumUp, Firestore:** il webhook del lettore interroga SumUp
+  solo se un conto o un pagamento di gruppo ha quel
+  `client_transaction_id`.
+- **Numeri doppi:** `risolviNumeroDuplicato` chiede prima i conti con lo
+  stesso numero e legge tutta la cassa solo se il conto nuovo ha perso la
+  disputa. Se la domanda stretta fallisce, torna alla lettura completa
+  (BUG-161).
+
 ## Configurazione
 
 | Variabile | Tipo | Default | Descrizione |

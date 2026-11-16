@@ -37,6 +37,18 @@
   sul telefono sia per il suono della coda. Battere un drink e toglierlo
   non fa più squillare gli altri dispositivi (BUG-159).
 
+### Sicurezza e costi
+
+- Le foto dei prodotti del menù le caricano e le cancellano solo banco e
+  admin. Prima bastava un account qualunque, anche quello di un cliente
+  registrato (BUG-160).
+- Le Functions hanno un tetto di istanze: 10 ciascuna, 3 per i pagamenti
+  online che il cliente fa senza account. Il webhook del lettore non
+  interroga più SumUp per una transazione che non è del locale
+  (REQ-DEV-026).
+- Il controllo dei numeri doppi, a ogni conto nuovo, legge solo i conti
+  con lo stesso numero invece di tutta la cassa (BUG-161).
+
 ## 1.10.51 — 15 novembre 2026 (produzione)
 
 Provata sul test come 1.10.50-beta e 1.10.51-beta.

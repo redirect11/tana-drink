@@ -69,4 +69,34 @@ function numeroDaRiassegnare(conto, fratelli) {
   return massimo + 1
 }
 
-module.exports = { numeroDaRiassegnare, primoArrivato }
+// QUANTO SI LEGGE PER DECIDERE (BUG-161). La decisione qui sopra vuole i
+// fratelli, e fino al 16/11/2026 i fratelli erano TUTTI i conti della
+// cassa, riletti a ogni conto nuovo: la spesa cresceva col quadrato dei
+// conti, circa 20.000 letture in una sera da 200. Il conto quasi sempre non
+// è conteso, e per saperlo bastano i conti con lo STESSO numero — di solito
+// uno, lui. Tutta la cassa serve solo a chi ha perso, per dargli il primo
+// libero dopo il più alto.
+//
+//   stessoNumero():  i conti della cassa con lo stesso numero
+//   tuttaLaCassa():  tutti i conti della cassa, come prima
+//
+// Se la domanda stretta fallisce (un indice che manca o non è ancora
+// costruito dopo un deploy), si legge tutta la cassa come prima: un numero
+// doppio non risolto costa più di qualche lettura.
+async function numeroDaRiassegnareInCassa(conto, { stessoNumero, tuttaLaCassa }) {
+  let contesi
+  try {
+    contesi = await stessoNumero()
+  } catch (e) {
+    // A VOCE ALTA: se la domanda stretta fallisse sempre, ogni conto
+    // rileggerebbe tutta la cassa in silenzio e BUG-161 tornerebbe senza
+    // che nessuno se ne accorga.
+    console.warn('[numerazione] domanda per numero fallita, si legge tutta la cassa:', e?.message || e)
+    return numeroDaRiassegnare(conto, await tuttaLaCassa())
+  }
+  // Nessuno lo contende, o il primo è lui: non serve leggere altro.
+  if (numeroDaRiassegnare(conto, contesi) == null) return null
+  return numeroDaRiassegnare(conto, await tuttaLaCassa())
+}
+
+module.exports = { numeroDaRiassegnare, numeroDaRiassegnareInCassa, primoArrivato }

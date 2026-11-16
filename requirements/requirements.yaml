@@ -17317,8 +17317,18 @@ requirements:
       progetti dei locali, ed è una decisione di Daniele, REQ-SIC-002); la
       coda pagata due volte e il riassunto per le pagine del cliente (punti
       5 e 6 del controllo), che toccano la coda e vanno provati senza rete.
-    status: todo
-    generate_issue: true
+      CRITERIO: il tetto globale e quello delle chiamabili del cliente
+      (tests/bdd/tetti-functions.test.js, che legge functions/index.js come
+      testo); il webhook del lettore che non chiama SumUp per un id che non
+      è del locale (tests/bdd/payment-reader.test.js); le foto del menù
+      (BUG-160, tests/regole/storage.test.js); i numeri doppi (BUG-161,
+      tests/bdd/numerazione.test.js).
+    status: implemented
+    generate_issue: false
     labels: [dev, functions, costi]
     priority: P1
-    test_cases: []
+    test_cases:
+      - tests/bdd/tetti-functions.test.js
+      - tests/bdd/payment-reader.test.js
+      - tests/bdd/numerazione.test.js
+      - tests/regole/storage.test.js
