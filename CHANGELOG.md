@@ -1,6 +1,8 @@
 # Cosa è cambiato
 
-## 1.10.52-beta — in lavorazione
+## 1.10.53-beta — in lavorazione
+
+## 1.10.52-beta — 17/11/2026 (test)
 
 ### Aspetto
 
