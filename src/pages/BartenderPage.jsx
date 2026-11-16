@@ -884,6 +884,14 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   useEffect(() => {
     let primed = false
     const awaiting = new Set() // ordini in attesa di pagamento obbligatorio
+    // CONTI CHE SI STANNO ANCORA BATTENDO (BUG-159). Al POS il conto nasce
+    // al primo tocco e resta `in_creazione` finché chi lo batte non esce:
+    // annunciarlo lì faceva suonare il banco a metà composizione, e per un
+    // drink battuto e tolto. Si mette da parte come quelli in attesa di
+    // pagamento, e si annuncia quando il segno cade. Serve l'insieme: il
+    // conto a quel punto risulta già visto (statoPrec), e senza non
+    // suonerebbe mai.
+    const inComposizione = new Set()
     const unsub = subscribeActiveOrders(
       (data) => {
         // Notifica i nuovi ordini "ricevuti" comparsi dopo il primo
@@ -893,6 +901,10 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           const printerSettings = loadPrinterSettings()
           for (const o of data) {
             const isNew = !statoPrec.current.has(o.id)
+            // Era in composizione al giro prima? Si toglie qui, una volta
+            // sola: chi lo è ancora ci torna qui sotto, e così nessuna uscita
+            // dal ciclo lascia un id appeso nell'insieme.
+            const daComposizione = inComposizione.delete(o.id)
             // USCITO DALLA CODA, USCITO DALL'ATTESA. Un conto annullato
             // mentre aspettava il pagamento obbligatorio restava in questo
             // insieme per sempre: ripristinandolo veniva annunciato come
@@ -915,13 +927,21 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             // Il metro giusto non è il ruolo, è il terminale — lo stesso
             // account sta su tablet, telefono e portatile insieme.
             if (battutoDaQui(o.placed_by)) continue
-            if (isAwaitingPayment(o)) {
-              if (isNew) awaiting.add(o.id)
+            if (o.in_creazione === true) {
+              if (isNew || daComposizione) inComposizione.add(o.id)
               continue
             }
-            if (isNew || awaiting.has(o.id)) {
+            if (isAwaitingPayment(o)) {
+              if (isNew || daComposizione) awaiting.add(o.id)
+              continue
+            }
+            if (isNew || awaiting.has(o.id) || daComposizione) {
               awaiting.delete(o.id)
-              if (avvisoAttivo(avvisi.current, 'nuovo_ordine')) {
+              // Il segno l'ha tolto QUESTO terminale prendendo in mano la
+              // comanda (advanceComanda): il conto lo conosce già, perché ci
+              // ha appena messo le mani.
+              const presoDaQui = daComposizione && o.avanzamento_device === idDispositivo()
+              if (!presoDaQui && avvisoAttivo(avvisi.current, 'nuovo_ordine')) {
                 beep() // su iPad in primo piano il banner di sistema è soppresso
                 // STESSO NOME della notifica che manda il server (sw.js):
                 // così il sistema le fonde in una invece di mostrarne due —

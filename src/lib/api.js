@@ -272,6 +272,10 @@ function mapItem(snap) {
     // IL CLIENTE PUÒ SCEGLIERLO DAL MENÙ (REQ-MAG-055): è fra le alternative
     // delle voci che offrono la scelta (REQ-MENU-042). Spento se non scritto.
     scelta_cliente: i.scelta_cliente === true,
+    // OSCURA AUTOMATICAMENTE (REQ-MENU-045): a giacenza sotto la soglia delle
+    // Impostazioni, le voci che lo usano escono dal menù dei clienti. Il
+    // segno sulle voci lo scrive la Function. Spento se non scritto.
+    oscura_automaticamente: i.oscura_automaticamente === true,
     cost: i.cost != null ? Number(i.cost) : null,
     vat: i.vat != null ? Number(i.vat) : 22,
     // Chi non lo dichiara è semplicemente in assortimento: "in linea" è una

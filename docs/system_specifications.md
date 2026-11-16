@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 15 novembre 2026.
+> Generato il 16 novembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,16 +22,16 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 303 | fatto e coperto dai test |
+| ✅ | 306 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 9 | fatto a metà |
-| ⬜ | 27 | da fare |
+| ⬜ | 30 | da fare |
 | 🗑 | 8 | non più valido |
 
-**362 voci** in tutto. **327** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **27** sono lavori
+**368 voci** in tutto. **330** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
-cosa che l'app fa; **16** difetti noti sono ancora aperti.
+cosa che l'app fa; **18** difetti noti sono ancora aperti.
 
 Le voci ⚠️ sono la parte scomoda: funzionano, ma **nessun test le tiene**.
 Sono quelle che si rompono senza che nessuno se ne accorga, e vanno lette
@@ -41,14 +41,14 @@ come «vero oggi», non come «garantito».
 
 | Area | Fatto | Previsto | Di cosa parla |
 |---|---|---|---|
-| [Ordini e comande](#ordini-e-comande) | 20 | 1 | Il conto e le sue comande: come nascono, come cambiano stato, come arrivano al banco. |
+| [Ordini e comande](#ordini-e-comande) | 21 | 1 | Il conto e le sue comande: come nascono, come cambiano stato, come arrivano al banco. |
 | [Cassa e POS](#cassa-e-pos) | 18 | 2 | La schermata più usata della serata: si compone un conto, si corregge, si chiude. |
 | [Pagamenti](#pagamenti) | 14 | 1 | Come si incassa: contanti, carta, SumUp, pagamenti parziali e separati. |
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
-| [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 39 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 51 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Tavoli](#tavoli) | — | 3 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
+| [Menù e catalogo](#menù-e-catalogo) | 40 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Magazzino](#magazzino) | 51 | 6 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 16 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 20 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 9 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
@@ -60,9 +60,9 @@ come «vero oggi», non come «garantito».
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | 6 | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 29 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
-| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 23 | 2 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
+| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 24 | 2 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
-| [LIC](#lic) | 15 | 3 |  |
+| [LIC](#lic) | 15 | 4 |  |
 | [VENUE](#venue) | 6 | — |  |
 | [FLOTTA](#flotta) | 10 | — |  |
 
@@ -75,11 +75,11 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 11 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 184 |
-| Unità | il progetto di dettaglio: un modulo da solo | 187 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 187 |
+| Unità | il progetto di dettaglio: un modulo da solo | 188 |
 
-**18** bisogni del locale, **0** con un test di accettazione.
-**114** requisiti su 354 sono collegati a un bisogno;
+**20** bisogni del locale, **0** con un test di accettazione.
+**120** requisiti su 360 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -111,7 +111,7 @@ Chi batte un conto viene interrotto di continuo: si cambia schermata, si rispond
 
 **Come si accetta**: Si mettono tre righe in un conto nuovo senza confermarlo, si torna alla coda e si ricarica la pagina. Riaprendo il nuovo ordine le tre righe ci sono. Lo stesso in modifica di un conto esistente. Dopo la conferma la bozza è vuota.
 
-**Chi**: Banco, Sala · **Lo realizzano**: [REQ-POS-003](#req-pos-003--la-bozza-non-si-perde-uscendo-dalla-schermata), [REQ-POS-004](#req-pos-004--un-ricaricamento-non-fa-perdere-il-conto-in-corso) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Banco, Sala · **Lo realizzano**: [REQ-POS-003](#req-pos-003--la-bozza-non-si-perde-uscendo-dalla-schermata), [REQ-POS-004](#req-pos-004--un-ricaricamento-non-fa-perdere-il-conto-in-corso), [REQ-ORD-025](#req-ord-025--il-conto-svuotato-si-chiude-da-solo-o-resta-aperto-lo-sceglie-chi-lavora-sul-suo-dispositivo) · ⚠️ **Nessun test di accettazione, ancora.**
 
 #### UR-004 — La comanda arriva a chi deve preparare
 
@@ -151,7 +151,7 @@ Con gli ordini dal telefono il cliente non deve chiedere a nessuno a che punto �
 
 **Come si accetta**: Dal QR di un tavolo si apre il menù, si ordinano due drink e si resta sulla pagina dell'ordine. Il banco lo vede arrivare. Quando il banco lo porta a «pronto», la pagina del cliente lo dice senza ricaricare.
 
-**Chi**: Cliente · **Lo realizzano**: [REQ-CLI-001](#req-cli-001--il-cliente-ordina-dal-telefono-e-segue-il-suo-ordine), [REQ-CLI-007](#req-cli-007--gli-ordini-del-cliente-stanno-in-i-miei-ordini-non-in-mezzo-al-menù), [REQ-CLI-002](#req-cli-002--chi-apre-un-ordine-vede-la-schermata-giusta), [REQ-CLI-003](#req-cli-003--stima-di-attesa-onesta), [REQ-CLI-006](#req-cli-006--il-cliente-sa-che-il-suo-drink-è-pronto-da-ritirare), [REQ-NOTIF-001](#req-notif-001--il-cliente-sa-quando-il-suo-drink-è-pronto) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Cliente · **Lo realizzano**: [REQ-CLI-001](#req-cli-001--il-cliente-ordina-dal-telefono-e-segue-il-suo-ordine), [REQ-CLI-007](#req-cli-007--gli-ordini-del-cliente-stanno-in-i-miei-ordini-non-in-mezzo-al-menù), [REQ-CLI-002](#req-cli-002--chi-apre-un-ordine-vede-la-schermata-giusta), [REQ-CLI-003](#req-cli-003--stima-di-attesa-onesta), [REQ-CLI-006](#req-cli-006--il-cliente-sa-che-il-suo-drink-è-pronto-da-ritirare), [REQ-NOTIF-001](#req-notif-001--il-cliente-sa-quando-il-suo-drink-è-pronto), [REQ-MENU-045](#req-menu-045--oscura-automaticamente-si-sceglie-sul-prodotto-di-magazzino-a-giacenza-zero-o-sotto-le-voci-che-lo-usano-escono-dal-menù-dei-clienti) · ⚠️ **Nessun test di accettazione, ancora.**
 
 #### UR-009 — Si paga con la carta, al lettore o con un link
 
@@ -233,6 +233,22 @@ Daniele, 14/11/2026: il tema che il locale sceglie non deve valere solo per il m
 
 **Chi**: Cliente, Gestore · **Lo realizzano**: [REQ-MENU-044](#req-menu-044--il-tema-del-locale-veste-anche-la-pagina-iniziale-coi-contatti-non-solo-il-menù) · ⚠️ **Nessun test di accettazione, ancora.**
 
+#### UR-019 — Il locale non paga i servizi che fanno girare l'app oltre quello che usa davvero
+
+Daniele, 15/11/2026: «non voglio trovarmi a pagare migliaia di euro». I progetti dei locali stanno sull'account di fatturazione di Stonebit: un indirizzo pubblico bombardato, un trigger che si riaccende da solo o una lettura che cresce col numero dei conti diventano una fattura vera. La spesa deve seguire il lavoro del locale, e avere un tetto dove qualcuno da fuori può farla salire.
+
+**Come si accetta**: Ogni Function ha un tetto di istanze, più basso dove si chiama senza account; una chiamata con un id inventato non arriva a SumUp; una sera da 200 conti non rilegge la cassa a ogni conto; un cliente registrato non riesce a caricare file nello Storage del locale.
+
+**Chi**: Gestore · **Lo realizzano**: [REQ-DEV-026](#req-dev-026--la-spesa-dei-servizi-google-ha-un-tetto-istanze-limitate-e-indirizzi-pubblici-che-non-lavorano-a-vuoto) · ⚠️ **Nessun test di accettazione, ancora.**
+
+#### UR-020 — Un ristorante lavora coi suoi tavoli e coi suoi prodotti freschi
+
+Daniele, 16/11/2026: l'app va integrata per i ristoranti. In sala si lavora per tavoli, e chi lavora deve vedere a colpo d'occhio dove sono e cosa aspettano; in cucina e al banco ci sono prodotti che, aperti, durano pochi giorni, e chi gestisce deve sapere quando scadono.
+
+**Come si accetta**: Con il modulo «ristorante», accanto agli ordini c'è la Sala: la pianta coi tavoli al loro posto (disposti dal gestore nell'editor della sala), ogni tavolo libero o occupato, e toccandolo i suoi conti e i suoi ordini. Nella scheda di un prodotto si scrivono scadenza, apertura e decadimento, e il gestionale dice quando il prodotto va consumato.
+
+**Chi**: Sala, Gestore · **Lo realizzano**: [REQ-TAVOLI-003](#req-tavoli-003--la-sala-in-pianta-una-schermata-coi-tavoli-al-loro-posto-i-loro-conti-e-i-loro-ordini-e-un-editor-per-disporli), [REQ-MAG-057](#req-mag-057--nella-scheda-del-prodotto-scadenza-apertura-e-decadimento), [REQ-LIC-019](#req-lic-019--il-modulo-ristorante-le-personalizzazioni-per-i-ristoranti-vendute-insieme-quando-nella-regia-si-sceglie-ristorante) · ⚠️ **Nessun test di accettazione, ancora.**
+
 ## Cosa fa il sistema
 
 Quello che segue è vero adesso. Dove una voce è segnata 🟡 «fatto a metà» la
@@ -263,7 +279,7 @@ Gli aumenti confluiscono nella comanda ancora modificabile (ricevuta o in prepar
 
 #### REQ-ORD-004 — Un conto rimasto senza righe si annulla da solo
 
-Togliendo tutte le righe di un conto appena aperto, il conto viene annullato e si torna alla coda: un conto vuoto in lista è solo un ingombro. Non succede se qualcosa è già stato incassato — lì il conto esiste davvero e va chiuso a mano.
+Togliendo tutte le righe di un conto appena aperto, il conto viene annullato e si torna alla coda: un conto vuoto in lista è solo un ingombro. Non succede se qualcosa è già stato incassato — lì il conto esiste davvero e va chiuso a mano. Chi preferisce restare sul conto svuotato lo sceglie nel suo profilo, e allora l'annullo avviene all'uscita (REQ-ORD-025).
 
 **Dove**: `src/components/OrderPosDetail.jsx` · **Serve**: [UR-002](#ur-002--quello-che-si-vede-a-schermo-è-il-conto-vero) · **Lo dimostrano**: `tests/component/OrderPosDetail.test.jsx`
 
@@ -420,6 +436,12 @@ LA RIGA IN BOZZA, non ancora mandata, mostra subito l'iniziale di chi la sta bat
 Flavio, 09/11/2026: «ora che è stata aggiunta l'icona vicino a ogni item all'interno di un ordine viene disabilitata la funzione del +1, +2, +3 […] se Alex da fuori vuole aggiungere una Tennent's non può fare +1, deve caricarla lui, perché altrimenti che mette lì? Due Tennent's, una caricata da me e una caricata da lui?». L'utente: il «−» segue la stessa regola; l'admin non fa eccezione («l'iniziale segnata poi che ne sappiamo chi ha caricato effettivamente»); la regola vale solo se l'iniziale è accesa nelle impostazioni. Sul conto, su una riga firmata da un altro, il «+» e il «−» sono spenti, e il «+» dice «Caricato da …: per aggiungerne, toccare il prodotto». Chi ne vuole un altro lo batte dalla griglia e fa una riga sua. Il confronto è sull'email dell'account, il nome solo se manca. Le righe senza iniziale (del cliente dal menù, e quelle battute prima della 1.10.30) restano a tutti: di chi siano non si sa. La bozza è sempre di chi la sta battendo. Con l'iniziale spenta i tasti sono di tutti, come prima: un tasto spento senza un motivo a schermo sarebbe un tasto rotto.
 
 **Dove**: `src/lib/comande.js (rigaDiAltri, firmaRigheAccesa), src/components/OrderPosDetail.jsx (altruiPerMe), src/components/SettingsTab.jsx, src/lib/api.js (firma_righe)` · **Serve**: [UR-012](#ur-012--su-un-conto-si-vede-chi-ha-battuto-cosa) · **Lo dimostrano**: `tests/unit/rigaDiAltri.test.js`, `tests/sistema/piuSoloSulleProprie.spec.js`
+
+#### REQ-ORD-025 — Il conto svuotato si chiude da solo o resta aperto: lo sceglie chi lavora, sul suo dispositivo
+
+Daniele, 15/11/2026: togliendo l'ultima riga il conto si annulla dopo 400 ms e si torna alla coda (REQ-ORD-004); a chi sostituisce un drink con calma la schermata si chiudeva in mano. «Facciamolo così ma opzionale. Per utente, a Flavio piace a Vittorio no. Quindi mettiamolo configurabile per chi sta usando il terminale». La scelta sta nel profilo («Il mio profilo», `/profilo-staff`), come gli avvisi: vale per l'account e per il dispositivo, e due persone che si passano lo stesso tablet non se la cambiano a vicenda. Accesa di partenza, che è il comportamento di sempre. Spenta, il conto svuotato resta aperto a schermo e si può continuare a battere; se all'uscita è ancora vuoto si annulla allora, con le stesse regole: niente annullo se qualcosa è già stato incassato, e il conto annullato esce subito dalla coda. Annullare all'uscita chiude anche la composizione nella stessa scrittura (BUG-071): l'uscita non toglie `in_creazione` per conto suo, e del conto vuoto non esce carta né notifica. Uscire da un conto vuoto prima dei 400 ms lo annulla comunque, con la scelta accesa o spenta: prima restava aperto e vuoto in coda. Uscendo da un conto vuoto non si chiede il nome: sta per essere annullato. La scelta si legge allo scadere dei 400 ms, non all'apertura: aprendo un conto già vuoto l'accesso può non aver ancora risposto.
+
+**Dove**: `src/lib/impostazioniLocali.js (contoVuotoSiChiude), src/components/OrderPosDetail.jsx, src/pages/StaffProfilePage.jsx` · **Serve**: [UR-003](#ur-003--niente-di-quello-che-si-sta-battendo-va-perso) · **Lo dimostrano**: `tests/unit/impostazioniLocali.test.js`, `tests/component/OrderPosDetail.test.jsx`, `tests/component/StaffProfilePage.test.jsx`, `tests/unit/giroInLocale.test.js`
 
 ### Cassa e POS
 
@@ -1199,7 +1221,7 @@ L'utente, 10/11/2026, davanti alla copia del listino della Tana nell'editor (cen
 
 Flavio, 10/11/2026, con la foto del Gold Rush modificato al POS: il riquadro dava il prezzo reale della ricetta (1,72 €) ma non quanto pesa ciascun ingrediente («jim beam 60 ml 1,14 €»). Nel prodotto modificato al POS e nella scheda del drink a menù ogni riga di ricetta mostra, dopo quantità e unità, il suo costo al dettaglio: quantità × costo dell'articolo nell'unità scritta, IVA inclusa, con lo stesso calcolo del prezzo reale, così le righe sommate fanno il totale. Senza quantità la riga non mostra niente; con un articolo senza costo in magazzino mostra un trattino, e il riquadro del prezzo dice già quale manca.
 
-**Dove**: `src/lib/pricing.js (costoRiga), src/components/CostoRiga.jsx, CustomDrinkForm.jsx, DrinkForm.jsx` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/component/costoRigheRicetta.test.jsx`
+**Dove**: `src/lib/pricing.js (costoRiga), src/components/CostoRiga.jsx, CustomDrinkForm.jsx, DrinkForm.jsx` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/component/costoRigheRicetta.test.jsx`, `tests/unit/lavorazioneInU.test.js`
 
 #### REQ-MENU-023 — Il marketplace dei temi, una pagina sua: un tema è una tavolozza più uno stile, si sfoglia, si prova, si installa e si usa
 
@@ -1313,7 +1335,9 @@ IL TASTO SI CHIAMA «SALVA NUOVA» (Daniele, 21/10/2026: «chiamalo solo salva n
 
 **Dove**: `src/components/CustomDrinkForm.jsx, src/components/OrderPosDetail.jsx, src/components/DrinkForm.jsx, src/lib/saveDrink.js` · **Lo dimostrano**: `tests/component/CustomDrinkForm.test.jsx`, `tests/unit/css.test.js`
 
-#### REQ-MENU-015 — Il ghiaccio nelle ricette: 1,6 volte la dose scritta in origine
+#### REQ-MENU-015 — Il ghiaccio nelle ricette: la dose si porta a un multiplo di quella scritta in origine (in produzione ×1,5)
+
+IN PRODUZIONE ×0,75 DELLE DOSI DI ALLORA, IL 16/11/2026. Daniele: «moltiplicare il ghiaccio in tutte le ricette dove è presente x0,75 in produzione. Quindi prima backup poi moltiplichiamo». Il ×0,8 del 29/10 in produzione non era mai passato: il segno sull'articolo diceva ×2 (200 dove l'originale diceva 100). Backup completo (backup/tana-drink-2026-11-16-15-33-39.json, 18.563 documenti), anteprima, poi `--a 1.5`: 110 ricette, 110 righe, 200 → 150, 400 → 300, segno a ×1,5; riletto dopo, le dosi sono quelle. Sul test il segno è ancora ×2 (il catalogo è quello copiato dalla produzione il 10/11). Da qui lo script non ha più un obiettivo di partenza: senza `--a` dice solo dove stanno le dosi, perché con 1,6 di partenza avrebbe riportato la produzione a ×1,6 in silenzio.
 
 RIPENSATO ANCORA IL 29/10/2026: ×0,8 DELLE DOSI ATTUALI, CIOE' ×1,6 DELL'ORIGINALE. Nella lista di Flavio: «moltiplicare per 0,8 tutte le quantita' di Ghiaccio Hoshizaki nelle ricette degli ITEMS di MENU». Le dosi erano a ×2 (200 g dove l'originale diceva 100), e lo 0,8 le porta a 160. L'obiettivo di partenza dello script e' ora 1,6 (`--a`): rilanciato senza dire altro, non riporta le dosi al doppio.
 
@@ -1332,6 +1356,16 @@ CIECO, ed e' la scelta che conta. Uno script che moltiplica si puo' lanciare due
 SUL TEST (10/09/2026): 87 ricette riscritte; 3 righe erano gia' a 150 o 300, 3 fuori tabella (Bramble 220, Rusty Nail 80, Black Russian 70) lasciate a Flavio. Nota per il passaggio a ×2 su test: quelle sei righe non sono a ×1,5 dell'originale, e con `--da 1.5` finiscono a 4/3 del loro valore e non a 2 — sono dati di prova, si sistemano a mano se servono. In produzione il problema non c'e'.
 
 **Dove**: `scripts/ghiaccio-nelle-ricette.js, scripts/lib-ghiaccio.js` · **Lo dimostrano**: `tests/unit/ghiaccioNelleRicette.test.js`
+
+#### REQ-MENU-045 — «Oscura automaticamente» si sceglie sul prodotto di magazzino: a giacenza zero o sotto, le voci che lo usano escono dal menù dei clienti
+
+Daniele, 16/11/2026, per Flavio: «all'interno della scheda Prodotto inserire casella da selezionare per abilitare funzione OSCURA AUTOMATICAMENTE (questa funzione oscura nel MENU CLIENTI tutte le voci che contengono questo prodotto nel ricettario quando arriva a 0 o negativo) … Adesso flavio lo vuole per prodotto». È la domanda lasciata aperta da REQ-MENU-017 («se l'opzione vale per la voce o per il prodotto di magazzino»), ora decisa: per il PRODOTTO DI MAGAZZINO. Oggi l'opzione sta sul prodotto della cassa (`segue_giacenze`) e guarda tutti i suoi ingredienti; Flavio vuole dire, ingrediente per ingrediente, quali contano — il gin sì, il lime e il ghiaccio no. Valgono le regole di REQ-MENU-017: al cliente non si dice mai cosa manca; il segno lo scrive la Cloud Function solo quando la giacenza attraversa lo zero; al banco la voce resta.
+
+DECISO (Daniele, 16/11/2026): vale la soglia delle Impostazioni («anche la soglia nelle impostazioni»): esaurito, oppure già in esaurimento, come per l'opzione sul prodotto della cassa. L'OPZIONE SUL PRODOTTO DELLA CASSA RESTA, e le due si sommano: la domanda non ha avuto risposta, ed è la scelta che non cambia niente a chi l'ha già accesa e non chiede un travaso. Una voce esce dal menù se segue le giacenze e un suo ingrediente (non di servizio) manca, OPPURE se manca un ingrediente con «Oscura automaticamente» — anche di servizio: la spunta sul prodotto è una scelta esplicita.
+
+FATTO (1.10.52-beta): `oscura_automaticamente` sul prodotto di magazzino, casella «Oscura automaticamente» nella scheda; `nonDisponibile` e `vociDaRicalcolare` in functions/lib/disponibilita.js; `disponibilitaDalMagazzino` rilegge tutte le voci quando il prodotto ha la spunta (o la spunta cambia), `disponibilitaDalleImpostazioni` tutte le voci quando cambia la soglia.
+
+**Dove**: `scheda del prodotto di magazzino (InventoryManager), functions/lib/disponibilita.js, functions/index.js (disponibilitaDalMagazzino)` · **Serve**: [UR-008](#ur-008--il-cliente-ordina-dal-telefono-e-sa-quando-il-drink-è-pronto) · **Lo dimostrano**: `tests/bdd/disponibilita.test.js`, `tests/component/InventoryManagerCard.test.jsx`
 
 ### Magazzino
 
@@ -3947,6 +3981,24 @@ CRITERIO: il Node delle Functions basta a `firebase-admin`, e `uuid` non torna f
 
 **Dove**: `functions/package.json, functions/package-lock.json, package.json (overrides), package-lock.json; tests/unit/dipendenzeFunctions.test.js` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera) · **Lo dimostrano**: `tests/unit/dipendenzeFunctions.test.js`
 
+#### REQ-DEV-026 — La spesa dei servizi Google ha un tetto: istanze limitate e indirizzi pubblici che non lavorano a vuoto
+
+Daniele, 15/11/2026: «non voglio trovarmi a pagare migliaia di euro». I progetti dei locali nascono sull'account di fatturazione di Stonebit: quello che consumano Functions, Firestore e Storage lo paga Stonebit. Controllo dei costi chiesto dalla regia il 15/11 (messaggio «un controllo dei costi delle vostre Functions»), risposto il 16/11 con otto punti; questa voce copre i primi.
+
+PRIMA nessuna delle venti Functions aveva `maxInstances`: Google ne accende fino a 100 per Function, e un indirizzo pubblico bombardato apposta moltiplica la spesa senza un tetto.
+
+ADESSO il tetto è 10 per tutte, impostato una volta in `setGlobalOptions` così vale anche per le Functions che arriveranno; 3 per le quattro chiamabili che il cliente usa senza account (checkout online e verifica, singolo e di gruppo), dove l'id del conto fa da lasciapassare e ogni chiamata legge Firestore prima di qualunque controllo.
+
+IL WEBHOOK DEI PAGAMENTI RESTA A 10, non a 3 (regia, 16/11/2026): finché non si sa se SumUp ritenta una notifica rifiutata con 429, un tetto basso può far perdere un pagamento confermato. E SUI TRIGGER NIENTE SOTTO 10: per la seconda generazione Google non scrive cosa succede a un evento che trova le istanze piene, e senza nuovi tentativi (il predefinito) può perdersi; 10 un bar non li riempie. La prova la fa la regia sul suo progetto di test.
+
+IL WEBHOOK DEL LETTORE chiedeva l'esito a SumUp prima di sapere se la transazione era di un conto del locale: un POST con un id inventato costava due query e una chiamata a SumUp. Ora si chiama SumUp solo se un conto o un pagamento di gruppo con quell'id esiste.
+
+NON QUI: App Check imposto sulle chiamabili (oggi non c'è nei progetti dei locali, ed è una decisione di Daniele, REQ-SIC-002); la coda pagata due volte e il riassunto per le pagine del cliente (punti 5 e 6 del controllo), che toccano la coda e vanno provati senza rete.
+
+CRITERIO: il tetto globale e quello delle chiamabili del cliente (tests/bdd/tetti-functions.test.js, che legge functions/index.js come testo); il webhook del lettore che non chiama SumUp per un id che non è del locale (tests/bdd/payment-reader.test.js); le foto del menù (BUG-160, tests/regole/storage.test.js); i numeri doppi (BUG-161, tests/bdd/numerazione.test.js).
+
+**Dove**: `functions/index.js (setGlobalOptions, OPTS_PUBBLICO), functions/lib/payment-service.js (handleReaderWebhook)` · **Serve**: [UR-019](#ur-019--il-locale-non-paga-i-servizi-che-fanno-girare-lapp-oltre-quello-che-usa-davvero) · **Lo dimostrano**: `tests/bdd/tetti-functions.test.js`, `tests/bdd/payment-reader.test.js`, `tests/bdd/numerazione.test.js`, `tests/regole/storage.test.js`
+
 ### STAT
 
 #### REQ-STAT-001 — Statistiche: prima la serata (lista e dettaglio), poi il periodo
@@ -4483,6 +4535,16 @@ Nella vista «Ordina dal menù» dello staff si possono inserire NOME e numero d
 
 **Dove**: `src/pages/MenuPage.jsx, src/components/OrderSummary.jsx`
 
+#### REQ-TAVOLI-003 — La sala in pianta: una schermata coi tavoli al loro posto, i loro conti e i loro ordini, e un editor per disporli
+
+Daniele, 16/11/2026, per l'uso nei ristoranti: «posizionamento grafico tavoli su CODA ORDINI in modalità vista dall'alto/occhio di falco». Nella coda, oltre all'elenco dei conti, una vista con la pianta della sala: ogni tavolo al suo posto, e su ciascuno quello che serve a chi lavora (il conto aperto, cosa aspetta, cosa è pronto). La pianta la disegna il gestore, mettendo i tavoli dell'anagrafica dove stanno.
+
+DECISO (Daniele, 16/11/2026): «I tavoli sarebbero gli ordini quindi fa esattamente quello che fa adesso. Al massimo si gestisce lo stato di libero/occupato per ora». Il tavolo in pianta è il conto: si legge e si tocca come la card della coda di oggi; in più, ogni tavolo dice se è libero o occupato. Una sala sola, per ora; forme e misure dei tavoli no, solo la posizione.
+
+PRECISATO LO STESSO GIORNO (Daniele, 16/11/2026): non dentro la coda, ma UNA SCHERMATA APPOSTA, «magari affianco a quella degli ordini (delivery/asporto)»: la Sala, dove si vedono i tavoli occupati, i loro conti, e gli ordini e i conti di quegli ordini; gli ordini senza tavolo (delivery, asporto) restano nella schermata degli ordini. E «un editor della sala dove posizionare i tavoli», una schermata sua. È un'opzione della versione per i ristoranti: sta nel modulo «ristorante» (REQ-LIC-019). Richiede l'anagrafica dei tavoli (REQ-TAVOLI-001, ancora da fare). Lavora in locale come la coda: la pianta si aggiorna all'istante.
+
+**Dove**: `src/pages/BartenderPage.jsx (coda ordini), anagrafica dei tavoli (REQ-TAVOLI-001)` · **Serve**: [UR-020](#ur-020--un-ristorante-lavora-coi-suoi-tavoli-e-coi-suoi-prodotti-freschi)
+
 ### Menù e catalogo
 
 #### REQ-MENU-044 — Il tema del locale veste anche la pagina iniziale, coi contatti, non solo il menù
@@ -4608,6 +4670,24 @@ DA CHIEDERE A FLAVIO prima di implementare, e nel frattempo la regola resta quel
 NOTA DEL 20/08, dal giro di decisioni su REQ-MAG-025: il carico al ricevimento NON e' piu' automatico — «arrivato» lo segna l'admin, e il bartender sceglie se e quali righe caricare (o «carica tutti»). Questa voce genera l'ordine; il suo ricevimento segue la regola nuova scritta la'.
 
 **Dove**: `src/lib/warehouse.js, src/components/PurchaseOrdersPanel.jsx, src/lib/api.js`
+
+#### REQ-MAG-057 — Nella scheda del prodotto: scadenza, apertura e decadimento
+
+Daniele, 16/11/2026, per l'uso nei ristoranti: «in PRODOTTI inserire in ogni prodotto le caselle:
+
+SCADENZA - APERTURA - DECADIMENTO». Lettura proposta:
+
+SCADENZA è la data di scadenza della confezione;
+
+APERTURA la data in cui la confezione è stata aperta;
+
+DECADIMENTO per quanti giorni il prodotto resta buono dopo l'apertura. Da apertura e decadimento si ricava il «da consumare entro».
+
+DECISO (Daniele, 16/11/2026): a una scadenza vicina o passata, «un avviso e un elenco» nel gestionale. Il prodotto NON esce dal menù da solo: «se il prodotto esce dal menu dovrebbe sempre deciderlo il gestore».
+
+DA CONFERMARE (proposta, senza risposta il 16/11): il decadimento è un dato del prodotto, scadenza e apertura sono della confezione in uso; l'apertura si registra dal gestionale.
+
+**Dove**: `scheda del prodotto di magazzino (InventoryManager), src/lib/inventory.js` · **Serve**: [UR-020](#ur-020--un-ristorante-lavora-coi-suoi-tavoli-e-coi-suoi-prodotti-freschi)
 
 ### Cassa di serata e statistiche
 
@@ -4811,6 +4891,14 @@ RESTA DA FARE il primo stile a pagamento: «Compra» nell'app, pagamento una tan
 
 **Dove**: `drink-regia (catalogo, acquisto, licenza.temi), Impostazioni → Menù clienti («Altri stili»), docs/catalogo-temi.md`
 
+#### REQ-LIC-019 — Il modulo «ristorante»: le personalizzazioni per i ristoranti, vendute insieme quando nella regia si sceglie «ristorante»
+
+Daniele, 16/11/2026: «la vista dei tavoli è un'opzione per la versione per ristoranti. Le customizzazioni per il ristorante sono un modulo a parte ma entrambi si vendono come uno se dalla regia selezionano ristorante e alla regia dopo va detto». Un modulo nuovo, `ristorante`, come gli altri di MODULI_PREMIUM: dentro, per ora, la Sala e l'editor della sala (REQ-TAVOLI-003). Quando nella regia il locale è un ristorante, il modulo viaggia insieme a quelli che servono, come un pacchetto solo.
+
+INTERFACCIA CON LA REGIA: l'elenco dei moduli è una copia tenuta allineata a mano (REQ-DEV-025). Va detto alla regia prima di rilasciarlo: id del modulo, la scelta «ristorante» che lo porta con sé, e da quali moduli dipende (la Sala richiede l'anagrafica dei tavoli, quindi probabilmente `menu_tavoli`). Da decidere con la regia se «ristorante» è un piano, un tipo di locale o un pacchetto di moduli.
+
+**Dove**: `src/lib/licenza.js (MODULI_PREMIUM), firestore.rules (modulo()), la regia (piani.json, elenco dei moduli)` · **Serve**: [UR-020](#ur-020--un-ristorante-lavora-coi-suoi-tavoli-e-coi-suoi-prodotti-freschi)
+
 ## L'architettura e le sue prove
 
 Il gradino sotto la specifica: i meccanismi su cui poggiano molti requisiti
@@ -4903,6 +4991,8 @@ della correzione è il test citato nel requisito della sua area.
 | 🔴 | [BUG-156](#bug-156--la-chat-dellai-non-legge-i-limiti-degli-strumenti-che-la-regia-manda) — La chat dell'AI non legge i limiti degli strumenti che la regia manda | bassa | P3 |
 | 🔴 | [BUG-157](#bug-157--la-licenza-della-tana-scritta-dal-deploy-è-più-povera-di-quella-che-scrive-la-regia) — La licenza della Tana scritta dal deploy è più povera di quella che scrive la regia | bassa | P3 |
 | 🔴 | [BUG-158](#bug-158--genera-clientemjs-non-conosce-il-tipo-di-locale-che-il-workflow-della-regia-gli-passa) — genera-cliente.mjs non conosce il tipo di locale che il workflow della regia gli passa | bassa | P3 |
+| 🔴 | [BUG-163](#bug-163--un-rifiuto-del-pagamento-online-che-sumup-rimanda-in-ritardo-segna-fallito-un-conto-passato-nel-frattempo-al-lettore) — Un rifiuto del pagamento online che SumUp rimanda in ritardo segna «fallito» un conto passato nel frattempo al lettore | media | P2 |
+| 🔴 | [BUG-164](#bug-164--il-tempo-di-lavorazione-in-ricetta-non-entra-nel-costo-del-drink-57-righe-lo-dosano-in-grammi) — Il tempo di lavorazione in ricetta non entra nel costo del drink: 57 righe lo dosano in grammi | media | P2 |
 
 🔴 succede **in produzione**, cioè al banco. `·` no. `?` non si sa ancora.
 
@@ -5057,6 +5147,22 @@ Dalla regia, contratto del 14/11/2026: la licenza della Tana non ha `piano`, `te
 Dalla regia, contratto del 14/11/2026: lo script della 1.10.x non conosce `--sa tipo-locale` né `--tipo-locale`. Il workflow della regia ripiega, ma telefono, partita IVA, codice fiscale e sede legale arrivano solo da settings/bar. Lo script lo chiama la regia: i suoi argomenti sono contratto.
 
 **Dove**: `scripts/genera-cliente.mjs` · **Tradisce**: [REQ-VENUE-001](#req-venue-001--lidentità-del-locale-è-un-dato-clientislugvenuejson-in-build-settingsbar-venue-a-runtime)
+
+#### BUG-163 — Un rifiuto del pagamento online che SumUp rimanda in ritardo segna «fallito» un conto passato nel frattempo al lettore
+
+Trovato dal revisore il 16/11/2026, correggendo BUG-162: è lo stesso difetto, sul checkout online. Il cliente paga online e la carta viene rifiutata; il conto passa al lettore del banco (`in_attesa`, metodo `lettore`). Se SumUp rimanda il rifiuto online (ritenta dopo 1, 5, 20 minuti e 2 ore), `verifyCheckoutStatus` vede uno stato diverso da quello del conto, scrive «fallito» e azzera l'importo in volo del lettore: il pagamento al banco, se poi riesce, arriva su un conto che non lo aspetta più. Da correggere come BUG-162: l'esito online si applica solo a un conto che aspetta ancora quel checkout.
+
+**Dove**: `functions/lib/payment-service.js (verifyCheckoutStatus, handleOnlineWebhook)` · **Tradisce**: [REQ-PAG-005](#req-pag-005--pagamento-online-con-link-o-qr), [REQ-DEV-026](#req-dev-026--la-spesa-dei-servizi-google-ha-un-tetto-istanze-limitate-e-indirizzi-pubblici-che-non-lavorano-a-vuoto)
+
+#### BUG-164 — Il tempo di lavorazione in ricetta non entra nel costo del drink: 57 righe lo dosano in grammi
+
+Daniele, 16/11/2026: «tempo di lavorazione quando è presente in ricetta va calcolato come un normale ingrediente quindi deve comparire nei costi, ricordando che il tempo di lavorazione si calcola in U ovvero 1 pz corrisponde a 60 U ed 1 pz costa 10€». L'articolo è già così, in produzione e sul test (pezzo da 60 U, 10 €, IVA 0), e il costo per U lo sa fare costPerUnit. Ma 57 righe di ricetta su 59 lo dosano in GRAMMI («0,5 g», «1,5 g»…), scritte quando il grammo era l'unica unità possibile: un grammo di un articolo che si conta a U non ha un costo, la riga finisce fra quelle senza costo e il costo del drink resta parziale. Le altre due sono già in U.
+
+CORREZIONE: uno script riscrive in U quelle righe, con la stessa quantità («1,5 g» → 1,5 U, 0,25 €). Prima sul test, poi in produzione col via libera e dopo il backup. Da quel momento quelle righe scaricano anche il magazzino (U/60 di pezzo per drink), come tutto quello che sta in magazzino dal 12/09/2026.
+
+SUL TEST (16/11/2026): riscritte 57 ricette, tutte del «Tempo di Lavorazione»; rilanciato, lo script non trova più niente. In produzione: da fare, col via libera.
+
+**Dove**: `dati: drinks.recipe_items del «Tempo di Lavorazione»; scripts/lavorazione-in-u.js, scripts/lib-lavorazione.js` · **Tradisce**: [REQ-MENU-034](#req-menu-034--ogni-riga-della-ricetta-mostra-quanto-costa)
 
 ## Non più valido
 

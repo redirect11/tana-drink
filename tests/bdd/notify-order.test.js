@@ -232,6 +232,63 @@ describe('decideNewOrderStaffPush', () => {
   })
 })
 
+// ── IL CONTO CHE SI STA ANCORA BATTENDO (BUG-159) ────────────────────
+// Daniele, 15/11/2026: «io l'ordine ricevuto, la notifica la vedo»,
+// battendo un drink e togliendolo subito. Il conto al POS nasce al primo
+// tocco (BUG-148) e resta `in_creazione` finché chi lo batte non esce:
+// avvisare lì voleva dire far squillare il banco a metà composizione, e
+// per un ripensamento che poi si annullava.
+describe('decideNewOrderStaffPush, il conto in composizione', () => {
+  const comanda = (status, items = [{ drink_id: 'gin', qty: 1 }]) => ({ id: 'c1', status, items })
+  const inCreazione = {
+    daily_number: 7,
+    in_creazione: true,
+    comande: [comanda('in_preparazione')],
+    placed_by: { role: 'bartender', device: 'tablet-banco' },
+  }
+
+  it('al primo drink battuto non avvisa: il conto si sta ancora componendo', () => {
+    expect(decideNewOrderStaffPush(null, inCreazione)).toBeNull()
+  })
+
+  it('le righe che arrivano mentre lo si batte non avvisano nemmeno loro', () => {
+    const dopo = { ...inCreazione, comande: [comanda('in_preparazione', [{ drink_id: 'gin', qty: 2 }])] }
+    expect(decideNewOrderStaffPush(inCreazione, dopo)).toBeNull()
+  })
+
+  it('chi lo batte esce: il conto composto arriva al banco come ordine nuovo', () => {
+    const msg = decideNewOrderStaffPush(inCreazione, { ...inCreazione, in_creazione: false })
+    expect(msg.title).toContain('Nuovo ordine')
+    expect(msg.body).toContain('#7')
+  })
+
+  it('anche con due comande è un primo invio, non un’aggiunta', () => {
+    const due = { ...inCreazione, comande: [comanda('in_preparazione'), { ...comanda('ricevuto'), id: 'c2' }] }
+    expect(decideNewOrderStaffPush(due, { ...due, in_creazione: false }).title).toContain('Nuovo ordine')
+  })
+
+  it('il ripensamento — battuto, tolto, annullato — non squilla mai', () => {
+    const vuoto = { ...inCreazione, comande: [comanda('in_preparazione', [])] }
+    expect(decideNewOrderStaffPush(inCreazione, vuoto)).toBeNull()
+    const annullato = { ...vuoto, in_creazione: false, status: 'annullato', comande: [comanda('annullato', [])] }
+    expect(decideNewOrderStaffPush(vuoto, annullato)).toBeNull()
+  })
+
+  it('una comanda rimasta senza righe non è lavoro da fare', () => {
+    expect(decideNewOrderStaffPush(null, { daily_number: 7, comande: [comanda('in_preparazione', [])] })).toBeNull()
+  })
+
+  // Dalla revisione: chi tiene aperto il conto svuotato (REQ-ORD-025) toglie
+  // il Mojito e mette un Gin Tonic nella STESSA comanda. Il banco quella
+  // comanda la conosce da ore: rimetterci una riga non è un ordine nuovo.
+  it('svuotata e riempita, la stessa comanda non avvisa di nuovo', () => {
+    const composto = { daily_number: 7, comande: [comanda('in_preparazione')] }
+    const svuotato = { ...composto, comande: [comanda('in_preparazione', [])] }
+    expect(decideNewOrderStaffPush(composto, svuotato)).toBeNull()
+    expect(decideNewOrderStaffPush(svuotato, composto)).toBeNull()
+  })
+})
+
 // ── A CHI ARRIVA L'AVVISO ────────────────────────────────────────────
 // Non si tace per ruolo, si tace per TERMINALE: l'unico che non viene
 // avvisato è il dispositivo da cui l'ordine è partito, che sa già di

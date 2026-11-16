@@ -19,6 +19,51 @@
   notifiche, l'avviso di aggiornamento) diventa scuro quando l'accento è
   chiaro, e resta leggibile (REQ-UI-033).
 
+### Il conto
+
+- **Conto svuotato: si chiude da solo o resta aperto**, a scelta di chi
+  lavora, in «Il mio profilo» → «Conto vuoto». Vale per l'account su quel
+  dispositivo. Acceso, come finora, togliendo l'ultima riga il conto si
+  annulla e si torna alla coda. Spento, il conto resta aperto e si può
+  continuare a battere; se all'uscita è ancora vuoto si annulla allora
+  (REQ-ORD-025).
+- Uscendo subito da un conto appena svuotato, il conto si annulla: prima
+  restava aperto e vuoto in coda (REQ-ORD-025).
+
+### Il menù dei clienti
+
+- **«Oscura automaticamente»**, nella scheda del prodotto di magazzino: con
+  la giacenza a zero o sotto (o sotto la soglia di avviso, secondo quanto
+  scelto in Impostazioni → Menù clienti), le voci del menù clienti che hanno quel
+  prodotto in ricetta risultano non disponibili. Si sceglie ingrediente per
+  ingrediente; l'opzione sulla voce resta e vale insieme (REQ-MENU-045).
+
+### Notifiche
+
+- **«Nuovo ordine» arriva quando il conto è composto**, cioè quando chi lo
+  batte esce dal conto: non più al primo drink. Vale sia per la notifica
+  sul telefono sia per il suono della coda. Battere un drink e toglierlo
+  non fa più squillare gli altri dispositivi (BUG-159).
+
+### Sicurezza e costi
+
+- Le foto dei prodotti del menù le caricano e le cancellano solo banco e
+  admin. Prima bastava un account qualunque, anche quello di un cliente
+  registrato (BUG-160).
+- Le Functions hanno un tetto di istanze: 10 ciascuna, 3 per i pagamenti
+  online che il cliente fa senza account. Il webhook del lettore non
+  interroga più SumUp per una transazione che non è del locale
+  (REQ-DEV-026).
+- Il controllo dei numeri doppi, a ogni conto nuovo, legge solo i conti
+  con lo stesso numero invece di tutta la cassa (BUG-161).
+- Un esito del lettore SumUp rimandato in ritardo non cambia più un conto
+  che non lo aspetta: un pagamento rifiutato e ripetuto ore dopo non
+  riporta a «parziale» un conto già pagato in contanti, e un pagamento
+  riuscito e ripetuto non si registra due volte (BUG-162).
+- Le utenze dello staff rispettano il numero massimo del piano anche
+  quando si creano dal server: sul piano Free non si aggiungono persone
+  oltre il titolare. Le utenze già presenti restano (BUG-165).
+
 ## 1.10.51 — 15 novembre 2026 (produzione)
 
 Provata sul test come 1.10.50-beta e 1.10.51-beta.

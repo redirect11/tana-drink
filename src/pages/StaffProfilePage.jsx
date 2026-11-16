@@ -9,6 +9,33 @@ import { RUOLO_ETICHETTA, isPersonale, isGestore } from '../lib/ruoli.js'
 import AvvisiPanel from '../components/AvvisiPanel.jsx'
 import StoricoNotifiche from '../components/StoricoNotifiche.jsx'
 import Icona, { ConIcona } from '../components/Icona.jsx'
+import ToggleRow from '../components/ToggleRow.jsx'
+import { contoVuotoSiChiude, ricordaContoVuotoSiChiude } from '../lib/impostazioniLocali.js'
+
+// COME LAVORA CHI È COLLEGATO, SU QUESTO DISPOSITIVO (REQ-ORD-025; il perché
+// in impostazioniLocali.js, contoVuotoSiChiude). Sta nel profilo e non nelle
+// impostazioni del locale come gli avvisi: chi è in sala nelle impostazioni
+// non entra.
+function IlMioConto({ uid }) {
+  const [siChiude, setSiChiude] = useState(() => contoVuotoSiChiude(uid))
+  return (
+    <div className="card settings-section">
+      <h3><Icona nome="coda" gruppo="tasti" /> Conto vuoto</h3>
+      <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+        Vale <strong>su questo dispositivo</strong> e per questo account.
+      </p>
+      <ToggleRow
+        label="Conto svuotato: si annulla e si torna alla coda"
+        desc="Togliendo l’ultimo prodotto il conto si annulla da solo. Spento, il conto resta aperto e si annulla all’uscita se è ancora vuoto."
+        checked={siChiude}
+        onChange={(v) => {
+          ricordaContoVuotoSiChiude(uid, v)
+          setSiChiude(v)
+        }}
+      />
+    </div>
+  )
+}
 
 // Profilo dello staff/bartender registrato: modifica del nome
 // visualizzato (usato in «Ciao, …» e nell'attribuzione degli ordini) e
@@ -98,6 +125,7 @@ export default function StaffProfilePage() {
           entra chi è in sala, cioè proprio chi ha bisogno di sapere quando
           un drink è pronto. */}
       <AvvisiPanel gestore={isGestore(role)} />
+      <IlMioConto uid={user.uid} />
       <StoricoNotifiche />
 
       {/* Per tornare al gestionale c'è l'«← Indietro» nella barra in alto,

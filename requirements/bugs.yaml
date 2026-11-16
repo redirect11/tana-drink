@@ -6429,3 +6429,202 @@ bugs:
     priority: P3
     requisiti: [REQ-VENUE-001]
     test_cases: []
+
+  - id: BUG-159
+    title: "«Nuovo ordine» squilla al primo drink battuto, anche se poi il conto si svuota e si annulla"
+    area: "functions/lib/push-core.js (decideNewOrderStaffPush), src/pages/BartenderPage.jsx (avviso in coda)"
+    description: >
+      Daniele, 15/11/2026: «io l'ordine ricevuto, la notifica la vedo»,
+      battendo un drink e togliendolo subito. Dal 14/11 (BUG-148) il conto
+      nasce al primo tocco, e `notifyNewOrder` avvisa gli altri dispositivi
+      appena il documento esiste, senza guardare `in_creazione`. La stampa
+      quel segno lo rispetta: la comanda esce quando chi batte esce dal
+      conto, completa. La notifica no: partiva a metà composizione, e
+      annullare dopo non la ritira. Un ripensamento faceva squillare il
+      banco per un conto che non esiste.
+      ORA un conto `in_creazione` non è un ordine nuovo: l'avviso parte
+      quando il segno si toglie (notifyOrderUpdate), cioè all'uscita di chi
+      lo batte, nello stesso momento in cui esce la comanda; un conto
+      annullato non ha più niente da fare e tace. Una comanda senza righe
+      non conta come lavoro da fare, ma solo nel conto dopo: svuotata e
+      riempita, la stessa comanda non riavvisa. Lo stesso per l'avviso in
+      pagina della coda (suono e notifica del browser), che suonava anch'esso
+      al primo drink e, con la sola push corretta, avrebbe suonato due volte:
+      il conto in composizione si mette da parte e si annuncia quando il
+      segno cade.
+      IL PREZZO, dalla revisione: gli altri dispositivi sanno del conto
+      quando è composto, non al primo drink. Un conto il cui segno non cade
+      mai — telefono bloccato o app chiusa prima di uscire dal conto — non
+      si annuncia, come già non stampa da solo. E un conto battuto e
+      incassato senza uscire, con «Riscuoti e servi» o col servizio spento,
+      quando il segno cade ha le comande già servite: non avvisa. Da
+      confermare con chi lavora al banco.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, notifiche, pos]
+    severity: media
+    priority: P2
+    requisiti: [REQ-NOTIF-002]
+    test_cases: [tests/bdd/notify-order.test.js, tests/component/AvvisiRipristino.test.jsx]
+  - id: BUG-160
+    title: "Le foto del menù le può caricare e cancellare qualunque account, anche un cliente registrato"
+    area: "storage.rules (drinks/)"
+    description: >
+      Trovato nel controllo dei costi del 16/11/2026 (REQ-DEV-026). La
+      cartella `drinks/` di Storage chiedeva solo di aver fatto l'accesso
+      (`request.auth != null`), e i clienti possono registrarsi
+      (src/lib/customerAuth.js): un cliente registrato poteva caricare file
+      da 5 MB senza limite di numero, a spese del locale, e cancellare le
+      foto dei prodotti del menù. Nessun flusso del cliente carica lì: la
+      foto la mette la scheda prodotto (src/lib/saveDrink.js), e scrivere
+      un prodotto richiede già banco o admin nelle regole del database.
+      ORA creare e cancellare in `drinks/` vuole banco o admin, come le
+      fatture; restano il tetto di 5 MB e il solo tipo immagine. La
+      lettura resta libera: il menù del cliente le mostra.
+      IL TEST GIRA SOLO IN LOCALE, per ora: vuole l'emulatore di Storage, e
+      il job «Regole Firestore» della CI accende solo Firestore (`--only
+      firestore`, .github/workflows/test.yml): lì si salta dicendolo. Per
+      averlo anche in CI il workflow deve accendere anche Storage — una
+      modifica alla CI, che decide Daniele.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, sicurezza, costi]
+    severity: alta
+    priority: P1
+    requisiti: [REQ-SIC-001, REQ-DEV-026]
+    test_cases: [tests/regole/storage.test.js]
+  - id: BUG-161
+    title: "A ogni conto nuovo il server rilegge tutti i conti della cassa per cercare un numero doppio"
+    area: "functions/index.js (risolviNumeroDuplicato), functions/lib/numerazione.js"
+    description: >
+      Trovato nel controllo dei costi del 16/11/2026 (REQ-DEV-026).
+      `risolviNumeroDuplicato` scatta a ogni conto creato e, per sapere se
+      il suo numero è conteso, leggeva tutti i conti della sessione di
+      cassa: la spesa cresce col quadrato dei conti, e con 200 conti in una
+      sera sono circa 20.000 letture solo per questo.
+      ORA si chiedono prima i soli conti della cassa con lo stesso numero —
+      di solito uno, il conto stesso. Tutta la cassa si legge solo quando
+      il numero è conteso E il conto nuovo ha perso, perché serve il più
+      alto per dargli il primo libero. Se la query stretta fallisce (un
+      indice che manca o non è ancora costruito), si torna alla lettura
+      completa di prima: un numero doppio non risolto costa più di qualche
+      lettura (regia, 16/11/2026).
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, functions, costi]
+    severity: media
+    priority: P2
+    requisiti: [REQ-ORD-016, REQ-DEV-026]
+    test_cases: [tests/bdd/numerazione.test.js]
+  - id: BUG-162
+    title: "Un esito del lettore che SumUp rimanda in ritardo può riportare a «parziale» un conto già pagato"
+    area: "functions/lib/payment-service.js (handleReaderWebhook), functions/lib/payment-core.js"
+    description: >
+      Dalla regia, 16/11/2026, nel controllo dei costi (REQ-DEV-026): SumUp
+      ritenta una notifica non riuscita (risposta diversa da 2xx, o troppo
+      lenta) dopo 1 minuto, 5 minuti, 20 minuti e 2 ore. Lo stesso esito
+      può quindi arrivare più volte, anche ore dopo. Per il webhook del
+      checkout online la pagina di SumUp lo dice; per quello del lettore
+      non è scritto, e si tratta allo stesso modo.
+      Il webhook del lettore applicava ogni esito che arrivava. Il conto
+      tiene `sumup_client_transaction_id` anche dopo l'esito, e un incasso
+      in contanti non lo toglie: un «fallito» ripetuto dopo che il conto
+      era stato pagato in contanti lo riportava a «parziale» (o
+      «fallito»), con i soldi già in cassa. Un «pagato» ripetuto riscriveva
+      ora e stato del pagamento.
+      ORA un esito del lettore si applica solo se il conto lo aspetta
+      ancora. Un «fallito» vale solo per un conto in attesa del lettore. Un
+      «pagato» non si riapplica se quella transazione è già fra gli incassi
+      del conto (o, senza un id della transazione, se il conto risulta già
+      pagato e non c'è un importo in volo). Il «pagato» che arriva dopo un
+      annullo dal banco si applica ancora: i soldi sono stati presi.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, pagamenti, sumup]
+    severity: alta
+    priority: P1
+    requisiti: [REQ-PAG-004, REQ-DEV-026]
+    test_cases: [tests/bdd/payment-reader.test.js]
+  - id: BUG-163
+    title: "Un rifiuto del pagamento online che SumUp rimanda in ritardo segna «fallito» un conto passato nel frattempo al lettore"
+    area: "functions/lib/payment-service.js (verifyCheckoutStatus, handleOnlineWebhook)"
+    description: >
+      Trovato dal revisore il 16/11/2026, correggendo BUG-162: è lo stesso
+      difetto, sul checkout online. Il cliente paga online e la carta viene
+      rifiutata; il conto passa al lettore del banco (`in_attesa`, metodo
+      `lettore`). Se SumUp rimanda il rifiuto online (ritenta dopo 1, 5,
+      20 minuti e 2 ore), `verifyCheckoutStatus` vede uno stato diverso da
+      quello del conto, scrive «fallito» e azzera l'importo in volo del
+      lettore: il pagamento al banco, se poi riesce, arriva su un conto che
+      non lo aspetta più. Da correggere come BUG-162: l'esito online si
+      applica solo a un conto che aspetta ancora quel checkout.
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, pagamenti, sumup]
+    severity: media
+    priority: P2
+    requisiti: [REQ-PAG-005, REQ-DEV-026]
+    test_cases: []
+  - id: BUG-164
+    title: "Il tempo di lavorazione in ricetta non entra nel costo del drink: 57 righe lo dosano in grammi"
+    area: "dati: drinks.recipe_items del «Tempo di Lavorazione»; scripts/lavorazione-in-u.js, scripts/lib-lavorazione.js"
+    description: >
+      Daniele, 16/11/2026: «tempo di lavorazione quando è presente in
+      ricetta va calcolato come un normale ingrediente quindi deve comparire
+      nei costi, ricordando che il tempo di lavorazione si calcola in U
+      ovvero 1 pz corrisponde a 60 U ed 1 pz costa 10€».
+      L'articolo è già così, in produzione e sul test (pezzo da 60 U, 10 €,
+      IVA 0), e il costo per U lo sa fare costPerUnit. Ma 57 righe di
+      ricetta su 59 lo dosano in GRAMMI («0,5 g», «1,5 g»…), scritte quando
+      il grammo era l'unica unità possibile: un grammo di un articolo che
+      si conta a U non ha un costo, la riga finisce fra quelle senza costo
+      e il costo del drink resta parziale. Le altre due sono già in U.
+      CORREZIONE: uno script riscrive in U quelle righe, con la stessa
+      quantità («1,5 g» → 1,5 U, 0,25 €). Prima sul test, poi in
+      produzione col via libera e dopo il backup. Da quel momento quelle
+      righe scaricano anche il magazzino (U/60 di pezzo per drink), come
+      tutto quello che sta in magazzino dal 12/09/2026.
+      SUL TEST (16/11/2026): riscritte 57 ricette, tutte del «Tempo di
+      Lavorazione»; rilanciato, lo script non trova più niente. In
+      produzione: da fare, col via libera.
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, magazzino, costi]
+    severity: media
+    priority: P2
+    requisiti: [REQ-MENU-034]
+    test_cases: [tests/unit/lavorazioneInU.test.js]
+  - id: BUG-165
+    title: "Su un Free col profilo completo, `staffAdmin` crea utenze oltre il limite del piano"
+    area: "functions/lib/staff-service.js, functions/lib/licenza-core.js, functions/index.js (staffAdmin)"
+    description: >
+      Dalla regia, 16/11/2026 (REQ-FLOTTA-122): ogni locale nuovo nasce col
+      profilo completo anche se è Free, e chi paga può scendere al Free a
+      fine periodo. Fino a ieri il Free era leggero — niente Functions — e
+      il limite `utenti_max: 1` reggeva da sé: `staffAdmin` non c'era.
+      L'app nasconde la gestione delle utenze sul Free (limiti.js,
+      `staffConsentito`), ma la Function, ora pubblicata, non guardava la
+      licenza: chiamata a mano dalla console del browser, un admin di un
+      Free creava quante utenze voleva.
+      ORA `staffAdmin` legge la licenza e non porta le utenze attive dello
+      staff oltre `utenti_max`: niente utenze nuove, nessun cliente
+      promosso a un ruolo dello staff, nessuna utenza dello staff
+      riattivata oltre il tetto. Una licenza scaduta vale come Free. Le
+      utenze che ci sono già NON si toccano: chi scende al Free con più
+      persone le tiene, e il limite ferma solo le aggiunte, come per i
+      prodotti (limiti.js, puoCreareProdotto). La copia dei limiti del Free
+      nelle Functions (licenza-core.js) si confronta con quella dell'app.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, licenza, staff]
+    severity: media
+    priority: P2
+    requisiti: [REQ-LIC-003]
+    test_cases: [tests/unit/utenze.test.js]

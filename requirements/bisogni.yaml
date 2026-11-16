@@ -97,6 +97,7 @@ bisogni:
     requisiti:
       - REQ-POS-003
       - REQ-POS-004
+      - REQ-ORD-025
     test_cases: []
 
   - id: UR-004
@@ -219,6 +220,7 @@ bisogni:
       - REQ-CLI-003
       - REQ-CLI-006
       - REQ-NOTIF-001
+      - REQ-MENU-045
     test_cases: []
 
   - id: UR-009
@@ -455,4 +457,45 @@ bisogni:
       insieme pagina iniziale e menù.
     requisiti:
       - REQ-MENU-044
+    test_cases: []
+
+  - id: UR-019
+    title: "Il locale non paga i servizi che fanno girare l'app oltre quello che usa davvero"
+    area: "Gestore"
+    description: >
+      Daniele, 15/11/2026: «non voglio trovarmi a pagare migliaia di euro».
+      I progetti dei locali stanno sull'account di fatturazione di Stonebit:
+      un indirizzo pubblico bombardato, un trigger che si riaccende da solo
+      o una lettura che cresce col numero dei conti diventano una fattura
+      vera. La spesa deve seguire il lavoro del locale, e avere un tetto
+      dove qualcuno da fuori può farla salire.
+    accettazione: >
+      Ogni Function ha un tetto di istanze, più basso dove si chiama senza
+      account; una chiamata con un id inventato non arriva a SumUp; una
+      sera da 200 conti non rilegge la cassa a ogni conto; un cliente
+      registrato non riesce a caricare file nello Storage del locale.
+    requisiti:
+      - REQ-DEV-026
+    test_cases: []
+
+  - id: UR-020
+    title: "Un ristorante lavora coi suoi tavoli e coi suoi prodotti freschi"
+    area: "Sala, Gestore"
+    description: >
+      Daniele, 16/11/2026: l'app va integrata per i ristoranti. In sala si
+      lavora per tavoli, e chi lavora deve vedere a colpo d'occhio dove
+      sono e cosa aspettano; in cucina e al banco ci sono prodotti che,
+      aperti, durano pochi giorni, e chi gestisce deve sapere quando
+      scadono.
+    accettazione: >
+      Con il modulo «ristorante», accanto agli ordini c'è la Sala: la
+      pianta coi tavoli al loro posto (disposti dal gestore nell'editor
+      della sala), ogni tavolo libero o occupato, e toccandolo i suoi conti
+      e i suoi ordini. Nella scheda di un
+      prodotto si scrivono scadenza, apertura e decadimento, e il
+      gestionale dice quando il prodotto va consumato.
+    requisiti:
+      - REQ-TAVOLI-003
+      - REQ-MAG-057
+      - REQ-LIC-019
     test_cases: []

@@ -23,6 +23,8 @@ import {
   ricordaProntoDiviso,
   filtriAperti,
   ricordaFiltriAperti,
+  contoVuotoSiChiude,
+  ricordaContoVuotoSiChiude,
 } from '../../src/lib/impostazioniLocali.js'
 
 const DEFAULTS = { stripe_pos: 'prodotto', queue_view: 'griglia' }
@@ -116,6 +118,29 @@ describe('le preferenze di questo terminale', () => {
     localStorage.setItem('drink:corsie:vista', 'boh')
     expect(corsieNascoste()).toBe(null)
     expect(vistaCorsie()).toBe(null)
+  })
+})
+
+// IL CONTO SVUOTATO (REQ-ORD-025). A Flavio piace che si chiuda da solo, a
+// Vittorio no: la scelta è della persona, su quel dispositivo, e due
+// persone allo stesso tablet non se la cambiano a vicenda.
+describe('il conto svuotato, per persona', () => {
+  it('di suo si chiude da solo: è il comportamento di sempre', () => {
+    expect(contoVuotoSiChiude('flavio')).toBe(true)
+    expect(contoVuotoSiChiude(null)).toBe(true)
+  })
+
+  it('chi lo spegne lo spegne per sé, non per chi usa lo stesso tablet', () => {
+    ricordaContoVuotoSiChiude('vittorio', false)
+    expect(contoVuotoSiChiude('vittorio')).toBe(false)
+    expect(contoVuotoSiChiude('flavio')).toBe(true)
+  })
+
+  it('lo spento resta scritto, e si riaccende', () => {
+    ricordaContoVuotoSiChiude('vittorio', false)
+    expect(localStorage.getItem('drink:conto:vuoto-si-chiude:vittorio')).toBe('0')
+    ricordaContoVuotoSiChiude('vittorio', true)
+    expect(contoVuotoSiChiude('vittorio')).toBe(true)
   })
 })
 

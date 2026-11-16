@@ -107,7 +107,7 @@ import ActionSheet from './ActionSheet.jsx'
 import { StoriaOrdineDialog, RipristinaOrdineDialog } from './StoriaOrdine.jsx'
 import { ripristinabile, ultimaRiapertura, quando } from '../lib/storiaOrdine.js'
 import PaymentScreen from './PaymentScreen.jsx'
-import { azioniContoRidotte, ricordaAzioniContoRidotte } from '../lib/impostazioniLocali.js'
+import { azioniContoRidotte, ricordaAzioniContoRidotte, contoVuotoSiChiude } from '../lib/impostazioniLocali.js'
 import Icona, { ConIcona } from './Icona.jsx'
 import OrderBy from './OrderBy.jsx'
 import { emojiDi } from '../lib/icone.js'
@@ -698,8 +698,21 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     // col timer.
     flushAdditionsRef.current?.()
     flushAllRef.current?.()
+    // IL CONTO SVUOTATO, PER CHI LO TIENE APERTO (REQ-ORD-025): a schermo
+    // è rimasto aperto, e uscendo vuoto si annulla adesso. La rimozione
+    // dell'ultima riga è appena partita qui sopra e l'annullo le va dietro
+    // nel turno del conto (perConto), quindi legge il conto già vuoto.
+    // L'annullo chiude anche la composizione, nella stessa scrittura
+    // (BUG-071): per questo `chiudiCreazione` qui sotto non deve partire —
+    // da sola toglierebbe il cancello a un conto ancora aperto.
+    const vuoto = contoVuotoRef.current
+    if (vuoto) {
+      cancelOrder(vuoto, { by: 'bartender' }).catch(() => mostraOrdine(vuoto))
+      nascondiOrdine(vuoto)
+    }
     if (orderProp) return
     ricordaContoInCorso(null)
+    if (vuoto) return saveDraft('new', [])
     // LA SESSIONE DI CREAZIONE FINISCE QUI, e solo qui: andare in pagamento
     // e tornare è ancora la stessa battuta. Da adesso le comande di questo
     // conto possono uscire dalla stampante — il ticket esce COMPLETO, non a
@@ -1264,32 +1277,48 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // toglie subito): si annulla da solo e si torna alla coda, senza chiedere
   // nulla — non era un conto, era un ripensamento. Vale solo per l'ordine
   // creato in questa sessione, mai per uno aperto dalla coda.
+  // Vale per QUALSIASI conto aperto rimasto senza righe, non solo per quello
+  // creato in questa sessione: uscendo e rientrando (per esempio quando si
+  // chiude il box del nome) il conto non era più "creato qui", e togliendo
+  // l'ultima riga restava aperto e vuoto in mezzo agli altri.
+  // Con un incasso dentro no: lì il conto esiste davvero e va chiuso a mano.
+  // Le righe si contano da quelle vere, non da `orderedLines`: quella passa
+  // dall'ordine a mano, che si riallinea in un effetto, e nel disegno in cui
+  // il conto nasce può risultare vuota per un attimo — ora che l'uscita
+  // annulla (REQ-ORD-025), quell'attimo annullerebbe un conto pieno.
+  const contoVuoto =
+    !isNew &&
+    !closed &&
+    !!order?.id &&
+    confirmedLines.length === 0 &&
+    draft.length === 0 &&
+    (order.payments || []).length === 0
+  // L'uscita legge da qui (l'id del conto vuoto, o null): gira dopo lo
+  // smontaggio, quando di questo disegno resta solo il riferimento.
+  const contoVuotoRef = useRef(null)
+  contoVuotoRef.current = contoVuoto ? order.id : null
   useEffect(() => {
-    // Vale per QUALSIASI conto aperto rimasto senza righe, non solo per quello
-    // creato in questa sessione: uscendo e rientrando (per esempio quando si
-    // chiude il box del nome) il conto non era più "creato qui", e togliendo
-    // l'ultima riga restava aperto e vuoto in mezzo agli altri.
-    if (isNew || closed || !order?.id) return
-    if (orderedLines.length > 0 || draft.length > 0) return
-    if ((order.payments || []).length > 0) return // qualcosa è già stato incassato
-    const t = setTimeout(async () => {
-      // PRIMA si scrive la rimozione, POI si annulla. La rimozione dell'ultima
-      // riga passa da un salvataggio ritardato (600ms): l'annullo arrivava
-      // prima, leggeva l'ordine con la riga ancora dentro e la riscriveva
-      // così com'era. Risultato: un conto annullato che in coda mostrava
-      // ancora "1 prodotto · 4,00 €" mentre dentro non aveva più niente.
-      try {
-        await flushAll()
-      } catch {
-        /* se la scrittura non riesce si annulla lo stesso: il conto va chiuso */
-      }
-      cancelOrder(order.id, { by: 'bartender' }).catch(() => mostraOrdine(order.id))
-      nascondiOrdine(order.id)
+    if (!contoVuoto) return
+    const t = setTimeout(() => {
+      // CHI LAVORA SCEGLIE (REQ-ORD-025). Spenta, il conto svuotato resta a
+      // schermo — si sta sostituendo un drink, e si continua a battere — e
+      // se all'uscita è ancora vuoto lo annulla l'uscita. Si legge QUI, allo
+      // scadere: all'apertura di un conto già vuoto l'accesso può non aver
+      // ancora risposto, e senza account vale la scelta di partenza — il
+      // conto si annullerebbe anche a chi l'ha spenta.
+      if (!contoVuotoSiChiude(auth.currentUser?.uid)) return
+      // L'ANNULLO LO FA L'USCITA. Si torna alla coda, la schermata si smonta
+      // e l'uscita (uscitaRef) manda la rimozione dell'ultima riga e poi
+      // l'annullo, nel turno del conto (perConto): l'annullo legge il conto
+      // già vuoto, e qui non si aspetta niente. Prima questo timer annullava
+      // da sé dopo un `await flushAll()` — un'attesa prima dell'esito di un
+      // gesto, che senza rete non torna — e doveva difendersi dalle uscite
+      // in quel mentre.
       navigate('/bar')
     }, 400) // respiro: evita di annullare durante una sostituzione di riga
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isNew, closed, order?.id, orderedLines.length, draft.length])
+  }, [contoVuoto])
 
   // Memoria bozza solo finché non confermato/pagato: se l'ordine è chiuso
   // (pagato/annullato) si azzera.
@@ -2143,7 +2172,9 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       // senza nome, lo si chiede una volta prima di uscire.
       flushAll()
       flushAdditions()
-      if (createdInPlace && !nameAskedRef.current && needsName(order)) return askNameThenExit()
+      // Un conto vuoto lo annulla l'uscita (REQ-ORD-025): chiedergli il nome
+      // vorrebbe dire battezzare un conto che sta per sparire.
+      if (!contoVuoto && createdInPlace && !nameAskedRef.current && needsName(order)) return askNameThenExit()
       return navigate('/bar')
     }
     // Nulla ancora creato (uscita prima dell'auto-creazione): il conto si crea

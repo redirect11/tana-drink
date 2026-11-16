@@ -166,7 +166,8 @@ requirements:
       Togliendo tutte le righe di un conto appena aperto, il conto viene annullato
       e si torna alla coda: un conto vuoto in lista è solo un ingombro. Non
       succede se qualcosa è già stato incassato — lì il conto esiste davvero e va
-      chiuso a mano.
+      chiuso a mano. Chi preferisce restare sul conto svuotato lo sceglie nel
+      suo profilo, e allora l'annullo avviene all'uscita (REQ-ORD-025).
     status: implemented
     generate_issue: false
     labels: [ordini, pos]
@@ -6745,6 +6746,7 @@ requirements:
     labels: [menu, magazzino]
     test_cases:
       - tests/component/costoRigheRicetta.test.jsx
+      - tests/unit/lavorazioneInU.test.js
 
   - id: REQ-MENU-023
     title: "Il marketplace dei temi, una pagina sua: un tema è una tavolozza più uno stile, si sfoglia, si prova, si installa e si usa"
@@ -10676,6 +10678,39 @@ requirements:
     test_cases:
       - tests/unit/rigaDiAltri.test.js
       - tests/sistema/piuSoloSulleProprie.spec.js
+
+  - id: REQ-ORD-025
+    title: "Il conto svuotato si chiude da solo o resta aperto: lo sceglie chi lavora, sul suo dispositivo"
+    area: "src/lib/impostazioniLocali.js (contoVuotoSiChiude), src/components/OrderPosDetail.jsx, src/pages/StaffProfilePage.jsx"
+    description: >
+      Daniele, 15/11/2026: togliendo l'ultima riga il conto si annulla dopo
+      400 ms e si torna alla coda (REQ-ORD-004); a chi sostituisce un drink
+      con calma la schermata si chiudeva in mano. «Facciamolo così ma
+      opzionale. Per utente, a Flavio piace a Vittorio no. Quindi mettiamolo
+      configurabile per chi sta usando il terminale».
+      La scelta sta nel profilo («Il mio profilo», `/profilo-staff`), come
+      gli avvisi: vale per l'account e per il dispositivo, e due persone che
+      si passano lo stesso tablet non se la cambiano a vicenda. Accesa di
+      partenza, che è il comportamento di sempre. Spenta, il conto svuotato
+      resta aperto a schermo e si può continuare a battere; se all'uscita è
+      ancora vuoto si annulla allora, con le stesse regole: niente annullo
+      se qualcosa è già stato incassato, e il conto annullato esce subito
+      dalla coda. Annullare all'uscita chiude anche la composizione nella
+      stessa scrittura (BUG-071): l'uscita non toglie `in_creazione` per
+      conto suo, e del conto vuoto non esce carta né notifica.
+      Uscire da un conto vuoto prima dei 400 ms lo annulla comunque, con la
+      scelta accesa o spenta: prima restava aperto e vuoto in coda. Uscendo
+      da un conto vuoto non si chiede il nome: sta per essere annullato. La
+      scelta si legge allo scadere dei 400 ms, non all'apertura: aprendo un
+      conto già vuoto l'accesso può non aver ancora risposto.
+    status: implemented
+    generate_issue: false
+    labels: [ordini, pos, staff]
+    test_cases:
+      - tests/unit/impostazioniLocali.test.js
+      - tests/component/OrderPosDetail.test.jsx
+      - tests/component/StaffProfilePage.test.jsx
+      - tests/unit/giroInLocale.test.js
 
   - id: REQ-STAMPA-011
     title: "Il logo sugli scontrini si sceglie: quale, e su quali stampe"
@@ -16066,9 +16101,21 @@ requirements:
       - tests/unit/css.test.js
 
   - id: REQ-MENU-015
-    title: "Il ghiaccio nelle ricette: 1,6 volte la dose scritta in origine"
+    title: "Il ghiaccio nelle ricette: la dose si porta a un multiplo di quella scritta in origine (in produzione ×1,5)"
     area: "scripts/ghiaccio-nelle-ricette.js, scripts/lib-ghiaccio.js"
     description: >
+      IN PRODUZIONE ×0,75 DELLE DOSI DI ALLORA, IL 16/11/2026. Daniele:
+      «moltiplicare il ghiaccio in tutte le ricette dove è presente x0,75 in
+      produzione. Quindi prima backup poi moltiplichiamo». Il ×0,8 del
+      29/10 in produzione non era mai passato: il segno sull'articolo
+      diceva ×2 (200 dove l'originale diceva 100). Backup completo
+      (backup/tana-drink-2026-11-16-15-33-39.json, 18.563 documenti),
+      anteprima, poi `--a 1.5`: 110 ricette, 110 righe, 200 → 150, 400 →
+      300, segno a ×1,5; riletto dopo, le dosi sono quelle. Sul test il
+      segno è ancora ×2 (il catalogo è quello copiato dalla produzione il
+      10/11). Da qui lo script non ha più un obiettivo di partenza: senza
+      `--a` dice solo dove stanno le dosi, perché con 1,6 di partenza
+      avrebbe riportato la produzione a ×1,6 in silenzio.
       RIPENSATO ANCORA IL 29/10/2026: ×0,8 DELLE DOSI ATTUALI, CIOE' ×1,6
       DELL'ORIGINALE. Nella lista di Flavio: «moltiplicare per 0,8 tutte
       le quantita' di Ghiaccio Hoshizaki nelle ricette degli ITEMS di
@@ -17248,4 +17295,175 @@ requirements:
     status: todo
     generate_issue: true
     labels: [metodo, regia]
+    test_cases: []
+
+  - id: REQ-DEV-026
+    title: "La spesa dei servizi Google ha un tetto: istanze limitate e indirizzi pubblici che non lavorano a vuoto"
+    area: "functions/index.js (setGlobalOptions, OPTS_PUBBLICO), functions/lib/payment-service.js (handleReaderWebhook)"
+    description: >
+      Daniele, 15/11/2026: «non voglio trovarmi a pagare migliaia di euro».
+      I progetti dei locali nascono sull'account di fatturazione di Stonebit:
+      quello che consumano Functions, Firestore e Storage lo paga Stonebit.
+      Controllo dei costi chiesto dalla regia il 15/11 (messaggio «un
+      controllo dei costi delle vostre Functions»), risposto il 16/11 con
+      otto punti; questa voce copre i primi.
+      PRIMA nessuna delle venti Functions aveva `maxInstances`: Google ne
+      accende fino a 100 per Function, e un indirizzo pubblico bombardato
+      apposta moltiplica la spesa senza un tetto. ADESSO il tetto è 10 per
+      tutte, impostato una volta in `setGlobalOptions` così vale anche per
+      le Functions che arriveranno; 3 per le quattro chiamabili che il
+      cliente usa senza account (checkout online e verifica, singolo e di
+      gruppo), dove l'id del conto fa da lasciapassare e ogni chiamata
+      legge Firestore prima di qualunque controllo.
+      IL WEBHOOK DEI PAGAMENTI RESTA A 10, non a 3 (regia, 16/11/2026):
+      finché non si sa se SumUp ritenta una notifica rifiutata con 429, un
+      tetto basso può far perdere un pagamento confermato. E SUI TRIGGER
+      NIENTE SOTTO 10: per la seconda generazione Google non scrive cosa
+      succede a un evento che trova le istanze piene, e senza nuovi
+      tentativi (il predefinito) può perdersi; 10 un bar non li riempie.
+      La prova la fa la regia sul suo progetto di test.
+      IL WEBHOOK DEL LETTORE chiedeva l'esito a SumUp prima di sapere se la
+      transazione era di un conto del locale: un POST con un id inventato
+      costava due query e una chiamata a SumUp. Ora si chiama SumUp solo se
+      un conto o un pagamento di gruppo con quell'id esiste.
+      NON QUI: App Check imposto sulle chiamabili (oggi non c'è nei
+      progetti dei locali, ed è una decisione di Daniele, REQ-SIC-002); la
+      coda pagata due volte e il riassunto per le pagine del cliente (punti
+      5 e 6 del controllo), che toccano la coda e vanno provati senza rete.
+      CRITERIO: il tetto globale e quello delle chiamabili del cliente
+      (tests/bdd/tetti-functions.test.js, che legge functions/index.js come
+      testo); il webhook del lettore che non chiama SumUp per un id che non
+      è del locale (tests/bdd/payment-reader.test.js); le foto del menù
+      (BUG-160, tests/regole/storage.test.js); i numeri doppi (BUG-161,
+      tests/bdd/numerazione.test.js).
+    status: implemented
+    generate_issue: false
+    labels: [dev, functions, costi]
+    priority: P1
+    test_cases:
+      - tests/bdd/tetti-functions.test.js
+      - tests/bdd/payment-reader.test.js
+      - tests/bdd/numerazione.test.js
+      - tests/regole/storage.test.js
+
+  - id: REQ-TAVOLI-003
+    title: "La sala in pianta: una schermata coi tavoli al loro posto, i loro conti e i loro ordini, e un editor per disporli"
+    area: "src/pages/BartenderPage.jsx (coda ordini), anagrafica dei tavoli (REQ-TAVOLI-001)"
+    description: >
+      Daniele, 16/11/2026, per l'uso nei ristoranti: «posizionamento
+      grafico tavoli su CODA ORDINI in modalità vista dall'alto/occhio di
+      falco». Nella coda, oltre all'elenco dei conti, una vista con la
+      pianta della sala: ogni tavolo al suo posto, e su ciascuno quello che
+      serve a chi lavora (il conto aperto, cosa aspetta, cosa è pronto). La
+      pianta la disegna il gestore, mettendo i tavoli dell'anagrafica dove
+      stanno.
+      DECISO (Daniele, 16/11/2026): «I tavoli sarebbero gli ordini quindi
+      fa esattamente quello che fa adesso. Al massimo si gestisce lo stato
+      di libero/occupato per ora». Il tavolo in pianta è il conto: si legge
+      e si tocca come la card della coda di oggi; in più, ogni tavolo dice
+      se è libero o occupato. Una sala sola, per ora; forme e misure dei
+      tavoli no, solo la posizione.
+      PRECISATO LO STESSO GIORNO (Daniele, 16/11/2026): non dentro la coda,
+      ma UNA SCHERMATA APPOSTA, «magari affianco a quella degli ordini
+      (delivery/asporto)»: la Sala, dove si vedono i tavoli occupati, i
+      loro conti, e gli ordini e i conti di quegli ordini; gli ordini senza
+      tavolo (delivery, asporto) restano nella schermata degli ordini. E
+      «un editor della sala dove posizionare i tavoli», una schermata sua.
+      È un'opzione della versione per i ristoranti: sta nel modulo
+      «ristorante» (REQ-LIC-019).
+      Richiede l'anagrafica dei tavoli (REQ-TAVOLI-001, ancora da fare).
+      Lavora in locale come la coda: la pianta si aggiorna all'istante.
+    status: todo
+    generate_issue: true
+    labels: [tavoli, coda, ristorante]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-MAG-057
+    title: "Nella scheda del prodotto: scadenza, apertura e decadimento"
+    area: "scheda del prodotto di magazzino (InventoryManager), src/lib/inventory.js"
+    description: >
+      Daniele, 16/11/2026, per l'uso nei ristoranti: «in PRODOTTI inserire
+      in ogni prodotto le caselle: SCADENZA - APERTURA - DECADIMENTO».
+      Lettura proposta: SCADENZA è la data di scadenza della confezione;
+      APERTURA la data in cui la confezione è stata aperta; DECADIMENTO
+      per quanti giorni il prodotto resta buono dopo l'apertura. Da
+      apertura e decadimento si ricava il «da consumare entro».
+      DECISO (Daniele, 16/11/2026): a una scadenza vicina o passata, «un
+      avviso e un elenco» nel gestionale. Il prodotto NON esce dal menù da
+      solo: «se il prodotto esce dal menu dovrebbe sempre deciderlo il
+      gestore».
+      DA CONFERMARE (proposta, senza risposta il 16/11): il decadimento è un
+      dato del prodotto, scadenza e apertura sono della confezione in uso;
+      l'apertura si registra dal gestionale.
+    status: todo
+    generate_issue: true
+    labels: [magazzino, ristorante]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-MENU-045
+    title: "«Oscura automaticamente» si sceglie sul prodotto di magazzino: a giacenza zero o sotto, le voci che lo usano escono dal menù dei clienti"
+    area: "scheda del prodotto di magazzino (InventoryManager), functions/lib/disponibilita.js, functions/index.js (disponibilitaDalMagazzino)"
+    description: >
+      Daniele, 16/11/2026, per Flavio: «all'interno della scheda Prodotto
+      inserire casella da selezionare per abilitare funzione OSCURA
+      AUTOMATICAMENTE (questa funzione oscura nel MENU CLIENTI tutte le
+      voci che contengono questo prodotto nel ricettario quando arriva a 0
+      o negativo) … Adesso flavio lo vuole per prodotto».
+      È la domanda lasciata aperta da REQ-MENU-017 («se l'opzione vale per
+      la voce o per il prodotto di magazzino»), ora decisa: per il
+      PRODOTTO DI MAGAZZINO. Oggi l'opzione sta sul prodotto della cassa
+      (`segue_giacenze`) e guarda tutti i suoi ingredienti; Flavio vuole
+      dire, ingrediente per ingrediente, quali contano — il gin sì, il
+      lime e il ghiaccio no.
+      Valgono le regole di REQ-MENU-017: al cliente non si dice mai cosa
+      manca; il segno lo scrive la Cloud Function solo quando la giacenza
+      attraversa lo zero; al banco la voce resta.
+      DECISO (Daniele, 16/11/2026): vale la soglia delle Impostazioni
+      («anche la soglia nelle impostazioni»): esaurito, oppure già in
+      esaurimento, come per l'opzione sul prodotto della cassa.
+      L'OPZIONE SUL PRODOTTO DELLA CASSA RESTA, e le due si sommano: la
+      domanda non ha avuto risposta, ed è la scelta che non cambia niente a
+      chi l'ha già accesa e non chiede un travaso. Una voce esce dal menù se
+      segue le giacenze e un suo ingrediente (non di servizio) manca,
+      OPPURE se manca un ingrediente con «Oscura automaticamente» — anche di
+      servizio: la spunta sul prodotto è una scelta esplicita.
+      FATTO (1.10.52-beta): `oscura_automaticamente` sul prodotto di
+      magazzino, casella «Oscura automaticamente» nella scheda;
+      `nonDisponibile` e `vociDaRicalcolare` in functions/lib/disponibilita.js;
+      `disponibilitaDalMagazzino` rilegge tutte le voci quando il prodotto
+      ha la spunta (o la spunta cambia), `disponibilitaDalleImpostazioni`
+      tutte le voci quando cambia la soglia.
+    status: implemented
+    generate_issue: true
+    labels: [menu, magazzino, vista-cliente]
+    priority: P1
+    test_cases:
+      - tests/bdd/disponibilita.test.js
+      - tests/component/InventoryManagerCard.test.jsx
+
+  - id: REQ-LIC-019
+    title: "Il modulo «ristorante»: le personalizzazioni per i ristoranti, vendute insieme quando nella regia si sceglie «ristorante»"
+    area: "src/lib/licenza.js (MODULI_PREMIUM), firestore.rules (modulo()), la regia (piani.json, elenco dei moduli)"
+    description: >
+      Daniele, 16/11/2026: «la vista dei tavoli è un'opzione per la
+      versione per ristoranti. Le customizzazioni per il ristorante sono un
+      modulo a parte ma entrambi si vendono come uno se dalla regia
+      selezionano ristorante e alla regia dopo va detto». Un modulo nuovo,
+      `ristorante`, come gli altri di MODULI_PREMIUM: dentro, per ora, la
+      Sala e l'editor della sala (REQ-TAVOLI-003). Quando nella regia il
+      locale è un ristorante, il modulo viaggia insieme a quelli che
+      servono, come un pacchetto solo.
+      INTERFACCIA CON LA REGIA: l'elenco dei moduli è una copia tenuta
+      allineata a mano (REQ-DEV-025). Va detto alla regia prima di
+      rilasciarlo: id del modulo, la scelta «ristorante» che lo porta con
+      sé, e da quali moduli dipende (la Sala richiede l'anagrafica dei
+      tavoli, quindi probabilmente `menu_tavoli`). Da decidere con la regia
+      se «ristorante» è un piano, un tipo di locale o un pacchetto di
+      moduli.
+    status: todo
+    generate_issue: true
+    labels: [licenza, ristorante, regia]
+    priority: P2
     test_cases: []

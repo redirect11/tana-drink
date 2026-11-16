@@ -9,6 +9,7 @@
 // nel repo:
 //   firebase functions:secrets:set SUMUP_API_KEY
 
+const { setGlobalOptions } = require('firebase-functions/v2')
 const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https')
 const { onDocumentUpdated, onDocumentCreated, onDocumentWritten } = require('firebase-functions/v2/firestore')
 const disponibilita = require('./lib/disponibilita')
@@ -18,7 +19,7 @@ const { getFirestore, FieldValue } = require('firebase-admin/firestore')
 const { getMessaging } = require('firebase-admin/messaging')
 const { getAuth } = require('firebase-admin/auth')
 
-const { numeroDaRiassegnare } = require('./lib/numerazione')
+const { numeroDaRiassegnareInCassa } = require('./lib/numerazione')
 const {
   decideOrderPush,
   decideStaffCallPush,
@@ -52,14 +53,38 @@ const {
 initializeApp()
 const db = getFirestore()
 
+// ── IL TETTO ALLE ISTANZE (REQ-DEV-026) ─────────────────────────────────────
+// Senza `maxInstances` Google accende fino a 100 istanze per Function, e la
+// spesa la paga Stonebit (Daniele, 15/11/2026: «non voglio trovarmi a pagare
+// migliaia di euro»). Il tetto sta qui, una volta, così vale anche per le
+// Functions che arriveranno.
+// 10 PER TUTTE, NON MENO: per i trigger di seconda generazione Google non
+// scrive cosa succede a un evento che trova le istanze piene, e senza nuovi
+// tentativi può perdersi — una «Nuovo ordine» mancata, un numero doppio non
+// risolto. Un bar 10 istanze non le riempie. Lo stesso per il webhook dei
+// pagamenti: finché non si sa se SumUp ritenta una notifica respinta, un
+// tetto basso può far perdere un pagamento confermato (regia, 16/11/2026).
+const TETTO_ISTANZE = 10
+setGlobalOptions({ region: 'europe-west1', maxInstances: TETTO_ISTANZE })
+
 const OPTS = { region: 'europe-west1' }
+// 3 PER LE CHIAMABILI DEL CLIENTE SENZA ACCOUNT: l'id del conto fa da
+// lasciapassare, quindi chiunque può chiamarle, e ogni chiamata legge
+// Firestore prima di qualunque controllo. Il cliente ne fa una o due per
+// pagamento: 3 istanze bastano, e chi le bombarda trova il muro presto.
+const OPTS_PUBBLICO = { ...OPTS, maxInstances: 3 }
 
 // ── Gestione utenze staff (solo bartender) ────────────────────────────────────
 // Crea/elenca/modifica/elimina gli account dello staff con il ruolo
 // (custom claim). La logica vive in lib/staff-service.js (testata).
 exports.staffAdmin = onCall(OPTS, async (request) => {
   try {
-    return await staffAdmin(getAuth(), request.auth, request.data)
+    // La licenza, per il tetto di utenze del piano (BUG-165).
+    const leggiLicenza = async () => {
+      const snap = await db.doc('licenza/attuale').get()
+      return snap.exists ? snap.data() : null
+    }
+    return await staffAdmin(getAuth(), request.auth, request.data, { leggiLicenza })
   } catch (e) {
     if (e?.code && e?.message) throw new HttpsError(e.code, e.message)
     throw new HttpsError('internal', e?.message || 'Errore interno.')
@@ -105,8 +130,14 @@ async function ricalcolaDisponibilita(drinks, impostazioni) {
   await scriviALotti(cambi, (lotto, c) => lotto.update(db.doc(`drinks/${c.id}`), { non_disponibile_cliente: c.valore }))
 }
 
-const drinksCheSeguono = async () =>
-  (await db.collection('drinks').where('segue_giacenze', '==', true).get()).docs.map((d) => ({ id: d.id, ...d.data() }))
+const comeDrink = (snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+const drinksCheSeguono = async () => comeDrink(await db.collection('drinks').where('segue_giacenze', '==', true).get())
+// Tutte le voci: con «Oscura automaticamente» sul prodotto di magazzino
+// (REQ-MENU-045) conta anche chi non segue le giacenze, e la ricetta non si
+// può interrogare per ingrediente. Si leggono solo quando un prodotto con la
+// spunta attraversa la soglia, o la spunta o la soglia cambiano: non a ogni
+// vendita.
+const tuttiIDrinks = async () => comeDrink(await db.collection('drinks').get())
 
 exports.disponibilitaDalMagazzino = onDocumentWritten({ ...OPTS, document: 'inventory_items/{itemId}' }, async (event) => {
   const prima = event.data?.before?.exists ? event.data.before.data() : null
@@ -118,9 +149,12 @@ exports.disponibilitaDalMagazzino = onDocumentWritten({ ...OPTS, document: 'inve
   const alternativa = disponibilita.alternativaDopo(prima, dopo, impostazioni)
   if (alternativa?.cancella) await db.doc(`alternative_cliente/${itemId}`).delete()
   if (alternativa?.scrivi) await db.doc(`alternative_cliente/${itemId}`).set(alternativa.scrivi)
-  // Non a ogni vendita: solo quando la soglia si attraversa.
-  if (!disponibilita.haAttraversato(prima, dopo, impostazioni)) return
-  await ricalcolaDisponibilita((await drinksCheSeguono()).filter((d) => disponibilita.usaIlProdotto(d, itemId)), impostazioni)
+  // Non a ogni vendita: solo quando la soglia si attraversa, o quando la
+  // spunta «Oscura automaticamente» si accende o si spegne.
+  const quali = disponibilita.vociDaRicalcolare(prima, dopo, impostazioni)
+  if (!quali) return
+  const candidati = quali === 'tutte' ? await tuttiIDrinks() : await drinksCheSeguono()
+  await ricalcolaDisponibilita(candidati.filter((d) => disponibilita.usaIlProdotto(d, itemId)), impostazioni)
 })
 
 async function riallineaScelteDelProdotto(drinkId, ricetta) {
@@ -156,7 +190,9 @@ exports.disponibilitaDalleImpostazioni = onDocumentUpdated({ ...OPTS, document: 
   const prima = event.data?.before?.data() || {}
   const dopo = event.data?.after?.data() || {}
   if (disponibilita.sogliaDi(prima) === disponibilita.sogliaDi(dopo)) return
-  await ricalcolaDisponibilita(await drinksCheSeguono(), dopo)
+  // Tutte le voci, non solo quelle che seguono le giacenze: la soglia vale
+  // anche per gli ingredienti con «Oscura automaticamente» (REQ-MENU-045).
+  await ricalcolaDisponibilita(await tuttiIDrinks(), dopo)
   // E le alternative del cliente, con la soglia nuova.
   // TUTTE, anche quelle che non cambiano: è anche la strada che rimette il
   // documento ai prodotti spuntati prima che la Function ci fosse.
@@ -398,18 +434,24 @@ exports.risolviNumeroDuplicato = onDocumentCreated(
     const valore = nuovo.cash_session_id || nuovo.order_date
     if (!valore) return
 
-    const snap = await db.collection('orders').where(campo, '==', valore).get()
-    const fratelli = snap.docs.map((d) => ({
-      id: d.id,
-      created_at: d.get('created_at'),
-      daily_number: d.get('daily_number'),
-    }))
+    const fratelli = (snap) =>
+      snap.docs.map((d) => ({
+        id: d.id,
+        created_at: d.get('created_at'),
+        daily_number: d.get('daily_number'),
+      }))
+    const cassa = db.collection('orders').where(campo, '==', valore)
     const conto = {
       id: event.params.orderId,
       created_at: nuovo.created_at,
       daily_number: nuovo.daily_number,
     }
-    const numero = numeroDaRiassegnare(conto, fratelli)
+    // Prima i soli conti con lo stesso numero; tutta la cassa solo se serve
+    // (BUG-161, lib/numerazione.js).
+    const numero = await numeroDaRiassegnareInCassa(conto, {
+      stessoNumero: async () => fratelli(await cassa.where('daily_number', '==', nuovo.daily_number).get()),
+      tuttaLaCassa: async () => fratelli(await cassa.get()),
+    })
     if (numero == null) return
 
     await db.collection('orders').doc(conto.id).update({
@@ -550,7 +592,7 @@ function toHttpsError(e) {
 
 // Checkout online: chiamabile anche da clienti anonimi (l'id ordine fa
 // da capability token, come per la pagina ordine pubblica).
-exports.createPaymentCheckout = onCall({ ...OPTS, secrets: [SUMUP_API_KEY] }, async (request) => {
+exports.createPaymentCheckout = onCall({ ...OPTS_PUBBLICO, secrets: [SUMUP_API_KEY] }, async (request) => {
   try {
     return await createCheckout(paymentDeps(), request.data || {})
   } catch (e) {
@@ -558,7 +600,7 @@ exports.createPaymentCheckout = onCall({ ...OPTS, secrets: [SUMUP_API_KEY] }, as
   }
 })
 
-exports.getPaymentStatus = onCall({ ...OPTS, secrets: [SUMUP_API_KEY] }, async (request) => {
+exports.getPaymentStatus = onCall({ ...OPTS_PUBBLICO, secrets: [SUMUP_API_KEY] }, async (request) => {
   try {
     return await verifyCheckoutStatus(paymentDeps(), request.data || {})
   } catch (e) {
@@ -633,7 +675,7 @@ exports.readerTerminate = onCall({ ...OPTS, secrets: [SUMUP_API_KEY] }, async (r
 })
 
 // ── Pagamento di un GRUPPO via SumUp (online + lettore) ───────────────────────
-exports.createGroupCheckout = onCall({ ...OPTS, secrets: [SUMUP_API_KEY] }, async (request) => {
+exports.createGroupCheckout = onCall({ ...OPTS_PUBBLICO, secrets: [SUMUP_API_KEY] }, async (request) => {
   try {
     return await createGroupCheckout(paymentDeps(), request.data || {})
   } catch (e) {
@@ -641,7 +683,7 @@ exports.createGroupCheckout = onCall({ ...OPTS, secrets: [SUMUP_API_KEY] }, asyn
   }
 })
 
-exports.getGroupPaymentStatus = onCall({ ...OPTS, secrets: [SUMUP_API_KEY] }, async (request) => {
+exports.getGroupPaymentStatus = onCall({ ...OPTS_PUBBLICO, secrets: [SUMUP_API_KEY] }, async (request) => {
   try {
     return await verifyGroupPayment(paymentDeps(), request.data || {})
   } catch (e) {
