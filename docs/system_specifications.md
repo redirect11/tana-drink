@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 305 | fatto e coperto dai test |
+| ✅ | 306 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 9 | fatto a metà |
-| ⬜ | 30 | da fare |
+| ⬜ | 29 | da fare |
 | 🗑 | 8 | non più valido |
 
-**367 voci** in tutto. **329** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
+**367 voci** in tutto. **330** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **29** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **17** difetti noti sono ancora aperti.
 
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 3 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 39 | 2 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 40 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 51 | 6 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 16 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 20 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -1356,6 +1356,16 @@ CIECO, ed e' la scelta che conta. Uno script che moltiplica si puo' lanciare due
 SUL TEST (10/09/2026): 87 ricette riscritte; 3 righe erano gia' a 150 o 300, 3 fuori tabella (Bramble 220, Rusty Nail 80, Black Russian 70) lasciate a Flavio. Nota per il passaggio a ×2 su test: quelle sei righe non sono a ×1,5 dell'originale, e con `--da 1.5` finiscono a 4/3 del loro valore e non a 2 — sono dati di prova, si sistemano a mano se servono. In produzione il problema non c'e'.
 
 **Dove**: `scripts/ghiaccio-nelle-ricette.js, scripts/lib-ghiaccio.js` · **Lo dimostrano**: `tests/unit/ghiaccioNelleRicette.test.js`
+
+#### REQ-MENU-045 — «Oscura automaticamente» si sceglie sul prodotto di magazzino: a giacenza zero o sotto, le voci che lo usano escono dal menù dei clienti
+
+Daniele, 16/11/2026, per Flavio: «all'interno della scheda Prodotto inserire casella da selezionare per abilitare funzione OSCURA AUTOMATICAMENTE (questa funzione oscura nel MENU CLIENTI tutte le voci che contengono questo prodotto nel ricettario quando arriva a 0 o negativo) … Adesso flavio lo vuole per prodotto». È la domanda lasciata aperta da REQ-MENU-017 («se l'opzione vale per la voce o per il prodotto di magazzino»), ora decisa: per il PRODOTTO DI MAGAZZINO. Oggi l'opzione sta sul prodotto della cassa (`segue_giacenze`) e guarda tutti i suoi ingredienti; Flavio vuole dire, ingrediente per ingrediente, quali contano — il gin sì, il lime e il ghiaccio no. Valgono le regole di REQ-MENU-017: al cliente non si dice mai cosa manca; il segno lo scrive la Cloud Function solo quando la giacenza attraversa lo zero; al banco la voce resta.
+
+DECISO (Daniele, 16/11/2026): vale la soglia delle Impostazioni («anche la soglia nelle impostazioni»): esaurito, oppure già in esaurimento, come per l'opzione sul prodotto della cassa. L'OPZIONE SUL PRODOTTO DELLA CASSA RESTA, e le due si sommano: la domanda non ha avuto risposta, ed è la scelta che non cambia niente a chi l'ha già accesa e non chiede un travaso. Una voce esce dal menù se segue le giacenze e un suo ingrediente (non di servizio) manca, OPPURE se manca un ingrediente con «Oscura automaticamente» — anche di servizio: la spunta sul prodotto è una scelta esplicita.
+
+FATTO (1.10.52-beta): `oscura_automaticamente` sul prodotto di magazzino, casella «Oscura automaticamente» nella scheda; `nonDisponibile` e `vociDaRicalcolare` in functions/lib/disponibilita.js; `disponibilitaDalMagazzino` rilegge tutte le voci quando il prodotto ha la spunta (o la spunta cambia), `disponibilitaDalleImpostazioni` tutte le voci quando cambia la soglia.
+
+**Dove**: `scheda del prodotto di magazzino (InventoryManager), functions/lib/disponibilita.js, functions/index.js (disponibilitaDalMagazzino)` · **Serve**: [UR-008](#ur-008--il-cliente-ordina-dal-telefono-e-sa-quando-il-drink-è-pronto) · **Lo dimostrano**: `tests/bdd/disponibilita.test.js`, `tests/component/InventoryManagerCard.test.jsx`
 
 ### Magazzino
 
@@ -4542,14 +4552,6 @@ Daniele, 14/11/2026: «la home con i contatti e la front page dovrebbe essere pa
 DANIELE, STESSO GIORNO: il tema riguarda tutto; un tema per la home e un tema per il menù; il sito ha pagine predefinite che il locale sceglie (home, contatti…), le pagine libere sono da decidere; un sito minimale già pubblicato, che può essere un modulo a parte. Il concetto, con le domande aperte e il primo passo proposto, è in docs/tema-del-sito.md.
 
 **Dove**: `docs/tema-del-sito.md (il concetto), src/pages/LandingPage.jsx, src/lib/stileMenu.js (pagine, vestePagine), src/lib/testiStile.js, src/lib/marketplaceTemi.js, src/index.css` · **Serve**: [UR-018](#ur-018--il-locale-si-presenta-al-cliente-col-suo-stile-dalla-prima-pagina-al-menù)
-
-#### REQ-MENU-045 — «Oscura automaticamente» si sceglie sul prodotto di magazzino: a giacenza zero o sotto, le voci che lo usano escono dal menù dei clienti
-
-Daniele, 16/11/2026, per Flavio: «all'interno della scheda Prodotto inserire casella da selezionare per abilitare funzione OSCURA AUTOMATICAMENTE (questa funzione oscura nel MENU CLIENTI tutte le voci che contengono questo prodotto nel ricettario quando arriva a 0 o negativo) … Adesso flavio lo vuole per prodotto». È la domanda lasciata aperta da REQ-MENU-017 («se l'opzione vale per la voce o per il prodotto di magazzino»), ora decisa: per il PRODOTTO DI MAGAZZINO. Oggi l'opzione sta sul prodotto della cassa (`segue_giacenze`) e guarda tutti i suoi ingredienti; Flavio vuole dire, ingrediente per ingrediente, quali contano — il gin sì, il lime e il ghiaccio no. Valgono le regole di REQ-MENU-017: al cliente non si dice mai cosa manca; il segno lo scrive la Cloud Function solo quando la giacenza attraversa lo zero; al banco la voce resta.
-
-DECISO (Daniele, 16/11/2026): vale la soglia delle Impostazioni («anche la soglia nelle impostazioni»): esaurito, oppure già in esaurimento, come per l'opzione sul prodotto della cassa. L'OPZIONE SUL PRODOTTO DELLA CASSA RESTA, e le due si sommano: la domanda non ha avuto risposta, ed è la scelta che non cambia niente a chi l'ha già accesa e non chiede un travaso. Una voce esce dal menù se segue le giacenze e un suo ingrediente (non di servizio) manca, OPPURE se manca un ingrediente con «Oscura automaticamente» — anche di servizio: la spunta sul prodotto è una scelta esplicita.
-
-**Dove**: `scheda del prodotto di magazzino (InventoryManager), functions/lib/disponibilita.js, functions/index.js (disponibilitaDalMagazzino)` · **Serve**: [UR-008](#ur-008--il-cliente-ordina-dal-telefono-e-sa-quando-il-drink-è-pronto)
 
 ### Magazzino
 

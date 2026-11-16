@@ -161,15 +161,24 @@ stessi tre gesti quando a pagare è un gruppo di conti insieme.
   cioè quando chi lo batte esce dal conto (BUG-159).
 - `notifyStaffCall` — trigger su `staff_calls/{callId}`: la chiamata al tavolo.
 
-## Il menù dei clienti — voci non disponibili (REQ-MENU-017)
+## Il menù dei clienti — voci non disponibili (REQ-MENU-017, REQ-MENU-045)
 
 Il cliente non legge il magazzino: il segno `non_disponibile_cliente` sul
 prodotto della cassa lo scrivono tre trigger, con la logica in
-`lib/disponibilita.js`, solo per i prodotti con «Il menù dei clienti segue
-le giacenze» e solo dove il segno cambia:
+`lib/disponibilita.js`, solo dove il segno cambia. Una voce non è
+disponibile se:
+
+- segue le giacenze («Il menù dei clienti segue le giacenze», sulla voce) e
+  le manca un ingrediente, tolti quelli di servizio; **oppure**
+- le manca un ingrediente con «Oscura automaticamente» (sul prodotto di
+  magazzino, `oscura_automaticamente`), anche di servizio.
+
+«Manca» vuol dire sotto la soglia delle Impostazioni, per tutte e due.
 
 - `disponibilitaDalMagazzino` — `inventory_items/{itemId}`: quando la
-  giacenza attraversa la soglia (non a ogni vendita);
+  giacenza attraversa la soglia (non a ogni vendita), o quando la spunta
+  «Oscura automaticamente» cambia. Con la spunta legge tutte le voci;
+  senza, solo quelle che seguono le giacenze (`vociDaRicalcolare`);
 - `disponibilitaDalProdotto` — `drinks/{drinkId}`: quando cambiano opzione o
   ricetta (la sua stessa scrittura non lo rimette in moto);
 - `disponibilitaDalleImpostazioni` — `settings/bar`: quando cambia la soglia

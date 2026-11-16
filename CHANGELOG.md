@@ -30,6 +30,14 @@
 - Uscendo subito da un conto appena svuotato, il conto si annulla: prima
   restava aperto e vuoto in coda (REQ-ORD-025).
 
+### Il menù dei clienti
+
+- **«Oscura automaticamente»**, nella scheda del prodotto di magazzino: con
+  la giacenza a zero o sotto (o sotto la soglia di avviso, secondo quanto
+  scelto in Impostazioni → Menù clienti), le voci del menù clienti che hanno quel
+  prodotto in ricetta risultano non disponibili. Si sceglie ingrediente per
+  ingrediente; l'opzione sulla voce resta e vale insieme (REQ-MENU-045).
+
 ### Notifiche
 
 - **«Nuovo ordine» arriva quando il conto è composto**, cioè quando chi lo

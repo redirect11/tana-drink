@@ -17420,8 +17420,16 @@ requirements:
       segue le giacenze e un suo ingrediente (non di servizio) manca,
       OPPURE se manca un ingrediente con «Oscura automaticamente» — anche di
       servizio: la spunta sul prodotto è una scelta esplicita.
-    status: todo
+      FATTO (1.10.52-beta): `oscura_automaticamente` sul prodotto di
+      magazzino, casella «Oscura automaticamente» nella scheda;
+      `nonDisponibile` e `vociDaRicalcolare` in functions/lib/disponibilita.js;
+      `disponibilitaDalMagazzino` rilegge tutte le voci quando il prodotto
+      ha la spunta (o la spunta cambia), `disponibilitaDalleImpostazioni`
+      tutte le voci quando cambia la soglia.
+    status: implemented
     generate_issue: true
     labels: [menu, magazzino, vista-cliente]
     priority: P1
-    test_cases: []
+    test_cases:
+      - tests/bdd/disponibilita.test.js
+      - tests/component/InventoryManagerCard.test.jsx

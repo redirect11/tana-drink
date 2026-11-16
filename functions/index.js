@@ -125,8 +125,14 @@ async function ricalcolaDisponibilita(drinks, impostazioni) {
   await scriviALotti(cambi, (lotto, c) => lotto.update(db.doc(`drinks/${c.id}`), { non_disponibile_cliente: c.valore }))
 }
 
-const drinksCheSeguono = async () =>
-  (await db.collection('drinks').where('segue_giacenze', '==', true).get()).docs.map((d) => ({ id: d.id, ...d.data() }))
+const comeDrink = (snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+const drinksCheSeguono = async () => comeDrink(await db.collection('drinks').where('segue_giacenze', '==', true).get())
+// Tutte le voci: con «Oscura automaticamente» sul prodotto di magazzino
+// (REQ-MENU-045) conta anche chi non segue le giacenze, e la ricetta non si
+// può interrogare per ingrediente. Si leggono solo quando un prodotto con la
+// spunta attraversa la soglia, o la spunta o la soglia cambiano: non a ogni
+// vendita.
+const tuttiIDrinks = async () => comeDrink(await db.collection('drinks').get())
 
 exports.disponibilitaDalMagazzino = onDocumentWritten({ ...OPTS, document: 'inventory_items/{itemId}' }, async (event) => {
   const prima = event.data?.before?.exists ? event.data.before.data() : null
@@ -138,9 +144,12 @@ exports.disponibilitaDalMagazzino = onDocumentWritten({ ...OPTS, document: 'inve
   const alternativa = disponibilita.alternativaDopo(prima, dopo, impostazioni)
   if (alternativa?.cancella) await db.doc(`alternative_cliente/${itemId}`).delete()
   if (alternativa?.scrivi) await db.doc(`alternative_cliente/${itemId}`).set(alternativa.scrivi)
-  // Non a ogni vendita: solo quando la soglia si attraversa.
-  if (!disponibilita.haAttraversato(prima, dopo, impostazioni)) return
-  await ricalcolaDisponibilita((await drinksCheSeguono()).filter((d) => disponibilita.usaIlProdotto(d, itemId)), impostazioni)
+  // Non a ogni vendita: solo quando la soglia si attraversa, o quando la
+  // spunta «Oscura automaticamente» si accende o si spegne.
+  const quali = disponibilita.vociDaRicalcolare(prima, dopo, impostazioni)
+  if (!quali) return
+  const candidati = quali === 'tutte' ? await tuttiIDrinks() : await drinksCheSeguono()
+  await ricalcolaDisponibilita(candidati.filter((d) => disponibilita.usaIlProdotto(d, itemId)), impostazioni)
 })
 
 async function riallineaScelteDelProdotto(drinkId, ricetta) {
@@ -176,7 +185,9 @@ exports.disponibilitaDalleImpostazioni = onDocumentUpdated({ ...OPTS, document: 
   const prima = event.data?.before?.data() || {}
   const dopo = event.data?.after?.data() || {}
   if (disponibilita.sogliaDi(prima) === disponibilita.sogliaDi(dopo)) return
-  await ricalcolaDisponibilita(await drinksCheSeguono(), dopo)
+  // Tutte le voci, non solo quelle che seguono le giacenze: la soglia vale
+  // anche per gli ingredienti con «Oscura automaticamente» (REQ-MENU-045).
+  await ricalcolaDisponibilita(await tuttiIDrinks(), dopo)
   // E le alternative del cliente, con la soglia nuova.
   // TUTTE, anche quelle che non cambiano: è anche la strada che rimette il
   // documento ai prodotti spuntati prima che la Function ci fosse.

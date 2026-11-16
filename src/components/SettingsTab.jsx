@@ -957,8 +957,9 @@ export default function SettingsTab({ role = null }) {
         <div className="card settings-section">
           <h3>Voci non disponibili</h3>
           <p className="muted small" style={{ margin: '0 0 10px' }}>
-            Per i prodotti che seguono le giacenze (opzione nella scheda del prodotto). Al cliente non si dice quale
-            ingrediente manca; al banco la voce resta sempre.
+            Per le voci che seguono le giacenze (opzione nella scheda della voce) e per quelle con un ingrediente
+            in «Oscura automaticamente» (opzione nella scheda del prodotto di magazzino). Al cliente non si dice
+            quale ingrediente manca; al banco la voce resta sempre.
           </p>
           <h4 style={{ margin: '4px 0' }}>Nel menù dei clienti</h4>
           <SceltaModo

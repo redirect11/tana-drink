@@ -28,7 +28,9 @@ vi.mock('../../src/lib/api.js', () => {
       cost: 12,
       vat: 22,
     },
-    { id: 'ichnusa', name: 'Ichnusa', unit: 'pz', stock: 12, cost: 1.2, vat: 22 },
+    // Spuntata «Oscura automaticamente» (REQ-MENU-045): riaperta e salvata,
+    // la spunta deve restare.
+    { id: 'ichnusa', name: 'Ichnusa', unit: 'pz', stock: 12, cost: 1.2, vat: 22, oscura_automaticamente: true },
     // Gli articoli arrivano dalle api SEMPRE nella forma nuova, anche quando
     // sul database sono ancora scritti a «U»: a rimetterli in riga è la
     // lettura tollerante (REQ-MAG-018, mapItem). Qui il magazzino è già
@@ -358,6 +360,37 @@ describe('la scheda prodotto: l’unità è sempre il pezzo', () => {
     await user.click(screen.getByRole('button', { name: 'Salva' }))
     await waitFor(() => expect(createInventoryItem).toHaveBeenCalled())
     expect(createInventoryItem.mock.calls[0][0]).toMatchObject({ name: 'Gin Mare', scelta_cliente: true })
+  })
+
+  // REQ-MENU-045 (Flavio, 16/11/2026): l'ingrediente che, finito, toglie dal
+  // menù dei clienti le voci che lo usano. Spento di partenza; acceso, si
+  // salva sul prodotto, e la Function fa il resto.
+  it('«Oscura automaticamente» parte spento e si salva acceso', async () => {
+    const user = userEvent.setup()
+    createInventoryItem.mockClear()
+    await apriForm(user)
+    await user.type(screen.getByLabelText('Nome *'), 'Gin Mare')
+    const oscura = screen.getByRole('checkbox', { name: 'Oscura automaticamente' })
+    expect(oscura).not.toBeChecked()
+    await user.click(oscura)
+    await user.click(screen.getByRole('button', { name: 'Salva' }))
+    await waitFor(() => expect(createInventoryItem).toHaveBeenCalled())
+    expect(createInventoryItem.mock.calls[0][0]).toMatchObject({ name: 'Gin Mare', oscura_automaticamente: true })
+  })
+
+  it('«Oscura automaticamente» già accesa resta accesa a ogni modifica della scheda', async () => {
+    // Se la scheda non la rileggesse, ogni salvataggio la spegnerebbe senza
+    // dirlo, e le voci tornerebbero nel menù a giacenza zero.
+    const user = userEvent.setup()
+    updateInventoryItem.mockClear()
+    render(<InventoryManager />)
+    await screen.findByText('Campari')
+    await user.click(screen.getByRole('button', { name: /Ichnusa/ }))
+    await user.click(screen.getByRole('button', { name: 'Modifica' }))
+    expect(screen.getByRole('checkbox', { name: 'Oscura automaticamente' })).toBeChecked()
+    await user.click(screen.getByRole('button', { name: 'Salva' }))
+    await waitFor(() => expect(updateInventoryItem).toHaveBeenCalled())
+    expect(updateInventoryItem.mock.calls.at(-1)[1]).toMatchObject({ oscura_automaticamente: true })
   })
 
   it('il contenuto è facoltativo: senza, in ricetta si dosa solo a pezzi', async () => {

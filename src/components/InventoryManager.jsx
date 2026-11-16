@@ -2347,6 +2347,7 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
     vat: initial?.vat ?? defaultVat,
     status: initial?.status ?? 'assortimento',
     scelta_cliente: initial?.scelta_cliente === true,
+    oscura_automaticamente: initial?.oscura_automaticamente === true,
     content_size: packIniziale > 0 ? String(fromBaseQty(packIniziale, contUnita)) : '',
     content_unit: contUnita,
     // La soglia si è sempre scritta in quello che si compra: adesso quello
@@ -2431,6 +2432,7 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
         // La soglia si scrive in pezzi, come la giacenza.
         low_threshold: num(form.low_threshold),
         scelta_cliente: Boolean(form.scelta_cliente),
+        oscura_automaticamente: Boolean(form.oscura_automaticamente),
       }
       // Il fornitore viaggia a parte perché non è più un campo del
       // prodotto: chi salva ne fa una riga di listino (REQ-MAG-029).
@@ -2714,6 +2716,23 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
       <AiutoCampo style={{ margin: '2px 0 8px' }}>
         Compare fra le alternative delle voci del menù dei clienti che offrono
         la scelta della sua categoria, finché c’è giacenza.
+      </AiutoCampo>
+
+      {/* REQ-MENU-045 (Flavio, 16/11/2026): l'ingrediente che, finito, toglie
+          dal menù dei clienti le voci che lo usano. Per ingrediente, non per
+          voce: il gin sì, il lime e il ghiaccio no. */}
+      <label className="row" style={{ gap: 8, alignItems: 'center', marginTop: 8 }}>
+        <input
+          type="checkbox"
+          checked={form.oscura_automaticamente}
+          onChange={(e) => setForm((f) => ({ ...f, oscura_automaticamente: e.target.checked }))}
+        />
+        <span>Oscura automaticamente</span>
+      </label>
+      <AiutoCampo style={{ margin: '2px 0 8px' }}>
+        Con la giacenza a zero o sotto (o sotto la soglia di avviso, secondo
+        quanto scelto in Impostazioni → Menù clienti), le voci del menù clienti
+        che lo hanno in ricetta risultano non disponibili. Al banco restano.
       </AiutoCampo>
 
       {avviso && (

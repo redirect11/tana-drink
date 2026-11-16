@@ -9,7 +9,16 @@
 // giacenza attraversa la soglia, e solo dove cambia.
 
 import { describe, it, expect } from 'vitest'
-import { manca, nonDisponibile, haAttraversato, cambiDiDisponibilita, usaIlProdotto, sogliaDi } from '../../functions/lib/disponibilita.js'
+import {
+  manca,
+  nonDisponibile,
+  haAttraversato,
+  cambiDiDisponibilita,
+  usaIlProdotto,
+  sogliaDi,
+  contaPerIlMenu,
+  vociDaRicalcolare,
+} from '../../functions/lib/disponibilita.js'
 
 const GIN = { stock: 0, low_threshold: 2 }
 const TONICA = { stock: 10, low_threshold: 6 }
@@ -140,5 +149,63 @@ describe('Feature: la ricetta cambia, la scelta del cliente segue', () => {
     const { righeDellEtichetta } = await import('../../functions/lib/disponibilita.js')
     expect(righeDellEtichetta({ tipo: 'prodotto', id: 'tanq' }, [{ inventory_item_id: 'tanq' }], categoriaDi)).toEqual(['tanq'])
     expect(righeDellEtichetta({ tipo: 'prodotto', id: 'bombay' }, [{ inventory_item_id: 'tanq' }], categoriaDi)).toEqual([])
+  })
+})
+
+// «OSCURA AUTOMATICAMENTE» SUL PRODOTTO DI MAGAZZINO (REQ-MENU-045). Flavio,
+// 16/11/2026, la vuole per ingrediente: il gin sì, il lime e il ghiaccio no.
+// L'opzione sulla voce resta, e le due si sommano; la soglia è quella delle
+// Impostazioni anche qui.
+describe('Feature: «Oscura automaticamente» sul prodotto di magazzino', () => {
+  const ginOscura = { stock: 0, oscura_automaticamente: true }
+  const negroni = { id: 'n', recipe_items: [{ inventory_item_id: 'gin', name: 'Gin', unit: 'ml' }] }
+
+  it('il prodotto con la spunta a zero toglie la voce, anche se la voce non segue le giacenze', () => {
+    expect(nonDisponibile(negroni, new Map([['gin', ginOscura]]), {})).toBe(true)
+    expect(nonDisponibile(negroni, new Map([['gin', { stock: 0 }]]), {})).toBe(false)
+    expect(nonDisponibile(negroni, new Map([['gin', { ...ginOscura, stock: 3 }]]), {})).toBe(false)
+  })
+
+  it('vale la soglia delle Impostazioni: con «in esaurimento» basta la scorta minima', () => {
+    const inEsaurimento = new Map([['gin', { stock: 2, low_threshold: 3, oscura_automaticamente: true }]])
+    expect(nonDisponibile(negroni, inEsaurimento, {})).toBe(false)
+    expect(nonDisponibile(negroni, inEsaurimento, { menu_soglia_disponibilita: 'esaurimento' })).toBe(true)
+  })
+
+  it('la spunta conta anche su un ingrediente di servizio: è una scelta', () => {
+    // Il ghiaccio non conta per «segue le giacenze»; con la spunta, sì.
+    const conGhiaccio = { id: 'g', recipe_items: [{ inventory_item_id: 'ghiaccio', name: 'Ghiaccio', unit: 'g' }] }
+    expect(nonDisponibile(conGhiaccio, new Map([['ghiaccio', { stock: 0, oscura_automaticamente: true }]]), {})).toBe(true)
+  })
+
+  it('le due opzioni si sommano: la voce che segue le giacenze esce anche per un ingrediente senza spunta', () => {
+    const items2 = new Map([
+      ['gin', { stock: 5, oscura_automaticamente: true }],
+      ['vermut', { stock: 0 }],
+    ])
+    const ricetta = [
+      { inventory_item_id: 'gin', name: 'Gin', unit: 'ml' },
+      { inventory_item_id: 'vermut', name: 'Vermut', unit: 'ml' },
+    ]
+    expect(nonDisponibile({ recipe_items: ricetta }, items2, {})).toBe(false)
+    expect(nonDisponibile({ recipe_items: ricetta, segue_giacenze: true }, items2, {})).toBe(true)
+  })
+
+  it('accendere o spegnere la spunta rimette in moto il calcolo; una vendita qualunque no', () => {
+    expect(contaPerIlMenu({ stock: 0 }, { stock: 0, oscura_automaticamente: true })).toBe(true)
+    expect(vociDaRicalcolare({ stock: 0 }, { stock: 0, oscura_automaticamente: true }, {})).toBe('tutte')
+    expect(vociDaRicalcolare({ stock: 0, oscura_automaticamente: true }, { stock: 0 }, {})).toBe('tutte')
+    expect(vociDaRicalcolare({ stock: 5, oscura_automaticamente: true }, { stock: 4, oscura_automaticamente: true }, {})).toBe(null)
+  })
+
+  it('con la spunta si guardano tutte le voci che lo usano; senza, solo quelle che seguono le giacenze', () => {
+    expect(vociDaRicalcolare({ stock: 1, oscura_automaticamente: true }, { stock: 0, oscura_automaticamente: true }, {})).toBe('tutte')
+    expect(vociDaRicalcolare({ stock: 1 }, { stock: 0 }, {})).toBe('seguono')
+  })
+
+  it('un prodotto appena creato non sta in nessuna ricetta: non si legge niente', () => {
+    expect(vociDaRicalcolare(null, { stock: 0, oscura_automaticamente: true }, {})).toBe(null)
+    // Cancellato, invece, le voci che lo usavano vanno riviste.
+    expect(vociDaRicalcolare({ stock: 0, oscura_automaticamente: true }, null, {})).toBe('tutte')
   })
 })
