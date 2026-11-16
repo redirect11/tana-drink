@@ -31,7 +31,7 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 **364 voci** in tutto. **329** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **27** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
-cosa che l'app fa; **16** difetti noti sono ancora aperti.
+cosa che l'app fa; **17** difetti noti sono ancora aperti.
 
 Le voci ⚠️ sono la parte scomoda: funzionano, ma **nessun test le tiene**.
 Sono quelle che si rompono senza che nessuno se ne accorga, e vanno lette
@@ -4935,6 +4935,7 @@ della correzione è il test citato nel requisito della sua area.
 | 🔴 | [BUG-156](#bug-156--la-chat-dellai-non-legge-i-limiti-degli-strumenti-che-la-regia-manda) — La chat dell'AI non legge i limiti degli strumenti che la regia manda | bassa | P3 |
 | 🔴 | [BUG-157](#bug-157--la-licenza-della-tana-scritta-dal-deploy-è-più-povera-di-quella-che-scrive-la-regia) — La licenza della Tana scritta dal deploy è più povera di quella che scrive la regia | bassa | P3 |
 | 🔴 | [BUG-158](#bug-158--genera-clientemjs-non-conosce-il-tipo-di-locale-che-il-workflow-della-regia-gli-passa) — genera-cliente.mjs non conosce il tipo di locale che il workflow della regia gli passa | bassa | P3 |
+| 🔴 | [BUG-162](#bug-162--un-esito-del-lettore-che-sumup-rimanda-in-ritardo-può-riportare-a-parziale-un-conto-già-pagato) — Un esito del lettore che SumUp rimanda in ritardo può riportare a «parziale» un conto già pagato | alta | P1 |
 
 🔴 succede **in produzione**, cioè al banco. `·` no. `?` non si sa ancora.
 
@@ -5089,6 +5090,12 @@ Dalla regia, contratto del 14/11/2026: la licenza della Tana non ha `piano`, `te
 Dalla regia, contratto del 14/11/2026: lo script della 1.10.x non conosce `--sa tipo-locale` né `--tipo-locale`. Il workflow della regia ripiega, ma telefono, partita IVA, codice fiscale e sede legale arrivano solo da settings/bar. Lo script lo chiama la regia: i suoi argomenti sono contratto.
 
 **Dove**: `scripts/genera-cliente.mjs` · **Tradisce**: [REQ-VENUE-001](#req-venue-001--lidentità-del-locale-è-un-dato-clientislugvenuejson-in-build-settingsbar-venue-a-runtime)
+
+#### BUG-162 — Un esito del lettore che SumUp rimanda in ritardo può riportare a «parziale» un conto già pagato
+
+Dalla regia, 16/11/2026, nel controllo dei costi (REQ-DEV-026): SumUp ritenta una notifica non riuscita (risposta diversa da 2xx, o troppo lenta) dopo 1 minuto, 5 minuti, 20 minuti e 2 ore. Lo stesso esito può quindi arrivare più volte, anche ore dopo. Per il webhook del checkout online la pagina di SumUp lo dice; per quello del lettore non è scritto, e si tratta allo stesso modo. Il webhook del lettore applicava ogni esito che arrivava. Il conto tiene `sumup_client_transaction_id` anche dopo l'esito, e un incasso in contanti non lo toglie: un «fallito» ripetuto dopo che il conto era stato pagato in contanti lo riportava a «parziale» (o «fallito»), con i soldi già in cassa. Un «pagato» ripetuto riscriveva ora e stato del pagamento. ORA un esito del lettore si applica solo se il conto lo aspetta ancora. Un «fallito» vale solo per un conto in attesa del lettore. Un «pagato» non si riapplica se quella transazione è già fra gli incassi del conto (o, senza un id della transazione, se il conto risulta già pagato e non c'è un importo in volo). Il «pagato» che arriva dopo un annullo dal banco si applica ancora: i soldi sono stati presi.
+
+**Dove**: `functions/lib/payment-service.js (handleReaderWebhook), functions/lib/payment-core.js` · **Tradisce**: [REQ-PAG-004](#req-pag-004--lettore-sumup-pairing-e-incasso-con-carta), [REQ-DEV-026](#req-dev-026--la-spesa-dei-servizi-google-ha-un-tetto-istanze-limitate-e-indirizzi-pubblici-che-non-lavorano-a-vuoto)
 
 ## Non più valido
 

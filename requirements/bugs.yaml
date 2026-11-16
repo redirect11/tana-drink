@@ -6514,3 +6514,33 @@ bugs:
     priority: P2
     requisiti: [REQ-ORD-016, REQ-DEV-026]
     test_cases: [tests/bdd/numerazione.test.js]
+  - id: BUG-162
+    title: "Un esito del lettore che SumUp rimanda in ritardo può riportare a «parziale» un conto già pagato"
+    area: "functions/lib/payment-service.js (handleReaderWebhook), functions/lib/payment-core.js"
+    description: >
+      Dalla regia, 16/11/2026, nel controllo dei costi (REQ-DEV-026): SumUp
+      ritenta una notifica non riuscita (risposta diversa da 2xx, o troppo
+      lenta) dopo 1 minuto, 5 minuti, 20 minuti e 2 ore. Lo stesso esito
+      può quindi arrivare più volte, anche ore dopo. Per il webhook del
+      checkout online la pagina di SumUp lo dice; per quello del lettore
+      non è scritto, e si tratta allo stesso modo.
+      Il webhook del lettore applicava ogni esito che arrivava. Il conto
+      tiene `sumup_client_transaction_id` anche dopo l'esito, e un incasso
+      in contanti non lo toglie: un «fallito» ripetuto dopo che il conto
+      era stato pagato in contanti lo riportava a «parziale» (o
+      «fallito»), con i soldi già in cassa. Un «pagato» ripetuto riscriveva
+      ora e stato del pagamento.
+      ORA un esito del lettore si applica solo se il conto lo aspetta
+      ancora. Un «fallito» vale solo per un conto in attesa del lettore. Un
+      «pagato» non si riapplica se quella transazione è già fra gli incassi
+      del conto (o, senza un id della transazione, se il conto risulta già
+      pagato e non c'è un importo in volo). Il «pagato» che arriva dopo un
+      annullo dal banco si applica ancora: i soldi sono stati presi.
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, pagamenti, sumup]
+    severity: alta
+    priority: P1
+    requisiti: [REQ-PAG-004, REQ-DEV-026]
+    test_cases: []
