@@ -17677,3 +17677,37 @@ requirements:
     priority: P1
     test_cases:
       - tests/regole/storage.test.js
+
+  - id: REQ-MAG-058
+    title: "Il modulo «Product Tracking»: il prodotto entra in magazzino dal telefono, scansionando etichetta o codice a barre"
+    area: "magazzino (carico, scheda prodotto), src/lib/licenza.js (MODULI_PREMIUM), la regia (elenco dei moduli)"
+    description: >
+      Daniele, 17/11/2026: «altro modulo da aggiungere è Product Tracking
+      che in pratica ti consente di aggiungere all'inventario da
+      smartphone direttamente scansionando l'etichetta del prodotto o il
+      codice a barre per recuperare informazioni sulla scadenza, fornitore
+      etc. Cerca KitchenTracker, dobbiamo fare quello che fa questa app».
+      Un'app con quel nome esatto non si trova; la più vicina è
+      KitchenTrace, HACCP per cucine professionali: si inquadra
+      l'etichetta, l'app legge codice a barre e testo stampato (prodotto,
+      fornitore, lotto, scadenza, allergeni) e chiede conferma dei valori
+      incerti; i lotti si legano alle preparazioni, così un lotto richiamato
+      si ritrova in pochi secondi.
+      PER NOI: dal telefono, nel carico del magazzino, si inquadra
+      l'etichetta o il codice a barre; l'app riconosce il prodotto già a
+      listino (dal codice) o propone di crearlo, e compila quantità,
+      fornitore, lotto e scadenza da confermare. Si appoggia alle scadenze
+      di REQ-MAG-057 (avviso ed elenco). È un modulo a parte: va concordato
+      con la regia (REQ-DEV-025).
+      DA DECIDERE con Daniele: il nome del modulo (proposta
+      `tracciabilita`); se legge anche il testo dell'etichetta (con l'AI,
+      che costa credito, o sul telefono) o solo il codice a barre; da dove
+      vengono i dati di un codice sconosciuto (anagrafiche pubbliche come
+      Open Food Facts, o niente); se tiene i lotti legati alle preparazioni
+      e ai drink venduti (tracciabilità HACCP e richiami) o solo il carico;
+      il prezzo; per chi (ristoranti, o anche i bar).
+    status: todo
+    generate_issue: true
+    labels: [magazzino, modulo, ristorante]
+    priority: P2
+    test_cases: []

@@ -506,5 +506,6 @@ bisogni:
     requisiti:
       - REQ-TAVOLI-003
       - REQ-MAG-057
+      - REQ-MAG-058
       - REQ-LIC-019
     test_cases: []

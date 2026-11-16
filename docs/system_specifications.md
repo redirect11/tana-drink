@@ -25,11 +25,11 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 | ✅ | 308 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 9 | fatto a metà |
-| ⬜ | 37 | da fare |
+| ⬜ | 38 | da fare |
 | 🗑 | 8 | non più valido |
 
-**377 voci** in tutto. **332** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **37** sono lavori
+**378 voci** in tutto. **332** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **38** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **17** difetti noti sono ancora aperti.
 
@@ -48,7 +48,7 @@ come «vero oggi», non come «garantito».
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 3 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 40 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 51 | 6 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Magazzino](#magazzino) | 51 | 7 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 16 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 20 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 9 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
@@ -80,7 +80,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Unità | il progetto di dettaglio: un modulo da solo | 188 |
 
 **20** bisogni del locale, **0** con un test di accettazione.
-**129** requisiti su 369 sono collegati a un bisogno;
+**130** requisiti su 370 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -248,7 +248,7 @@ Daniele, 16/11/2026: l'app va integrata per i ristoranti. In sala si lavora per 
 
 **Come si accetta**: Con il modulo «ristorante», accanto agli ordini c'è la Sala: la pianta coi tavoli al loro posto (disposti dal gestore nell'editor della sala), ogni tavolo libero o occupato, e toccandolo i suoi conti e i suoi ordini. Nella scheda di un prodotto si scrivono scadenza, apertura e decadimento, e il gestionale dice quando il prodotto va consumato.
 
-**Chi**: Sala, Gestore · **Lo realizzano**: [REQ-TAVOLI-003](#req-tavoli-003--la-sala-in-pianta-una-schermata-coi-tavoli-al-loro-posto-i-loro-conti-e-i-loro-ordini-e-un-editor-per-disporli), [REQ-MAG-057](#req-mag-057--nella-scheda-del-prodotto-scadenza-apertura-e-decadimento), [REQ-LIC-019](#req-lic-019--il-modulo-ristorante-le-personalizzazioni-per-i-ristoranti-vendute-insieme-quando-nella-regia-si-sceglie-ristorante) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Sala, Gestore · **Lo realizzano**: [REQ-TAVOLI-003](#req-tavoli-003--la-sala-in-pianta-una-schermata-coi-tavoli-al-loro-posto-i-loro-conti-e-i-loro-ordini-e-un-editor-per-disporli), [REQ-MAG-057](#req-mag-057--nella-scheda-del-prodotto-scadenza-apertura-e-decadimento), [REQ-MAG-058](#req-mag-058--il-modulo-product-tracking-il-prodotto-entra-in-magazzino-dal-telefono-scansionando-etichetta-o-codice-a-barre), [REQ-LIC-019](#req-lic-019--il-modulo-ristorante-le-personalizzazioni-per-i-ristoranti-vendute-insieme-quando-nella-regia-si-sceglie-ristorante) · ⚠️ **Nessun test di accettazione, ancora.**
 
 ## Cosa fa il sistema
 
@@ -4713,6 +4713,16 @@ DECISO (Daniele, 16/11/2026): a una scadenza vicina o passata, «un avviso e un 
 DA CONFERMARE (proposta, senza risposta il 16/11): il decadimento è un dato del prodotto, scadenza e apertura sono della confezione in uso; l'apertura si registra dal gestionale.
 
 **Dove**: `scheda del prodotto di magazzino (InventoryManager), src/lib/inventory.js` · **Serve**: [UR-020](#ur-020--un-ristorante-lavora-coi-suoi-tavoli-e-coi-suoi-prodotti-freschi)
+
+#### REQ-MAG-058 — Il modulo «Product Tracking»: il prodotto entra in magazzino dal telefono, scansionando etichetta o codice a barre
+
+Daniele, 17/11/2026: «altro modulo da aggiungere è Product Tracking che in pratica ti consente di aggiungere all'inventario da smartphone direttamente scansionando l'etichetta del prodotto o il codice a barre per recuperare informazioni sulla scadenza, fornitore etc. Cerca KitchenTracker, dobbiamo fare quello che fa questa app». Un'app con quel nome esatto non si trova; la più vicina è KitchenTrace, HACCP per cucine professionali: si inquadra l'etichetta, l'app legge codice a barre e testo stampato (prodotto, fornitore, lotto, scadenza, allergeni) e chiede conferma dei valori incerti; i lotti si legano alle preparazioni, così un lotto richiamato si ritrova in pochi secondi.
+
+PER NOI: dal telefono, nel carico del magazzino, si inquadra l'etichetta o il codice a barre; l'app riconosce il prodotto già a listino (dal codice) o propone di crearlo, e compila quantità, fornitore, lotto e scadenza da confermare. Si appoggia alle scadenze di REQ-MAG-057 (avviso ed elenco). È un modulo a parte: va concordato con la regia (REQ-DEV-025).
+
+DA DECIDERE con Daniele: il nome del modulo (proposta `tracciabilita`); se legge anche il testo dell'etichetta (con l'AI, che costa credito, o sul telefono) o solo il codice a barre; da dove vengono i dati di un codice sconosciuto (anagrafiche pubbliche come Open Food Facts, o niente); se tiene i lotti legati alle preparazioni e ai drink venduti (tracciabilità HACCP e richiami) o solo il carico; il prezzo; per chi (ristoranti, o anche i bar).
+
+**Dove**: `magazzino (carico, scheda prodotto), src/lib/licenza.js (MODULI_PREMIUM), la regia (elenco dei moduli)` · **Serve**: [UR-020](#ur-020--un-ristorante-lavora-coi-suoi-tavoli-e-coi-suoi-prodotti-freschi)
 
 ### Cassa di serata e statistiche
 
