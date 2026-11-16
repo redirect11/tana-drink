@@ -25,11 +25,11 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 | ✅ | 305 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 9 | fatto a metà |
-| ⬜ | 27 | da fare |
+| ⬜ | 30 | da fare |
 | 🗑 | 8 | non più valido |
 
-**364 voci** in tutto. **329** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **27** sono lavori
+**367 voci** in tutto. **329** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **17** difetti noti sono ancora aperti.
 
@@ -46,9 +46,9 @@ come «vero oggi», non come «garantito».
 | [Pagamenti](#pagamenti) | 14 | 1 | Come si incassa: contanti, carta, SumUp, pagamenti parziali e separati. |
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
-| [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 39 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 51 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Tavoli](#tavoli) | — | 3 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
+| [Menù e catalogo](#menù-e-catalogo) | 39 | 2 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Magazzino](#magazzino) | 51 | 6 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 16 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 20 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 9 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
@@ -78,8 +78,8 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 187 |
 | Unità | il progetto di dettaglio: un modulo da solo | 187 |
 
-**19** bisogni del locale, **0** con un test di accettazione.
-**116** requisiti su 356 sono collegati a un bisogno;
+**20** bisogni del locale, **0** con un test di accettazione.
+**119** requisiti su 359 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -151,7 +151,7 @@ Con gli ordini dal telefono il cliente non deve chiedere a nessuno a che punto �
 
 **Come si accetta**: Dal QR di un tavolo si apre il menù, si ordinano due drink e si resta sulla pagina dell'ordine. Il banco lo vede arrivare. Quando il banco lo porta a «pronto», la pagina del cliente lo dice senza ricaricare.
 
-**Chi**: Cliente · **Lo realizzano**: [REQ-CLI-001](#req-cli-001--il-cliente-ordina-dal-telefono-e-segue-il-suo-ordine), [REQ-CLI-007](#req-cli-007--gli-ordini-del-cliente-stanno-in-i-miei-ordini-non-in-mezzo-al-menù), [REQ-CLI-002](#req-cli-002--chi-apre-un-ordine-vede-la-schermata-giusta), [REQ-CLI-003](#req-cli-003--stima-di-attesa-onesta), [REQ-CLI-006](#req-cli-006--il-cliente-sa-che-il-suo-drink-è-pronto-da-ritirare), [REQ-NOTIF-001](#req-notif-001--il-cliente-sa-quando-il-suo-drink-è-pronto) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Cliente · **Lo realizzano**: [REQ-CLI-001](#req-cli-001--il-cliente-ordina-dal-telefono-e-segue-il-suo-ordine), [REQ-CLI-007](#req-cli-007--gli-ordini-del-cliente-stanno-in-i-miei-ordini-non-in-mezzo-al-menù), [REQ-CLI-002](#req-cli-002--chi-apre-un-ordine-vede-la-schermata-giusta), [REQ-CLI-003](#req-cli-003--stima-di-attesa-onesta), [REQ-CLI-006](#req-cli-006--il-cliente-sa-che-il-suo-drink-è-pronto-da-ritirare), [REQ-NOTIF-001](#req-notif-001--il-cliente-sa-quando-il-suo-drink-è-pronto), [REQ-MENU-045](#req-menu-045--oscura-automaticamente-si-sceglie-sul-prodotto-di-magazzino-a-giacenza-zero-o-sotto-le-voci-che-lo-usano-escono-dal-menù-dei-clienti) · ⚠️ **Nessun test di accettazione, ancora.**
 
 #### UR-009 — Si paga con la carta, al lettore o con un link
 
@@ -240,6 +240,14 @@ Daniele, 15/11/2026: «non voglio trovarmi a pagare migliaia di euro». I proget
 **Come si accetta**: Ogni Function ha un tetto di istanze, più basso dove si chiama senza account; una chiamata con un id inventato non arriva a SumUp; una sera da 200 conti non rilegge la cassa a ogni conto; un cliente registrato non riesce a caricare file nello Storage del locale.
 
 **Chi**: Gestore · **Lo realizzano**: [REQ-DEV-026](#req-dev-026--la-spesa-dei-servizi-google-ha-un-tetto-istanze-limitate-e-indirizzi-pubblici-che-non-lavorano-a-vuoto) · ⚠️ **Nessun test di accettazione, ancora.**
+
+#### UR-020 — Un ristorante lavora coi suoi tavoli e coi suoi prodotti freschi
+
+Daniele, 16/11/2026: l'app va integrata per i ristoranti. In sala si lavora per tavoli, e chi lavora deve vedere a colpo d'occhio dove sono e cosa aspettano; in cucina e al banco ci sono prodotti che, aperti, durano pochi giorni, e chi gestisce deve sapere quando scadono.
+
+**Come si accetta**: Nella coda ordini si apre la pianta della sala con i tavoli al loro posto, e ogni tavolo dice cosa ha di aperto. Nella scheda di un prodotto si scrivono scadenza, apertura e decadimento, e il gestionale dice quando il prodotto va consumato.
+
+**Chi**: Sala, Gestore · **Lo realizzano**: [REQ-TAVOLI-003](#req-tavoli-003--la-coda-ordini-mostra-i-tavoli-in-pianta-visti-dallalto), [REQ-MAG-057](#req-mag-057--nella-scheda-del-prodotto-scadenza-apertura-e-decadimento) · ⚠️ **Nessun test di accettazione, ancora.**
 
 ## Cosa fa il sistema
 
@@ -1327,7 +1335,9 @@ IL TASTO SI CHIAMA «SALVA NUOVA» (Daniele, 21/10/2026: «chiamalo solo salva n
 
 **Dove**: `src/components/CustomDrinkForm.jsx, src/components/OrderPosDetail.jsx, src/components/DrinkForm.jsx, src/lib/saveDrink.js` · **Lo dimostrano**: `tests/component/CustomDrinkForm.test.jsx`, `tests/unit/css.test.js`
 
-#### REQ-MENU-015 — Il ghiaccio nelle ricette: 1,6 volte la dose scritta in origine
+#### REQ-MENU-015 — Il ghiaccio nelle ricette: la dose si porta a un multiplo di quella scritta in origine (in produzione ×1,5)
+
+IN PRODUZIONE ×0,75 DELLE DOSI DI ALLORA, IL 16/11/2026. Daniele: «moltiplicare il ghiaccio in tutte le ricette dove è presente x0,75 in produzione. Quindi prima backup poi moltiplichiamo». Il ×0,8 del 29/10 in produzione non era mai passato: il segno sull'articolo diceva ×2 (200 dove l'originale diceva 100). Backup completo (backup/tana-drink-2026-11-16-15-33-39.json, 18.563 documenti), anteprima, poi `--a 1.5`: 110 ricette, 110 righe, 200 → 150, 400 → 300, segno a ×1,5; riletto dopo, le dosi sono quelle. Sul test il segno è ancora ×2 (il catalogo è quello copiato dalla produzione il 10/11). Da qui lo script non ha più un obiettivo di partenza: senza `--a` dice solo dove stanno le dosi, perché con 1,6 di partenza avrebbe riportato la produzione a ×1,6 in silenzio.
 
 RIPENSATO ANCORA IL 29/10/2026: ×0,8 DELLE DOSI ATTUALI, CIOE' ×1,6 DELL'ORIGINALE. Nella lista di Flavio: «moltiplicare per 0,8 tutte le quantita' di Ghiaccio Hoshizaki nelle ricette degli ITEMS di MENU». Le dosi erano a ×2 (200 g dove l'originale diceva 100), e lo 0,8 le porta a 160. L'obiettivo di partenza dello script e' ora 1,6 (`--a`): rilanciato senza dire altro, non riporta le dosi al doppio.
 
@@ -4515,6 +4525,14 @@ Nella vista «Ordina dal menù» dello staff si possono inserire NOME e numero d
 
 **Dove**: `src/pages/MenuPage.jsx, src/components/OrderSummary.jsx`
 
+#### REQ-TAVOLI-003 — La coda ordini mostra i tavoli in pianta, visti dall'alto
+
+Daniele, 16/11/2026, per l'uso nei ristoranti: «posizionamento grafico tavoli su CODA ORDINI in modalità vista dall'alto/occhio di falco». Nella coda, oltre all'elenco dei conti, una vista con la pianta della sala: ogni tavolo al suo posto, e su ciascuno quello che serve a chi lavora (il conto aperto, cosa aspetta, cosa è pronto). La pianta la disegna il gestore, mettendo i tavoli dell'anagrafica dove stanno.
+
+DA DECIDERE: cosa si legge su un tavolo (numero del conto, totale, stato delle comande, da quanto aspetta); cosa fa un tocco sul tavolo (apre il conto, ne apre uno nuovo); se le sale possono essere più di una (dentro, dehors); forme e misure dei tavoli o solo posizione. Richiede l'anagrafica dei tavoli (REQ-TAVOLI-001, ancora da fare). Lavora in locale come la coda: la pianta si aggiorna all'istante.
+
+**Dove**: `src/pages/BartenderPage.jsx (coda ordini), anagrafica dei tavoli (REQ-TAVOLI-001)` · **Serve**: [UR-020](#ur-020--un-ristorante-lavora-coi-suoi-tavoli-e-coi-suoi-prodotti-freschi)
+
 ### Menù e catalogo
 
 #### REQ-MENU-044 — Il tema del locale veste anche la pagina iniziale, coi contatti, non solo il menù
@@ -4524,6 +4542,14 @@ Daniele, 14/11/2026: «la home con i contatti e la front page dovrebbe essere pa
 DANIELE, STESSO GIORNO: il tema riguarda tutto; un tema per la home e un tema per il menù; il sito ha pagine predefinite che il locale sceglie (home, contatti…), le pagine libere sono da decidere; un sito minimale già pubblicato, che può essere un modulo a parte. Il concetto, con le domande aperte e il primo passo proposto, è in docs/tema-del-sito.md.
 
 **Dove**: `docs/tema-del-sito.md (il concetto), src/pages/LandingPage.jsx, src/lib/stileMenu.js (pagine, vestePagine), src/lib/testiStile.js, src/lib/marketplaceTemi.js, src/index.css` · **Serve**: [UR-018](#ur-018--il-locale-si-presenta-al-cliente-col-suo-stile-dalla-prima-pagina-al-menù)
+
+#### REQ-MENU-045 — «Oscura automaticamente» si sceglie sul prodotto di magazzino: a giacenza zero o sotto, le voci che lo usano escono dal menù dei clienti
+
+Daniele, 16/11/2026, per Flavio: «all'interno della scheda Prodotto inserire casella da selezionare per abilitare funzione OSCURA AUTOMATICAMENTE (questa funzione oscura nel MENU CLIENTI tutte le voci che contengono questo prodotto nel ricettario quando arriva a 0 o negativo) … Adesso flavio lo vuole per prodotto». È la domanda lasciata aperta da REQ-MENU-017 («se l'opzione vale per la voce o per il prodotto di magazzino»), ora decisa: per il PRODOTTO DI MAGAZZINO. Oggi l'opzione sta sul prodotto della cassa (`segue_giacenze`) e guarda tutti i suoi ingredienti; Flavio vuole dire, ingrediente per ingrediente, quali contano — il gin sì, il lime e il ghiaccio no. Valgono le regole di REQ-MENU-017: al cliente non si dice mai cosa manca; il segno lo scrive la Cloud Function solo quando la giacenza attraversa lo zero; al banco la voce resta.
+
+DA DECIDERE: cosa ne è dell'opzione sul prodotto della cassa (si toglie, o resta e le due si sommano); se la soglia «in esaurimento» delle Impostazioni vale anche qui o la casella guarda solo lo zero, come dice la richiesta; il passaggio per i prodotti della cassa che oggi hanno `segue_giacenze` acceso.
+
+**Dove**: `scheda del prodotto di magazzino (InventoryManager), functions/lib/disponibilita.js, functions/index.js (disponibilitaDalMagazzino)` · **Serve**: [UR-008](#ur-008--il-cliente-ordina-dal-telefono-e-sa-quando-il-drink-è-pronto)
 
 ### Magazzino
 
@@ -4640,6 +4666,22 @@ DA CHIEDERE A FLAVIO prima di implementare, e nel frattempo la regola resta quel
 NOTA DEL 20/08, dal giro di decisioni su REQ-MAG-025: il carico al ricevimento NON e' piu' automatico — «arrivato» lo segna l'admin, e il bartender sceglie se e quali righe caricare (o «carica tutti»). Questa voce genera l'ordine; il suo ricevimento segue la regola nuova scritta la'.
 
 **Dove**: `src/lib/warehouse.js, src/components/PurchaseOrdersPanel.jsx, src/lib/api.js`
+
+#### REQ-MAG-057 — Nella scheda del prodotto: scadenza, apertura e decadimento
+
+Daniele, 16/11/2026, per l'uso nei ristoranti: «in PRODOTTI inserire in ogni prodotto le caselle:
+
+SCADENZA - APERTURA - DECADIMENTO». Lettura proposta:
+
+SCADENZA è la data di scadenza della confezione;
+
+APERTURA la data in cui la confezione è stata aperta;
+
+DECADIMENTO per quanti giorni il prodotto resta buono dopo l'apertura. Da apertura e decadimento si ricava il «da consumare entro».
+
+DA DECIDERE: se il decadimento è un dato del prodotto (vale per ogni confezione) e scadenza e apertura della confezione in uso, o se una giacenza fatta di più confezioni ne ha una per ciascuna; cosa succede a una scadenza vicina o passata (un avviso nel gestionale, un elenco dei prodotti in scadenza, il prodotto che esce dal menù come con REQ-MENU-045); chi registra l'apertura e da dove (al banco, con un gesto, o dal gestionale).
+
+**Dove**: `scheda del prodotto di magazzino (InventoryManager), src/lib/inventory.js` · **Serve**: [UR-020](#ur-020--un-ristorante-lavora-coi-suoi-tavoli-e-coi-suoi-prodotti-freschi)
 
 ### Cassa di serata e statistiche
 

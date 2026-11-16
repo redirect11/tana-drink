@@ -220,6 +220,7 @@ bisogni:
       - REQ-CLI-003
       - REQ-CLI-006
       - REQ-NOTIF-001
+      - REQ-MENU-045
     test_cases: []
 
   - id: UR-009
@@ -475,4 +476,23 @@ bisogni:
       registrato non riesce a caricare file nello Storage del locale.
     requisiti:
       - REQ-DEV-026
+    test_cases: []
+
+  - id: UR-020
+    title: "Un ristorante lavora coi suoi tavoli e coi suoi prodotti freschi"
+    area: "Sala, Gestore"
+    description: >
+      Daniele, 16/11/2026: l'app va integrata per i ristoranti. In sala si
+      lavora per tavoli, e chi lavora deve vedere a colpo d'occhio dove
+      sono e cosa aspettano; in cucina e al banco ci sono prodotti che,
+      aperti, durano pochi giorni, e chi gestisce deve sapere quando
+      scadono.
+    accettazione: >
+      Nella coda ordini si apre la pianta della sala con i tavoli al loro
+      posto, e ogni tavolo dice cosa ha di aperto. Nella scheda di un
+      prodotto si scrivono scadenza, apertura e decadimento, e il
+      gestionale dice quando il prodotto va consumato.
+    requisiti:
+      - REQ-TAVOLI-003
+      - REQ-MAG-057
     test_cases: []

@@ -1,12 +1,18 @@
 // =====================================================================
-//  IL GHIACCIO NELLE RICETTE: ×1,6 RISPETTO ALLA DOSE SCRITTA IN ORIGINE.
+//  IL GHIACCIO NELLE RICETTE: LA DOSE, RISPETTO A QUELLA SCRITTA IN ORIGINE.
 //
-//    node scripts/ghiaccio-nelle-ricette.js                      # ANTEPRIMA
-//    node scripts/ghiaccio-nelle-ricette.js --apply              # scrive
-//    node scripts/ghiaccio-nelle-ricette.js --da 1.5 --apply     # se le dosi sono già a ×1,5 e il segno manca
-//    node scripts/ghiaccio-nelle-ricette.js --a 1.6              # l'obiettivo (1,6 se non si dice altro)
+//    node scripts/ghiaccio-nelle-ricette.js                      # dice a che punto sono le dosi
+//    node scripts/ghiaccio-nelle-ricette.js --a 1.5              # ANTEPRIMA verso ×1,5 dell'originale
+//    node scripts/ghiaccio-nelle-ricette.js --a 1.5 --apply      # scrive
+//    node scripts/ghiaccio-nelle-ricette.js --da 1.5 --a 2       # se il segno manca
 //    node scripts/ghiaccio-nelle-ricette.js --ghiaccio <id>      # se di ghiaccio ce n'è più d'uno
-//    node scripts/ghiaccio-nelle-ricette.js --project tana-drink --apply
+//    node scripts/ghiaccio-nelle-ricette.js --project tana-drink --a 1.5 --apply
+//
+//  L'OBIETTIVO NON HA PIÙ UN VALORE DI PARTENZA (16/11/2026). Era 1,6, e
+//  dopo il ×0,75 del 16/11 la produzione sta a ×1,5: rilanciato senza
+//  `--a`, lo script l'avrebbe riportata a ×1,6 in silenzio. Le dosi di test
+//  e produzione non sono le stesse (REQ-MENU-015): l'obiettivo si dice
+//  ogni volta.
 //
 //  Flavio, 09/09/2026: «bisognerebbe moltiplicare tutte le quantità di
 //  ghiaccio per 1,5». E il 12/09: «ho fatto un errore di calcolo, quindi va
@@ -39,7 +45,7 @@ import { righeDaRiscrivere, fattoreDaApplicare } from './lib-ghiaccio.js'
 const PROJECT = arg('project', 'tana-drink-test')
 const APPLY = flag('apply')
 const GHIACCIO = arg('ghiaccio')
-const OBIETTIVO = Number(arg('a', '1.6'))
+const OBIETTIVO = arg('a') != null ? Number(arg('a')) : null
 const DA = arg('da')
 
 const db = client(PROJECT, await accessToken())
@@ -67,8 +73,16 @@ console.log(
   `[ghiaccio] articolo: ${strOf(ghiaccio.fields?.name)} (${idGhiaccio}, ${strOf(ghiaccio.fields?.unit) || '?'}) su "${PROJECT}"`
 )
 console.log(
-  `[ghiaccio] dosi adesso a ×${attuale} dell'originale (${DA != null ? 'detto con --da' : segno != null ? 'segno sull’articolo' : 'nessun segno: originali'}), obiettivo ×${OBIETTIVO}`
+  `[ghiaccio] dosi adesso a ×${attuale} dell'originale (${DA != null ? 'detto con --da' : segno != null ? 'segno sull’articolo' : 'nessun segno: originali'})${OBIETTIVO != null ? `, obiettivo ×${OBIETTIVO}` : ''}`
 )
+if (OBIETTIVO == null) {
+  console.log("[ghiaccio] Nessun obiettivo: indica con --a <fattore> a quante volte l'originale portarle.")
+  process.exit(0)
+}
+if (!(OBIETTIVO > 0)) {
+  console.error(`[ghiaccio] Obiettivo non valido: ${arg('a')}`)
+  process.exit(1)
+}
 if (attuale === OBIETTIVO) {
   console.log(`[ghiaccio] Le dosi sono già a ×${OBIETTIVO}: niente da fare.`)
   process.exit(0)
