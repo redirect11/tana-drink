@@ -488,11 +488,14 @@ bisogni:
       aperti, durano pochi giorni, e chi gestisce deve sapere quando
       scadono.
     accettazione: >
-      Nella coda ordini si apre la pianta della sala con i tavoli al loro
-      posto, e ogni tavolo dice cosa ha di aperto. Nella scheda di un
+      Con il modulo «ristorante», accanto agli ordini c'è la Sala: la
+      pianta coi tavoli al loro posto (disposti dal gestore nell'editor
+      della sala), ogni tavolo libero o occupato, e toccandolo i suoi conti
+      e i suoi ordini. Nella scheda di un
       prodotto si scrivono scadenza, apertura e decadimento, e il
       gestionale dice quando il prodotto va consumato.
     requisiti:
       - REQ-TAVOLI-003
       - REQ-MAG-057
+      - REQ-LIC-019
     test_cases: []

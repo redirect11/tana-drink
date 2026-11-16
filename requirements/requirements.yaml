@@ -17346,7 +17346,7 @@ requirements:
       - tests/regole/storage.test.js
 
   - id: REQ-TAVOLI-003
-    title: "La coda ordini mostra i tavoli in pianta, visti dall'alto"
+    title: "La sala in pianta: una schermata coi tavoli al loro posto, i loro conti e i loro ordini, e un editor per disporli"
     area: "src/pages/BartenderPage.jsx (coda ordini), anagrafica dei tavoli (REQ-TAVOLI-001)"
     description: >
       Daniele, 16/11/2026, per l'uso nei ristoranti: «posizionamento
@@ -17362,6 +17362,14 @@ requirements:
       e si tocca come la card della coda di oggi; in più, ogni tavolo dice
       se è libero o occupato. Una sala sola, per ora; forme e misure dei
       tavoli no, solo la posizione.
+      PRECISATO LO STESSO GIORNO (Daniele, 16/11/2026): non dentro la coda,
+      ma UNA SCHERMATA APPOSTA, «magari affianco a quella degli ordini
+      (delivery/asporto)»: la Sala, dove si vedono i tavoli occupati, i
+      loro conti, e gli ordini e i conti di quegli ordini; gli ordini senza
+      tavolo (delivery, asporto) restano nella schermata degli ordini. E
+      «un editor della sala dove posizionare i tavoli», una schermata sua.
+      È un'opzione della versione per i ristoranti: sta nel modulo
+      «ristorante» (REQ-LIC-019).
       Richiede l'anagrafica dei tavoli (REQ-TAVOLI-001, ancora da fare).
       Lavora in locale come la coda: la pianta si aggiorna all'istante.
     status: todo
@@ -17433,3 +17441,28 @@ requirements:
     test_cases:
       - tests/bdd/disponibilita.test.js
       - tests/component/InventoryManagerCard.test.jsx
+
+  - id: REQ-LIC-019
+    title: "Il modulo «ristorante»: le personalizzazioni per i ristoranti, vendute insieme quando nella regia si sceglie «ristorante»"
+    area: "src/lib/licenza.js (MODULI_PREMIUM), firestore.rules (modulo()), la regia (piani.json, elenco dei moduli)"
+    description: >
+      Daniele, 16/11/2026: «la vista dei tavoli è un'opzione per la
+      versione per ristoranti. Le customizzazioni per il ristorante sono un
+      modulo a parte ma entrambi si vendono come uno se dalla regia
+      selezionano ristorante e alla regia dopo va detto». Un modulo nuovo,
+      `ristorante`, come gli altri di MODULI_PREMIUM: dentro, per ora, la
+      Sala e l'editor della sala (REQ-TAVOLI-003). Quando nella regia il
+      locale è un ristorante, il modulo viaggia insieme a quelli che
+      servono, come un pacchetto solo.
+      INTERFACCIA CON LA REGIA: l'elenco dei moduli è una copia tenuta
+      allineata a mano (REQ-DEV-025). Va detto alla regia prima di
+      rilasciarlo: id del modulo, la scelta «ristorante» che lo porta con
+      sé, e da quali moduli dipende (la Sala richiede l'anagrafica dei
+      tavoli, quindi probabilmente `menu_tavoli`). Da decidere con la regia
+      se «ristorante» è un piano, un tipo di locale o un pacchetto di
+      moduli.
+    status: todo
+    generate_issue: true
+    labels: [licenza, ristorante, regia]
+    priority: P2
+    test_cases: []

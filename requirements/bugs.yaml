@@ -6565,3 +6565,30 @@ bugs:
     priority: P2
     requisiti: [REQ-PAG-005, REQ-DEV-026]
     test_cases: []
+  - id: BUG-164
+    title: "Il tempo di lavorazione in ricetta non entra nel costo del drink: 57 righe lo dosano in grammi"
+    area: "dati: drinks.recipe_items del «Tempo di Lavorazione»; scripts/lavorazione-in-u.js, scripts/lib-lavorazione.js"
+    description: >
+      Daniele, 16/11/2026: «tempo di lavorazione quando è presente in
+      ricetta va calcolato come un normale ingrediente quindi deve comparire
+      nei costi, ricordando che il tempo di lavorazione si calcola in U
+      ovvero 1 pz corrisponde a 60 U ed 1 pz costa 10€».
+      L'articolo è già così, in produzione e sul test (pezzo da 60 U, 10 €,
+      IVA 0), e il costo per U lo sa fare costPerUnit. Ma 57 righe di
+      ricetta su 59 lo dosano in GRAMMI («0,5 g», «1,5 g»…), scritte quando
+      il grammo era l'unica unità possibile: un grammo di un articolo che
+      si conta a U non ha un costo, la riga finisce fra quelle senza costo
+      e il costo del drink resta parziale. Le altre due sono già in U.
+      CORREZIONE: uno script riscrive in U quelle righe, con la stessa
+      quantità («1,5 g» → 1,5 U, 0,25 €). Prima sul test, poi in
+      produzione col via libera e dopo il backup. Da quel momento quelle
+      righe scaricano anche il magazzino (U/60 di pezzo per drink), come
+      tutto quello che sta in magazzino dal 12/09/2026.
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, magazzino, costi]
+    severity: media
+    priority: P2
+    requisiti: [REQ-MENU-034]
+    test_cases: []

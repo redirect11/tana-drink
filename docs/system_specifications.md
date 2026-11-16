@@ -25,13 +25,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 | ✅ | 306 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 9 | fatto a metà |
-| ⬜ | 29 | da fare |
+| ⬜ | 30 | da fare |
 | 🗑 | 8 | non più valido |
 
-**367 voci** in tutto. **330** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **29** sono lavori
+**368 voci** in tutto. **330** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
-cosa che l'app fa; **17** difetti noti sono ancora aperti.
+cosa che l'app fa; **18** difetti noti sono ancora aperti.
 
 Le voci ⚠️ sono la parte scomoda: funzionano, ma **nessun test le tiene**.
 Sono quelle che si rompono senza che nessuno se ne accorga, e vanno lette
@@ -62,7 +62,7 @@ come «vero oggi», non come «garantito».
 | [Interfaccia](#interfaccia) | 29 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 24 | 2 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
-| [LIC](#lic) | 15 | 3 |  |
+| [LIC](#lic) | 15 | 4 |  |
 | [VENUE](#venue) | 6 | — |  |
 | [FLOTTA](#flotta) | 10 | — |  |
 
@@ -79,7 +79,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Unità | il progetto di dettaglio: un modulo da solo | 187 |
 
 **20** bisogni del locale, **0** con un test di accettazione.
-**119** requisiti su 359 sono collegati a un bisogno;
+**120** requisiti su 360 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -245,9 +245,9 @@ Daniele, 15/11/2026: «non voglio trovarmi a pagare migliaia di euro». I proget
 
 Daniele, 16/11/2026: l'app va integrata per i ristoranti. In sala si lavora per tavoli, e chi lavora deve vedere a colpo d'occhio dove sono e cosa aspettano; in cucina e al banco ci sono prodotti che, aperti, durano pochi giorni, e chi gestisce deve sapere quando scadono.
 
-**Come si accetta**: Nella coda ordini si apre la pianta della sala con i tavoli al loro posto, e ogni tavolo dice cosa ha di aperto. Nella scheda di un prodotto si scrivono scadenza, apertura e decadimento, e il gestionale dice quando il prodotto va consumato.
+**Come si accetta**: Con il modulo «ristorante», accanto agli ordini c'è la Sala: la pianta coi tavoli al loro posto (disposti dal gestore nell'editor della sala), ogni tavolo libero o occupato, e toccandolo i suoi conti e i suoi ordini. Nella scheda di un prodotto si scrivono scadenza, apertura e decadimento, e il gestionale dice quando il prodotto va consumato.
 
-**Chi**: Sala, Gestore · **Lo realizzano**: [REQ-TAVOLI-003](#req-tavoli-003--la-coda-ordini-mostra-i-tavoli-in-pianta-visti-dallalto), [REQ-MAG-057](#req-mag-057--nella-scheda-del-prodotto-scadenza-apertura-e-decadimento) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Sala, Gestore · **Lo realizzano**: [REQ-TAVOLI-003](#req-tavoli-003--la-sala-in-pianta-una-schermata-coi-tavoli-al-loro-posto-i-loro-conti-e-i-loro-ordini-e-un-editor-per-disporli), [REQ-MAG-057](#req-mag-057--nella-scheda-del-prodotto-scadenza-apertura-e-decadimento), [REQ-LIC-019](#req-lic-019--il-modulo-ristorante-le-personalizzazioni-per-i-ristoranti-vendute-insieme-quando-nella-regia-si-sceglie-ristorante) · ⚠️ **Nessun test di accettazione, ancora.**
 
 ## Cosa fa il sistema
 
@@ -4535,11 +4535,13 @@ Nella vista «Ordina dal menù» dello staff si possono inserire NOME e numero d
 
 **Dove**: `src/pages/MenuPage.jsx, src/components/OrderSummary.jsx`
 
-#### REQ-TAVOLI-003 — La coda ordini mostra i tavoli in pianta, visti dall'alto
+#### REQ-TAVOLI-003 — La sala in pianta: una schermata coi tavoli al loro posto, i loro conti e i loro ordini, e un editor per disporli
 
 Daniele, 16/11/2026, per l'uso nei ristoranti: «posizionamento grafico tavoli su CODA ORDINI in modalità vista dall'alto/occhio di falco». Nella coda, oltre all'elenco dei conti, una vista con la pianta della sala: ogni tavolo al suo posto, e su ciascuno quello che serve a chi lavora (il conto aperto, cosa aspetta, cosa è pronto). La pianta la disegna il gestore, mettendo i tavoli dell'anagrafica dove stanno.
 
-DECISO (Daniele, 16/11/2026): «I tavoli sarebbero gli ordini quindi fa esattamente quello che fa adesso. Al massimo si gestisce lo stato di libero/occupato per ora». Il tavolo in pianta è il conto: si legge e si tocca come la card della coda di oggi; in più, ogni tavolo dice se è libero o occupato. Una sala sola, per ora; forme e misure dei tavoli no, solo la posizione. Richiede l'anagrafica dei tavoli (REQ-TAVOLI-001, ancora da fare). Lavora in locale come la coda: la pianta si aggiorna all'istante.
+DECISO (Daniele, 16/11/2026): «I tavoli sarebbero gli ordini quindi fa esattamente quello che fa adesso. Al massimo si gestisce lo stato di libero/occupato per ora». Il tavolo in pianta è il conto: si legge e si tocca come la card della coda di oggi; in più, ogni tavolo dice se è libero o occupato. Una sala sola, per ora; forme e misure dei tavoli no, solo la posizione.
+
+PRECISATO LO STESSO GIORNO (Daniele, 16/11/2026): non dentro la coda, ma UNA SCHERMATA APPOSTA, «magari affianco a quella degli ordini (delivery/asporto)»: la Sala, dove si vedono i tavoli occupati, i loro conti, e gli ordini e i conti di quegli ordini; gli ordini senza tavolo (delivery, asporto) restano nella schermata degli ordini. E «un editor della sala dove posizionare i tavoli», una schermata sua. È un'opzione della versione per i ristoranti: sta nel modulo «ristorante» (REQ-LIC-019). Richiede l'anagrafica dei tavoli (REQ-TAVOLI-001, ancora da fare). Lavora in locale come la coda: la pianta si aggiorna all'istante.
 
 **Dove**: `src/pages/BartenderPage.jsx (coda ordini), anagrafica dei tavoli (REQ-TAVOLI-001)` · **Serve**: [UR-020](#ur-020--un-ristorante-lavora-coi-suoi-tavoli-e-coi-suoi-prodotti-freschi)
 
@@ -4889,6 +4891,14 @@ RESTA DA FARE il primo stile a pagamento: «Compra» nell'app, pagamento una tan
 
 **Dove**: `drink-regia (catalogo, acquisto, licenza.temi), Impostazioni → Menù clienti («Altri stili»), docs/catalogo-temi.md`
 
+#### REQ-LIC-019 — Il modulo «ristorante»: le personalizzazioni per i ristoranti, vendute insieme quando nella regia si sceglie «ristorante»
+
+Daniele, 16/11/2026: «la vista dei tavoli è un'opzione per la versione per ristoranti. Le customizzazioni per il ristorante sono un modulo a parte ma entrambi si vendono come uno se dalla regia selezionano ristorante e alla regia dopo va detto». Un modulo nuovo, `ristorante`, come gli altri di MODULI_PREMIUM: dentro, per ora, la Sala e l'editor della sala (REQ-TAVOLI-003). Quando nella regia il locale è un ristorante, il modulo viaggia insieme a quelli che servono, come un pacchetto solo.
+
+INTERFACCIA CON LA REGIA: l'elenco dei moduli è una copia tenuta allineata a mano (REQ-DEV-025). Va detto alla regia prima di rilasciarlo: id del modulo, la scelta «ristorante» che lo porta con sé, e da quali moduli dipende (la Sala richiede l'anagrafica dei tavoli, quindi probabilmente `menu_tavoli`). Da decidere con la regia se «ristorante» è un piano, un tipo di locale o un pacchetto di moduli.
+
+**Dove**: `src/lib/licenza.js (MODULI_PREMIUM), firestore.rules (modulo()), la regia (piani.json, elenco dei moduli)` · **Serve**: [UR-020](#ur-020--un-ristorante-lavora-coi-suoi-tavoli-e-coi-suoi-prodotti-freschi)
+
 ## L'architettura e le sue prove
 
 Il gradino sotto la specifica: i meccanismi su cui poggiano molti requisiti
@@ -4982,6 +4992,7 @@ della correzione è il test citato nel requisito della sua area.
 | 🔴 | [BUG-157](#bug-157--la-licenza-della-tana-scritta-dal-deploy-è-più-povera-di-quella-che-scrive-la-regia) — La licenza della Tana scritta dal deploy è più povera di quella che scrive la regia | bassa | P3 |
 | 🔴 | [BUG-158](#bug-158--genera-clientemjs-non-conosce-il-tipo-di-locale-che-il-workflow-della-regia-gli-passa) — genera-cliente.mjs non conosce il tipo di locale che il workflow della regia gli passa | bassa | P3 |
 | 🔴 | [BUG-163](#bug-163--un-rifiuto-del-pagamento-online-che-sumup-rimanda-in-ritardo-segna-fallito-un-conto-passato-nel-frattempo-al-lettore) — Un rifiuto del pagamento online che SumUp rimanda in ritardo segna «fallito» un conto passato nel frattempo al lettore | media | P2 |
+| 🔴 | [BUG-164](#bug-164--il-tempo-di-lavorazione-in-ricetta-non-entra-nel-costo-del-drink-57-righe-lo-dosano-in-grammi) — Il tempo di lavorazione in ricetta non entra nel costo del drink: 57 righe lo dosano in grammi | media | P2 |
 
 🔴 succede **in produzione**, cioè al banco. `·` no. `?` non si sa ancora.
 
@@ -5142,6 +5153,14 @@ Dalla regia, contratto del 14/11/2026: lo script della 1.10.x non conosce `--sa 
 Trovato dal revisore il 16/11/2026, correggendo BUG-162: è lo stesso difetto, sul checkout online. Il cliente paga online e la carta viene rifiutata; il conto passa al lettore del banco (`in_attesa`, metodo `lettore`). Se SumUp rimanda il rifiuto online (ritenta dopo 1, 5, 20 minuti e 2 ore), `verifyCheckoutStatus` vede uno stato diverso da quello del conto, scrive «fallito» e azzera l'importo in volo del lettore: il pagamento al banco, se poi riesce, arriva su un conto che non lo aspetta più. Da correggere come BUG-162: l'esito online si applica solo a un conto che aspetta ancora quel checkout.
 
 **Dove**: `functions/lib/payment-service.js (verifyCheckoutStatus, handleOnlineWebhook)` · **Tradisce**: [REQ-PAG-005](#req-pag-005--pagamento-online-con-link-o-qr), [REQ-DEV-026](#req-dev-026--la-spesa-dei-servizi-google-ha-un-tetto-istanze-limitate-e-indirizzi-pubblici-che-non-lavorano-a-vuoto)
+
+#### BUG-164 — Il tempo di lavorazione in ricetta non entra nel costo del drink: 57 righe lo dosano in grammi
+
+Daniele, 16/11/2026: «tempo di lavorazione quando è presente in ricetta va calcolato come un normale ingrediente quindi deve comparire nei costi, ricordando che il tempo di lavorazione si calcola in U ovvero 1 pz corrisponde a 60 U ed 1 pz costa 10€». L'articolo è già così, in produzione e sul test (pezzo da 60 U, 10 €, IVA 0), e il costo per U lo sa fare costPerUnit. Ma 57 righe di ricetta su 59 lo dosano in GRAMMI («0,5 g», «1,5 g»…), scritte quando il grammo era l'unica unità possibile: un grammo di un articolo che si conta a U non ha un costo, la riga finisce fra quelle senza costo e il costo del drink resta parziale. Le altre due sono già in U.
+
+CORREZIONE: uno script riscrive in U quelle righe, con la stessa quantità («1,5 g» → 1,5 U, 0,25 €). Prima sul test, poi in produzione col via libera e dopo il backup. Da quel momento quelle righe scaricano anche il magazzino (U/60 di pezzo per drink), come tutto quello che sta in magazzino dal 12/09/2026.
+
+**Dove**: `dati: drinks.recipe_items del «Tempo di Lavorazione»; scripts/lavorazione-in-u.js, scripts/lib-lavorazione.js` · **Tradisce**: [REQ-MENU-034](#req-menu-034--ogni-riga-della-ricetta-mostra-quanto-costa)
 
 ## Non più valido
 
