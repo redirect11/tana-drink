@@ -4529,7 +4529,7 @@ Nella vista «Ordina dal menù» dello staff si possono inserire NOME e numero d
 
 Daniele, 16/11/2026, per l'uso nei ristoranti: «posizionamento grafico tavoli su CODA ORDINI in modalità vista dall'alto/occhio di falco». Nella coda, oltre all'elenco dei conti, una vista con la pianta della sala: ogni tavolo al suo posto, e su ciascuno quello che serve a chi lavora (il conto aperto, cosa aspetta, cosa è pronto). La pianta la disegna il gestore, mettendo i tavoli dell'anagrafica dove stanno.
 
-DA DECIDERE: cosa si legge su un tavolo (numero del conto, totale, stato delle comande, da quanto aspetta); cosa fa un tocco sul tavolo (apre il conto, ne apre uno nuovo); se le sale possono essere più di una (dentro, dehors); forme e misure dei tavoli o solo posizione. Richiede l'anagrafica dei tavoli (REQ-TAVOLI-001, ancora da fare). Lavora in locale come la coda: la pianta si aggiorna all'istante.
+DECISO (Daniele, 16/11/2026): «I tavoli sarebbero gli ordini quindi fa esattamente quello che fa adesso. Al massimo si gestisce lo stato di libero/occupato per ora». Il tavolo in pianta è il conto: si legge e si tocca come la card della coda di oggi; in più, ogni tavolo dice se è libero o occupato. Una sala sola, per ora; forme e misure dei tavoli no, solo la posizione. Richiede l'anagrafica dei tavoli (REQ-TAVOLI-001, ancora da fare). Lavora in locale come la coda: la pianta si aggiorna all'istante.
 
 **Dove**: `src/pages/BartenderPage.jsx (coda ordini), anagrafica dei tavoli (REQ-TAVOLI-001)` · **Serve**: [UR-020](#ur-020--un-ristorante-lavora-coi-suoi-tavoli-e-coi-suoi-prodotti-freschi)
 
@@ -4547,7 +4547,7 @@ DANIELE, STESSO GIORNO: il tema riguarda tutto; un tema per la home e un tema pe
 
 Daniele, 16/11/2026, per Flavio: «all'interno della scheda Prodotto inserire casella da selezionare per abilitare funzione OSCURA AUTOMATICAMENTE (questa funzione oscura nel MENU CLIENTI tutte le voci che contengono questo prodotto nel ricettario quando arriva a 0 o negativo) … Adesso flavio lo vuole per prodotto». È la domanda lasciata aperta da REQ-MENU-017 («se l'opzione vale per la voce o per il prodotto di magazzino»), ora decisa: per il PRODOTTO DI MAGAZZINO. Oggi l'opzione sta sul prodotto della cassa (`segue_giacenze`) e guarda tutti i suoi ingredienti; Flavio vuole dire, ingrediente per ingrediente, quali contano — il gin sì, il lime e il ghiaccio no. Valgono le regole di REQ-MENU-017: al cliente non si dice mai cosa manca; il segno lo scrive la Cloud Function solo quando la giacenza attraversa lo zero; al banco la voce resta.
 
-DA DECIDERE: cosa ne è dell'opzione sul prodotto della cassa (si toglie, o resta e le due si sommano); se la soglia «in esaurimento» delle Impostazioni vale anche qui o la casella guarda solo lo zero, come dice la richiesta; il passaggio per i prodotti della cassa che oggi hanno `segue_giacenze` acceso.
+DECISO (Daniele, 16/11/2026): vale la soglia delle Impostazioni («anche la soglia nelle impostazioni»): esaurito, oppure già in esaurimento, come per l'opzione sul prodotto della cassa. L'OPZIONE SUL PRODOTTO DELLA CASSA RESTA, e le due si sommano: la domanda non ha avuto risposta, ed è la scelta che non cambia niente a chi l'ha già accesa e non chiede un travaso. Una voce esce dal menù se segue le giacenze e un suo ingrediente (non di servizio) manca, OPPURE se manca un ingrediente con «Oscura automaticamente» — anche di servizio: la spunta sul prodotto è una scelta esplicita.
 
 **Dove**: `scheda del prodotto di magazzino (InventoryManager), functions/lib/disponibilita.js, functions/index.js (disponibilitaDalMagazzino)` · **Serve**: [UR-008](#ur-008--il-cliente-ordina-dal-telefono-e-sa-quando-il-drink-è-pronto)
 
@@ -4679,7 +4679,9 @@ APERTURA la data in cui la confezione è stata aperta;
 
 DECADIMENTO per quanti giorni il prodotto resta buono dopo l'apertura. Da apertura e decadimento si ricava il «da consumare entro».
 
-DA DECIDERE: se il decadimento è un dato del prodotto (vale per ogni confezione) e scadenza e apertura della confezione in uso, o se una giacenza fatta di più confezioni ne ha una per ciascuna; cosa succede a una scadenza vicina o passata (un avviso nel gestionale, un elenco dei prodotti in scadenza, il prodotto che esce dal menù come con REQ-MENU-045); chi registra l'apertura e da dove (al banco, con un gesto, o dal gestionale).
+DECISO (Daniele, 16/11/2026): a una scadenza vicina o passata, «un avviso e un elenco» nel gestionale. Il prodotto NON esce dal menù da solo: «se il prodotto esce dal menu dovrebbe sempre deciderlo il gestore».
+
+DA CONFERMARE (proposta, senza risposta il 16/11): il decadimento è un dato del prodotto, scadenza e apertura sono della confezione in uso; l'apertura si registra dal gestionale.
 
 **Dove**: `scheda del prodotto di magazzino (InventoryManager), src/lib/inventory.js` · **Serve**: [UR-020](#ur-020--un-ristorante-lavora-coi-suoi-tavoli-e-coi-suoi-prodotti-freschi)
 
