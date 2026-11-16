@@ -58,13 +58,16 @@ async function richiediModulo(db, id, adesso = Date.now()) {
 // (functions/ non importa da src/): tests/unit/utenze.test.js le confronta.
 const LIMITI_FREE = Object.freeze({ utenti_max: 1 })
 
-// I limiti in vigore adesso, o null (nessun limite). Come l'app: valgono
-// quelli scritti nella licenza; una licenza scaduta vale come Free; senza
-// licenza, o senza la voce `limiti`, nessun limite — un limite non è mai il
-// comportamento di partenza (src/lib/limiti.js).
+// I limiti in vigore adesso, o null (nessun limite): valgono quelli scritti
+// nella licenza; una licenza scaduta vale come Free; senza licenza, o senza
+// la voce `limiti`, nessun limite — un limite non è mai il comportamento di
+// partenza (src/lib/limiti.js). La scadenza si legge come le regole
+// (`valida_fino_ts`) e, se manca, come l'app (`valida_fino`): la regia li
+// scrive insieme, e dei due vale quello che c'è — qui serve solo a
+// stringere.
 function limitiInVigore(licenza, adesso = Date.now()) {
   if (!licenza || typeof licenza !== 'object') return null
-  const fino = inMillisecondi(licenza.valida_fino_ts)
+  const fino = inMillisecondi(licenza.valida_fino_ts ?? licenza.valida_fino)
   if (fino !== null && adesso >= fino) return LIMITI_FREE
   return licenza.limiti && typeof licenza.limiti === 'object' ? licenza.limiti : null
 }

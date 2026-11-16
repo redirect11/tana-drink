@@ -29,7 +29,7 @@ const JPEG = { contentType: 'image/jpeg' }
 // invece di far cadere tutto il giro. Per averle anche in CI il workflow
 // deve accendere anche Storage (`--only firestore,storage`): la CI non si
 // cambia senza Daniele.
-const STORAGE_ACCESO = await fetch(`http://${HOST}:${PORT}/`).then(
+const STORAGE_ACCESO = await fetch(`http://${HOST}:${PORT}/`, { signal: AbortSignal.timeout(2000) }).then(
   () => true,
   () => false
 )

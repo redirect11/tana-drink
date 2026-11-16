@@ -223,7 +223,7 @@ describe('staffAdmin — il tetto di utenze del piano', () => {
   it('sul Free il titolare c’è già: un’utenza nuova dello staff no', async () => {
     await expect(
       staffAdmin(adminAuth, admin, { action: 'create', email: 'b@x', password: 'segreta', role: 'bartender' }, conLicenza(FREE))
-    ).rejects.toMatchObject({ code: 'failed-precondition', message: 'Il piano del locale comprende al massimo un utente.' })
+    ).rejects.toMatchObject({ code: 'failed-precondition', message: expect.stringContaining('al massimo 1 utenza attiva dello staff') })
     expect(adminAuth.db.has('uid-b@x')).toBe(false)
   })
 
@@ -249,6 +249,19 @@ describe('staffAdmin — il tetto di utenze del piano', () => {
     expect(adminAuth.db.get('b1').customClaims).toEqual({ role: 'staff' })
     expect(adminAuth.db.get('s1').disabled).toBe(true)
     expect(adminAuth.db.size).toBe(4)
+  })
+
+  it('un cliente sospeso promosso allo staff non aggiunge nessuno di attivo', async () => {
+    adminAuth.db.get('c1').disabled = true
+    await staffAdmin(adminAuth, admin, { action: 'setRole', uid: 'c1', role: 'staff' }, conLicenza(FREE))
+    expect(adminAuth.db.get('c1').customClaims).toEqual({ role: 'staff' })
+  })
+
+  it('anche con la sola `valida_fino` dell’app, scaduta vale come Free', async () => {
+    const scaduta = { piano: 'completo', stato: 'attiva', valida_fino: '2026-01-01T00:00:00.000Z' }
+    await expect(
+      staffAdmin(adminAuth, admin, { action: 'create', email: 'b@x', password: 'segreta', role: 'staff' }, conLicenza(scaduta))
+    ).rejects.toMatchObject({ code: 'failed-precondition' })
   })
 
   it('una licenza scaduta vale come Free', async () => {

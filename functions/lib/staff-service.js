@@ -85,16 +85,29 @@ async function vietaSeUltimoAdmin(adminAuth, uid, cosa) {
 // contano le utenze ATTIVE dello staff, e il tetto ferma solo le aggiunte —
 // crearne una, promuovere un cliente, riattivarne una spenta. Quelle che ci
 // sono restano: chi scende al Free con più persone non perde nessuno.
-// `leggiLicenza` manca solo nei test che non parlano di piani.
-async function vietaOltreIlPiano(adminAuth, leggiLicenza) {
+// Prima i limiti, poi l'elenco delle utenze, letto una volta sola: senza un
+// tetto (la Tana, i piani a pagamento) non si legge niente in più.
+// `aggiunge(utenti)` dice se il gesto porta davvero un'utenza attiva dello
+// staff in più. Fra il conteggio e la scrittura passa un istante: due
+// chiamate in parallelo dalla console possono sforare di una — sul Free no,
+// il titolare occupa già l'unico posto. `leggiLicenza` manca solo nei test
+// che non parlano di piani.
+async function vietaOltreIlPiano(adminAuth, leggiLicenza, aggiunge = () => true) {
   if (!leggiLicenza) return
-  const max = Number(limitiInVigore(await leggiLicenza())?.utenti_max)
-  if (!(max > 0)) return
-  const attive = (await tutteLeUtenze(adminAuth)).filter((u) => RUOLI.includes(u.customClaims?.role) && !u.disabled)
+  const tetto = limitiInVigore(await leggiLicenza())?.utenti_max
+  const max = Number(tetto)
+  // Come l'app (limiti.js, `tetto`): un numero da zero in su è un tetto,
+  // il resto — assente o illeggibile — non limita.
+  if (tetto == null || !Number.isFinite(max) || max < 0) return
+  const utenti = await tutteLeUtenze(adminAuth)
+  if (!aggiunge(utenti)) return
+  const attive = utenti.filter((u) => RUOLI.includes(u.customClaims?.role) && !u.disabled)
   if (attive.length >= max) {
     throw {
       code: 'failed-precondition',
-      message: `Il piano del locale comprende al massimo ${max === 1 ? 'un utente' : `${max} utenti`}.`,
+      message:
+        `Il piano del locale comprende al massimo ${max} ${max === 1 ? 'utenza attiva' : 'utenze attive'} dello staff. ` +
+        'Per aggiungerne un’altra occorre sospenderne una o passare a un piano superiore.',
     }
   }
 }
@@ -141,10 +154,12 @@ async function staffAdmin(adminAuth, auth, data, { leggiLicenza } = {}) {
       throw { code: 'failed-precondition', message: 'Non puoi cambiare il tuo stesso ruolo.' }
     }
     if (role !== 'admin') await vietaSeUltimoAdmin(adminAuth, uid, 'cambiargli ruolo')
-    // Un cliente che diventa staff è un'utenza dello staff in più.
+    // Un cliente attivo che diventa staff è un'utenza dello staff in più.
     if (RUOLI.includes(role)) {
-      const prima = (await tutteLeUtenze(adminAuth)).find((u) => u.uid === uid)
-      if (!RUOLI.includes(prima?.customClaims?.role)) await vietaOltreIlPiano(adminAuth, leggiLicenza)
+      await vietaOltreIlPiano(adminAuth, leggiLicenza, (utenti) => {
+        const prima = utenti.find((u) => u.uid === uid)
+        return Boolean(prima) && !prima.disabled && !RUOLI.includes(prima.customClaims?.role)
+      })
     }
     // "cliente" non è un claim: è l'assenza di claim.
     await adminAuth.setCustomUserClaims(uid, role === 'cliente' ? null : { role })
@@ -160,8 +175,10 @@ async function staffAdmin(adminAuth, auth, data, { leggiLicenza } = {}) {
     if (disabled) await vietaSeUltimoAdmin(adminAuth, uid, 'disattivarlo')
     else {
       // Riattivare un'utenza dello staff spenta la rimette nel conto.
-      const prima = (await tutteLeUtenze(adminAuth)).find((u) => u.uid === uid)
-      if (prima?.disabled && RUOLI.includes(prima?.customClaims?.role)) await vietaOltreIlPiano(adminAuth, leggiLicenza)
+      await vietaOltreIlPiano(adminAuth, leggiLicenza, (utenti) => {
+        const prima = utenti.find((u) => u.uid === uid)
+        return Boolean(prima?.disabled) && RUOLI.includes(prima?.customClaims?.role)
+      })
     }
     await adminAuth.updateUser(uid, { disabled })
     return { uid, disabled }
