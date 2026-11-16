@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 16 novembre 2026.
+> Generato il 17 novembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -31,7 +31,7 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 **368 voci** in tutto. **330** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
-cosa che l'app fa; **18** difetti noti sono ancora aperti.
+cosa che l'app fa; **17** difetti noti sono ancora aperti.
 
 Le voci ⚠️ sono la parte scomoda: funzionano, ma **nessun test le tiene**.
 Sono quelle che si rompono senza che nessuno se ne accorga, e vanno lette
@@ -4992,7 +4992,6 @@ della correzione è il test citato nel requisito della sua area.
 | 🔴 | [BUG-157](#bug-157--la-licenza-della-tana-scritta-dal-deploy-è-più-povera-di-quella-che-scrive-la-regia) — La licenza della Tana scritta dal deploy è più povera di quella che scrive la regia | bassa | P3 |
 | 🔴 | [BUG-158](#bug-158--genera-clientemjs-non-conosce-il-tipo-di-locale-che-il-workflow-della-regia-gli-passa) — genera-cliente.mjs non conosce il tipo di locale che il workflow della regia gli passa | bassa | P3 |
 | 🔴 | [BUG-163](#bug-163--un-rifiuto-del-pagamento-online-che-sumup-rimanda-in-ritardo-segna-fallito-un-conto-passato-nel-frattempo-al-lettore) — Un rifiuto del pagamento online che SumUp rimanda in ritardo segna «fallito» un conto passato nel frattempo al lettore | media | P2 |
-| 🔴 | [BUG-164](#bug-164--il-tempo-di-lavorazione-in-ricetta-non-entra-nel-costo-del-drink-57-righe-lo-dosano-in-grammi) — Il tempo di lavorazione in ricetta non entra nel costo del drink: 57 righe lo dosano in grammi | media | P2 |
 
 🔴 succede **in produzione**, cioè al banco. `·` no. `?` non si sa ancora.
 
@@ -5153,16 +5152,6 @@ Dalla regia, contratto del 14/11/2026: lo script della 1.10.x non conosce `--sa 
 Trovato dal revisore il 16/11/2026, correggendo BUG-162: è lo stesso difetto, sul checkout online. Il cliente paga online e la carta viene rifiutata; il conto passa al lettore del banco (`in_attesa`, metodo `lettore`). Se SumUp rimanda il rifiuto online (ritenta dopo 1, 5, 20 minuti e 2 ore), `verifyCheckoutStatus` vede uno stato diverso da quello del conto, scrive «fallito» e azzera l'importo in volo del lettore: il pagamento al banco, se poi riesce, arriva su un conto che non lo aspetta più. Da correggere come BUG-162: l'esito online si applica solo a un conto che aspetta ancora quel checkout.
 
 **Dove**: `functions/lib/payment-service.js (verifyCheckoutStatus, handleOnlineWebhook)` · **Tradisce**: [REQ-PAG-005](#req-pag-005--pagamento-online-con-link-o-qr), [REQ-DEV-026](#req-dev-026--la-spesa-dei-servizi-google-ha-un-tetto-istanze-limitate-e-indirizzi-pubblici-che-non-lavorano-a-vuoto)
-
-#### BUG-164 — Il tempo di lavorazione in ricetta non entra nel costo del drink: 57 righe lo dosano in grammi
-
-Daniele, 16/11/2026: «tempo di lavorazione quando è presente in ricetta va calcolato come un normale ingrediente quindi deve comparire nei costi, ricordando che il tempo di lavorazione si calcola in U ovvero 1 pz corrisponde a 60 U ed 1 pz costa 10€». L'articolo è già così, in produzione e sul test (pezzo da 60 U, 10 €, IVA 0), e il costo per U lo sa fare costPerUnit. Ma 57 righe di ricetta su 59 lo dosano in GRAMMI («0,5 g», «1,5 g»…), scritte quando il grammo era l'unica unità possibile: un grammo di un articolo che si conta a U non ha un costo, la riga finisce fra quelle senza costo e il costo del drink resta parziale. Le altre due sono già in U.
-
-CORREZIONE: uno script riscrive in U quelle righe, con la stessa quantità («1,5 g» → 1,5 U, 0,25 €). Prima sul test, poi in produzione col via libera e dopo il backup. Da quel momento quelle righe scaricano anche il magazzino (U/60 di pezzo per drink), come tutto quello che sta in magazzino dal 12/09/2026.
-
-SUL TEST (16/11/2026): riscritte 57 ricette, tutte del «Tempo di Lavorazione»; rilanciato, lo script non trova più niente. In produzione: da fare, col via libera.
-
-**Dove**: `dati: drinks.recipe_items del «Tempo di Lavorazione»; scripts/lavorazione-in-u.js, scripts/lib-lavorazione.js` · **Tradisce**: [REQ-MENU-034](#req-menu-034--ogni-riga-della-ricetta-mostra-quanto-costa)
 
 ## Non più valido
 

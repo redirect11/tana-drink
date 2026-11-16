@@ -6590,10 +6590,14 @@ bugs:
       righe scaricano anche il magazzino (U/60 di pezzo per drink), come
       tutto quello che sta in magazzino dal 12/09/2026.
       SUL TEST (16/11/2026): riscritte 57 ricette, tutte del «Tempo di
-      Lavorazione»; rilanciato, lo script non trova più niente. In
-      produzione: da fare, col via libera.
+      Lavorazione»; rilanciato, lo script non trova più niente.
+      IN PRODUZIONE (17/11/2026, via libera di Daniele): backup
+      (backup/tana-drink-prima-lavorazione-in-u.json, 18.589 documenti),
+      anteprima, poi 57 ricette riscritte; riletto, le 59 righe sono tutte
+      in U e lo script non trova più niente. La giacenza del «Tempo di
+      Lavorazione» (151 pz, cioè 9.060 U) da qui scende a ogni drink.
     in_produzione: true
-    status: todo
+    status: fixed
     generate_issue: true
     labels: [bug, magazzino, costi]
     severity: media
