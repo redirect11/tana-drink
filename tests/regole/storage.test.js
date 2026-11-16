@@ -23,6 +23,18 @@ const PORT = Number(process.env.STORAGE_EMULATOR_PORT || 9199)
 const FOTO = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4])
 const JPEG = { contentType: 'image/jpeg' }
 
+// L'EMULATORE STORAGE C'È? In locale si accende con gli altri (vedi
+// tests/regole/ambiente.js); il job «Regole Firestore» della CI accende solo
+// Firestore (`--only firestore`), e lì queste prove si saltano dicendolo,
+// invece di far cadere tutto il giro. Per averle anche in CI il workflow
+// deve accendere anche Storage (`--only firestore,storage`): la CI non si
+// cambia senza Daniele.
+const STORAGE_ACCESO = await fetch(`http://${HOST}:${PORT}/`).then(
+  () => true,
+  () => false
+)
+if (!STORAGE_ACCESO) console.warn(`[regole] emulatore Storage spento su ${HOST}:${PORT}: le prove di storage.rules si saltano`)
+
 let env
 
 const chi = {
@@ -33,52 +45,54 @@ const chi = {
   admin: () => env.authenticatedContext('admin-1', { role: 'admin' }).storage(),
 }
 
-beforeAll(async () => {
-  env = await initializeTestEnvironment({
-    projectId: 'regole-storage',
-    storage: { host: HOST, port: PORT, rules: REGOLE },
+describe.skipIf(!STORAGE_ACCESO)('storage.rules (emulatore Storage)', () => {
+  beforeAll(async () => {
+    env = await initializeTestEnvironment({
+      projectId: 'regole-storage',
+      storage: { host: HOST, port: PORT, rules: REGOLE },
+    })
   })
-})
-afterAll(async () => {
-  await env?.cleanup()
-})
-beforeEach(async () => {
-  await env.clearStorage()
-  await env.withSecurityRulesDisabled((ctx) => ctx.storage().ref('drinks/negroni.jpg').put(FOTO, JPEG))
-})
-
-describe('caricare una foto del menù', () => {
-  it('il banco e l’admin la caricano', async () => {
-    await assertSucceeds(chi.banco().ref('drinks/spritz.jpg').put(FOTO, JPEG))
-    await assertSucceeds(chi.admin().ref('drinks/mojito.jpg').put(FOTO, JPEG))
+  afterAll(async () => {
+    await env?.cleanup()
+  })
+  beforeEach(async () => {
+    await env.clearStorage()
+    await env.withSecurityRulesDisabled((ctx) => ctx.storage().ref('drinks/negroni.jpg').put(FOTO, JPEG))
   })
 
-  it('un cliente registrato no: i file li pagherebbe il locale', async () => {
-    await assertFails(chi.cliente().ref('drinks/mio.jpg').put(FOTO, JPEG))
+  describe('caricare una foto del menù', () => {
+    it('il banco e l’admin la caricano', async () => {
+      await assertSucceeds(chi.banco().ref('drinks/spritz.jpg').put(FOTO, JPEG))
+      await assertSucceeds(chi.admin().ref('drinks/mojito.jpg').put(FOTO, JPEG))
+    })
+
+    it('un cliente registrato no: i file li pagherebbe il locale', async () => {
+      await assertFails(chi.cliente().ref('drinks/mio.jpg').put(FOTO, JPEG))
+    })
+
+    it('né la sala né chi non ha fatto l’accesso', async () => {
+      await assertFails(chi.sala().ref('drinks/sala.jpg').put(FOTO, JPEG))
+      await assertFails(chi.anonimo().ref('drinks/anonimo.jpg').put(FOTO, JPEG))
+    })
+
+    it('anche al banco, solo immagini', async () => {
+      await assertFails(chi.banco().ref('drinks/listino.pdf').put(FOTO, { contentType: 'application/pdf' }))
+    })
   })
 
-  it('né la sala né chi non ha fatto l’accesso', async () => {
-    await assertFails(chi.sala().ref('drinks/sala.jpg').put(FOTO, JPEG))
-    await assertFails(chi.anonimo().ref('drinks/anonimo.jpg').put(FOTO, JPEG))
+  describe('cancellare una foto del menù', () => {
+    it('il banco la cancella', async () => {
+      await assertSucceeds(chi.banco().ref('drinks/negroni.jpg').delete())
+    })
+
+    it('un cliente registrato no', async () => {
+      await assertFails(chi.cliente().ref('drinks/negroni.jpg').delete())
+    })
   })
 
-  it('anche al banco, solo immagini', async () => {
-    await assertFails(chi.banco().ref('drinks/listino.pdf').put(FOTO, { contentType: 'application/pdf' }))
-  })
-})
-
-describe('cancellare una foto del menù', () => {
-  it('il banco la cancella', async () => {
-    await assertSucceeds(chi.banco().ref('drinks/negroni.jpg').delete())
-  })
-
-  it('un cliente registrato no', async () => {
-    await assertFails(chi.cliente().ref('drinks/negroni.jpg').delete())
-  })
-})
-
-describe('vedere la foto', () => {
-  it('la vede chiunque: il menù del cliente la mostra senza account', async () => {
-    await assertSucceeds(chi.anonimo().ref('drinks/negroni.jpg').getMetadata())
+  describe('vedere la foto', () => {
+    it('la vede chiunque: il menù del cliente la mostra senza account', async () => {
+      await assertSucceeds(chi.anonimo().ref('drinks/negroni.jpg').getMetadata())
+    })
   })
 })
