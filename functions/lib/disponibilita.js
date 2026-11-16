@@ -62,10 +62,6 @@ function nonDisponibile(drink, itemsById, impostazioni) {
   })
 }
 
-// Il cambio di un prodotto di magazzino cambia qualcosa per le voci? Se
-// attraversa la soglia, o se gli si accende o spegne «Oscura
-// automaticamente» (una spunta accesa su un prodotto già esaurito toglie
-// subito le voci).
 const oscuraCambiata = (prima, dopo) => oscura(prima) !== oscura(dopo)
 
 // QUALI VOCI RICALCOLARE dopo il cambio di un prodotto di magazzino:
@@ -79,7 +75,15 @@ function vociDaRicalcolare(prima, dopo, impostazioni) {
   // spuntato e a giacenza zero (i nuovi partono quasi sempre da lì), farebbe
   // leggere tutte le voci per niente.
   if (!prima) return null
-  if (!haAttraversato(prima, dopo, impostazioni) && !oscuraCambiata(prima, dopo)) return null
+  const soglia = sogliaDi(impostazioni)
+  const mancaPrima = manca(prima, soglia)
+  const mancaDopo = manca(dopo, soglia)
+  // La spunta che si accende o si spegne conta solo su un prodotto che
+  // manca: su uno ben fornito non cambia nessuna voce, e alla prima
+  // configurazione — venti distillati spuntati di fila — si leggerebbe
+  // tutto il catalogo venti volte per niente.
+  const spuntaCheConta = oscuraCambiata(prima, dopo) && (mancaPrima || mancaDopo)
+  if (mancaPrima === mancaDopo && !spuntaCheConta) return null
   return oscura(prima) || oscura(dopo) ? 'tutte' : 'seguono'
 }
 

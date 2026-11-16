@@ -55,7 +55,9 @@ vi.mock('../../src/lib/api.js', () => ({
   }),
 }))
 vi.mock('../../src/lib/pendingOrders.js', () => ({ submitPosOrder: vi.fn() }))
-vi.mock('../../src/lib/firebaseClient.js', () => ({ auth: {} }))
+// L'account che ha fatto l'accesso: lo stesso `u1` del finto
+// onAuthStateChanged qui sotto (le scelte del conto vuoto sono sue, REQ-ORD-025).
+vi.mock('../../src/lib/firebaseClient.js', () => ({ auth: { currentUser: { uid: 'u1' } } }))
 // CHI GUARDA IL CONTO lo decide il singolo test. Di suo è il banco, che è
 // il caso di quasi tutti i test qui sotto; la sala ha una schermata più
 // stretta (REQ-STAFF-014) e ha il suo blocco in fondo.
@@ -855,9 +857,24 @@ describe('tasti sempre presenti, spenti se non servono', () => {
 // rientrando (per esempio chiudendo il box del nome) il conto non era più
 // "creato qui", e togliendo l'ultima riga restava aperto e vuoto in coda.
 describe('conto rimasto senza righe', () => {
+  // Qui la coda è una rotta vera: tornarci SMONTA il conto, ed è l'uscita a
+  // annullarlo (il timer torna alla coda e basta, senza aspettare niente).
+  async function mountConCoda(order) {
+    const utils = render(
+      <MemoryRouter>
+        <Routes>
+          <Route path="/" element={<OrderPosDetail order={order} />} />
+          <Route path="/bar" element={<p>La coda</p>} />
+        </Routes>
+      </MemoryRouter>
+    )
+    await avvioDelConto()
+    return utils
+  }
+
   it('si annulla da solo e si torna alla lista', async () => {
     const user = userEvent.setup()
-    await mount(
+    await mountConCoda(
       baseOrder({
         comande: [
           {
@@ -875,6 +892,7 @@ describe('conto rimasto senza righe', () => {
     await waitFor(() => expect(cancelOrder).toHaveBeenCalledWith('ord1', { by: 'bartender' }), {
       timeout: 3000,
     })
+    expect(screen.getByText('La coda')).toBeInTheDocument()
   })
 
   it('ma non se qualcosa è già stato incassato', async () => {
@@ -903,7 +921,7 @@ describe('conto rimasto senza righe', () => {
   // non deve annullare una seconda volta.
   it('annullato da solo, uscendo non si annulla di nuovo', async () => {
     const user = userEvent.setup()
-    const { unmount } = await mount(contoConUnaRiga())
+    const { unmount } = await mountConCoda(contoConUnaRiga())
     await user.click(screen.getByRole('button', { name: 'Riduci Mojito' }))
     await waitFor(() => expect(cancelOrder).toHaveBeenCalledTimes(1), { timeout: 3000 })
     unmount()

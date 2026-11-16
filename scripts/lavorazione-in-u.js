@@ -15,45 +15,32 @@
 //  via libera, e prima si fa il backup:
 //    node scripts/backup-db.js --project tana-drink
 // =====================================================================
-import { accessToken, client, idDi, arg, flag } from './lib-firestore.js'
+import { accessToken, client, idDi, arg, flag, daCampi } from './lib-firestore.js'
 import { siDosaAU, righeInGrammi } from './lib-lavorazione.js'
 
 const PROJECT = arg('project', 'tana-drink-test')
 const APPLY = flag('apply')
 
 const db = client(PROJECT, await accessToken())
-const strOf = (f) => (f?.stringValue != null ? f.stringValue : null)
-const numOf = (f) =>
-  f?.doubleValue != null ? Number(f.doubleValue) : f?.integerValue != null ? Number(f.integerValue) : null
 
-const articoli = await db.documenti('inventory_items', { campi: ['name', 'unit', 'content_unit', 'package_size'] })
-const inU = articoli.filter((d) =>
-  siDosaAU({
-    unit: strOf(d.fields?.unit),
-    content_unit: strOf(d.fields?.content_unit),
-    package_size: numOf(d.fields?.package_size),
-  })
-)
+const articoli = await db.documenti('inventory_items', { campi: ['name', 'unit', 'content_unit', 'package_size', 'resa', 'resa_unit'] })
+const inU = articoli.filter((d) => siDosaAU(daCampi(d.fields)))
 const idsInU = new Set(inU.map(idDi))
 console.log(`[lavorazione] su "${PROJECT}", articoli che si dosano a U: ${inU.length}`)
-for (const d of inU) console.log(`   ${idDi(d).padEnd(24)} ${strOf(d.fields?.name)}`)
+for (const d of inU) console.log(`   ${idDi(d).padEnd(24)} ${daCampi(d.fields).name}`)
 
-const drinks = await db.documenti('drinks')
+const drinks = await db.documenti('drinks', { campi: ['name', 'recipe_items'] })
 const scritture = []
 let righeToccate = 0
 for (const d of drinks) {
-  const valori = d.fields?.recipe_items?.arrayValue?.values || []
-  const righe = valori.map((v) => {
-    const rf = v.mapValue?.fields || {}
-    return { inventory_item_id: strOf(rf.inventory_item_id), unit: strOf(rf.unit) }
-  })
+  const { name, recipe_items: righe } = daCampi(d.fields)
   const indici = new Set(righeInGrammi(righe, idsInU))
   if (indici.size === 0) continue
-  const nome = strOf(d.fields?.name) || idDi(d)
-  for (const i of indici) {
-    const rf = valori[i].mapValue.fields
-    console.log(`   ~ ${nome.padEnd(30)} ${strOf(rf.name) || ''}: ${numOf(rf.qty)} g → ${numOf(rf.qty)} U`)
-  }
+  const nome = name || idDi(d)
+  for (const i of indici) console.log(`   ~ ${nome.padEnd(30)} ${righe[i].name || ''}: ${righe[i].qty} g → ${righe[i].qty} U`)
+  // Si riscrive dai valori NATIVI: un intero resta intero, il resto della
+  // riga resta identico.
+  const valori = d.fields.recipe_items.arrayValue.values
   righeToccate += indici.size
   const nuovi = valori.map((v, i) =>
     indici.has(i) ? { mapValue: { fields: { ...v.mapValue.fields, unit: { stringValue: 'U' } } } } : v

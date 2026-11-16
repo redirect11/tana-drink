@@ -554,13 +554,8 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // se il ruolo non arrivasse mai — offline col token scaduto — il conto non
   // nascerebbe più da solo.
   const [chiLavoraNoto, setChiLavoraNoto] = useState(false)
-  // L'account di chi lavora, per le scelte che sono sue su questo
-  // dispositivo (il conto svuotato, REQ-ORD-025). Un ref: si legge nel
-  // momento del gesto, non serve ridisegnare.
-  const uidRef = useRef(null)
   useEffect(() => {
     return onAuthStateChanged(auth, async (u) => {
-      uidRef.current = u?.uid ?? null
       try {
         await chiStaLavorando(u)
       } finally {
@@ -1304,41 +1299,22 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   contoVuotoRef.current = contoVuoto ? order.id : null
   useEffect(() => {
     if (!contoVuoto) return
-    const t = setTimeout(async () => {
+    const t = setTimeout(() => {
       // CHI LAVORA SCEGLIE (REQ-ORD-025). Spenta, il conto svuotato resta a
       // schermo — si sta sostituendo un drink, e si continua a battere — e
       // se all'uscita è ancora vuoto lo annulla l'uscita. Si legge QUI, allo
       // scadere: all'apertura di un conto già vuoto l'accesso può non aver
       // ancora risposto, e senza account vale la scelta di partenza — il
       // conto si annullerebbe anche a chi l'ha spenta.
-      if (!contoVuotoSiChiude(uidRef.current ?? auth.currentUser?.uid)) return
-      // Da qui il conto lo chiude l'annullo, come col tasto «Annulla»: anche
-      // la composizione, nella stessa scrittura (BUG-071). Il segno va messo
-      // PRIMA dell'attesa qui sotto: uscendo in quel mentre, l'uscita
-      // annullerebbe per conto suo e poi lo rifarebbe questo timer.
-      staAnnullando.current = true
-      // PRIMA si scrive la rimozione, POI si annulla. La rimozione dell'ultima
-      // riga passa da un salvataggio ritardato (600ms): l'annullo arrivava
-      // prima, leggeva l'ordine con la riga ancora dentro e la riscriveva
-      // così com'era. Risultato: un conto annullato che in coda mostrava
-      // ancora "1 prodotto · 4,00 €" mentre dentro non aveva più niente.
-      try {
-        await flushAll()
-      } catch {
-        /* se la scrittura non riesce si annulla lo stesso: il conto va chiuso */
-      }
-      // Durante l'attesa si è battuto un prodotto: il conto non è più vuoto,
-      // e quella riga deve poter partire con l'uscita.
-      if (!contoVuotoRef.current) {
-        staAnnullando.current = false
-        return
-      }
-      if (!orderProp) ricordaContoInCorso(null)
-      cancelOrder(order.id, { by: 'bartender' }).catch(() => mostraOrdine(order.id))
-      nascondiOrdine(order.id)
-      // Se nel frattempo si è usciti, si è già altrove: non si porta via
-      // nessuno da dove è andato.
-      if (montatoRef.current) navigate('/bar')
+      if (!contoVuotoSiChiude(auth.currentUser?.uid)) return
+      // L'ANNULLO LO FA L'USCITA. Si torna alla coda, la schermata si smonta
+      // e l'uscita (uscitaRef) manda la rimozione dell'ultima riga e poi
+      // l'annullo, nel turno del conto (perConto): l'annullo legge il conto
+      // già vuoto, e qui non si aspetta niente. Prima questo timer annullava
+      // da sé dopo un `await flushAll()` — un'attesa prima dell'esito di un
+      // gesto, che senza rete non torna — e doveva difendersi dalle uscite
+      // in quel mentre.
+      navigate('/bar')
     }, 400) // respiro: evita di annullare durante una sostituzione di riga
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2198,8 +2174,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       flushAdditions()
       // Un conto vuoto lo annulla l'uscita (REQ-ORD-025): chiedergli il nome
       // vorrebbe dire battezzare un conto che sta per sparire.
-      if (contoVuoto) return navigate('/bar')
-      if (createdInPlace && !nameAskedRef.current && needsName(order)) return askNameThenExit()
+      if (!contoVuoto && createdInPlace && !nameAskedRef.current && needsName(order)) return askNameThenExit()
       return navigate('/bar')
     }
     // Nulla ancora creato (uscita prima dell'auto-creazione): il conto si crea

@@ -901,15 +901,16 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           const printerSettings = loadPrinterSettings()
           for (const o of data) {
             const isNew = !statoPrec.current.has(o.id)
+            // Era in composizione al giro prima? Si toglie qui, una volta
+            // sola: chi lo è ancora ci torna qui sotto, e così nessuna uscita
+            // dal ciclo lascia un id appeso nell'insieme.
+            const daComposizione = inComposizione.delete(o.id)
             // USCITO DALLA CODA, USCITO DALL'ATTESA. Un conto annullato
             // mentre aspettava il pagamento obbligatorio restava in questo
             // insieme per sempre: ripristinandolo veniva annunciato come
             // «nuovo ordine» — ed era il secondo avviso, quello di troppo,
             // che il banco ha visto sull'ordine #5 (BUG-072).
-            if (o.workflow_status === ORDER_STATUSES.ANNULLATO) {
-              awaiting.delete(o.id)
-              inComposizione.delete(o.id)
-            }
+            if (o.workflow_status === ORDER_STATUSES.ANNULLATO) awaiting.delete(o.id)
             // C'È QUALCOSA DA FARE? Un ordine battuto alla cassa nasce già
             // «in preparazione» — chi lo batte sta facendo il drink —
             // mentre quelli dal menù nascono «ricevuto». Guardando i soli
@@ -918,12 +919,8 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             if (
               o.workflow_status !== ORDER_STATUSES.RICEVUTO &&
               o.workflow_status !== ORDER_STATUSES.IN_PREPARAZIONE
-            ) {
-              // Uscito dalla composizione già servito o annullato: non c'è
-              // più niente da annunciare.
-              inComposizione.delete(o.id)
+            )
               continue
-            }
             // NIENTE AVVISO SOLO A CHI L'HA MANDATO. Prima si tacevano tutti
             // gli ordini battuti da un gestore, su QUALUNQUE dispositivo:
             // col telefono in mano a un admin, al banco non suonava niente.
@@ -931,22 +928,19 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             // account sta su tablet, telefono e portatile insieme.
             if (battutoDaQui(o.placed_by)) continue
             if (o.in_creazione === true) {
-              if (isNew) inComposizione.add(o.id)
+              if (isNew || daComposizione) inComposizione.add(o.id)
               continue
             }
             if (isAwaitingPayment(o)) {
-              if (isNew || inComposizione.has(o.id)) awaiting.add(o.id)
-              inComposizione.delete(o.id)
+              if (isNew || daComposizione) awaiting.add(o.id)
               continue
             }
-            if (isNew || awaiting.has(o.id) || inComposizione.has(o.id)) {
+            if (isNew || awaiting.has(o.id) || daComposizione) {
               awaiting.delete(o.id)
               // Il segno l'ha tolto QUESTO terminale prendendo in mano la
               // comanda (advanceComanda): il conto lo conosce già, perché ci
               // ha appena messo le mani.
-              const presoDaQui =
-                inComposizione.has(o.id) && o.avanzamento_device === idDispositivo()
-              inComposizione.delete(o.id)
+              const presoDaQui = daComposizione && o.avanzamento_device === idDispositivo()
               if (!presoDaQui && avvisoAttivo(avvisi.current, 'nuovo_ordine')) {
                 beep() // su iPad in primo piano il banner di sistema è soppresso
                 // STESSO NOME della notifica che manda il server (sw.js):

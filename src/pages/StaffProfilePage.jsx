@@ -12,11 +12,10 @@ import Icona, { ConIcona } from '../components/Icona.jsx'
 import ToggleRow from '../components/ToggleRow.jsx'
 import { contoVuotoSiChiude, ricordaContoVuotoSiChiude } from '../lib/impostazioniLocali.js'
 
-// COME LAVORA CHI È COLLEGATO, SU QUESTO DISPOSITIVO (REQ-ORD-025). Sta nel
-// profilo e non nelle impostazioni del locale per la stessa ragione degli
-// avvisi: è il modo di lavorare di una persona — a Flavio il conto svuotato
-// che si chiude da solo piace, a Vittorio no — e nelle impostazioni chi è
-// in sala non entra.
+// COME LAVORA CHI È COLLEGATO, SU QUESTO DISPOSITIVO (REQ-ORD-025; il perché
+// in impostazioniLocali.js, contoVuotoSiChiude). Sta nel profilo e non nelle
+// impostazioni del locale come gli avvisi: chi è in sala nelle impostazioni
+// non entra.
 function IlMioConto({ uid }) {
   const [siChiude, setSiChiude] = useState(() => contoVuotoSiChiude(uid))
   return (

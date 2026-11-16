@@ -45,7 +45,8 @@ import { righeDaRiscrivere, fattoreDaApplicare } from './lib-ghiaccio.js'
 const PROJECT = arg('project', 'tana-drink-test')
 const APPLY = flag('apply')
 const GHIACCIO = arg('ghiaccio')
-const OBIETTIVO = arg('a') != null ? Number(arg('a')) : null
+const A = arg('a')
+const OBIETTIVO = A != null ? Number(A) : null
 const DA = arg('da')
 
 const db = client(PROJECT, await accessToken())
@@ -80,7 +81,7 @@ if (OBIETTIVO == null) {
   process.exit(0)
 }
 if (!(OBIETTIVO > 0)) {
-  console.error(`[ghiaccio] Obiettivo non valido: ${arg('a')}`)
+  console.error(`[ghiaccio] Obiettivo non valido: ${A}`)
   process.exit(1)
 }
 if (attuale === OBIETTIVO) {

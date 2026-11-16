@@ -17,22 +17,18 @@
 //  lavoro, e diventa 1,5 U (0,25 € a 10 € per 60 U).
 // =====================================================================
 
-// L'articolo si dosa a U? Sì se è lui stesso a unità generiche, o se è un
-// pezzo che contiene unità (1 pz = 60 U).
-export function siDosaAU(item) {
-  const u = (x) => String(x || '').toUpperCase() === 'U'
-  if (u(item?.unit)) return true
-  return (item?.unit || 'pz') === 'pz' && u(item?.content_unit) && Number(item?.package_size) > 0
-}
+import { entryUnits, UNITA_GENERICA } from '../src/lib/inventory.js'
+
+// L'articolo si dosa a U? Lo dice la stessa regola che dà le unità
+// all'editor delle ricette: a U, o un pezzo che contiene U (1 pz = 60 U).
+// Una sola regola: se cambia in inventory.js, lo script la segue.
+export const siDosaAU = (item) => entryUnits(item).includes(UNITA_GENERICA)
 
 // `righe`: le righe di ricetta ({ inventory_item_id, unit }), nell'ordine in
 // cui stanno nel documento. `idsInU`: gli articoli che si dosano a U.
 // Torna gli INDICI delle righe da riscrivere in U: solo quelle in grammi, e
 // solo di quegli articoli. Il resto della riga, quantità compresa, resta.
-export function righeInGrammi(righe, idsInU) {
-  const out = []
-  ;(righe || []).forEach((r, i) => {
-    if (r && idsInU.has(r.inventory_item_id) && String(r.unit || '').toLowerCase() === 'g') out.push(i)
-  })
-  return out
-}
+export const righeInGrammi = (righe, idsInU) =>
+  (righe || []).flatMap((r, i) =>
+    r && idsInU.has(r.inventory_item_id) && String(r.unit || '').toLowerCase() === 'g' ? [i] : []
+  )

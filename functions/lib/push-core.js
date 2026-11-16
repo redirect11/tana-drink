@@ -195,20 +195,16 @@ function comandeDaFare(o) {
 // Una comanda SENZA RIGHE non è lavoro da fare: è quello che resta di un
 // drink battuto e tolto (BUG-159). Quelle senza l'elenco delle righe sono
 // le vecchie, e contano come prima.
-// Il filtro vale solo per il conto DOPO (`soloConRighe`). Sul conto di prima
-// una comanda svuotata è ancora quella che il banco conosce: si toglie il
-// Mojito e si mette un Gin Tonic nella stessa comanda, e confrontando un
-// «prima» senza di lei col «dopo» che la riporta il conto, annunciato ore
-// prima, risuonava come nuovo.
 const haRighe = (c) => !Array.isArray(c.items) || c.items.length > 0
 
 function idsDaFare(o, { soloConRighe = true } = {}) {
   if (!o) return []
   if (Array.isArray(o.comande)) {
-    return o.comande
-      .map((c, i) => [c, c?.id || `#${i}`])
-      .filter(([c]) => c && DA_FARE.includes(c.status) && (!soloConRighe || haRighe(c)))
-      .map(([, id]) => id)
+    // L'indice si prende prima del filtro: è l'id di riserva di una comanda
+    // vecchia, e deve restare lo stesso fra il conto di prima e quello dopo.
+    return o.comande.flatMap((c, i) =>
+      c && DA_FARE.includes(c.status) && (!soloConRighe || haRighe(c)) ? [c?.id || `#${i}`] : []
+    )
   }
   return DA_FARE.includes(o.status) ? ['#legacy'] : []
 }
@@ -243,6 +239,11 @@ function decideNewOrderStaffPush(before, after) {
   // Se prima il conto era fermo in attesa del pagamento obbligatorio, adesso
   // che e' saldato entra in coda TUTTO INSIEME: e' nuovo per il banco anche
   // se le comande sono le stesse di prima.
+  // Sul conto di PRIMA anche le comande svuotate (`soloConRighe: false`):
+  // una comanda svuotata è ancora quella che il banco conosce. Si toglie il
+  // Mojito e si mette un Gin Tonic nella stessa comanda, e confrontando un
+  // «prima» senza di lei col «dopo» che la riporta, il conto — annunciato
+  // ore prima — risuonava come nuovo.
   const prima = isPayableReceived(before) ? idsDaFare(before, { soloConRighe: false }) : []
   const nuove = idsDaFare(after).filter((id) => !prima.includes(id))
   if (nuove.length === 0) return null // niente di nuovo in coda

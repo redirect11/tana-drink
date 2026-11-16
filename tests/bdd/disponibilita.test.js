@@ -198,6 +198,13 @@ describe('Feature: «Oscura automaticamente» sul prodotto di magazzino', () => 
     expect(vociDaRicalcolare({ stock: 5, oscura_automaticamente: true }, { stock: 4, oscura_automaticamente: true }, {})).toBe(null)
   })
 
+  it('la spunta su un prodotto ben fornito non cambia nessuna voce: non si legge il catalogo', () => {
+    expect(vociDaRicalcolare({ stock: 8 }, { stock: 8, oscura_automaticamente: true }, {})).toBe(null)
+    // Con la soglia «in esaurimento», sotto la soglia di avviso conta.
+    const sottoAvviso = { stock: 2, low_threshold: 3 }
+    expect(vociDaRicalcolare(sottoAvviso, { ...sottoAvviso, oscura_automaticamente: true }, { menu_soglia_disponibilita: 'esaurimento' })).toBe('tutte')
+  })
+
   it('con la spunta si guardano tutte le voci che lo usano; senza, solo quelle che seguono le giacenze', () => {
     expect(vociDaRicalcolare({ stock: 1, oscura_automaticamente: true }, { stock: 0, oscura_automaticamente: true }, {})).toBe('tutte')
     expect(vociDaRicalcolare({ stock: 1 }, { stock: 0 }, {})).toBe('seguono')

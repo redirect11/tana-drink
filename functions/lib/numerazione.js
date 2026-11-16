@@ -84,7 +84,7 @@ function numeroDaRiassegnare(conto, fratelli) {
 // costruito dopo un deploy), si legge tutta la cassa come prima: un numero
 // doppio non risolto costa più di qualche lettura.
 async function numeroDaRiassegnareInCassa(conto, { stessoNumero, tuttaLaCassa }) {
-  let contesi
+  let contesi = null
   try {
     contesi = await stessoNumero()
   } catch (e) {
@@ -92,10 +92,9 @@ async function numeroDaRiassegnareInCassa(conto, { stessoNumero, tuttaLaCassa })
     // rileggerebbe tutta la cassa in silenzio e BUG-161 tornerebbe senza
     // che nessuno se ne accorga.
     console.warn('[numerazione] domanda per numero fallita, si legge tutta la cassa:', e?.message || e)
-    return numeroDaRiassegnare(conto, await tuttaLaCassa())
   }
   // Nessuno lo contende, o il primo è lui: non serve leggere altro.
-  if (numeroDaRiassegnare(conto, contesi) == null) return null
+  if (contesi && numeroDaRiassegnare(conto, contesi) == null) return null
   return numeroDaRiassegnare(conto, await tuttaLaCassa())
 }
 
