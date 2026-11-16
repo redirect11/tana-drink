@@ -11,7 +11,10 @@ export function catBtnStyle(active) {
     background: active
       ? 'var(--accent, #b47a3c)'
       : 'var(--tile-bg)',
-    color: active ? '#fff' : 'inherit',
+    // L'inchiostro sopra l'accento lo sceglie il tema (applyTheme): bianco
+    // su un accento scuro come il rosa della Tana, scuro su uno chiaro come
+    // il lime. Col bianco scritto a mano, su Lime era 1,4:1 (BUG-166).
+    color: active ? 'var(--accent-ink, #fff)' : 'inherit',
     fontWeight: active ? 700 : 400,
     // em (non rem): così il font segue la scala della colonna categorie
     // (--cats-scale su .posd-cats), crescendo/calando con la larghezza.

@@ -2,6 +2,18 @@
 
 ## 1.10.53-beta — in lavorazione
 
+### Aspetto
+
+- Col tema «Lime» la categoria scelta nella colonna del conto e il numero
+  degli ordinati sulle card hanno il testo scuro: prima erano bianchi sul
+  lime e non si leggevano. Con la Tana non cambia niente (BUG-166).
+
+### Demo
+
+- Il locale della demo si chiama «Bancone 21» invece di «Bar Demo»: un
+  nome inventato ma credibile, per le schermate del prodotto
+  (REQ-FLOTTA-033).
+
 ## 1.10.52-beta — 17/11/2026 (test)
 
 ### Aspetto

@@ -161,4 +161,31 @@ describe('l\'inchiostro sopra l\'accento', () => {
     )
     expect(bianche.map((r) => r.split('{')[0].trim())).toEqual([])
   })
+
+  // BUG-166 (Daniele, 17/11/2026: «il bianco sul verde lime che abbiamo
+  // scelto non è il massimo»): il foglio era a posto, ma due stili scritti
+  // nei componenti avevano ancora il bianco fisso sull'accento — la
+  // categoria scelta nel conto e il numero sulle card, 1,4:1 sul lime.
+  it('anche negli stili dei componenti l\'accento pieno prende l\'inchiostro del tema', async () => {
+    const { catBtnStyle } = await import('../../src/lib/posStyles.js')
+    expect(catBtnStyle(true).color).toBe('var(--accent-ink, #fff)')
+    expect(catBtnStyle(false).color).toBe('inherit')
+
+    const { readFileSync, readdirSync, statSync } = await import('node:fs')
+    const { join } = await import('node:path')
+    const file = []
+    const giro = (d) => {
+      for (const n of readdirSync(d)) {
+        const p = join(d, n)
+        if (statSync(p).isDirectory()) giro(p)
+        else if (/\.(jsx?|tsx?)$/.test(n)) file.push(p)
+      }
+    }
+    giro('src')
+    // Uno sfondo d'accento seguito, entro un paio di righe, da un colore
+    // bianco scritto a mano (anche dentro un ternario).
+    const schema = /background:\s*'var\(--accent(-2)?[,)][^']*'[^\n]*\n?[^\n]*\n?[^\n]*color:\s*[^,\n]*'(#fff|#ffffff|white)'/
+    const colpevoli = file.filter((f) => schema.test(readFileSync(f, 'utf8')))
+    expect(colpevoli).toEqual([])
+  })
 })

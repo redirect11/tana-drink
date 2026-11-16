@@ -6653,12 +6653,13 @@ bugs:
       del foglio usano già.
       CORREZIONE: i due stili prendono `var(--accent-ink, #fff)`. Con la
       Tana non cambia niente; con Lime e con ogni accento chiaro il testo
-      diventa scuro.
+      diventa scuro. Il test del tema, che controllava già il foglio, ora
+      controlla anche gli stili scritti nei componenti.
     in_produzione: false
-    status: todo
+    status: fixed
     generate_issue: true
     labels: [bug, ui]
     severity: lieve
     priority: P1
     requisiti: [REQ-UI-033]
-    test_cases: []
+    test_cases: [tests/unit/temaLime.test.js]
