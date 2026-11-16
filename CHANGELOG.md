@@ -2,6 +2,13 @@
 
 ## 1.10.53-beta — in lavorazione
 
+### Sicurezza e costi
+
+- Le foto dei prodotti e gli allegati delle fatture si caricano solo se la
+  licenza del locale li comprende: le foto non sul piano Free, gli allegati
+  col modulo dello scadenzario o del magazzino. Vederli e cancellarli resta
+  sempre possibile (REQ-SIC-006).
+
 ### Aspetto
 
 - Col tema «Lime» la categoria scelta nella colonna del conto e il numero

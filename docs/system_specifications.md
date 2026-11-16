@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 307 | fatto e coperto dai test |
+| ✅ | 308 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 9 | fatto a metà |
-| ⬜ | 38 | da fare |
+| ⬜ | 37 | da fare |
 | 🗑 | 8 | non più valido |
 
-**377 voci** in tutto. **331** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **38** sono lavori
+**377 voci** in tutto. **332** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **37** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **17** difetti noti sono ancora aperti.
 
@@ -55,7 +55,7 @@ come «vero oggi», non come «garantito».
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
 | [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 14 | 2 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
-| [Sicurezza](#sicurezza) | 3 | 3 | Regole di accesso, App Check, e cosa protegge cosa. |
+| [Sicurezza](#sicurezza) | 4 | 2 | Regole di accesso, App Check, e cosa protegge cosa. |
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | 6 | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
@@ -3250,6 +3250,18 @@ L'utente, 30/10/2026: «i font per questioni sulla privacy ... devono essere sem
 
 **Dove**: `src/main.jsx (@fontsource), index.html, public/privacy-policy.html, public/cookie-policy.html, package.json (gsap, @fontsource)` · **Lo dimostrano**: `tests/unit/risorseEsterne.test.js`
 
+#### REQ-SIC-006 — Lo Storage segue la licenza: le foto dove il piano le comprende, gli allegati delle fatture col loro modulo
+
+Daniele, 17/11/2026, alla domanda della regia «Le regole di Storage leggono la licenza?»: sì. Col Free col profilo completo (REQ-FLOTTA-122 della regia) lo Storage c'è anche dove il piano non lo comprende: l'app nasconde le foto sul Free (limiti.js, `fotoConsentite`), ma le regole di Storage non leggevano la licenza, e un admin di un Free poteva caricare foto chiamando lo Storage a mano, a spese di Stonebit. ORA le regole di Storage leggono `licenza/attuale` da Firestore, con la stessa domanda delle regole di Firestore (licenza valida, scaduta, al Free, moduli): le foto dei prodotti si caricano solo con una licenza valida e non Free; gli allegati delle fatture solo col modulo `scadenzario` o `magazzino`, come la loro collezione. Cancellare e leggere non chiedono la licenza: un locale fermo deve poter fare pulizia e vedere i suoi documenti.
+
+IL PREZZO, INFRASTRUTTURA: le regole che leggono Firestore dallo Storage vogliono il ruolo `roles/firebaserules.firestoreServiceAgent` al service agent dello Storage del progetto (service-<numero>@gcp-sa-firebasestorage.iam.gserviceaccount.com). Senza, la lettura fallisce e nessuno carica più foto. Va dato prima del deploy su tana-drink-test, tana-drink (col via libera di Daniele) e nei locali della flotta (il Terraform della regia).
+
+LE PROVE IN CI: Daniele ha detto sì ad accendere lo Storage nel job delle regole (17/11/2026); la riga del workflow, `--only firestore,storage` in .github/workflows/test.yml, la cambia lui (a me è negato). Finché manca, in CI le prove di storage.rules si saltano dicendolo; in locale girano.
+
+FATTO (1.10.53-beta): storage.rules legge la licenza (licenzaValida, alFree, modulo, fotoConsentite); tests/regole/storage.test.js la prova con gli emulatori di Storage e Firestore insieme, nel progetto degli emulatori.
+
+**Dove**: `storage.rules, tests/regole/storage.test.js, .github/workflows/test.yml (job delle regole), IAM dei progetti (service agent dello Storage)` · **Serve**: [UR-015](#ur-015--il-piano-del-locale-decide-cosa-si-usa-e-chi-ha-tutto-non-se-ne-accorge) · **Lo dimostrano**: `tests/regole/storage.test.js`
+
 ### Si lavora anche senza rete
 
 Cosa continua a funzionare quando la rete non c’è, e come lo si vede.
@@ -4807,14 +4819,6 @@ Oggi test gira senza App Check e con la chiave reCAPTCHA della produzione, che p
 Richiesta della regia (drink-regia REQ-FLOTTA-019), 02/11/2026. L'utente: «incarica un agente di verificare la sicurezza della demo», e letti i risultati, «dobbiamo risolvere anche tutte queste cose». Il disegno della modalità demo regge (nessuna demo nel pacchetto della Tana, nessuna richiesta verso Firebase, nessun dato personale nei dati di prova), ma: genera-cliente.mjs rifiuta la cartella «demo» prima di vedere che esiste, e la demo vecchia (un'app vera) restava online; la demo chiama la regia di produzione (presentazione, catalogo) a ogni apertura; con la configurazione vera e disableNetwork che fallisce in silenzio la rete resterebbe accesa; l'informativa privacy della Tana finisce in ogni build, demo e locali della flotta; nel pacchetto della demo restano nomi, foto e un fornitore della Tana; i link dei social accettano javascript:; la stampante finta non scapa il logo. Il dettaglio, coi file e le righe, in docs/sicurezza-demo.md. La regia ha già messo la sua difesa (PR #69): configurazione finta, niente indirizzo della regia, CSP con connect-src 'self', Storage chiuso.
 
 **Dove**: `scripts/genera-cliente.mjs, src/lib/funzioniRegia.js, src/lib/presentazione.js, src/App.jsx, src/porte/configurazione.js, src/lib/firebaseClient.js, public/privacy-policy.html, public/cookie-policy.html, clienti/pluginCliente.js, src/demo/, src/lib/venue.js, src/lib/stampanteFinta.js, docs/sicurezza-demo.md` · **Serve**: [UR-014](#ur-014--la-demo-che-si-mostra-a-un-locale-nuovo-non-espone-niente-di-un-locale-vero)
-
-#### REQ-SIC-006 — Lo Storage segue la licenza: le foto dove il piano le comprende, gli allegati delle fatture col loro modulo
-
-Daniele, 17/11/2026, alla domanda della regia «Le regole di Storage leggono la licenza?»: sì. Col Free col profilo completo (REQ-FLOTTA-122 della regia) lo Storage c'è anche dove il piano non lo comprende: l'app nasconde le foto sul Free (limiti.js, `fotoConsentite`), ma le regole di Storage non leggevano la licenza, e un admin di un Free poteva caricare foto chiamando lo Storage a mano, a spese di Stonebit. ORA le regole di Storage leggono `licenza/attuale` da Firestore, con la stessa domanda delle regole di Firestore (licenza valida, scaduta, al Free, moduli): le foto dei prodotti si caricano solo con una licenza valida e non Free; gli allegati delle fatture solo col modulo `scadenzario` o `magazzino`, come la loro collezione. Cancellare e leggere non chiedono la licenza: un locale fermo deve poter fare pulizia e vedere i suoi documenti.
-
-IL PREZZO, INFRASTRUTTURA: le regole che leggono Firestore dallo Storage vogliono il ruolo `roles/firebaserules.firestoreServiceAgent` al service agent dello Storage del progetto (service-<numero>@gcp-sa-firebasestorage.iam.gserviceaccount.com). Senza, la lettura fallisce e nessuno carica più foto. Va dato prima del deploy su tana-drink-test, tana-drink (col via libera di Daniele) e nei locali della flotta (il Terraform della regia). Le prove girano anche in CI: il job delle regole accende anche lo Storage (Daniele, 17/11/2026: sì).
-
-**Dove**: `storage.rules, tests/regole/storage.test.js, .github/workflows/test.yml (job delle regole), IAM dei progetti (service agent dello Storage)` · **Serve**: [UR-015](#ur-015--il-piano-del-locale-decide-cosa-si-usa-e-chi-ha-tutto-non-se-ne-accorge)
 
 ### Intelligenza artificiale
 
