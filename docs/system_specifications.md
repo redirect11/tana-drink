@@ -5160,6 +5160,8 @@ Daniele, 16/11/2026: «tempo di lavorazione quando è presente in ricetta va cal
 
 CORREZIONE: uno script riscrive in U quelle righe, con la stessa quantità («1,5 g» → 1,5 U, 0,25 €). Prima sul test, poi in produzione col via libera e dopo il backup. Da quel momento quelle righe scaricano anche il magazzino (U/60 di pezzo per drink), come tutto quello che sta in magazzino dal 12/09/2026.
 
+SUL TEST (16/11/2026): riscritte 57 ricette, tutte del «Tempo di Lavorazione»; rilanciato, lo script non trova più niente. In produzione: da fare, col via libera.
+
 **Dove**: `dati: drinks.recipe_items del «Tempo di Lavorazione»; scripts/lavorazione-in-u.js, scripts/lib-lavorazione.js` · **Tradisce**: [REQ-MENU-034](#req-menu-034--ogni-riga-della-ricetta-mostra-quanto-costa)
 
 ## Non più valido

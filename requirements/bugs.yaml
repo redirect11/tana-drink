@@ -6584,6 +6584,9 @@ bugs:
       produzione col via libera e dopo il backup. Da quel momento quelle
       righe scaricano anche il magazzino (U/60 di pezzo per drink), come
       tutto quello che sta in magazzino dal 12/09/2026.
+      SUL TEST (16/11/2026): riscritte 57 ricette, tutte del «Tempo di
+      Lavorazione»; rilanciato, lo script non trova più niente. In
+      produzione: da fare, col via libera.
     in_produzione: true
     status: todo
     generate_issue: true
@@ -6591,4 +6594,4 @@ bugs:
     severity: media
     priority: P2
     requisiti: [REQ-MENU-034]
-    test_cases: []
+    test_cases: [tests/unit/lavorazioneInU.test.js]
