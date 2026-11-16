@@ -15877,11 +15877,15 @@ requirements:
       CRITERIO: la build della demo si chiama «Bancone 21» nel titolo
       della pagina e nel manifest (nome corto «Bancone 21»), e le frasi
       che nominano il locale dicono «al Bancone 21».
-    status: todo
+      COME È FATTO (17/11/2026): clienti/demo/venue.json (nome, nome corto,
+      «al Bancone 21», la descrizione del manifest); il logo della demo
+      resta quello neutro di prima.
+    status: implemented
     generate_issue: true
     labels: [flotta]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/clienteBuild.test.js
 
   - id: REQ-PAG-013
     title: "Lo sconto cade sui prodotti che si stanno riscuotendo, e gli sconti si accumulano"

@@ -128,7 +128,7 @@ describe('index.html e manifest per il cliente', () => {
     const html = readFileSync('index.html', 'utf8')
     expect(html).toMatch(/<title>%VENUE_NAME%<\/title>/)
     const pieno = htmlPerCliente(html, demo)
-    expect(pieno).toMatch(/<title>Bar Demo<\/title>/)
+    expect(pieno).toMatch(/<title>Bancone 21<\/title>/)
     expect(pieno).not.toMatch(/%VENUE_/)
     // Il testo non rompe l'HTML.
     expect(htmlPerCliente('<title>%VENUE_NAME%</title>', { venue_name: 'A & "B"' })).toBe('<title>A &amp; &quot;B&quot;</title>')
@@ -136,9 +136,9 @@ describe('index.html e manifest per il cliente', () => {
 
   it('il manifest prende nome, nome corto, descrizione e colori', () => {
     const m = manifestPerCliente(modello, demo)
-    expect(m.name).toBe('Bar Demo')
-    expect(m.short_name).toBe('Demo')
-    expect(m.description).toBe('Ordina i tuoi drink al Bar Demo')
+    expect(m.name).toBe('Bancone 21')
+    expect(m.short_name).toBe('Bancone 21')
+    expect(m.description).toBe('Ordina i tuoi drink al Bancone 21')
     expect(m.icons).toEqual(modello.icons)
     expect(JSON.stringify(m)).not.toMatch(/%VENUE_/)
   })
