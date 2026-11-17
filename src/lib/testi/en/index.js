@@ -17,7 +17,10 @@
 
 import comune from './comune.js'
 import profilo from './profilo.js'
+import coda from './coda.js'
+import conto from './conto.js'
+import cassa from './cassa.js'
 
-export const AREE = { comune, profilo }
+export const AREE = { comune, profilo, coda, conto, cassa }
 
 export default Object.assign({}, ...Object.values(AREE))
