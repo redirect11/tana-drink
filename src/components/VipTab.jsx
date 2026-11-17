@@ -5,18 +5,20 @@ import { totalOutstanding, expiryLabel, isVoucherExpired } from '../lib/vouchers
 import ConfirmDialog from './ConfirmDialog.jsx'
 import Icona from './Icona.jsx'
 import { useTestoConIcona } from '../lib/temaIcone.js'
+import { tr, daTradurre, trSegnato, useLingua } from '../lib/lingua.js'
 
 const EXPIRY_OPTS = [
-  ['none', 'Nessuna'],
-  ['daily', 'Giornaliera'],
-  ['monthly', 'Mensile'],
-  ['yearly', 'Annuale'],
-  ['date', 'Data libera'],
+  ['none', daTradurre('scadenza|Nessuna')],
+  ['daily', daTradurre('scadenza|Giornaliera')],
+  ['monthly', daTradurre('scadenza|Mensile')],
+  ['yearly', daTradurre('scadenza|Annuale')],
+  ['date', daTradurre('scadenza|Data libera')],
 ]
 
 // Sezione VIP: buoni (credito ricaricabile) associati a una persona.
 // Si creano, si ricaricano e si spendono al pagamento (metodo Buono).
 export default function VipTab({ embedded = false }) {
+  useLingua()
   const testoConIcona = useTestoConIcona()
   const [vouchers, setVouchers] = useState([])
   const [error, setError] = useState(null)
@@ -74,35 +76,35 @@ export default function VipTab({ embedded = false }) {
 
   return (
     <div>
-      {!embedded && <h2><Icona nome="buono" gruppo="tasti" /> Buoni VIP</h2>}
-      {error && <div className="banner">Errore: {error}</div>}
+      {!embedded && <h2><Icona nome="buono" gruppo="tasti" /> {tr('Buoni VIP')}</h2>}
+      {error && <div className="banner">{tr('Errore: {messaggio}', { messaggio: error })}</div>}
 
       <div className="chip" style={{ width: '100%', justifyContent: 'center', marginBottom: 8, cursor: 'default' }}>
-        <Icona nome="carta" gruppo="tasti" />{' '}Credito in circolazione <strong>{formatPrice(outstanding)}</strong>
+        <Icona nome="carta" gruppo="tasti" />{' '}{tr('Credito in circolazione')} <strong>{formatPrice(outstanding)}</strong>
       </div>
 
       {/* Nuovo buono */}
       <form className="card" onSubmit={crea}>
-        <strong>Nuovo buono</strong>
+        <strong>{tr('Nuovo buono')}</strong>
         <div className="grid-2" style={{ marginTop: 8 }}>
           <div>
-            <label htmlFor="vip-name">Intestatario *</label>
-            <input id="vip-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome" required />
+            <label htmlFor="vip-name">{tr('Intestatario *')}</label>
+            <input id="vip-name" value={name} onChange={(e) => setName(e.target.value)} placeholder={tr('Nome')} required />
           </div>
           <div>
-            <label htmlFor="vip-amount">Credito iniziale (€)</label>
-            <input id="vip-amount" type="number" min="0" step="0.5" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Es. 50" />
+            <label htmlFor="vip-amount">{tr('Credito iniziale (€)')}</label>
+            <input id="vip-amount" type="number" min="0" step="0.5" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder={tr('Es. 50')} />
           </div>
         </div>
-        <label htmlFor="vip-note" style={{ marginTop: 6, display: 'block' }}>Note</label>
-        <input id="vip-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Es. regalo, staff…" />
+        <label htmlFor="vip-note" style={{ marginTop: 6, display: 'block' }}>{tr('Note')}</label>
+        <input id="vip-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder={tr('Es. regalo, staff…')} />
 
         {/* Scadenza */}
-        <label htmlFor="vip-expiry" style={{ marginTop: 8, display: 'block' }}>Scadenza</label>
+        <label htmlFor="vip-expiry" style={{ marginTop: 8, display: 'block' }}>{tr('Scadenza')}</label>
         <div className="row" style={{ gap: 8, alignItems: 'center' }}>
           <select id="vip-expiry" value={expiryType} onChange={(e) => setExpiryType(e.target.value)} style={{ flex: 1 }}>
             {EXPIRY_OPTS.map(([v, l]) => (
-              <option key={v} value={v}>{l}</option>
+              <option key={v} value={v}>{trSegnato(l)}</option>
             ))}
           </select>
           {expiryType === 'date' && (
@@ -112,25 +114,25 @@ export default function VipTab({ embedded = false }) {
         {(expiryType === 'daily' || expiryType === 'monthly' || expiryType === 'yearly') && (
           <label className="row" style={{ marginTop: 6, gap: 8, alignItems: 'center' }}>
             <input type="checkbox" style={{ width: 'auto' }} checked={autoRenew} onChange={(e) => setAutoRenew(e.target.checked)} />
-            <span className="small">Rinnovo automatico (si estende a ogni nuovo periodo)</span>
+            <span className="small">{tr('Rinnovo automatico (si estende a ogni nuovo periodo)')}</span>
           </label>
         )}
 
         <button className="btn block" type="submit" style={{ marginTop: 10 }} disabled={!name.trim()}>
-          Crea buono
+          {tr('Crea buono')}
         </button>
       </form>
 
       <input
         type="search"
-        placeholder={testoConIcona('cerca', 'Cerca intestatario…')}
+        placeholder={testoConIcona('cerca', tr('Cerca intestatario…'))}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         style={{ width: '100%', margin: '10px 0' }}
       />
 
       {filtered.length === 0 && (
-        <p className="muted">Nessun buono{search ? ' trovato' : ''}.</p>
+        <p className="muted">{search ? tr('Nessun buono trovato.') : tr('Nessun buono.')}</p>
       )}
 
       {filtered.map((v) => {
@@ -146,24 +148,26 @@ export default function VipTab({ embedded = false }) {
             <Icona nome="giorno" gruppo="tasti" />{' '}{expiryLabel(v)}
           </div>
           <div className="muted small">
-            Caricato in tutto: {formatPrice(v.initial || 0)}
+            {tr('Caricato in tutto: {importo}', { importo: formatPrice(v.initial || 0) })}
             {(v.movements || []).some((m) => m.type === 'uso') &&
-              ` · usato: ${formatPrice((v.movements || []).filter((m) => m.type === 'uso').reduce((s, m) => s - m.amount, 0))}`}
+              ` · ${tr('usato: {importo}', {
+                importo: formatPrice((v.movements || []).filter((m) => m.type === 'uso').reduce((s, m) => s - m.amount, 0)),
+              })}`}
           </div>
           <div className="row" style={{ gap: 6, marginTop: 8, alignItems: 'center' }}>
             <input
               type="number"
               min="0"
               step="0.5"
-              placeholder="Ricarica €"
+              placeholder={tr('Ricarica €')}
               value={topUp[v.id] ?? ''}
               onChange={(e) => setTopUp((t) => ({ ...t, [v.id]: e.target.value }))}
               style={{ width: 110 }}
             />
-            <button className="btn small" onClick={() => ricarica(v)}><Icona nome="importa" gruppo="tasti" /> Ricarica</button>
+            <button className="btn small" onClick={() => ricarica(v)}><Icona nome="importa" gruppo="tasti" /> {tr('buono|Ricarica')}</button>
             <span className="grow" />
             {Number(v.balance) === 0 && (
-              <button className="btn ghost small" onClick={() => setConfirmDel(v)} aria-label="Elimina" title="Elimina"><Icona nome="elimina" gruppo="tasti" /></button>
+              <button className="btn ghost small" onClick={() => setConfirmDel(v)} aria-label={tr('Elimina')} title={tr('Elimina')}><Icona nome="elimina" gruppo="tasti" /></button>
             )}
           </div>
         </div>
@@ -173,9 +177,12 @@ export default function VipTab({ embedded = false }) {
       {confirmDel && (
         <ConfirmDialog
           icona="elimina"
-          title="Eliminare il buono?"
-          message={`Il buono di ${confirmDel.holder_name} (saldo ${formatPrice(confirmDel.balance)}) verrà eliminato.`}
-          confirmLabel="Elimina"
+          title={tr('Eliminare il buono?')}
+          message={tr('Il buono di {nome} (saldo {importo}) verrà eliminato.', {
+            nome: confirmDel.holder_name,
+            importo: formatPrice(confirmDel.balance),
+          })}
+          confirmLabel={tr('Elimina')}
           danger
           onCancel={() => setConfirmDel(null)}
           onConfirm={() => {

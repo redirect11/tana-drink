@@ -28,7 +28,7 @@ import { licenzaDi } from './licenzaInVigore.js'
 import { leggi, scrivi } from './impostazioniLocali.js'
 // Solo dentro una funzione: funzioniRegia.js legge PROGETTI_REGIA da qui.
 import { erroreDellaRegia } from './funzioniRegia.js'
-import { tr } from './lingua.js'
+import { formatoAttivo, tr } from './lingua.js'
 
 const MODALITA = Object.freeze({ OBBLIGATORI: 'obbligatori', A_SCELTA: 'a_scelta' })
 export const SCELTE = Object.freeze({ AGGIORNA: 'aggiorna', SALTA: 'salta' })
@@ -225,7 +225,7 @@ export function dataAvviso(dal) {
   if (!dal) return ''
   const d = new Date(dal)
   if (Number.isNaN(d.getTime())) return ''
-  return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })
+  return d.toLocaleDateString(formatoAttivo(), { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
 // La versione senza la «v», per i titoli: «Versione 1.11.0».

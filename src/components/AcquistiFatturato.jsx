@@ -18,6 +18,7 @@ import { BloccoMacro, BloccoTotale } from './TabellaMacro.jsx'
 import Didascalia from './Didascalia.jsx'
 import GruppoChip from './GruppoChip.jsx'
 import Soffietto from './Soffietto.jsx'
+import { tr, daTradurre, trSegnato } from '../lib/lingua.js'
 
 // BILANCIO → ACQUISTI × FATTURATO (REQ-MAG-022): il foglio «RAPPORTI
 // ACQUISTI» di Flavio, per anno, mese, settimana o giorno. Il conto sta in
@@ -26,15 +27,19 @@ import Soffietto from './Soffietto.jsx'
 
 // Le righe nell'ordine del foglio: ACQUISTI, FATTURATO, UTILE, RAPPORTO.
 const RIGHE = [
-  { campo: 'costo', label: 'Acquisti', cls: 'r-cos' },
-  { campo: 'incasso', label: 'Fatturato', cls: 'r-inc' },
-  { campo: 'margine', label: 'Utile', cls: 'r-mar' },
-  { campo: 'rapporto', label: 'Fat/Acq', cls: 'r-rap' },
+  { campo: 'costo', label: daTradurre('Acquisti'), cls: 'r-cos' },
+  { campo: 'incasso', label: daTradurre('Fatturato'), cls: 'r-inc' },
+  { campo: 'margine', label: daTradurre('Utile'), cls: 'r-mar' },
+  { campo: 'rapporto', label: daTradurre('Fat/Acq'), cls: 'r-rap' },
 ]
 const IVA = [
-  { id: true, label: 'Lordo IVA' },
-  { id: false, label: 'Netto IVA' },
+  { id: true, label: daTradurre('Lordo IVA') },
+  { id: false, label: daTradurre('Netto IVA') },
 ]
+// Le etichette delle scelte nella lingua in uso, a ogni disegno. Quelle di
+// VISTE vengono da lib/periodiBilancio.js: `trSegnato` le traduce quando
+// sono segnate lì, e intanto le lascia come sono.
+const tradotte = (opzioni) => opzioni.map((o) => ({ ...o, label: trSegnato(o.label) }))
 
 export default function AcquistiFatturato() {
   // Le impostazioni ricordate, non quelle di partenza: con un cambio di
@@ -117,46 +122,48 @@ export default function AcquistiFatturato() {
     })
   }, [pronto, ordini, periodo, fissi, colonne, cutoff, settings.sale_vat, lordo])
 
-  if (error) return <div className="banner">Errore: {error}</div>
+  if (error) return <div className="banner">{tr('Errore: {errore}', { errore: error })}</div>
 
   return (
     <div>
       <div className="row between" style={{ alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
-        <GruppoChip etichetta="Periodo della tabella" opzioni={VISTE} valore={vista} scegli={setVista} />
-        <GruppoChip etichetta="IVA" opzioni={IVA} valore={lordo} scegli={setLordo} />
+        <GruppoChip etichetta={tr('Periodo della tabella')} opzioni={tradotte(VISTE)} valore={vista} scegli={setVista} />
+        <GruppoChip etichetta={tr('IVA')} opzioni={tradotte(IVA)} valore={lordo} scegli={setLordo} />
       </div>
 
       <div className="row between" style={{ alignItems: 'center', marginBottom: 10 }}>
-        <button className="btn ghost small" aria-label="Periodo precedente" onClick={() => setGiorno((g) => spostaGiorno(vista, g, -1))}>
+        <button className="btn ghost small" aria-label={tr('Periodo precedente')} onClick={() => setGiorno((g) => spostaGiorno(vista, g, -1))}>
           ←
         </button>
         <strong style={{ fontSize: '1.1rem' }}>{nomeDelPeriodo(vista, giorno)}</strong>
-        <button className="btn ghost small" aria-label="Periodo successivo" onClick={() => setGiorno((g) => spostaGiorno(vista, g, 1))}>
+        <button className="btn ghost small" aria-label={tr('Periodo successivo')} onClick={() => setGiorno((g) => spostaGiorno(vista, g, 1))}>
           →
         </button>
       </div>
 
       <Spiegazione lordo={lordo} saleVat={settings.sale_vat} />
 
-      {!report && <div className="empty">Calcolo acquisti e fatturato…</div>}
+      {!report && <div className="empty">{tr('Calcolo acquisti e fatturato…')}</div>}
 
       {report && fissi.macros.length === 0 && (
         <div className="empty">
-          Nessuna macro-categoria: si creano in <strong>Magazzino → Macro-categorie</strong>, con la quota di
-          ogni prodotto e di ogni voce del menù.
+          {tr(
+            'Nessuna macro-categoria: si creano in {dove}, con la quota di ogni prodotto e di ogni voce del menù.',
+            { dove: tr('Magazzino → Macro-categorie') }
+          )}
         </div>
       )}
 
       {report && fissi.macros.length > 0 && (
         <>
           {report.rows.map((r) => (
-            <BloccoMacro key={r.id} row={r} colonne={colonne} righe={RIGHE} rapportoLabel="Fat/Acq del periodo" />
+            <BloccoMacro key={r.id} row={r} colonne={colonne} righe={RIGHE} rapportoLabel={tr('Fat/Acq del periodo')} />
           ))}
           <BloccoTotale
             report={report}
             colonne={colonne}
             righe={RIGHE}
-            incidenzaLabel={VISTE.find((v) => v.id === vista).incidenza}
+            incidenzaLabel={trSegnato(VISTE.find((v) => v.id === vista).incidenza)}
           />
         </>
       )}
@@ -169,45 +176,42 @@ export default function AcquistiFatturato() {
 // registro del gestionale (DESIGN.md, guardrail 3): la legge il gestore.
 function Spiegazione({ lordo, saleVat }) {
   return (
-    <Soffietto titolo="Cosa misura questa tabella">
+    <Soffietto titolo={tr('Cosa misura questa tabella')}>
       <Didascalia>
-        <strong>Quanto si spende in merce rispetto a quanto si fattura.</strong> È il foglio «Rapporti acquisti»:
-        per ogni macro-categoria il fatturato del periodo e la merce entrata nello stesso periodo — consegne
-        degli ordini fornitore alla data di consegna e carichi diretti — ripartita secondo le quote dei
-        prodotti. Il fatturato è l’incassato delle voci di menù, sconti compresi, secondo le quote delle voci.
+        <strong>{tr('Quanto si spende in merce rispetto a quanto si fattura.')}</strong>{' '}
+        {tr(
+          'È il foglio «Rapporti acquisti»: per ogni macro-categoria il fatturato del periodo e la merce entrata nello stesso periodo — consegne degli ordini fornitore alla data di consegna e carichi diretti — ripartita secondo le quote dei prodotti. Il fatturato è l’incassato delle voci di menù, sconti compresi, secondo le quote delle voci.'
+        )}
       </Didascalia>
       <Didascalia>
-        <strong>La data di un acquisto è quella in cui la merce entra</strong>: il giorno della consegna
-        dell’ordine o del carico, non quello del pagamento. Una fattura pagata a trenta giorni pesa sul mese
-        in cui la merce è arrivata.
+        <strong>{tr('La data di un acquisto è quella in cui la merce entra')}</strong>:{' '}
+        {tr(
+          'il giorno della consegna dell’ordine o del carico, non quello del pagamento. Una fattura pagata a trenta giorni pesa sul mese in cui la merce è arrivata.'
+        )}
       </Didascalia>
       <Didascalia>
-        <strong>Differenza con «Venduto × Incassato».</strong> Qui conta la merce <strong>entrata</strong>,
-        quando entra, venduta o no; là il costo della merce <strong>venduta</strong>, dalle ricette. Trenta casse
-        di birra comprate a giugno per l’estate qui pesano tutte su giugno, che sembra in perdita, e luglio
-        sembra in forte attivo; là pesano solo le birre vendute, mese per mese. Per il margine di ciò che si
-        vende: «Venduto × Incassato». Per quanto esce per comprare: questa.
+        <strong>{tr('Differenza con «Venduto × Incassato».')}</strong>{' '}
+        {tr(
+          'Qui conta la merce entrata, quando entra, venduta o no; là il costo della merce venduta, dalle ricette. Trenta casse di birra comprate a giugno per l’estate qui pesano tutte su giugno, che sembra in perdita, e luglio sembra in forte attivo; là pesano solo le birre vendute, mese per mese. Per il margine di ciò che si vende: «Venduto × Incassato». Per quanto esce per comprare: questa.'
+        )}
       </Didascalia>
       <Didascalia>
-        <strong>Utile</strong>: fatturato − acquisti. <strong>Fat/Acq</strong>: fatturato ÷ acquisti.{' '}
-        <strong>Incidenza</strong>: quota dell’utile della macro sulla somma degli utili della colonna. In
-        fondo, l’incidenza di ogni colonna sul fatturato del periodo.
+        {tr(
+          'Utile: fatturato − acquisti. Fat/Acq: fatturato ÷ acquisti. Incidenza: quota dell’utile della macro sulla somma degli utili della colonna. In fondo, l’incidenza di ogni colonna sul fatturato del periodo.'
+        )}
       </Didascalia>
       <Didascalia>
-        {lordo ? (
-          <>
-            Valori <strong>al lordo dell’IVA</strong>, come il foglio di analisi: incassato così com’è, acquisti
-            con l’IVA del prodotto.
-          </>
-        ) : (
-          <>
-            Valori <strong>al netto dell’IVA</strong>: incassato scorporato al {saleVat}% (o all’aliquota della
-            voce), acquisti al costo senza IVA.
-          </>
-        )}{' '}
-        Gli acquisti ci sono da quando ordini fornitore e carichi passano dall’app (agosto 2026): per gli anni
-        di Tiller c’è il fatturato ma non gli acquisti, e l’utile di quei mesi non è un utile. Lo storico del
-        foglio non è importato.
+        {lordo
+          ? tr(
+              'Valori al lordo dell’IVA, come il foglio di analisi: incassato così com’è, acquisti con l’IVA del prodotto.'
+            )
+          : tr(
+              'Valori al netto dell’IVA: incassato scorporato al {iva}% (o all’aliquota della voce), acquisti al costo senza IVA.',
+              { iva: saleVat }
+            )}{' '}
+        {tr(
+          'Gli acquisti ci sono da quando ordini fornitore e carichi passano dall’app (agosto 2026): per gli anni di Tiller c’è il fatturato ma non gli acquisti, e l’utile di quei mesi non è un utile. Lo storico del foglio non è importato.'
+        )}
       </Didascalia>
     </Soffietto>
   )

@@ -37,12 +37,17 @@ import CampoDataOra from './CampoDataOra.jsx'
 import { fetchGiorniDiServizio } from '../lib/giorniDiServizio.js'
 import { nelPeriodo } from '../lib/magazzinoPeriodo.js'
 import Icona from './Icona.jsx'
+import { tr, daTradurre, trSegnato, formatoAttivo } from '../lib/lingua.js'
 
 const fmtMin = (m) => (m == null ? '—' : `${Math.round(m * 10) / 10} min`)
-// Prezzo compatto per le etichette dei grafici (niente centesimi).
+// Prezzo compatto per le etichette dei grafici (niente centesimi). Resta
+// all'italiana anche in inglese, come formatPrice (REQ-UI-039).
 const fmtShort = (v) => `${Math.round(v).toLocaleString('it-IT', { useGrouping: 'always' })} €`
+// Le due forme si scrivono intere: l'inglese fa il plurale in un altro modo.
+const quantiOrdini = (n) => (n === 1 ? tr('1 ordine') : tr('{n} ordini', { n }))
+const quanteComande = (n) => (n === 1 ? tr('1 comanda') : tr('{n} comande', { n }))
 const fmtQty = (u) =>
-  u.unit === 'pz' ? `${u.qty} pz` : u.qty >= 1000 ? `${(u.qty / 1000).toFixed(1)} L` : `${Math.round(u.qty)} ml`
+  u.unit === 'pz' ? tr('{n} pz', { n: u.qty }) : u.qty >= 1000 ? `${(u.qty / 1000).toFixed(1)} L` : `${Math.round(u.qty)} ml`
 
 // Statistiche del locale, per GIORNATA COMMERCIALE o per SERATA (la finestra
 // di una chiusura di cassa).
@@ -91,14 +96,15 @@ const giorniFra = (dal, al) => Math.round((Date.parse(al) - Date.parse(dal)) / 8
 // alle 05:00 del giorno dopo l'ultimo», cioè gli stessi numeri.
 const PERSONALIZZATO = 'personalizzato'
 const allOra = (key, cutoff) => `${key}T${String(cutoff).padStart(2, '0')}:00`
-const GIORNI_SETTIMANA = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato']
 // «18:00 di sabato 20/09/2026»: l'ora e il giorno per esteso, perché è la
-// frase con cui si verifica di aver preso la notte giusta.
+// frase con cui si verifica di aver preso la notte giusta. Il nome del
+// giorno nella lingua in uso («Saturday» in inglese), letto a mezzogiorno
+// UTC: a mezzanotte un fuso a ovest lo farebbe cadere il giorno prima.
 const oraPerEsteso = (locale) => {
   const [giorno, ora] = String(locale || '').split('T')
   if (!giorno || !ora) return ''
-  const sett = GIORNI_SETTIMANA[new Date(`${giorno}T00:00:00Z`).getUTCDay()]
-  return `${ora.slice(0, 5)} di ${sett} ${dataBreve(giorno)}`
+  const sett = new Date(`${giorno}T12:00:00Z`).toLocaleDateString(formatoAttivo(), { weekday: 'long', timeZone: 'UTC' })
+  return tr('{ora} di {giorno} {data}', { ora: ora.slice(0, 5), giorno: sett, data: dataBreve(giorno) })
 }
 
 // LE DUE DOMANDE, DUE SOTTOSEZIONI. «È la cosa principale che si vuole
@@ -112,15 +118,18 @@ const oraPerEsteso = (locale) => {
 // Incassato, ed è per quello che le sottosezioni erano sparite — una sola
 // voce spuntata da sé nel menu è una scelta che non è una scelta.)
 const SEZIONI = [
-  { id: 'serate', icona: 'registro', label: 'Per serata' },
-  { id: 'periodo', icona: 'andamento', label: 'Per periodo' },
+  { id: 'serate', icona: 'registro', label: daTradurre('Per serata') },
+  { id: 'periodo', icona: 'andamento', label: daTradurre('Per periodo') },
 ]
 
 export default function StatsTab() {
   const [sezione, setSezione] = useState('serate')
+  // Le etichette si traducono qui, a ogni disegno: un `tr` sulla tabella,
+  // fuori dal componente, fisserebbe la lingua del primo caricamento.
+  const voci = SEZIONI.map((v) => ({ ...v, label: trSegnato(v.label) }))
   return (
     <div>
-      <Sottosezioni voci={SEZIONI} attiva={sezione} scegli={setSezione} />
+      <Sottosezioni voci={voci} attiva={sezione} scegli={setSezione} />
       <DailyStats sezione={sezione} />
     </div>
   )
@@ -433,8 +442,8 @@ function DailyStats({ sezione = 'serate' }) {
     }
   }, [loaded, giorniAttivi, orders, drinks, prodotti, periodo, personalizzato, istanti, intervallo, hourRange, dayRange, cutoff, serata, sessions, contiTiller, diTiller])
 
-  if (error) return <div className="banner">Errore: {error}</div>
-  if (!loaded) return <div className="empty">Carico le statistiche…</div>
+  if (error) return <div className="banner">{tr('Errore: {errore}', { errore: error })}</div>
+  if (!loaded) return <div className="empty">{tr('Carico le statistiche…')}</div>
 
   // A) PER SERATA — l'elenco è la schermata di partenza, il dettaglio si apre
   // toccando una riga.
@@ -445,7 +454,7 @@ function DailyStats({ sezione = 'serate' }) {
   if (giorniAttivi.length === 0) {
     return (
       <div className="empty">
-        Nessun ordine ancora: le statistiche compaiono dopo la prima giornata di lavoro.
+        {tr('Nessun ordine ancora: le statistiche compaiono dopo la prima giornata di lavoro.')}
       </div>
     )
   }
@@ -461,12 +470,14 @@ function DailyStats({ sezione = 'serate' }) {
         {/* UNA SOLA VIA D'USCITA, e dice dove riporta — non «indietro», che
             si capisce solo ricordandosi da dove si è arrivati. */}
         <button className="btn ghost small" onClick={() => setSessionId(null)}>
-          ← Chiusure
+          ← {tr('Chiusure')}
         </button>
         <p className="muted small" style={{ margin: '8px 0 12px' }}>
           {diTiller
-            ? `Giornata del ${etichettaSerata(serata)} battuta su Tiller — dal primo conto all’ultimo.`
-            : `Serata del ${etichettaSerata(serata)} — dall’apertura alla chiusura della cassa, mezzanotte compresa.`}
+            ? tr('Giornata del {serata} battuta su Tiller — dal primo conto all’ultimo.', { serata: etichettaSerata(serata) })
+            : tr('Serata del {serata} — dall’apertura alla chiusura della cassa, mezzanotte compresa.', {
+                serata: etichettaSerata(serata),
+              })}
         </p>
         <CorpoStatistiche
           view={view}
@@ -496,11 +507,11 @@ function DailyStats({ sezione = 'serate' }) {
               setPeriodo(periodoDaPreset(v, businessDayKey(new Date(), cutoff)))
             }}
           >
-            {v} giorni
+            {tr('{n} giorni', { n: v })}
           </button>
         ))}
         <button className={`chip${personalizzato ? ' active' : ''}`} onClick={apriPersonalizzato}>
-          Personalizzato
+          {tr('periodo|Personalizzato')}
         </button>
       </div>
       {personalizzato ? (
@@ -511,7 +522,7 @@ function DailyStats({ sezione = 'serate' }) {
           <div className="row" style={{ gap: 8, alignItems: 'flex-start', marginBottom: 6, flexWrap: 'wrap' }}>
             <CampoDataOra
               id="periodo-dalle"
-              label="Inizio"
+              label={tr('periodo|Inizio')}
               valore={scritto.dalle}
               max={scritto.alle}
               oggi={businessDayKey(new Date(), cutoff)}
@@ -520,7 +531,7 @@ function DailyStats({ sezione = 'serate' }) {
             />
             <CampoDataOra
               id="periodo-alle"
-              label="Fine"
+              label={tr('periodo|Fine')}
               valore={scritto.alle}
               min={scritto.dalle}
               oggi={businessDayKey(new Date(), cutoff)}
@@ -528,27 +539,42 @@ function DailyStats({ sezione = 'serate' }) {
               onChange={(v) => scriviOra('alle', v)}
             />
             <button type="button" className="btn small" style={{ alignSelf: 'flex-end' }} onClick={applicaBozza} disabled={!bozza || !bozzaValida}>
-              Applica
+              {tr('Applica')}
             </button>
           </div>
           <p className="muted small" style={{ margin: '0 0 12px' }}>
-            {!bozzaValida ? (
-              'L’ora di fine deve venire dopo quella di inizio.'
-            ) : bozza ? (
-              'Tocca «Applica» per calcolare il periodo scritto.'
-            ) : (
-              <>
-                Dalle {oraPerEsteso(periodo.dalle)} alle {oraPerEsteso(periodo.alle)}: {view.sel.length}{' '}
-                {view.sel.length === 1 ? 'giornata' : 'giornate'} con ordini.
-              </>
-            )}
+            {!bozzaValida
+              ? tr('L’ora di fine deve venire dopo quella di inizio.')
+              : bozza
+                ? tr('Tocca «Applica» per calcolare il periodo scritto.')
+                : view.sel.length === 1
+                  ? tr('Dalle {da} alle {a}: {n} giornata con ordini.', {
+                      da: oraPerEsteso(periodo.dalle),
+                      a: oraPerEsteso(periodo.alle),
+                      n: view.sel.length,
+                    })
+                  : tr('Dalle {da} alle {a}: {n} giornate con ordini.', {
+                      da: oraPerEsteso(periodo.dalle),
+                      a: oraPerEsteso(periodo.alle),
+                      n: view.sel.length,
+                    })}
           </p>
         </>
       ) : (
         <p className="muted small" style={{ margin: '0 0 12px' }}>
-          Dal {dataBreve(periodo.dal)} al {dataBreve(periodo.al)}: {view.sel.length}{' '}
-          {view.sel.length === 1 ? 'giornata' : 'giornate'} con ordini su{' '}
-          {giorniFra(periodo.dal, periodo.al)}.
+          {view.sel.length === 1
+            ? tr('Dal {dal} al {al}: {n} giornata con ordini su {giorni}.', {
+                dal: dataBreve(periodo.dal),
+                al: dataBreve(periodo.al),
+                n: view.sel.length,
+                giorni: giorniFra(periodo.dal, periodo.al),
+              })
+            : tr('Dal {dal} al {al}: {n} giornate con ordini su {giorni}.', {
+                dal: dataBreve(periodo.dal),
+                al: dataBreve(periodo.al),
+                n: view.sel.length,
+                giorni: giorniFra(periodo.dal, periodo.al),
+              })}
         </p>
       )}
       <CorpoStatistiche
@@ -592,18 +618,18 @@ function ElencoSerate({ righe, onApri, oggi, cutoff }) {
     if (perGiorno.has(giorno)) onApri(perGiorno.get(giorno))
   }
   if (righe.length === 0) {
-    return <div className="empty">Nessuna chiusura di cassa registrata.</div>
+    return <div className="empty">{tr('Nessuna chiusura di cassa registrata.')}</div>
   }
   return (
     <div>
       <CalendarioServizio servizio={servizio} scelto={cercato} oggi={oggi} onScegli={cerca} />
       {cercato && !perGiorno.has(cercato) && (
         <p className="muted small" role="status" style={{ margin: '0 0 8px' }}>
-          Nessun servizio {businessDayLabel(cercato)}.
+          {tr('Nessun servizio {giorno}.', { giorno: businessDayLabel(cercato) })}
         </p>
       )}
       <p className="muted small" style={{ margin: '0 0 8px' }}>
-        Tocca una serata per vederne le statistiche.
+        {tr('Tocca una serata per vederne le statistiche.')}
       </p>
       <div className="inv-list">
         {righe.map((r) => (
@@ -614,11 +640,11 @@ function ElencoSerate({ righe, onApri, oggi, cutoff }) {
               onClick={() => onApri(r.id)}
               title={
                 r.inCorso
-                  ? 'Cassa ancora aperta: i numeri sono quelli di adesso.'
+                  ? tr('Cassa ancora aperta: i numeri sono quelli di adesso.')
                   : daTiller(r.session)
-                    ? 'Giornata battuta su Tiller, prima dell’app.'
+                    ? tr('Giornata battuta su Tiller, prima dell’app.')
                     : r.daSnapshot
-                      ? 'Numeri della chiusura di cassa: gli ordini di questa serata sono troppo vecchi per essere qui.'
+                      ? tr('Numeri della chiusura di cassa: gli ordini di questa serata sono troppo vecchi per essere qui.')
                       : undefined
               }
             >
@@ -631,9 +657,11 @@ function ElencoSerate({ righe, onApri, oggi, cutoff }) {
                 {r.durata ? ` · ${r.durata}` : ''}
               </span>
               <span className="muted small inv-row-price">
-                {r.conti} cont{r.conti === 1 ? 'o' : 'i'}
+                {r.conti === 1 ? tr('1 conto') : tr('{n} conti', { n: r.conti })}
               </span>
-              <span className="muted small inv-row-price">{formatPrice(r.scontrinoMedio)} medio</span>
+              <span className="muted small inv-row-price">
+                {tr('{prezzo} medio', { prezzo: formatPrice(r.scontrinoMedio) })}
+              </span>
               <span className="inv-row-price inv-row-stock">{formatPrice(r.incasso)}</span>
             </button>
           </div>
@@ -670,14 +698,14 @@ function ClassificaVenduto({ righe }) {
     <div className="card">
       <div className="row between" style={{ alignItems: 'center' }}>
         <h3 className="cat-header" style={{ margin: 0 }}>
-          <Icona nome="classifica" gruppo="tasti" /> Classifica del venduto
+          <Icona nome="classifica" gruppo="tasti" /> {tr('Classifica del venduto')}
         </h3>
         <button type="button" className="btn ghost small" onClick={() => setPerIncasso((v) => !v)}>
-          {perIncasso ? 'Ordina per pezzi' : 'Ordina per incasso'}
+          {perIncasso ? tr('Ordina per pezzi') : tr('Ordina per incasso')}
         </button>
       </div>
       <p className="muted small" style={{ margin: '8px 0 0' }}>
-        Tutte le voci battute nel periodo, dalla più venduta all’ultima.
+        {tr('Tutte le voci battute nel periodo, dalla più venduta all’ultima.')}
       </p>
       <div className="inv-list">
         {ordinate.map((p, i) => (
@@ -688,7 +716,7 @@ function ClassificaVenduto({ righe }) {
               </span>
               <span className="inv-row-name">{p.name}</span>
               <span className="inv-row-cat" />
-              <span className="muted small inv-row-price">{p.qty} pz</span>
+              <span className="muted small inv-row-price">{tr('{n} pz', { n: p.qty })}</span>
               <span className="inv-row-price inv-row-stock">{formatPrice(p.revenue)}</span>
             </div>
           </div>
@@ -712,19 +740,19 @@ function UtiliPerCategoria({ righe }) {
   return (
     <div className="card">
       <h3 className="cat-header" style={{ margin: 0 }}>
-        <Icona nome="contanti" gruppo="tasti" /> Utile per categoria
+        <Icona nome="contanti" gruppo="tasti" /> {tr('Utile per categoria')}
       </h3>
       <p className="muted small" style={{ margin: '8px 0 6px' }}>
-        Incassato meno il costo del venduto, ricavato dalle ricette delle voci di menù. Importi IVA compresa.
+        {tr('Incassato meno il costo del venduto, ricavato dalle ricette delle voci di menù. Importi IVA compresa.')}
       </p>
       <div className="table-scroll">
         <table className="margin-tab utili-tab">
           <thead>
             <tr>
-              <th className="rowhead">Categoria</th>
-              <th>Incassato</th>
-              <th>Costo del venduto</th>
-              <th>Utile</th>
+              <th className="rowhead">{tr('Categoria')}</th>
+              <th>{tr('Incassato')}</th>
+              <th>{tr('Costo del venduto')}</th>
+              <th>{tr('Utile')}</th>
             </tr>
           </thead>
           <tbody>
@@ -748,7 +776,7 @@ function UtiliPerCategoria({ righe }) {
           <tfoot>
             <tr>
               <th scope="row" className="rowhead">
-                Totale
+                {tr('Totale')}
               </th>
               <td>{formatPrice(tot.incassato)}</td>
               <td>{formatPrice(tot.costo)}</td>
@@ -761,8 +789,10 @@ function UtiliPerCategoria({ righe }) {
       </div>
       {parziali && (
         <p className="muted small" style={{ margin: '6px 0 0' }}>
-          * Costo incompleto: alcune voci non hanno ricetta, o un ingrediente non ha costo. L’utile di quella
-          categoria è più alto del vero.
+          *{' '}
+          {tr(
+            'Costo incompleto: alcune voci non hanno ricetta, o un ingrediente non ha costo. L’utile di quella categoria è più alto del vero.'
+          )}
         </p>
       )}
     </div>
@@ -786,36 +816,44 @@ function CorpoStatistiche({ view, comandi, intervallo, cutoff, perGiornata = tru
     <div>
       {/* KPI */}
       <div className="kpi-grid">
-        <Kpi label="Incasso" value={formatPrice(kpi.incasso)} />
-        <Kpi label="Ordini" value={kpi.ordini} sub={`${kpi.giorni} giornate`} />
-        <Kpi label="Scontrino medio" value={formatPrice(kpi.scontrinoMedio)} />
-        <Kpi label="Drink venduti" value={kpi.drinkVenduti} sub={`${kpi.drinkPerOrdine.toFixed(1)}/ordine`} />
-        {perGiornata && <Kpi label="Incasso / giornata" value={formatPrice(kpi.incassoPerGiorno)} />}
-        <Kpi label="Ora di punta" value={byHour.peakLabel ?? '—'} />
-        <Kpi label="Attesa media" value={fmtMin(prep.attesaMedia)} />
-        <Kpi label="Preparazione media" value={fmtMin(prep.prepMedia)} />
+        <Kpi label={tr('Incasso')} value={formatPrice(kpi.incasso)} />
+        <Kpi
+          label={tr('Ordini')}
+          value={kpi.ordini}
+          sub={kpi.giorni === 1 ? tr('1 giornata') : tr('{n} giornate', { n: kpi.giorni })}
+        />
+        <Kpi label={tr('Scontrino medio')} value={formatPrice(kpi.scontrinoMedio)} />
+        <Kpi
+          label={tr('Drink venduti')}
+          value={kpi.drinkVenduti}
+          sub={tr('{n}/ordine', { n: kpi.drinkPerOrdine.toFixed(1) })}
+        />
+        {perGiornata && <Kpi label={tr('Incasso / giornata')} value={formatPrice(kpi.incassoPerGiorno)} />}
+        <Kpi label={tr('Ora di punta')} value={byHour.peakLabel ?? '—'} />
+        <Kpi label={tr('Attesa media')} value={fmtMin(prep.attesaMedia)} />
+        <Kpi label={tr('Preparazione media')} value={fmtMin(prep.prepMedia)} />
       </div>
 
       {perGiornata && (
-        <ChartCard icona="andamento" title="Incasso per giornata">
+        <ChartCard icona="andamento" title={tr('Incasso per giornata')}>
           <VBars
             data={byDay.map((s) => ({
               label: `${s.weekday} ${s.label}`,
               value: s.incasso,
-              sub: `${s.ordini} ordini`,
+              sub: quantiOrdini(s.ordini),
             }))}
             format={fmtShort}
           />
         </ChartCard>
       )}
 
-      <ChartCard icona="orario" title="Incasso per fascia oraria">
+      <ChartCard icona="orario" title={tr('Incasso per fascia oraria')}>
         <TimeRange value={hourRange} onChange={setHourRange} />
         <VBars
           data={byHour.buckets.map((b) => ({
             label: b.label,
             value: b.incasso,
-            sub: `${b.ordini} comande`,
+            sub: quanteComande(b.ordini),
           }))}
           format={fmtShort}
         />
@@ -825,16 +863,17 @@ function CorpoStatistiche({ view, comandi, intervallo, cutoff, perGiornata = tru
           i prodotti e le categorie. Risponde a "fra le 22 e l'una cosa vendo?" */}
       {/* Le date non ci sono più: fa fede il periodo scelto in cima
           (19/09/2026). Qui si stringe soltanto l'ora. */}
-      <ChartCard icona="coda" title="Venduto nella fascia oraria">
+      <ChartCard icona="coda" title={tr('Venduto nella fascia oraria')}>
         <TimeRange value={hourRange} onChange={setHourRange} />
         <div className="row between" style={{ alignItems: 'baseline', margin: '8px 0' }}>
           <span className="muted small">
-            {hourRange.from}–{hourRange.to} · {fascia.nOrdini} cont{fascia.nOrdini === 1 ? 'o' : 'i'}
+            {hourRange.from}–{hourRange.to} ·{' '}
+            {fascia.nOrdini === 1 ? tr('1 conto') : tr('{n} conti', { n: fascia.nOrdini })}
           </span>
           <strong className="price" style={{ fontSize: '1.3rem' }}>{formatPrice(fascia.totale)}</strong>
         </div>
         {fascia.categorie.length === 0 ? (
-          <p className="muted small">Nessuna vendita in questa fascia.</p>
+          <p className="muted small">{tr('Nessuna vendita in questa fascia.')}</p>
         ) : (
           // SOLO LE CATEGORIE, E OGNUNA SI APRE SUI SUOI PRODOTTI (Flavio,
           // 13/10/2026): prima c'erano le barre delle categorie e sotto un
@@ -865,29 +904,29 @@ function CorpoStatistiche({ view, comandi, intervallo, cutoff, perGiornata = tru
       </ChartCard>
 
       {perGiornata && (
-        <ChartCard icona="calendario" title="Incasso per giornata nella fascia scelta">
+        <ChartCard icona="calendario" title={tr('Incasso per giornata nella fascia scelta')}>
           <TimeRange value={dayRange} onChange={setDayRange} />
           <VBars
             data={byDayRange.map((s) => ({
               label: `${s.weekday} ${s.label}`,
               value: s.incasso,
-              sub: `${s.ordini} comande`,
+              sub: quanteComande(s.ordini),
             }))}
             format={fmtShort}
           />
         </ChartCard>
       )}
 
-      <ChartCard icona="incasso" title="Top prodotti per incasso">
+      <ChartCard icona="incasso" title={tr('Top prodotti per incasso')}>
         <HBars data={top.byRevenue.map((p) => ({ label: p.name, value: p.revenue, text: formatPrice(p.revenue) }))} />
       </ChartCard>
 
-      <ChartCard icona="richiesti" title="Prodotti più richiesti">
-        <HBars data={top.byQty.map((p) => ({ label: p.name, value: p.qty, text: `${p.qty} pz` }))} />
+      <ChartCard icona="richiesti" title={tr('Prodotti più richiesti')}>
+        <HBars data={top.byQty.map((p) => ({ label: p.name, value: p.qty, text: tr('{n} pz', { n: p.qty }) }))} />
       </ChartCard>
 
       {ingredients.length > 0 && (
-        <ChartCard icona="prova" title="Ingredienti più usati">
+        <ChartCard icona="prova" title={tr('Ingredienti più usati')}>
           <HBars
             data={ingredients.map((u) => ({
               label: u.name,
@@ -899,7 +938,7 @@ function CorpoStatistiche({ view, comandi, intervallo, cutoff, perGiornata = tru
       )}
 
       {byCategory.length > 0 && (
-        <ChartCard icona="raggruppa" title="Incasso per categoria">
+        <ChartCard icona="raggruppa" title={tr('Incasso per categoria')}>
           <HBars data={byCategory.map((c) => ({ label: c.name, value: c.revenue, text: formatPrice(c.revenue) }))} />
         </ChartCard>
       )}
@@ -924,30 +963,30 @@ function CorpoStatistiche({ view, comandi, intervallo, cutoff, perGiornata = tru
       )}
 
       <div className="card">
-        <h3 className="cat-header" style={{ marginTop: 0 }}>Dettagli</h3>
+        <h3 className="cat-header" style={{ marginTop: 0 }}>{tr('Dettagli')}</h3>
         <div className="summary-rows" style={{ margin: 0 }}>
-          <Row k="Incasso drink" v={formatPrice(extras.drink)} />
-          {extras.coperto > 0 && <Row k="Coperto" v={formatPrice(extras.coperto)} />}
-          {extras.servizio > 0 && <Row k="Servizio" v={formatPrice(extras.servizio)} />}
-          {extras.mance > 0 && <Row k="Mance" v={formatPrice(extras.mance)} />}
+          <Row k={tr('Incasso drink')} v={formatPrice(extras.drink)} />
+          {extras.coperto > 0 && <Row k={tr('Coperto')} v={formatPrice(extras.coperto)} />}
+          {extras.servizio > 0 && <Row k={tr('supplemento|Servizio')} v={formatPrice(extras.servizio)} />}
+          {extras.mance > 0 && <Row k={tr('Mance')} v={formatPrice(extras.mance)} />}
           {/* Gli sconti sono già scalati dagli incassi qui sopra: si mostrano
               per sapere quanto si è lasciato sul tavolo. */}
           {extras.sconti > 0 && (
-            <Row k="Sconti concessi (già dedotti)" v={`−${formatPrice(extras.sconti)}`} />
+            <Row k={tr('Sconti concessi (già dedotti)')} v={`−${formatPrice(extras.sconti)}`} />
           )}
           <Row
-            k={<><Icona nome="menu" gruppo="tasti" /> Al tavolo</>}
-            v={`${split.tavolo.ordini} ordini · ${formatPrice(split.tavolo.incasso)}`}
+            k={<><Icona nome="menu" gruppo="tasti" /> {tr('Al tavolo')}</>}
+            v={`${quantiOrdini(split.tavolo.ordini)} · ${formatPrice(split.tavolo.incasso)}`}
           />
           <Row
-            k={<><Icona nome="a-piedi" gruppo="tasti" /> Al banco</>}
-            v={`${split.banco.ordini} ordini · ${formatPrice(split.banco.incasso)}`}
+            k={<><Icona nome="a-piedi" gruppo="tasti" /> {tr('Al banco')}</>}
+            v={`${quantiOrdini(split.banco.ordini)} · ${formatPrice(split.banco.incasso)}`}
           />
           {prep.prepMax && (
-            <Row k="Preparazione più lunga" v={`#${prep.prepMax.daily_number} · ${fmtMin(prep.prepMax.minutes)}`} />
+            <Row k={tr('Preparazione più lunga')} v={`#${prep.prepMax.daily_number} · ${fmtMin(prep.prepMax.minutes)}`} />
           )}
-          <Row k="Ordini annullati" v={`${kpi.pctAnnullati.toFixed(1)}%`} />
-          <Row k="Non ritirati/serviti" v={`${kpi.pctNonRitirati.toFixed(1)}%`} />
+          <Row k={tr('Ordini annullati')} v={`${kpi.pctAnnullati.toFixed(1)}%`} />
+          <Row k={tr('Non ritirati/serviti')} v={`${kpi.pctNonRitirati.toFixed(1)}%`} />
         </div>
       </div>
     </div>
@@ -959,7 +998,7 @@ function TimeRange({ value, onChange }) {
   return (
     <div className="time-range">
       <label>
-        Dalle
+        {tr('fascia oraria|Dalle')}
         <input
           type="time"
           value={value.from}
@@ -967,7 +1006,7 @@ function TimeRange({ value, onChange }) {
         />
       </label>
       <label>
-        alle
+        {tr('fascia oraria|alle')}
         <input
           type="time"
           value={value.to}

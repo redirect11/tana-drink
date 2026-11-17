@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { tocca, dentroIlPeriodo, etichettaPeriodo, periodiRapidi } from '../lib/periodo.js'
 import GrigliaMese from './GrigliaMese.jsx'
 import Icona from './Icona.jsx'
+import { tr } from '../lib/lingua.js'
 
 // ── IL CALENDARIO DEL PERIODO ────────────────────────────────────────
 //
@@ -32,6 +33,8 @@ export default function SelettorePeriodo({ periodo, onChange, oggi, servizio }) 
         onClick={() => setAperto((v) => !v)}
         aria-expanded={aperto}
       >
+        {/* «Oggi», «Ieri», «Sempre», le date e le scorciatoie li scrive
+            lib/periodo.js già nella lingua in uso (REQ-UI-039). */}
         <Icona nome="calendario" gruppo="tasti" />{' '}{etichettaPeriodo(periodo, oggi)}
       </button>
       {periodo?.da && (
@@ -39,7 +42,7 @@ export default function SelettorePeriodo({ periodo, onChange, oggi, servizio }) 
           type="button"
           className="chip periodo-pulisci"
           onClick={() => onChange({ da: null, a: null, completo: true })}
-          aria-label="Togli il filtro sulle date"
+          aria-label={tr('Togli il filtro sulle date')}
         >
           ✕
         </button>
@@ -73,7 +76,7 @@ export default function SelettorePeriodo({ periodo, onChange, oggi, servizio }) 
               }`
             }
             onScegli={scegli}
-            aiuto="tocca un giorno, poi un altro per arrivare fin lì"
+            aiuto={tr('tocca un giorno, poi un altro per arrivare fin lì')}
           />
         </div>
       )}

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import GrigliaMese from './GrigliaMese.jsx'
 import Icona from './Icona.jsx'
+import { tr } from '../lib/lingua.js'
 
 // ── DATA E ORA, COL CALENDARIO DELL'APP (REQ-STAT-007) ─────────────────
 //
@@ -33,7 +34,7 @@ export default function CampoDataOra({ id, label, valore, oggi, servizio, min, m
         <button
           type="button"
           className={`chip small${aperto ? ' active' : ''}`}
-          aria-label={`Calendario per ${label.toLowerCase()}`}
+          aria-label={tr('Calendario per {campo}', { campo: label.toLowerCase() })}
           aria-expanded={aperto}
           onClick={() => setAperto((v) => !v)}
         >
@@ -50,7 +51,7 @@ export default function CampoDataOra({ id, label, valore, oggi, servizio, min, m
             onChange(`${g}T${ora}`)
             setAperto(false)
           }}
-          aiuto={`l’ora resta ${ora}`}
+          aiuto={tr('l’ora resta {ora}', { ora })}
         />
       )}
     </span>

@@ -5,6 +5,7 @@ import { saveStaffToken } from '../lib/api.js'
 import { idDispositivo } from '../lib/dispositivo.js'
 import { auth } from '../lib/firebaseClient.js'
 import Icona from './Icona.jsx'
+import { tr, useLingua } from '../lib/lingua.js'
 
 // ── «GLI AVVISI SONO SPENTI SU QUESTO DISPOSITIVO» ───────────────────
 //
@@ -22,6 +23,7 @@ import Icona from './Icona.jsx'
 // Non è una finestra modale: al banco non si blocca il lavoro per una
 // impostazione. È una riga in cima, che si vede e non si può ignorare.
 export default function AvvisiSpenti({ ruolo }) {
+  useLingua()
   const [stato, setStato] = useState(null)
   const [rifiutato, setRifiutato] = useState(false)
 
@@ -58,18 +60,18 @@ export default function AvvisiSpenti({ ruolo }) {
   return (
     <div className="banner avvisi-spenti">
       <div>
-        <strong><Icona nome="notifiche-spente" gruppo="segnali" /> Gli avvisi sono spenti su questo dispositivo.</strong>
+        <strong><Icona nome="notifiche-spente" gruppo="segnali" /> {tr('Gli avvisi sono spenti su questo dispositivo.')}</strong>
         <div className="small">
           {stato === 'negato'
-            ? 'Il browser li ha bloccati: si riaccendono dalle sue impostazioni, alla voce Notifiche per questo sito.'
+            ? tr('Il browser li ha bloccati: si riaccendono dalle sue impostazioni, alla voce Notifiche per questo sito.')
             : rifiutato
-              ? 'Non sono stati attivati. Riprova: senza, qui non arriva nessun ordine.'
-              : 'Nuovi ordini e chiamate non arrivano finché non li attivi.'}
+              ? tr('Non sono stati attivati. Riprova: senza, qui non arriva nessun ordine.')
+              : tr('Nuovi ordini e chiamate non arrivano finché non li attivi.')}
         </div>
       </div>
       {stato !== 'negato' && (
         <button type="button" className="btn small" onClick={chiedi}>
-          Attiva gli avvisi
+          {tr('Attiva gli avvisi')}
         </button>
       )}
     </div>

@@ -20,6 +20,7 @@ import { righeDiProdotto, livelloDi, fetteFornitore } from './listini.js'
 import { eBozza } from './statiOrdine.js'
 import { formatPrice } from './orderStatus.js'
 import { conEmoji } from './icone.js'
+import { daTradurre, tr, trSegnato } from './lingua.js'
 
 // ── I TIPI DI DOCUMENTO ──────────────────────────────────────────────
 //
@@ -56,6 +57,24 @@ export const DOC_NOTA_CREDITO = 'Nota di credito'
 const DOC_RESO = 'Reso'
 
 export const TIPI_DOCUMENTO = ['Proforma', 'Fattura', DOC_NOTA_CREDITO, DOC_NESSUNO, 'Altro']
+
+// IL NOME DEL TIPO A SCHERMO (REQ-UI-039). I valori qui sopra sono quelli
+// SCRITTI in `doc_type`, e restano italiani in qualunque lingua: un
+// documento salvato in inglese diventerebbe di un tipo che il resto
+// dell'app non riconosce (`eNotaDiCredito`, il «Nessun documento» della
+// lista ordini). Si traduce solo l'etichetta, qui. «Altro» porta il suo
+// contesto perché altrove la stessa parola vuol dire «More». Un tipo che
+// non è nella tabella (scritto a mano, o di domani) si mostra com'è.
+const ETICHETTA_TIPO = {
+  Proforma: daTradurre('Proforma'),
+  Fattura: daTradurre('Fattura'),
+  [DOC_NOTA_CREDITO]: daTradurre('Nota di credito'),
+  [DOC_NESSUNO]: daTradurre('Nessun documento'),
+  Altro: daTradurre('tipo documento|Altro'),
+  [DOC_RESO]: daTradurre('Reso'),
+}
+export const etichettaTipoDocumento = (tipo) =>
+  Object.hasOwn(ETICHETTA_TIPO, tipo ?? '') ? trSegnato(ETICHETTA_TIPO[tipo]) : tipo
 
 // «Questo documento è una nota di credito?». È l'unica funzione che conosce
 // il nome vecchio: chi confronta `doc_type` a mano si porta dietro un
@@ -295,12 +314,12 @@ export function fetteDellaFattura(fattura, ordini, { suppliers = [] } = {}) {
 // quando l'aggancio si può fare. Le due parti dell'app la chiamano tutte e
 // due: quella che propone le candidate e quella che scrive.
 export function aggancioAmmesso(fattura, fetta, { fatture = [] } = {}) {
-  if (!fattura?.id || !fetta?.order_id) return 'Manca il documento o la parte di ordine.'
+  if (!fattura?.id || !fetta?.order_id) return tr('Manca il documento o la parte di ordine.')
   if (!fetta.supplier_id || fetta.supplier_id !== fattura.supplier_id) {
     return `Questa parte dell’ordine è di ${fetta.supplier_name || 'un altro fornitore'}: il documento è di ${fattura.supplier_name || '—'}.`
   }
   const altra = fatturaDellaFetta(fatture, fetta)
-  if (altra && altra.id !== fattura.id) return 'Quella parte dell’ordine ha già un documento collegato.'
+  if (altra && altra.id !== fattura.id) return tr('Quella parte dell’ordine ha già un documento collegato.')
   // E BASTA: dal 19/09/2026 un documento può coprire più ordini, quindi non
   // si guarda più se ne ha già uno. Quello che resta vietato è la stessa
   // merce su due documenti, ed è la riga qui sopra.
@@ -381,13 +400,15 @@ export const CAMPI_MODIFICABILI = [
 // Come si chiamano a schermo, e sono anche i campi di cui si racconta il
 // cambiamento. `supplier_id` non c'è: è il fornitore, e di un fornitore si
 // legge il nome.
+// I nomi dei campi si SCRIVONO nella storia del documento così come sono
+// (italiano: è un dato), e `descriviMovimento` li traduce quando li mostra.
 const ETICHETTA_CAMPO = {
-  supplier_name: 'Fornitore',
-  number: 'Numero',
-  doc_type: 'Tipo',
-  date: 'Data',
-  amount: 'Importo',
-  notes: 'Note',
+  supplier_name: daTradurre('Fornitore'),
+  number: daTradurre('Numero'),
+  doc_type: daTradurre('Tipo'),
+  date: daTradurre('Data'),
+  amount: daTradurre('Importo'),
+  notes: daTradurre('Note'),
 }
 
 const scritto = (v) => (v == null || v === '' ? '—' : String(v))
@@ -436,10 +457,10 @@ export function cambiFattura(prima, dopo) {
 //
 // Torna il motivo del rifiuto — una frase da mostrare — oppure `null`.
 export function modificaAmmessa(prima, dopo) {
-  if (!prima?.id) return 'Documento non trovato.'
-  if (!dopo?.supplier_id) return 'Il documento lo emette qualcuno: scegli il fornitore.'
+  if (!prima?.id) return tr('Documento non trovato.')
+  if (!dopo?.supplier_id) return tr('Il documento lo emette qualcuno: scegli il fornitore.')
   if (elencoOrdini(prima).length > 0 && dopo.supplier_id !== prima.supplier_id) {
-    return 'Questo documento è collegato a un ordine: per cambiare fornitore scollegalo prima.'
+    return tr('Questo documento è collegato a un ordine: per cambiare fornitore scollegalo prima.')
   }
   return null
 }
@@ -458,6 +479,7 @@ export function modificaAmmessa(prima, dopo) {
 // casi, che è quello che serve: il documento è chiuso quando quei soldi sono
 // tornati indietro, comunque siano tornati.
 export function etichettaSaldo(fattura) {
-  if (eNotaDiCredito(fattura)) return fattura?.paid ? conEmoji('fatto', 'scalata') : conEmoji('attesa', 'da scalare')
-  return fattura?.paid ? conEmoji('fatto', 'pagato') : conEmoji('attesa', 'da pagare')
+  if (eNotaDiCredito(fattura))
+    return fattura?.paid ? conEmoji('fatto', tr('scalata')) : conEmoji('attesa', tr('da scalare'))
+  return fattura?.paid ? conEmoji('fatto', tr('pagato')) : conEmoji('attesa', tr('da pagare'))
 }

@@ -17,10 +17,16 @@
   sull'account e lo segue su ogni dispositivo. In inglese: coda ordini,
   accesso, menu laterale, conto, griglia dei prodotti, pagamento, apertura e
   chiusura cassa, storico delle serate, la comanda al banco, le
-  impostazioni, il magazzino e la gestione del menù. Fornitori, statistiche,
-  staff e le altre sezioni arrivano dopo. Restano in italiano gli scontrini
-  e tutto ciò che si stampa, gli esempi dei campi che il cliente legge, e
-  le pagine dei clienti, che traduce il loro browser (REQ-UI-039).
+  impostazioni, il magazzino, la gestione del menù, fornitori e acquisti,
+  statistiche e bilancio, ore e paghe, utenti, buoni, marketplace e
+  assistente AI: tutto il gestionale. Date e giorni seguono la lingua; gli
+  importi restano in euro all'italiana. Restano in italiano gli scontrini e
+  tutto ciò che si stampa, gli esempi dei campi che il cliente legge, il
+  messaggio d'ordine al fornitore, le fatture ai clienti, le esportazioni,
+  e le pagine dei clienti, che traduce il loro browser (REQ-UI-039).
+- Nelle statistiche, nel bilancio e negli ordini ai fornitori un conteggio
+  di uno si legge al singolare: «1 ordine», «1 comanda», «1 prodotto
+  selezionato», invece di «1 ordini» (REQ-UI-039).
 - **Le pagine dei clienti funzionano tradotte dal browser.** Col menù
   tradotto da Chrome o da Safari, lo stato dell'ordine ora segue il banco
   («In preparazione», «Pronto») invece di restare su «Ordine ricevuto»;

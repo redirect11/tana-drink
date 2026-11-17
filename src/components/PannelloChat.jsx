@@ -23,17 +23,18 @@ import {
   updateDrink,
 } from '../lib/api.js'
 import FatturaDaAI from './FatturaDaAI.jsx'
+import { tr, daTradurre, trSegnato, useLingua } from '../lib/lingua.js'
 
 
 // Cosa si legge mentre uno strumento lavora: chi aspetta deve sapere cosa
 // sta succedendo, in parole del gestionale.
 const ATTIVITA = {
-  giacenza: 'Lettura delle giacenze',
-  vendite: 'Lettura delle vendite',
-  cerca_prodotti: 'Ricerca fra magazzino e menù',
-  proponi_descrizione: 'Proposta di una descrizione',
-  proponi_voce_menu: 'Proposta di un prodotto della cassa',
-  leggi_fattura: 'Lettura di un documento del fornitore',
+  giacenza: daTradurre('Lettura delle giacenze'),
+  vendite: daTradurre('Lettura delle vendite'),
+  cerca_prodotti: daTradurre('Ricerca fra magazzino e menù'),
+  proponi_descrizione: daTradurre('Proposta di una descrizione'),
+  proponi_voce_menu: daTradurre('Proposta di un prodotto della cassa'),
+  leggi_fattura: daTradurre('Lettura di un documento del fornitore'),
 }
 
 // ── L'ASSISTENTE AI DEL GESTIONALE (REQ-AI-006) ───────────────────────
@@ -50,7 +51,12 @@ const ATTIVITA = {
 // si scarta — il modello non scrive mai da solo. Gli esiti tornano alla
 // regia, e si ripete finché il modello non risponde senza strumenti (al
 // massimo MAX_GIRI_STRUMENTI volte di fila).
+// I testi della conversazione (le domande di chi scrive e le risposte
+// dell'AI) sono dati, e restano come sono; così gli esiti che tornano al
+// modello (errori degli strumenti, «usata», «scartata»): li legge lui, non
+// chi lavora. Si traduce solo il pannello intorno.
 export default function PannelloChat({ ruolo, onChiudi }) {
+  useLingua()
   const [credito, setCredito] = useState({ fase: 'attesa' })
   const [messaggi, setMessaggi] = useState([])
   const [vista, setVista] = useState([])
@@ -170,7 +176,7 @@ export default function PannelloChat({ ruolo, onChiudi }) {
       if (r.strumenti_richiesti.length === 0) return
       const esiti = []
       for (const s of r.strumenti_richiesti) {
-        aggiungi({ tipo: 'attivita', testo: `${ATTIVITA[s.nome] || 'Strumento'}…` })
+        aggiungi({ tipo: 'attivita', testo: `${ATTIVITA[s.nome] ? trSegnato(ATTIVITA[s.nome]) : tr('Strumento')}…` })
         try {
           esiti.push({ id: s.id, esito: await esegui(s) })
         } catch (e) {
@@ -180,7 +186,7 @@ export default function PannelloChat({ ruolo, onChiudi }) {
       conv = conEsiti(conv, esiti, r.turno)
       setMessaggi(conv)
     }
-    aggiungi({ tipo: 'errore', testo: 'L’assistente non è arrivato a una risposta: si può riformulare la domanda.' })
+    aggiungi({ tipo: 'errore', testo: tr('L’assistente non è arrivato a una risposta: si può riformulare la domanda.') })
   }
 
   async function manda(e) {
@@ -206,23 +212,23 @@ export default function PannelloChat({ ruolo, onChiudi }) {
   }
 
   return (
-    <aside className="pannello-chat" role="dialog" aria-label="Assistente AI">
+    <aside className="pannello-chat" role="dialog" aria-label={tr('Assistente AI')}>
       <div className="pannello-chat-testa">
-        <strong>Assistente AI</strong>
+        <strong>{tr('Assistente AI')}</strong>
         <div className="row" style={{ gap: 6 }}>
           {messaggi.length > 0 && (
             <button type="button" className="btn ghost small" onClick={nuova} disabled={lavora}>
-              Nuova conversazione
+              {tr('Nuova conversazione')}
             </button>
           )}
-          <button type="button" className="btn ghost small" onClick={onChiudi} aria-label="Chiudi l’assistente">
+          <button type="button" className="btn ghost small" onClick={onChiudi} aria-label={tr('Chiudi l’assistente')}>
             ✕
           </button>
         </div>
       </div>
 
       <div className="pannello-chat-corpo">
-        {credito.fase === 'attesa' && <p className="muted small">Verifica del credito AI…</p>}
+        {credito.fase === 'attesa' && <p className="muted small">{tr('Verifica del credito AI…')}</p>}
         {credito.fase === 'ferma' && (
           <p className="small" role="status">
             {credito.messaggio}
@@ -230,9 +236,10 @@ export default function PannelloChat({ ruolo, onChiudi }) {
         )}
         {credito.fase === 'pronta' && vista.length === 0 && (
           <p className="muted small">
-            Domande su giacenze, vendite e prodotti; proposte di descrizioni per il menù
-            {strumenti.includes('leggi_fattura') ? ' e lettura dei documenti dei fornitori' : ''}. Le modifiche si
-            confermano sempre a schermo. La conversazione non si conserva alla chiusura del pannello.
+            {strumenti.includes('leggi_fattura')
+              ? tr('Domande su giacenze, vendite e prodotti; proposte di descrizioni per il menù e lettura dei documenti dei fornitori.')
+              : tr('Domande su giacenze, vendite e prodotti; proposte di descrizioni per il menù.')}{' '}
+            {tr('Le modifiche si confermano sempre a schermo. La conversazione non si conserva alla chiusura del pannello.')}
           </p>
         )}
         {vista.map((r, i) => (
@@ -242,14 +249,14 @@ export default function PannelloChat({ ruolo, onChiudi }) {
         ))}
 
         {proposta?.tipo === 'descrizione' && (
-          <div className="descrizione-ai-proposta" role="group" aria-label="Descrizione proposta">
+          <div className="descrizione-ai-proposta" role="group" aria-label={tr('Descrizione proposta')}>
             <p className="small muted" style={{ margin: 0 }}>
-              Descrizione proposta per {proposta.drink.name}
+              {tr('Descrizione proposta per {nome}', { nome: proposta.drink.name })}
             </p>
             <p style={{ margin: '4px 0 6px' }}>{proposta.descrizione || '—'}</p>
             {proposta.daVerificare.length > 0 && (
               <p className="small" style={{ margin: '0 0 6px' }}>
-                Da verificare: {proposta.daVerificare.join(', ')}
+                {tr('Da verificare: {elenco}', { elenco: proposta.daVerificare.join(', ') })}
               </p>
             )}
             <div className="row" style={{ gap: 8 }}>
@@ -259,28 +266,29 @@ export default function PannelloChat({ ruolo, onChiudi }) {
                 disabled={!proposta.descrizione}
                 onClick={() => {
                   updateDrink(proposta.drink.id, { description: proposta.descrizione }).catch(() => {})
-                  aggiungi({ tipo: 'attivita', testo: `Descrizione di ${proposta.drink.name} aggiornata.` })
+                  aggiungi({ tipo: 'attivita', testo: tr('Descrizione di {nome} aggiornata.', { nome: proposta.drink.name }) })
                   chiudiProposta({ prodotto: proposta.drink.name, descrizione: proposta.descrizione, stato: 'usata' })
                 }}
               >
-                Usa questa
+                {tr('Usa questa')}
               </button>
               <button
                 type="button"
                 className="btn ghost small"
                 onClick={() => chiudiProposta({ prodotto: proposta.drink.name, descrizione: proposta.descrizione, stato: 'scartata' })}
               >
-                Scarta
+                {tr('Scarta')}
               </button>
             </div>
           </div>
         )}
         {proposta?.tipo === 'voce' && (
-          <div className="descrizione-ai-proposta" role="group" aria-label="Prodotto della cassa proposto">
+          <div className="descrizione-ai-proposta" role="group" aria-label={tr('Prodotto della cassa proposto')}>
             <p style={{ margin: '0 0 6px' }}>
-              Un prodotto della cassa da <strong>{proposta.item.name}</strong>
-              {proposta.prezzo != null ? `, a ${euro(proposta.prezzo)}` : ''}. La scheda si apre nel Menù, collegata a
-              questa bottiglia: si completano la quantità della ricetta e il prezzo, poi si salva.
+              {proposta.prezzo != null
+                ? tr('Un prodotto della cassa da {nome}, a {importo}.', { nome: proposta.item.name, importo: euro(proposta.prezzo) })
+                : tr('Un prodotto della cassa da {nome}.', { nome: proposta.item.name })}{' '}
+              {tr('La scheda si apre nel Menù, collegata a questa bottiglia: si completano la quantità della ricetta e il prezzo, poi si salva.')}
             </p>
             <div className="row" style={{ gap: 8 }}>
               <button
@@ -296,10 +304,10 @@ export default function PannelloChat({ ruolo, onChiudi }) {
                   chiudiProposta({ voce: { nome: proposta.item.name, prezzo_eur: proposta.prezzo }, stato: 'scheda aperta, da completare e salvare' })
                 }}
               >
-                Apri la scheda
+                {tr('Apri la scheda')}
               </button>
               <button type="button" className="btn ghost small" onClick={() => chiudiProposta({ voce: { nome: proposta.item.name }, stato: 'scartata' })}>
-                Scarta
+                {tr('Scarta')}
               </button>
             </div>
           </div>
@@ -316,10 +324,10 @@ export default function PannelloChat({ ruolo, onChiudi }) {
             }}
           />
         )}
-        {lavora && !proposta && <p className="muted small">L’assistente sta rispondendo…</p>}
+        {lavora && !proposta && <p className="muted small">{tr('L’assistente sta rispondendo…')}</p>}
         {quasiPiena(messaggi) && (
           <p className="small" role="status">
-            La conversazione è lunga: per una domanda nuova conviene aprirne un’altra.
+            {tr('La conversazione è lunga: per una domanda nuova conviene aprirne un’altra.')}
           </p>
         )}
         <div ref={fineRef} />
@@ -327,7 +335,7 @@ export default function PannelloChat({ ruolo, onChiudi }) {
 
       <form className="pannello-chat-piede" onSubmit={manda}>
         <textarea
-          aria-label="Messaggio per l’assistente"
+          aria-label={tr('Messaggio per l’assistente')}
           rows={2}
           value={testo}
           disabled={credito.fase !== 'pronta' || lavora}
@@ -337,10 +345,10 @@ export default function PannelloChat({ ruolo, onChiudi }) {
           }}
         />
         <button type="submit" className="btn small" disabled={credito.fase !== 'pronta' || lavora || !testo.trim()}>
-          Invia
+          {tr('Invia')}
         </button>
       </form>
-      {costo > 0 && <p className="muted small pannello-chat-costo">Costo della conversazione {euro(costo)}</p>}
+      {costo > 0 && <p className="muted small pannello-chat-costo">{tr('Costo della conversazione {importo}', { importo: euro(costo) })}</p>}
     </aside>
   )
 }

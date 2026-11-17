@@ -5,6 +5,7 @@ import { notify } from '../lib/notify.js'
 import { isAdmin } from '../lib/ruoli.js'
 import Icona from './Icona.jsx'
 import { conEmoji } from '../lib/icone.js'
+import { tr, useLingua } from '../lib/lingua.js'
 
 // ── LA CHIAMATA SI PRESENTA DOVUNQUE SI STIA GUARDANDO ───────────────
 //
@@ -30,9 +31,11 @@ const VIBRAZIONE = [500, 200, 500, 200, 900]
 
 // Chi chiama chi: il bancone chiama una persona; la sala chiama il bancone
 // (REQ-STAFF-019), e quella la riceve chi è titolare.
-const titoloDi = (call) => (isAdmin(call?.to_role) ? 'Chiamata dalla sala' : 'Chiamata dal bancone')
+// Si traduce quando si chiama, non al caricamento: la lingua può cambiare.
+const titoloDi = (call) => (isAdmin(call?.to_role) ? tr('Chiamata dalla sala') : tr('Chiamata dal bancone'))
 
 export default function ChiamataInArrivo({ ruolo }) {
+  useLingua()
   const [calls, setCalls] = useState([])
   const [dallaSala, setDallaSala] = useState([])
   const [errore, setErrore] = useState(null)
@@ -74,7 +77,7 @@ export default function ChiamataInArrivo({ ruolo }) {
     }
     // Notifica + vibrazione forte e continua finché non si risponde.
     // Stesso tag della push FCM: se arrivano entrambe, una sola notifica.
-    notify(conEmoji('chiama-bancone', titoloDi(incoming)), incoming.message || (incoming.from_name ? `${incoming.from_name} ti chiama.` : 'Rispondi sul telefono.'), {
+    notify(conEmoji('chiama-bancone', titoloDi(incoming)), incoming.message || (incoming.from_name ? tr('{nome} ti chiama.', { nome: incoming.from_name }) : tr('Rispondi sul telefono.')), {
       vibrate: VIBRAZIONE,
       tag: 'staff-call',
       renotify: true,
@@ -104,14 +107,14 @@ export default function ChiamataInArrivo({ ruolo }) {
         <div className="pager-icon"><Icona nome="lettore" gruppo="tasti" /></div>
         <h3 style={{ margin: '8px 0' }}>{titoloDi(incoming)}</h3>
         {incoming.from_name && (
-          <p className="muted" style={{ margin: 0 }}>da {incoming.from_name}</p>
+          <p className="muted" style={{ margin: 0 }}>{tr('da {nome}', { nome: incoming.from_name })}</p>
         )}
         {incoming.message && (
           <p style={{ fontSize: '1.05rem', margin: '12px 0 0' }}>«{incoming.message}»</p>
         )}
-        {errore && <p className="muted small" style={{ marginTop: 10 }}>Errore: {errore}</p>}
+        {errore && <p className="muted small" style={{ marginTop: 10 }}>{tr('Errore: {messaggio}', { messaggio: errore })}</p>}
         <button className="btn block" style={{ marginTop: 18 }} onClick={rispondi}>
-          ✓ Rispondo
+          ✓ {tr('Rispondo')}
         </button>
       </div>
     </div>

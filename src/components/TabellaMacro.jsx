@@ -1,4 +1,6 @@
 import Icona from './Icona.jsx'
+import { tr, trSegnato } from '../lib/lingua.js'
+import { UNASSIGNED } from '../lib/macroStats.js'
 // LA TABELLA PER MACRO DEL BILANCIO: un blocco per macro e uno coi totali,
 // le colonne del periodo e una colonna TOT. La disegnano «Venduto ×
 // Incassato» e «Acquisti × Fatturato» (REQ-MAG-022), che hanno la stessa
@@ -8,7 +10,9 @@ import Icona from './Icona.jsx'
 //   colonne: [{ key, label, sotto? }]  — `sotto` è la seconda riga
 //            dell'intestazione (i giorni di una settimana del mese)
 //   righe:   [{ campo, label, cls }]   — campo fra incasso, costo, margine,
-//            rapporto; `cls` dà il colore della riga (index.css, .macro-tab)
+//            rapporto; `cls` dà il colore della riga (index.css, .macro-tab);
+//            `label` segnata con `daTradurre` da chi passa le righe
+//   rapportoLabel, incidenzaLabel: già nella lingua in uso
 
 const eur0 = (v) =>
   `${Math.round(Number(v) || 0).toLocaleString('it-IT', { useGrouping: 'always' })} €`
@@ -24,7 +28,9 @@ export function BloccoMacro({ row, colonne, righe, rapportoLabel }) {
   return (
     <div className="card" style={{ marginBottom: 12 }}>
       <div className="row between" style={{ alignItems: 'baseline', marginBottom: 6 }}>
-        <strong><Icona nome="raggruppa" gruppo="tasti" /> {row.name}</strong>
+        {/* «Non attribuito» lo scrive lib/macroStats.js in italiano; gli
+            altri nomi sono quelli delle macro, cioè dati. */}
+        <strong><Icona nome="raggruppa" gruppo="tasti" /> {row.id === UNASSIGNED ? tr('Non attribuito') : row.name}</strong>
         <span className="muted small">
           {rapportoLabel}: <strong>{rapporto(row.tot.rapporto)}</strong>
         </span>
@@ -34,7 +40,7 @@ export function BloccoMacro({ row, colonne, righe, rapportoLabel }) {
         perColonna={row.perColonna}
         tot={row.tot}
         righe={righe}
-        incidenza={{ label: 'Incidenza', campo: 'incidenza' }}
+        incidenza={{ label: tr('Incidenza'), campo: 'incidenza' }}
       />
     </div>
   )
@@ -50,7 +56,12 @@ export function BloccoMacro({ row, colonne, righe, rapportoLabel }) {
 export function BloccoTotale({ report, colonne, righe, incidenzaLabel }) {
   return (
     <div className="card macro-total" style={{ marginBottom: 12 }}>
-      <strong>Σ Totale ({report.rows.length} macro)</strong>
+      <strong>
+        Σ{' '}
+        {report.rows.length === 1
+          ? tr('Totale (1 macro)')
+          : tr('Totale ({n} macro)', { n: report.rows.length })}
+      </strong>
       <div style={{ marginTop: 6 }}>
         <TabellaColonne
           colonne={colonne}
@@ -80,7 +91,7 @@ function TabellaColonne({ colonne, perColonna, tot, righe, incidenza }) {
             <th className="rowhead"></th>
             {colonne.map((c) => (
               <th key={c.key}>
-                {c.label}
+                {trSegnato(c.label)}
                 {c.sotto && <div className="muted">{c.sotto}</div>}
               </th>
             ))}
@@ -90,7 +101,7 @@ function TabellaColonne({ colonne, perColonna, tot, righe, incidenza }) {
         <tbody>
           {righe.map((r) => (
             <tr key={r.campo} className={r.cls}>
-              <th className="rowhead">{r.label}</th>
+              <th className="rowhead">{trSegnato(r.label)}</th>
               {celle.map(({ key, v }) => (
                 <td key={key} className={neg(r.campo, v)}>
                   {valoreCella(r.campo, v)}

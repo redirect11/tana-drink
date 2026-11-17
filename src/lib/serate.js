@@ -1,6 +1,6 @@
 import { kpiSummary } from './stats.js'
 import { businessDayKey, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
-import { formatoAttivo, daTradurre } from './lingua.js'
+import { formatoAttivo, daTradurre, tr } from './lingua.js'
 
 // ── L'ELENCO DELLE SERATE (chiusure di cassa) ────────────────────────
 //
@@ -49,7 +49,7 @@ export function durataSerata(da, a) {
 export function etichettaSerata(s) {
   if (!s?.opened_at) return '—'
   return `${giornoSerata(s.opened_at)} · ${oraSerata(s.opened_at)}→${
-    s.closed_at ? oraSerata(s.closed_at) : 'in corso'
+    s.closed_at ? oraSerata(s.closed_at) : tr('in corso')
   }`
 }
 
@@ -104,7 +104,7 @@ export function elencoSerate(sessions = [], orders = [], { adesso } = {}) {
         session: s,
         inCorso: inCorso(s),
         giorno: giornoSerata(s.opened_at),
-        orario: `${oraSerata(s.opened_at)} → ${s.closed_at ? oraSerata(s.closed_at) : 'in corso'}`,
+        orario: `${oraSerata(s.opened_at)} → ${s.closed_at ? oraSerata(s.closed_at) : tr('in corso')}`,
         durata: durataSerata(s.opened_at, fine),
         incasso,
         conti,

@@ -17967,15 +17967,15 @@ requirements:
       personalizzabili dal gestore (testo('chiave', 'predefinito') di
       lib/testiStile.js) e le loro versioni inglesi, insieme a REQ-MENU-046;
       il dizionario inglese caricato solo quando serve, se pesa sul pacchetto.
-      IN CORSO sul ramo feature/gestionale-inglese. FATTO: la lingua sul
+      Lavorato sul ramo feature/gestionale-inglese. FATTO: la lingua sul
       profilo — profili_staff/{uid} (regole: ognuno solo il suo, solo
       `lingua` fra it/en; fuori dal backup, perché il titolare non potrebbe
       rimettere i profili degli altri), salvaLinguaDelProfilo e
       leggiLinguaDelProfilo in api.js, la lettura al login senza farsi
       aspettare (App.jsx), il riquadro «Lingua» in Il mio profilo coi nomi
       delle lingue nella loro lingua; «Il mio profilo» tradotto (area
-      testi/en/profilo.js). Banco e cassa tradotti (17/11): coda, accesso, menu laterale, barra in alto, conto, griglia dei prodotti, pagamento, apertura e chiusura cassa, scheda Cassa (aree testi/en/coda, conto, cassa; le etichette di src/lib in comune). Anche le tabelle di src/lib che il banco mostra (coda.js, sezioni.js, ruoli.js, comande.js, storiaOrdine.js, statoStampante.js, erroriAccesso.js, pendingOrders.js): dove erano costruite al caricamento del modulo ora sono funzioni (filtriStato, etichettaRuolo, servizioEtichetta, etichettaAnnullo). LE PAGINE DEI CLIENTI RESTANO ITALIANE anche su un tablet dello staff in inglese (dalla revisione del 17/11): App.jsx dice a lib/lingua.js se la schermata è del cliente (non personale, «Vista cliente», «Mostra al cliente» ?cliente=1) e lì tr risponde in italiano, con lang=it. CHI NON HA MAI SCELTO ha l'italiano: leggiLinguaDelProfilo risponde it per un profilo senza lingua, e un collega non eredita la lingua di chi ha usato il tablet prima. Lo scontrino resta italiano (prova cartaInItaliano). Secondo giro (17/11): impostazioni (SettingsTab e pannelli), magazzino e comanda al banco, gestione del menù (aree impostazioni, magazzino, menu). DA FARE: fornitori, statistiche e bilancio, staff e utenti, il resto; in src/lib i modi di consegna, gli altri messaggi del piano Free, le descrizioni dei ruoli, i motivi d'errore della stampante.
-    status: todo
+      testi/en/profilo.js). Banco e cassa tradotti (17/11): coda, accesso, menu laterale, barra in alto, conto, griglia dei prodotti, pagamento, apertura e chiusura cassa, scheda Cassa (aree testi/en/coda, conto, cassa; le etichette di src/lib in comune). Anche le tabelle di src/lib che il banco mostra (coda.js, sezioni.js, ruoli.js, comande.js, storiaOrdine.js, statoStampante.js, erroriAccesso.js, pendingOrders.js): dove erano costruite al caricamento del modulo ora sono funzioni (filtriStato, etichettaRuolo, servizioEtichetta, etichettaAnnullo). LE PAGINE DEI CLIENTI RESTANO ITALIANE anche su un tablet dello staff in inglese (dalla revisione del 17/11): App.jsx dice a lib/lingua.js se la schermata è del cliente (non personale, «Vista cliente», «Mostra al cliente» ?cliente=1) e lì tr risponde in italiano, con lang=it. CHI NON HA MAI SCELTO ha l'italiano: leggiLinguaDelProfilo risponde it per un profilo senza lingua, e un collega non eredita la lingua di chi ha usato il tablet prima. Lo scontrino resta italiano (prova cartaInItaliano). Secondo giro (17/11): impostazioni (SettingsTab e pannelli), magazzino e comanda al banco, gestione del menù (aree impostazioni, magazzino, menu). Terzo giro (17/11): fornitori e acquisti, statistiche e bilancio, ore e paghe, utenti e buoni, marketplace, assistente AI, avvisi e novità (aree fornitori, statistiche, staff, altro), con le tabelle di src/lib che mostrano (stati e movimenti degli ordini ai fornitori, periodi e mesi, scadenze dei buoni, temi del marketplace). Date e giorni seguono la lingua (formatoAttivo); gli importi restano all'italiana («7,00 €»). RESTANO ITALIANI apposta: la carta stampata, le pagine dei clienti, il messaggio e la mail d'ordine al fornitore, le fatture ai clienti, le esportazioni, i dati (nomi, note, risposte dell'AI) e DevTools, che si vede solo in sviluppo. FUORI da qui: le lingue del menù scelte dal gestore (REQ-MENU-046).
+    status: implemented
     generate_issue: true
     labels: [ui, lingue]
     priority: P2
@@ -17988,6 +17988,9 @@ requirements:
       - tests/component/ImpostazioniInInglese.test.jsx
       - tests/component/MagazzinoInInglese.test.jsx
       - tests/component/MenuInInglese.test.jsx
+      - tests/component/FornitoriInInglese.test.jsx
+      - tests/component/StatisticheInInglese.test.jsx
+      - tests/component/StaffInInglese.test.jsx
 
   - id: REQ-SIC-007
     title: "Un elenco unico, nel codice, dei dati personali che l'app tiene"

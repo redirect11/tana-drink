@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 313 | fatto e coperto dai test |
+| ✅ | 314 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 9 | fatto a metà |
-| ⬜ | 45 | da fare |
+| ⬜ | 44 | da fare |
 | 🗑 | 8 | non più valido |
 
-**390 voci** in tutto. **337** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **45** sono lavori
+**390 voci** in tutto. **338** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **44** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **17** difetti noti sono ancora aperti.
 
@@ -59,7 +59,7 @@ come «vero oggi», non come «garantito».
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | 6 | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
-| [Interfaccia](#interfaccia) | 33 | 5 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
+| [Interfaccia](#interfaccia) | 34 | 4 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 24 | 2 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 15 | 4 |  |
@@ -76,7 +76,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 14 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 197 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 200 |
 | Unità | il progetto di dettaglio: un modulo da solo | 193 |
 
 **23** bisogni del locale, **0** con un test di accettazione.
@@ -3814,6 +3814,24 @@ Daniele, 17/11/2026: «da oggi tutte le funzioni dovranno avere testi in italian
 
 **Dove**: `src/lib (testi in due lingue), tutti i componenti con testi a schermo` · **Serve**: [UR-022](#ur-022--chi-non-parla-italiano-usa-il-menù-e-il-gestionale-nella-sua-lingua) · **Lo dimostrano**: `tests/unit/lingua.test.js`
 
+#### REQ-UI-039 — Il gestionale in inglese
+
+Daniele, 17/11/2026: dopo le pagine dei clienti, il gestionale va tradotto. Tutti i testi del banco, della cassa, delle impostazioni, del magazzino e delle altre sezioni passano dal meccanismo dei testi in due lingue (REQ-UI-038), una sezione alla volta: prima banco e cassa, poi il resto.
+
+CHI SCEGLIE (Daniele, 17/11/2026): «Chiunque può scegliere la lingua nel gestionale, qualsiasi ruolo. La lingua è legata al profilo». Quindi in «Il mio profilo» ogni persona — admin, bartender, sala — sceglie italiano o inglese, e la scelta sta sul suo account (profili_staff/{uid}, che legge e scrive solo lei): la segue su ogni tablet e telefono. Sul dispositivo ne resta una copia, perché l'app parta subito nella lingua giusta anche senza rete; all'accesso vince quella dell'account. Niente lingua di partenza del locale: si parte in italiano. Si lavora su un ramo feature/, e il selettore arriva insieme alle prime sezioni tradotte (banco e cassa): una scelta che non cambia niente non si mostra. Da decidere quando si comincia (dalla revisione di REQ-UI-038, 17/11/2026): date e importi seguono la lingua (formatPrice e le date oggi sono fissi su it-IT, serve un punto unico); i testi personalizzabili dal gestore (testo('chiave', 'predefinito') di lib/testiStile.js) e le loro versioni inglesi, insieme a REQ-MENU-046; il dizionario inglese caricato solo quando serve, se pesa sul pacchetto. Lavorato sul ramo feature/gestionale-inglese.
+
+FATTO: la lingua sul profilo — profili_staff/{uid} (regole: ognuno solo il suo, solo `lingua` fra it/en; fuori dal backup, perché il titolare non potrebbe rimettere i profili degli altri), salvaLinguaDelProfilo e leggiLinguaDelProfilo in api.js, la lettura al login senza farsi aspettare (App.jsx), il riquadro «Lingua» in Il mio profilo coi nomi delle lingue nella loro lingua; «Il mio profilo» tradotto (area testi/en/profilo.js). Banco e cassa tradotti (17/11): coda, accesso, menu laterale, barra in alto, conto, griglia dei prodotti, pagamento, apertura e chiusura cassa, scheda Cassa (aree testi/en/coda, conto, cassa; le etichette di src/lib in comune). Anche le tabelle di src/lib che il banco mostra (coda.js, sezioni.js, ruoli.js, comande.js, storiaOrdine.js, statoStampante.js, erroriAccesso.js, pendingOrders.js): dove erano costruite al caricamento del modulo ora sono funzioni (filtriStato, etichettaRuolo, servizioEtichetta, etichettaAnnullo).
+
+LE PAGINE DEI CLIENTI RESTANO ITALIANE anche su un tablet dello staff in inglese (dalla revisione del 17/11): App.jsx dice a lib/lingua.js se la schermata è del cliente (non personale, «Vista cliente», «Mostra al cliente» ?cliente=1) e lì tr risponde in italiano, con lang=it.
+
+CHI NON HA MAI SCELTO ha l'italiano: leggiLinguaDelProfilo risponde it per un profilo senza lingua, e un collega non eredita la lingua di chi ha usato il tablet prima. Lo scontrino resta italiano (prova cartaInItaliano). Secondo giro (17/11): impostazioni (SettingsTab e pannelli), magazzino e comanda al banco, gestione del menù (aree impostazioni, magazzino, menu). Terzo giro (17/11): fornitori e acquisti, statistiche e bilancio, ore e paghe, utenti e buoni, marketplace, assistente AI, avvisi e novità (aree fornitori, statistiche, staff, altro), con le tabelle di src/lib che mostrano (stati e movimenti degli ordini ai fornitori, periodi e mesi, scadenze dei buoni, temi del marketplace). Date e giorni seguono la lingua (formatoAttivo); gli importi restano all'italiana («7,00 €»).
+
+RESTANO ITALIANI apposta: la carta stampata, le pagine dei clienti, il messaggio e la mail d'ordine al fornitore, le fatture ai clienti, le esportazioni, i dati (nomi, note, risposte dell'AI) e DevTools, che si vede solo in sviluppo.
+
+FUORI da qui: le lingue del menù scelte dal gestore (REQ-MENU-046).
+
+**Dove**: `src/pages/BartenderPage.jsx, src/components (gestionale), Il mio profilo (src/pages/StaffProfilePage.jsx), src/lib/lingua.js, firestore.rules (profili_staff)` · **Serve**: [UR-022](#ur-022--chi-non-parla-italiano-usa-il-menù-e-il-gestionale-nella-sua-lingua) · **Lo dimostrano**: `tests/regole/profiliStaff.test.js`, `tests/component/CodaInInglese.test.jsx`, `tests/component/ContoInInglese.test.jsx`, `tests/component/CassaInInglese.test.jsx`, `tests/unit/cartaInItaliano.test.js`, `tests/component/ImpostazioniInInglese.test.jsx`, `tests/component/MagazzinoInInglese.test.jsx`, `tests/component/MenuInInglese.test.jsx`, `tests/component/FornitoriInInglese.test.jsx`, `tests/component/StatisticheInInglese.test.jsx`, `tests/component/StaffInInglese.test.jsx`
+
 ### Come si lavora al progetto
 
 Non è comportamento dell’app: è il metodo con cui la si costruisce.
@@ -5001,24 +5019,6 @@ FATTO (17/11/2026): le violazioni di axe corrette (BUG-167); la prova è un CANC
 DA FARE: la prova sul sito di test vero (dopo il prossimo tag); i comandi su `div` cliccabili; il fuoco nelle finestre di dialogo; gli avvisi letti; i temi uno per uno (anche `--muted` a 4,5, con la regia); la prova a mano a ogni versione maggiore (tastiera, NVDA, zoom 200%); infine la pagina «Accessibilità» collegata dal piè di pagina comune (src/App.jsx, accanto a Privacy), col testo approvato da Daniele.
 
 **Dove**: `tests/sistema/accessibilita.spec.js (axe-core), index.html (viewport), src/index.css (contrasto), componenti con comandi su div, src/App.jsx (piè di pagina)` · **Serve**: [UR-021](#ur-021--chi-ha-una-disabilità-usa-il-menù-la-home-del-locale-e-il-gestionale-come-tutti)
-
-#### REQ-UI-039 — Il gestionale in inglese
-
-Daniele, 17/11/2026: dopo le pagine dei clienti, il gestionale va tradotto. Tutti i testi del banco, della cassa, delle impostazioni, del magazzino e delle altre sezioni passano dal meccanismo dei testi in due lingue (REQ-UI-038), una sezione alla volta: prima banco e cassa, poi il resto.
-
-CHI SCEGLIE (Daniele, 17/11/2026): «Chiunque può scegliere la lingua nel gestionale, qualsiasi ruolo. La lingua è legata al profilo». Quindi in «Il mio profilo» ogni persona — admin, bartender, sala — sceglie italiano o inglese, e la scelta sta sul suo account (profili_staff/{uid}, che legge e scrive solo lei): la segue su ogni tablet e telefono. Sul dispositivo ne resta una copia, perché l'app parta subito nella lingua giusta anche senza rete; all'accesso vince quella dell'account. Niente lingua di partenza del locale: si parte in italiano. Si lavora su un ramo feature/, e il selettore arriva insieme alle prime sezioni tradotte (banco e cassa): una scelta che non cambia niente non si mostra. Da decidere quando si comincia (dalla revisione di REQ-UI-038, 17/11/2026): date e importi seguono la lingua (formatPrice e le date oggi sono fissi su it-IT, serve un punto unico); i testi personalizzabili dal gestore (testo('chiave', 'predefinito') di lib/testiStile.js) e le loro versioni inglesi, insieme a REQ-MENU-046; il dizionario inglese caricato solo quando serve, se pesa sul pacchetto.
-
-IN CORSO sul ramo feature/gestionale-inglese.
-
-FATTO: la lingua sul profilo — profili_staff/{uid} (regole: ognuno solo il suo, solo `lingua` fra it/en; fuori dal backup, perché il titolare non potrebbe rimettere i profili degli altri), salvaLinguaDelProfilo e leggiLinguaDelProfilo in api.js, la lettura al login senza farsi aspettare (App.jsx), il riquadro «Lingua» in Il mio profilo coi nomi delle lingue nella loro lingua; «Il mio profilo» tradotto (area testi/en/profilo.js). Banco e cassa tradotti (17/11): coda, accesso, menu laterale, barra in alto, conto, griglia dei prodotti, pagamento, apertura e chiusura cassa, scheda Cassa (aree testi/en/coda, conto, cassa; le etichette di src/lib in comune). Anche le tabelle di src/lib che il banco mostra (coda.js, sezioni.js, ruoli.js, comande.js, storiaOrdine.js, statoStampante.js, erroriAccesso.js, pendingOrders.js): dove erano costruite al caricamento del modulo ora sono funzioni (filtriStato, etichettaRuolo, servizioEtichetta, etichettaAnnullo).
-
-LE PAGINE DEI CLIENTI RESTANO ITALIANE anche su un tablet dello staff in inglese (dalla revisione del 17/11): App.jsx dice a lib/lingua.js se la schermata è del cliente (non personale, «Vista cliente», «Mostra al cliente» ?cliente=1) e lì tr risponde in italiano, con lang=it.
-
-CHI NON HA MAI SCELTO ha l'italiano: leggiLinguaDelProfilo risponde it per un profilo senza lingua, e un collega non eredita la lingua di chi ha usato il tablet prima. Lo scontrino resta italiano (prova cartaInItaliano). Secondo giro (17/11): impostazioni (SettingsTab e pannelli), magazzino e comanda al banco, gestione del menù (aree impostazioni, magazzino, menu).
-
-DA FARE: fornitori, statistiche e bilancio, staff e utenti, il resto; in src/lib i modi di consegna, gli altri messaggi del piano Free, le descrizioni dei ruoli, i motivi d'errore della stampante.
-
-**Dove**: `src/pages/BartenderPage.jsx, src/components (gestionale), Il mio profilo (src/pages/StaffProfilePage.jsx), src/lib/lingua.js, firestore.rules (profili_staff)` · **Serve**: [UR-022](#ur-022--chi-non-parla-italiano-usa-il-menù-e-il-gestionale-nella-sua-lingua)
 
 ### Come si lavora al progetto
 

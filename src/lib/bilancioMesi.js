@@ -28,9 +28,15 @@
 import { colonneDelBilancio } from './periodiBilancio.js'
 import { shiftDay, byDay } from './ore.js'
 import { payrollReport, costoSuIncasso } from './paghe.js'
+import { daTradurre, trSegnato } from './lingua.js'
 
 const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100
-const GIORNI = ['dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab']
+// I giorni si traducono quando si scrive il nome del giorno (REQ-UI-039);
+// «mar» porta il contesto perché fra i mesi corti (periodo.js) è marzo.
+const GIORNI = [
+  daTradurre('dom'), daTradurre('lun'), daTradurre('giorno|mar'), daTradurre('mer'),
+  daTradurre('gio'), daTradurre('ven'), daTradurre('sab'),
+]
 
 // IL COSTO DEL PERSONALE DI OGNI GIORNO: Map giorno → euro. Le ore EFFETTIVE
 // per i giorni fino a `oggi`, i turni PROGRAMMATI per quelli dopo: un giorno
@@ -85,7 +91,7 @@ export function tabellaDelMese({
       const incassato = g <= oggi ? r2(incassi.get(g) || 0) : null
       giorni.push({
         giorno: g,
-        nome: `${GIORNI[new Date(`${g}T12:00:00Z`).getUTCDay()]} ${Number(g.slice(8))}`,
+        nome: `${trSegnato(GIORNI[new Date(`${g}T12:00:00Z`).getUTCDay()])} ${Number(g.slice(8))}`,
         minimo,
         incassato,
         differenza: minimo != null && incassato != null ? r2(incassato - minimo) : null,
