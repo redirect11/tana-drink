@@ -2,6 +2,11 @@
 
 ## 1.10.55-beta — in lavorazione
 
+### Coda ordini
+
+- Svuotato un conto, tornando alla coda la sua card non ricompare più per un
+  attimo con l'avviso «Conto ripristinato» prima di sparire (BUG-169).
+
 ## 1.10.54-beta — 17/11/2026 (test)
 
 ### Aspetto

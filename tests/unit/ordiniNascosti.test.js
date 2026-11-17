@@ -8,6 +8,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import {
   nascondiOrdine,
+  nascondiPerAnnullo,
   mostraOrdine,
   ordineNascosto,
   senzaNascosti,
@@ -66,5 +67,43 @@ describe('conti appena chiusi', () => {
   it('un id vuoto non nasconde niente (chiamata a vuoto, non un crash)', () => {
     nascondiOrdine(null)
     expect(elencoNascosti()).toEqual([])
+  })
+})
+
+// IL CONTO SVUOTATO NASCOSTO NON RICOMPARE (BUG-169). Svuotato un conto, si
+// torna alla coda e l'uscita lo nasconde e lo annulla. Finché l'annullo non
+// arriva la sua comanda, ormai senza righe, è ancora «ricevuto»: contava
+// come lavoro da fare, e il conto vuoto ricompariva per un attimo
+// («0 prodotti · 0,00 €») prima di sparire di nuovo. Il conto incassato coi
+// drink ancora da fare, invece, resta (BUG-023).
+describe('nascosto, ma col lavoro da fare', () => {
+  const comanda = (status, items) => ({ id: `c-${status}`, status, items })
+  const svuotato = { id: 'vuoto', status: 'aperto', comande: [comanda('ricevuto', [])] }
+  const pagatoDaFare = {
+    id: 'pagato',
+    status: 'pagato',
+    comande: [comanda('ricevuto', [{ drink_id: 'negroni', qty: 1 }])],
+  }
+
+  it('il conto svuotato resta nascosto; quello pagato coi drink da fare no', async () => {
+    const { haLavoroDaFare } = await import('../../src/lib/coda.js')
+    nascondiOrdine('vuoto')
+    nascondiOrdine('pagato')
+    expect(senzaNascosti([svuotato, pagatoDaFare], haLavoroDaFare).map((o) => o.id)).toEqual(['pagato'])
+  })
+
+  // Dalla revisione: all'uscita la rimozione dell'ultima riga parte INSIEME
+  // all'annullo, e la coda può vedere il conto ancora col suo drink. Per
+  // `haLavoroDaFare` è lavoro; ma un conto che si sta annullando da qui non
+  // ne ha, e resta nascosto. Il conto pagato coi drink da fare no.
+  it('nascosto per annullo resta nascosto anche col drink ancora dentro', async () => {
+    const { haLavoroDaFare } = await import('../../src/lib/coda.js')
+    const annullando = { ...pagatoDaFare, id: 'annullando', status: 'aperto' }
+    nascondiPerAnnullo('annullando')
+    nascondiOrdine('pagato')
+    expect(senzaNascosti([annullando, pagatoDaFare], haLavoroDaFare).map((o) => o.id)).toEqual(['pagato'])
+    // e scade come gli altri: un annullo fallito non lo tiene nascosto per sempre
+    mostraOrdine('annullando')
+    expect(senzaNascosti([annullando], haLavoroDaFare).map((o) => o.id)).toEqual(['annullando'])
   })
 })

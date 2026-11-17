@@ -10720,6 +10720,7 @@ requirements:
       - tests/component/OrderPosDetail.test.jsx
       - tests/component/StaffProfilePage.test.jsx
       - tests/unit/giroInLocale.test.js
+      - tests/sistema/contoSvuotato.spec.js
 
   - id: REQ-STAMPA-011
     title: "Il logo sugli scontrini si sceglie: quale, e su quali stampe"
