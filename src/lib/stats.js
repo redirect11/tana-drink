@@ -8,6 +8,7 @@ import { businessDayKey, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
 import { comandeConRighe, itemsTotal } from './comande.js'
 import { ORARIO_PREDEFINITO, parseHM } from './orario.js'
 import { lineCost } from './rendiconto.js'
+import { formatoAttivo } from './lingua.js'
 
 const isCancelled = (o) => o.status === ORDER_STATUSES.ANNULLATO
 const valid = (orders) => orders.filter((o) => !isCancelled(o))
@@ -264,8 +265,8 @@ export function revenueByDay(orders, cutoffHour = DEFAULT_CUTOFF_HOUR, { giorniC
       const d = new Date(`${k}T12:00:00`)
       return {
         id: k,
-        label: d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }),
-        weekday: d.toLocaleDateString('it-IT', { weekday: 'short' }),
+        label: d.toLocaleDateString(formatoAttivo(), { day: '2-digit', month: '2-digit' }),
+        weekday: d.toLocaleDateString(formatoAttivo(), { weekday: 'short' }),
         incasso: agg.incasso,
         ordini: agg.ordini,
       }

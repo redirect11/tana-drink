@@ -15,6 +15,7 @@ import {
   speseSenzaData,
 } from '../lib/spese.js'
 import AiutoCampo from './AiutoCampo.jsx'
+import { tr } from '../lib/lingua.js'
 
 // ── ALTRE SPESE (REQ-MAG-034) ────────────────────────────────────────
 //
@@ -109,7 +110,7 @@ export default function AltreSpesePanel() {
   }
 
   function elimina(spesa) {
-    if (!confirm(`Eliminare «${spesa.name || 'questa voce'}»?`)) return
+    if (!confirm(tr('Eliminare «{nome}»?', { nome: spesa.name || tr('questa voce') }))) return
     setError(null)
     setSpese((prev) => prev.filter((s) => s.id !== spesa.id))
     eliminaAltraSpesa(spesa.id).catch((e) => {
@@ -120,17 +121,17 @@ export default function AltreSpesePanel() {
 
   return (
     <div>
-      {error && <div className="banner">Errore: {error}</div>}
+      {error && <div className="banner">{tr('Errore: {errore}', { errore: error })}</div>}
 
       <div className="inv-summary">
         <span className="chip" style={{ cursor: 'default' }}>
-          Comprato <strong>{formatPrice(totali.comprato)}</strong>
+          {tr('Comprato')} <strong>{formatPrice(totali.comprato)}</strong>
         </span>
         <button
           className={`chip ${soloDaComprare ? 'active' : ''}`}
           onClick={() => setSoloDaComprare((v) => !v)}
         >
-          Solo da comprare ({daComprare})
+          {tr('Solo da comprare ({n})', { n: daComprare })}
         </button>
         {/* Lo stesso mestiere dei chip dello Scadenzario: un buco si conta in
             testa e si isola con un tocco. Qui il buco è una voce segnata
@@ -141,21 +142,18 @@ export default function AltreSpesePanel() {
             className={`chip ${soloSenzaPrezzo ? 'active' : ''}`}
             onClick={() => setSoloSenzaPrezzo((v) => !v)}
           >
-            Senza prezzo ({senzaPrezzo.length})
+            {tr('Senza prezzo ({n})', { n: senzaPrezzo.length })}
           </button>
         )}
       </div>
 
       <p className="muted small" style={{ margin: '0 4px 8px' }}>
-        Quello che esce dal conto e non entra in magazzino. La merce dei
-        fornitori non va qui: si conta dalle fatture, e riscriverla la
-        conterebbe due volte. Pesa sul mese solo quello che è segnato come
-        comprato; il resto è un promemoria.
+        {tr('Quello che esce dal conto e non entra in magazzino. La merce dei fornitori non va qui: si conta dalle fatture, e riscriverla la conterebbe due volte. Pesa sul mese solo quello che è segnato come comprato; il resto è un promemoria.')}
       </p>
 
       {!modulo ? (
         <button className="btn block" onClick={() => setModulo({})}>
-          + Nuova spesa
+          + {tr('Nuova spesa')}
         </button>
       ) : (
         <SpesaForm spesa={modulo} onCancel={() => setModulo(null)} onSave={salva} />
@@ -180,9 +178,9 @@ export default function AltreSpesePanel() {
                     Il secondo non nasce da questa schermata — che la data la
                     mette sempre — ma da quello che arriva da fuori. */}
                 {spesaComprata(s) && totaleSpesa(s) <= 0 && (
-                  <span className="badge-low">senza prezzo</span>
+                  <span className="badge-low">{tr('senza prezzo')}</span>
                 )}
-                {senzaData.includes(s) && <span className="badge-low">senza data</span>}
+                {senzaData.includes(s) && <span className="badge-low">{tr('senza data')}</span>}
               </div>
               <div className="inv-qty">
                 <div>{formatPrice(totaleSpesa(s))}</div>
@@ -191,24 +189,32 @@ export default function AltreSpesePanel() {
                   style={{ marginTop: 4 }}
                   aria-label={
                     s.bought
-                      ? `Segna «${s.name}» come da comprare`
-                      : `Segna «${s.name}» come comprata`
+                      ? tr('Segna «{nome}» come da comprare', { nome: s.name })
+                      : tr('Segna «{nome}» come comprata', { nome: s.name })
                   }
                   onClick={() => cambiaComprata(s)}
                 >
-                  {s.bought ? <><Icona nome="fatto" gruppo="tasti" /> comprata</> : <><Icona nome="carrello" gruppo="tasti" /> da comprare</>}
+                  {s.bought ? (
+                    <>
+                      <Icona nome="fatto" gruppo="tasti" /> {tr('comprata')}
+                    </>
+                  ) : (
+                    <>
+                      <Icona nome="carrello" gruppo="tasti" /> {tr('da comprare')}
+                    </>
+                  )}
                 </button>
               </div>
               <button
                 className="btn ghost small"
-                aria-label={`Modifica «${s.name}»`}
+                aria-label={tr('Modifica «{nome}»', { nome: s.name })}
                 onClick={() => setModulo(s)}
               >
                 <Icona nome="modifica" gruppo="tasti" />
               </button>
               <button
                 className="btn ghost small"
-                aria-label={`Elimina «${s.name}»`}
+                aria-label={tr('Elimina «{nome}»', { nome: s.name })}
                 onClick={() => elimina(s)}
               >
                 <Icona nome="elimina" gruppo="tasti" />
@@ -218,15 +224,14 @@ export default function AltreSpesePanel() {
         ))}
       </div>
 
-      {visibili.length === 0 && <div className="empty">Nessuna spesa.</div>}
+      {visibili.length === 0 && <div className="empty">{tr('Nessuna spesa.')}</div>}
 
       {/* Il costo della lista NON è una spesa: è la stima di un promemoria, e
           sta staccato dai totali di sopra perché i due numeri non si devono
           poter confondere. */}
       {totali.daComprare > 0 && (
         <div className="muted small" style={{ margin: '8px 4px 0' }}>
-          Ancora da comprare: {formatPrice(totali.daComprare)}, che non pesa su
-          nessun mese.
+          {tr('Ancora da comprare: {importo}, che non pesa su nessun mese.', { importo: formatPrice(totali.daComprare) })}
         </div>
       )}
     </div>
@@ -267,21 +272,21 @@ function SpesaForm({ spesa, onCancel, onSave }) {
 
   return (
     <form className="card" onSubmit={submit}>
-      <strong>{spesa.id ? 'Modifica spesa' : 'Nuova spesa'}</strong>
+      <strong>{spesa.id ? tr('Modifica spesa') : tr('Nuova spesa')}</strong>
 
-      <label htmlFor="sp-nome" style={{ marginTop: 8 }}>Articolo *</label>
+      <label htmlFor="sp-nome" style={{ marginTop: 8 }}>{tr('Articolo *')}</label>
       <input id="sp-nome" value={form.name} onChange={set('name')} required />
 
       <div className="grid-2">
         <div>
-          <label htmlFor="sp-qty">Quantità</label>
+          <label htmlFor="sp-qty">{tr('Quantità')}</label>
           <input id="sp-qty" type="number" step="1" min="0" value={form.qty} onChange={set('qty')} />
         </div>
         <div>
           {/* IL PREZZO PUÒ RESTARE VUOTO, ed è la normalità di una lista della
               spesa: nel foglio diverse righe non sono ancora prezzate. Diventa
               un buco solo quando la voce si segna comprata. */}
-          <label htmlFor="sp-prezzo">Prezzo €</label>
+          <label htmlFor="sp-prezzo">{tr('Prezzo €')}</label>
           <input
             id="sp-prezzo"
             type="number"
@@ -293,10 +298,10 @@ function SpesaForm({ spesa, onCancel, onSave }) {
         </div>
       </div>
 
-      <label htmlFor="sp-dove">Dove si compra</label>
+      <label htmlFor="sp-dove">{tr('Dove si compra')}</label>
       <input id="sp-dove" value={form.shop} onChange={set('shop')} />
 
-      <label htmlFor="sp-note">Note</label>
+      <label htmlFor="sp-note">{tr('Note')}</label>
       <input id="sp-note" value={form.notes} onChange={set('notes')} />
 
       <label className="row" style={{ marginTop: 10 }}>
@@ -306,7 +311,7 @@ function SpesaForm({ spesa, onCancel, onSave }) {
           checked={form.bought}
           onChange={set('bought')}
         />
-        <span>Già comprata</span>
+        <span>{tr('Già comprata')}</span>
       </label>
 
       {/* La data compare solo dove serve: su un promemoria non c'è niente da
@@ -314,18 +319,18 @@ function SpesaForm({ spesa, onCancel, onSave }) {
           per una cosa che non è successa. */}
       {form.bought && (
         <>
-          <label htmlFor="sp-data">Data dell’acquisto</label>
+          <label htmlFor="sp-data">{tr('Data dell’acquisto')}</label>
           <input id="sp-data" type="date" value={form.bought_at} onChange={set('bought_at')} />
-          <AiutoCampo style={{ margin: '4px 0 0' }}>Determina il mese a cui è imputata la spesa.</AiutoCampo>
+          <AiutoCampo style={{ margin: '4px 0 0' }}>{tr('Determina il mese a cui è imputata la spesa.')}</AiutoCampo>
         </>
       )}
 
       <div className="grid-2" style={{ marginTop: 12 }}>
         <button type="button" className="btn ghost" onClick={onCancel}>
-          Annulla
+          {tr('Annulla')}
         </button>
         <button type="submit" className="btn">
-          Salva
+          {tr('Salva')}
         </button>
       </div>
     </form>

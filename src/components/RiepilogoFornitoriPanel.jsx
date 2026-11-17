@@ -7,6 +7,16 @@ import {
 } from '../lib/api.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { riepilogoMesi, totaleRiepilogo, nomeMese } from '../lib/riepilogoFornitori.js'
+import { tr, linguaInUso, formatoAttivo, LINGUA_DI_PARTENZA } from '../lib/lingua.js'
+
+// Il nome del mese nella lingua di chi guarda (REQ-UI-039). In italiano
+// resta `nomeMese`, che è quello di sempre; nelle altre lingue lo scrive il
+// browser, che i nomi dei mesi li sa già («January 2026»).
+function meseLeggibile(mese) {
+  const [anno, m] = String(mese || '').split('-').map(Number)
+  if (linguaInUso() === LINGUA_DI_PARTENZA || !anno || !m) return nomeMese(mese)
+  return new Date(anno, m - 1, 1).toLocaleDateString(formatoAttivo(), { month: 'long', year: 'numeric' })
+}
 
 // ── RIEPILOGO: I SOLDI CHE ESCONO, MESE PER MESE (REQ-MAG-034) ───────
 //
@@ -67,17 +77,17 @@ export default function RiepilogoFornitoriPanel() {
 
   return (
     <div>
-      {error && <div className="banner">Errore: {error}</div>}
+      {error && <div className="banner">{tr('Errore: {errore}', { errore: error })}</div>}
 
       <div className="inv-summary">
         <span className="chip" style={{ cursor: 'default' }}>
-          Merce <strong>{formatPrice(totale.merce)}</strong>
+          {tr('Merce')} <strong>{formatPrice(totale.merce)}</strong>
         </span>
         <span className="chip" style={{ cursor: 'default' }}>
-          Altre spese <strong>{formatPrice(totale.altre)}</strong>
+          {tr('Altre spese')} <strong>{formatPrice(totale.altre)}</strong>
         </span>
         <span className="chip" style={{ cursor: 'default' }}>
-          Totale <strong>{formatPrice(totale.totale)}</strong>
+          {tr('Totale')} <strong>{formatPrice(totale.totale)}</strong>
         </span>
       </div>
 
@@ -88,10 +98,7 @@ export default function RiepilogoFornitoriPanel() {
           numeri sono più bassi dei suoi. Senza dirlo, al primo confronto
           sembra che l'app sbagli. */}
       <p className="muted small" style={{ margin: '0 4px 8px' }}>
-        Qui c’è quello che è registrato nell’app: la merce dalle fatture dei
-        fornitori, il resto dalle altre spese. Nel foglio mensile la riga
-        «spese» comprende anche la merce, quindi questi totali sono più bassi:
-        la merce si conta una volta sola, nella sua colonna.
+        {tr('Qui c’è quello che è registrato nell’app: la merce dalle fatture dei fornitori, il resto dalle altre spese. Nel foglio mensile la riga «spese» comprende anche la merce, quindi questi totali sono più bassi: la merce si conta una volta sola, nella sua colonna.')}
       </p>
 
       <div className="inv-list">
@@ -99,9 +106,9 @@ export default function RiepilogoFornitoriPanel() {
           <div className="inv-item" key={r.mese}>
             <div className="inv-row" style={{ cursor: 'default' }}>
               <div className="grow" style={{ minWidth: 0 }}>
-                <div className="inv-name">{nomeMese(r.mese)}</div>
+                <div className="inv-name">{meseLeggibile(r.mese)}</div>
                 <div className="muted small">
-                  Merce {formatPrice(r.merce)} · Altre spese {formatPrice(r.altre)}
+                  {tr('Merce {merce} · Altre spese {altre}', { merce: formatPrice(r.merce), altre: formatPrice(r.altre) })}
                 </div>
               </div>
               <div className="inv-qty">
@@ -115,24 +122,21 @@ export default function RiepilogoFornitoriPanel() {
                 arriva. L'ambra dice lavoro che manca, non errore. */}
             {(r.daPagare > 0 || r.senzaFattura > 0) && (
               <div className="muted small" style={{ margin: '4px 4px 0' }}>
-                {r.daPagare > 0 && <>Ancora da pagare {formatPrice(r.daPagare)}</>}
+                {r.daPagare > 0 && tr('Ancora da pagare {importo}', { importo: formatPrice(r.daPagare) })}
                 {r.daPagare > 0 && r.senzaFattura > 0 && ' · '}
-                {r.senzaFattura > 0 && (
-                  <>Consegnato senza fattura {formatPrice(r.senzaFattura)} (netto)</>
-                )}
+                {r.senzaFattura > 0 &&
+                  tr('Consegnato senza fattura {importo} (netto)', { importo: formatPrice(r.senzaFattura) })}
               </div>
             )}
           </div>
         ))}
       </div>
 
-      {righe.length === 0 && <div className="empty">Nessun mese da riepilogare.</div>}
+      {righe.length === 0 && <div className="empty">{tr('Nessun mese da riepilogare.')}</div>}
 
       {(totale.daPagare > 0 || totale.senzaFattura > 0) && (
         <p className="muted small" style={{ margin: '8px 4px 0' }}>
-          Le due righe in fondo a ogni mese non entrano nel totale: quello che
-          è ancora da pagare è già contato nella merce, e la merce consegnata
-          senza fattura entrerà nel mese quando il documento arriva.
+          {tr('Le due righe in fondo a ogni mese non entrano nel totale: quello che è ancora da pagare è già contato nella merce, e la merce consegnata senza fattura entrerà nel mese quando il documento arriva.')}
         </p>
       )}
     </div>

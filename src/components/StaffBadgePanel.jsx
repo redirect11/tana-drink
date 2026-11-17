@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { listStaff } from '../lib/staffApi.js'
 import { subscribeStaffShiftsRange, clockIn, clockOut, updateStaffShift } from '../lib/api.js'
 import Icona from './Icona.jsx'
+import { tr, useLingua } from '../lib/lingua.js'
 
 // Pannello TIMBRATURE nella cassa: il bartender (Flavio/Vittorio) all'apertura
 // e alla chiusura può timbrare entrata/uscita anche PER I DIPENDENTI e
@@ -18,6 +19,7 @@ const fmtTime = (iso) => {
 }
 
 export default function StaffBadgePanel() {
+  useLingua()
   const [staff, setStaff] = useState([])
   const [shifts, setShifts] = useState([])
   const [busy, setBusy] = useState('')
@@ -82,12 +84,12 @@ export default function StaffBadgePanel() {
 
   return (
     <div className="card" style={{ marginTop: 12 }}>
-      <strong><Icona nome="orario" gruppo="tasti" /> Timbrature staff</strong>
+      <strong><Icona nome="orario" gruppo="tasti" /> {tr('Timbrature staff')}</strong>
       <div className="muted small" style={{ margin: '2px 0 8px' }}>
-        Timbra entrata/uscita anche per i dipendenti · {dentro} in servizio
+        {tr('Timbra entrata/uscita anche per i dipendenti · {n} in servizio', { n: dentro })}
       </div>
       {err && <div className="banner" style={{ marginBottom: 8 }}><Icona nome="avviso" gruppo="segnali" /> {err}</div>}
-      {membri.length === 0 && <p className="muted small">Nessun membro dello staff registrato.</p>}
+      {membri.length === 0 && <p className="muted small">{tr('Nessun membro dello staff registrato.')}</p>}
       {membri.map((m) => {
         const open = openByUid.get(m.uid)
         return (
@@ -95,9 +97,9 @@ export default function StaffBadgePanel() {
             <span style={{ minWidth: 0 }}>
               <strong>{m.name}</strong>{' '}
               {open ? (
-                <span className="muted small">in servizio dalle {fmtTime(open.clock_in)}</span>
+                <span className="muted small">{tr('in servizio dalle {ora}', { ora: fmtTime(open.clock_in) })}</span>
               ) : (
-                <span className="muted small">non in servizio</span>
+                <span className="muted small">{tr('non in servizio')}</span>
               )}
             </span>
             <span className="row" style={{ gap: 6, flexShrink: 0 }}>
@@ -115,13 +117,13 @@ export default function StaffBadgePanel() {
                 ) : (
                   <button
                     className="btn ghost small"
-                    title="Correggi l'orario di entrata"
+                    title={tr("Correggi l'orario di entrata")}
                     onClick={() => {
                       setEditUid(m.uid)
                       setEditTime(fmtTime(open.clock_in))
                     }}
                   >
-                    <Icona nome="scrivi" gruppo="tasti" /> ora
+                    <Icona nome="scrivi" gruppo="tasti" /> {tr('orario|ora')}
                   </button>
                 ))}
               <button
@@ -129,7 +131,7 @@ export default function StaffBadgePanel() {
                 disabled={busy === m.uid}
                 onClick={() => toggle(m)}
               >
-                {open ? 'Timbra uscita' : 'Timbra entrata'}
+                {open ? tr('Timbra uscita') : tr('Timbra entrata')}
               </button>
             </span>
           </div>

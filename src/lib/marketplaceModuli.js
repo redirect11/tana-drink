@@ -20,6 +20,7 @@ import { urlRegia } from './limiti.js'
 import { leggi, scrivi } from './impostazioniLocali.js'
 import { urlFunzioneRegia, scaricaERicorda, erroreDellaRegia } from './funzioniRegia.js'
 import { formatPrice } from './orderStatus.js'
+import { tr } from './lingua.js'
 
 export const urlListino = (progetto) => urlFunzioneRegia('catalogoModuli', progetto)
 export const urlAzioni = (progetto) => urlFunzioneRegia('moduloDallApp', progetto)
@@ -86,7 +87,8 @@ export function schedeModuli(settings, listino = []) {
 
 // Il prezzo come lo scrive il listino della regia (piani.json): mensile, IVA
 // esclusa. «15,00 € al mese + IVA», coi decimali come ogni prezzo dell'app.
-export const prezzoAlMese = (euro) => (euro === null || euro === undefined ? '' : `${formatPrice(euro)} al mese + IVA`)
+export const prezzoAlMese = (euro) =>
+  euro === null || euro === undefined ? '' : tr('{importo} al mese + IVA', { importo: formatPrice(euro) })
 
 // La risposta della regia a un'azione. Con `checkout_url` si va a pagare
 // sulla pagina di Stripe; con `in_attesa` la regia ha solo preso la

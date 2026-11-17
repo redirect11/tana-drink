@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { subscribeSettings, settingsIniziali } from '../lib/api.js'
 import { voceVisibile } from '../lib/licenza.js'
 import { Sottosezioni } from '../lib/sottosezioni.js'
+import { daTradurre, trSegnato } from '../lib/lingua.js'
 import { FornitoriPanel } from './InventoryManager.jsx'
 import PurchaseOrdersPanel from './PurchaseOrdersPanel.jsx'
 import SupplierInvoicesPanel from './SupplierInvoicesPanel.jsx'
@@ -37,20 +38,20 @@ import RiepilogoFornitoriPanel from './RiepilogoFornitoriPanel.jsx'
 // righe di catalogo, e per ordinare bisognava passare accanto a tutti gli
 // ordini già fatti. Sono due lavori diversi e si fanno in momenti diversi.
 const SEZIONI = [
-  { id: 'anagrafica', icona: 'fornitori', label: 'Gestione fornitori' },
-  { id: 'nuovo-ordine', icona: 'carrello', label: 'Nuovo ordine' },
-  { id: 'lista-ordini', icona: 'elenco', label: 'Lista ordini' },
+  { id: 'anagrafica', icona: 'fornitori', label: daTradurre('Gestione fornitori') },
+  { id: 'nuovo-ordine', icona: 'carrello', label: daTradurre('Nuovo ordine') },
+  { id: 'lista-ordini', icona: 'elenco', label: daTradurre('Lista ordini') },
   // Funzione premium (REQ-LIC-001): dove il modulo non lavora, la voce non
   // c'è. Le altre due restano, quindi la sezione non resta mai vuota.
-  { id: 'scadenzario', icona: 'calendario', label: 'Scadenzario' },
+  { id: 'scadenzario', icona: 'calendario', label: daTradurre('Scadenzario') },
   // ALTRE SPESE E RIEPILOGO (REQ-MAG-034, ritagliati da REQ-MAG-025). Non
   // se ne inventa un modulo: il riepilogo mette insieme quello che c'è. Le
   // altre spese stanno col magazzino come gli ordini (lib/licenza.js,
   // `sezioni`): le regole ne vogliono il modulo, e la sezione Fornitori la
   // apre anche lo scadenzario da solo (REQ-LIC-015), dove restano
   // l'anagrafica, lo scadenzario e il riepilogo.
-  { id: 'spese', icona: 'coda', label: 'Altre spese' },
-  { id: 'riepilogo', icona: 'statistiche', label: 'Riepilogo' },
+  { id: 'spese', icona: 'coda', label: daTradurre('Altre spese') },
+  { id: 'riepilogo', icona: 'statistiche', label: daTradurre('Riepilogo') },
 ]
 
 export default function FornitoriTab({ sezioneIniziale = 'anagrafica' }) {
@@ -60,7 +61,12 @@ export default function FornitoriTab({ sezioneIniziale = 'anagrafica' }) {
   const [impostazioni, setImpostazioni] = useState(settingsIniziali)
   useEffect(() => subscribeSettings(setImpostazioni, () => {}), [])
 
-  const voci = SEZIONI.filter((v) => voceVisibile(impostazioni, v.id))
+  // Le etichette si traducono qui, nel disegno: in SEZIONI fisserebbero la
+  // lingua al caricamento del modulo (REQ-UI-039).
+  const voci = SEZIONI.filter((v) => voceVisibile(impostazioni, v.id)).map((v) => ({
+    ...v,
+    label: trSegnato(v.label),
+  }))
   // La sezione aperta si RICAVA dall'elenco: se il modulo si spegne da un
   // altro terminale mentre si guarda lo scadenzario, si torna all'anagrafica
   // invece di restare su un pannello che non è più in elenco.

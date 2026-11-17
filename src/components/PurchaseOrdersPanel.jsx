@@ -28,6 +28,7 @@ import { purchaseOrderText } from '../lib/warehouse.js'
 import { printOrdineFornitore } from '../lib/printer.js'
 import { stampaNelPiano } from '../lib/limiti.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
+import { tr } from '../lib/lingua.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import NuovoOrdinePanel from './NuovoOrdinePanel.jsx'
 import OrdiniListaPanel from './OrdiniListaPanel.jsx'
@@ -262,7 +263,7 @@ export default function PurchaseOrdersPanel({ vista = 'nuovo' }) {
     allineaPrezziDaFattura(ordine, fattura).then(
       (agg) => {
         rimpiazza(agg)
-        toastSuccess('Listino allineato al documento')
+        toastSuccess(tr('Listino allineato al documento'))
       },
       (e) => setError(e.message)
     )
@@ -283,7 +284,7 @@ export default function PurchaseOrdersPanel({ vista = 'nuovo' }) {
         const senza = prev.filter((m) => m.id !== modello.id)
         return [...senza, modello].sort((a, b) => a.nome.localeCompare(b.nome, 'it-IT'))
       })
-      toastSuccess(`Modello «${modello.nome}» salvato`)
+      toastSuccess(tr('Modello «{nome}» salvato', { nome: modello.nome }))
       return modello
     } catch (e) {
       setError(e.message)
@@ -315,6 +316,9 @@ export default function PurchaseOrdersPanel({ vista = 'nuovo' }) {
 
   // Invia l'ordine di quel fornitore. La fetta ha la stessa forma di un
   // ordine, quindi testo e stampa non cambiano di una riga.
+  //
+  // L'OGGETTO E IL TESTO RESTANO IN ITALIANO, qualunque sia la lingua del
+  // gestionale (REQ-UI-039): li legge il fornitore, non chi lavora qui.
   function inviaEmail(fetta) {
     const body = purchaseOrderText(fetta)
     window.location.href = `mailto:${encodeURIComponent(fetta.email || '')}?subject=${encodeURIComponent(
@@ -325,14 +329,14 @@ export default function PurchaseOrdersPanel({ vista = 'nuovo' }) {
   async function copia(fetta) {
     try {
       await navigator.clipboard.writeText(purchaseOrderText(fetta))
-      toastSuccess('Ordine copiato negli appunti')
+      toastSuccess(tr('Ordine copiato negli appunti'))
     } catch (e) {
-      toastError(`Copia non riuscita: ${e.message}`)
+      toastError(tr('Copia non riuscita: {errore}', { errore: e.message }))
     }
   }
 
   async function remove(order) {
-    if (!confirm(`Eliminare l'ordine del ${order.created_at?.slice(0, 10)}?`)) return
+    if (!confirm(tr("Eliminare l'ordine del {data}?", { data: order.created_at?.slice(0, 10) }))) return
     try {
       await deletePurchaseOrder(order.id)
       setOrders((prev) => prev.filter((o) => o.id !== order.id))
@@ -351,7 +355,7 @@ export default function PurchaseOrdersPanel({ vista = 'nuovo' }) {
 
   return (
     <div>
-      {error && <div className="banner">Errore: {error}</div>}
+      {error && <div className="banner">{tr('Errore: {errore}', { errore: error })}</div>}
 
       {/* Gli ordini si scrivono lo stesso — sono carta, non giacenze — ma la
           merce non si può ancora caricare. Dirlo qui, e non solo sul tasto:
@@ -359,11 +363,8 @@ export default function PurchaseOrdersPanel({ vista = 'nuovo' }) {
           il perché. */}
       {bloccato && (
         <div className="banner">
-          <strong>Il magazzino va aggiornato.</strong> Gli ordini si possono
-          preparare e mandare; per <strong>caricare la merce</strong> serve
-          prima l’aggiornamento, dal <strong>Magazzino</strong> (il banner in
-          alto). Se no si sommerebbero pezzi a giacenze scritte alla vecchia
-          maniera, e i numeri non tornerebbero più.
+          <strong>{tr('Il magazzino va aggiornato.')}</strong>{' '}
+          {tr('Gli ordini si possono preparare e mandare; per caricare la merce serve prima l’aggiornamento, dal Magazzino (il banner in alto). Se no si sommerebbero pezzi a giacenze scritte alla vecchia maniera, e i numeri non tornerebbero più.')}
         </div>
       )}
 
@@ -387,7 +388,7 @@ export default function PurchaseOrdersPanel({ vista = 'nuovo' }) {
           onSalvaModello={salvaModelloDaOrdine}
           onStampa={
             stampaNelPiano()
-              ? (fetta) => printOrdineFornitore(fetta).catch((e) => toastError(`Stampa: ${e.message}`))
+              ? (fetta) => printOrdineFornitore(fetta).catch((e) => toastError(tr('Stampa: {errore}', { errore: e.message })))
               : undefined
           }
         />
@@ -405,9 +406,12 @@ export default function PurchaseOrdersPanel({ vista = 'nuovo' }) {
 
       {togliFor && (
         <ConfirmDialog
-          title="Togliere il prodotto dall’ordine?"
-          message={`«${togliFor.riga.name}» esce dall’ordine di ${togliFor.fetta?.supplier_name || 'questo fornitore'} e torna allo stato che aveva prima: non risulta più in arrivo.`}
-          confirmLabel="Togli dall’ordine"
+          title={tr('Togliere il prodotto dall’ordine?')}
+          message={tr('«{nome}» esce dall’ordine di {fornitore} e torna allo stato che aveva prima: non risulta più in arrivo.', {
+            nome: togliFor.riga.name,
+            fornitore: togliFor.fetta?.supplier_name || tr('questo fornitore'),
+          })}
+          confirmLabel={tr('Togli dall’ordine')}
           onCancel={() => setTogliFor(null)}
           onConfirm={togliRiga}
         />

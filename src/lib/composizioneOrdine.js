@@ -25,6 +25,7 @@ import {
   scalaListino,
   ETICHETTA_UNITA_PREZZO,
 } from './listini.js'
+import { tr, trSegnato } from './lingua.js'
 
 // Quante righe si aggiungono a ogni caricata dello scorrimento continuo.
 // Quaranta è una schermata abbondante: chi scorre non arriva mai al fondo
@@ -207,16 +208,18 @@ export const totaleRiga = (qty, prezzo) => (Number(qty) || 0) * (Number(prezzo) 
 export function didascaliaListino({ unita, perCollo, prezzo, prezzoCollo } = {}) {
   const pezzi = []
   if (unita && unita !== 'collo' && prezzo != null) {
-    pezzi.push(`${arrotonda(prezzo)} €/${ETICHETTA_UNITA_PREZZO[unita] || unita}`)
+    pezzi.push(`${arrotonda(prezzo)} €/${trSegnato(ETICHETTA_UNITA_PREZZO[unita] || unita)}`)
   }
   if (perCollo > 1 && prezzoCollo != null) {
-    pezzi.push(`collo da ${perCollo}: ${arrotonda(prezzoCollo)} €`)
+    pezzi.push(tr('collo da {n}: {prezzo} €', { n: perCollo, prezzo: arrotonda(prezzoCollo) }))
   }
   return pezzi.length > 0 ? pezzi.join(' · ') : null
 }
 
 // Le cifre della didascalia si leggono in centesimi tondi, con la virgola
 // italiana: sopra ci sono divisioni, e «6.749999999 €/L» non è un prezzo.
+// La virgola resta anche in inglese: è un importo, e gli importi si
+// scrivono come formatPrice e come sugli scontrini (REQ-UI-039).
 const arrotonda = (n) =>
   (Math.round((Number(n) || 0) * 100) / 100).toLocaleString('it-IT', {
     minimumFractionDigits: 2,
@@ -232,8 +235,9 @@ const arrotonda = (n) =>
 export function etichettaQuantita({ qty = 0, perCollo = 1, pezzi = null } = {}) {
   const n = Number(qty) || 0
   const dentro = pezziPerCollo({ pezzi_per_collo: perCollo })
-  if (dentro <= 1) return `${n} pz`
-  return `${n} ${n === 1 ? 'collo' : 'colli'} · ${pezzi ?? n * dentro} pz`
+  if (dentro <= 1) return tr('{n} pz', { n })
+  const pz = pezzi ?? n * dentro
+  return n === 1 ? tr('{n} collo · {pz} pz', { n, pz }) : tr('{n} colli · {pz} pz', { n, pz })
 }
 
 // IL TOTALE SI CORREGGE SULLA RIGA, e da lì torna indietro al prezzo del

@@ -43,13 +43,24 @@ function testiVisibili(radice) {
   return fuori
 }
 
+// Un testo del dizionario conta solo a parole intere. Cercato come pezzo,
+// la chiave «alle» (l'orario «dalle… alle…») scattava su «Installed» e
+// «smaller», e «oggi» su «logging»: allarmi falsi da filtrare a mano.
+// Prima il confronto semplice, che scarta quasi tutto: una regex per
+// ognuna delle duemila chiavi mandava le prove oltre il tempo.
+function aParoleIntere(tutto, it) {
+  if (!tutto.includes(it)) return false
+  const testo = it.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(`(^|[^\\p{L}])${testo}(?=[^\\p{L}]|$)`, 'u').test(tutto)
+}
+
 // Quello che è rimasto in italiano, per l'expect: `toEqual([])`.
 export function italianoRimasto(radice) {
   const testi = testiVisibili(radice)
   const tutto = testi.join('\n')
   const dalDizionario = Object.entries(en)
     .map(([chiave, inglese]) => [chiave.slice(chiave.indexOf('|') + 1), inglese])
-    .filter(([it, inglese]) => it.length >= 4 && it !== inglese && !inglese.includes(it) && tutto.includes(it))
+    .filter(([it, inglese]) => it.length >= 4 && it !== inglese && !inglese.includes(it) && aParoleIntere(tutto, it))
     .map(([it]) => `dal dizionario: «${it}»`)
   const parole = testi.filter((t) => RE_PAROLE.test(t)).map((t) => `parola italiana: «${t}»`)
   return [...dalDizionario, ...parole]

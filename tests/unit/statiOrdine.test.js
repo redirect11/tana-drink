@@ -12,7 +12,9 @@
 // DOCUMENTO — il bonifico porta sopra il numero della fattura, non quello
 // dell'ordine. Due copie dello stesso stato divergono sempre.
 
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { impostaLingua } from '../../src/lib/lingua.js'
+import { cambiFattura, etichettaTipoDocumento } from '../../src/lib/fatture.js'
 import {
   ETICHETTA_STATO,
   FILTRI_ORDINE,
@@ -166,5 +168,56 @@ describe('la storia dell’ordine', () => {
     expect(descriviMovimento(movimento('riga_tolta', { nome: 'Gin Mare' }))).toBe(
       'Tolto dall’ordine: Gin Mare'
     )
+  })
+})
+
+// ── LA STORIA IN INGLESE (REQ-UI-039) ────────────────────────────────
+//
+// La storia si SCRIVE in italiano (è un dato, e si rilegge mesi dopo) e si
+// traduce quando si mostra. Revisione del 17/11: la correzione del tipo di
+// documento usciva «Type from Fattura to Nota di credito» — il campo
+// tradotto, i valori no. I tipi sono parole della tabella dei tipi, non
+// importi né nomi: si traducono con l'etichetta che passa chi mostra la
+// storia (`etichettaTipoDocumento`). Un tipo scritto a mano resta com'è.
+describe('la storia dell’ordine in inglese', () => {
+  beforeEach(() => impostaLingua('en'))
+  afterEach(() => impostaLingua('it'))
+  const comeASchermo = (v) => descriviMovimento(v, { etichettaTipo: etichettaTipoDocumento })
+
+  it('singolare e plurale delle righe', () => {
+    expect(descriviMovimento(movimento('creato', { righe: 1 }))).toBe('Order created · 1 line')
+    expect(descriviMovimento(movimento('creato', { righe: 3 }))).toBe('Order created · 3 lines')
+    expect(descriviMovimento(movimento('consegnato', { righe: 1 }))).toBe('Goods received · 1 line booked in')
+    expect(descriviMovimento(movimento('riga_tolta', { nome: 'Gin Mare' }))).toBe('Removed from the order: Gin Mare')
+  })
+
+  it('la correzione di un documento: il campo e il tipo tradotti, gli importi come scritti', () => {
+    // Le voci come le scrive davvero `cambiFattura`, non a mano: se il nome
+    // del campo «Tipo» cambiasse lì, questa prova se ne accorgerebbe.
+    const cambi = cambiFattura(
+      { doc_type: 'Fattura', amount: 120, supplier_id: 'nova' },
+      { doc_type: 'Nota di credito', amount: 120, supplier_id: 'nova' }
+    )
+    const v = movimento('documento_corretto', { cambi: cambi.filter((c) => c.campo === 'Tipo') })
+    expect(comeASchermo(v)).toBe('Document corrected · Type from Invoice to Credit note')
+    // Senza l'etichetta (chi non la passa) i valori restano quelli scritti.
+    expect(descriviMovimento(v)).toBe('Document corrected · Type from Fattura to Nota di credito')
+  })
+
+  it('un tipo che la tabella non conosce si legge com’è, e così il vuoto', () => {
+    const v = movimento('documento_corretto', {
+      pagato: true,
+      cambi: [
+        { campo: 'Tipo', da: '—', a: 'Ricevuta fiscale' },
+        { campo: 'Numero', da: '12', a: '13' },
+      ],
+    })
+    expect(comeASchermo(v)).toBe('Document corrected (already paid) · Type from — to Ricevuta fiscale · Number from 12 to 13')
+  })
+
+  it('in italiano la frase resta quella di sempre', () => {
+    impostaLingua('it')
+    const v = movimento('documento_corretto', { cambi: [{ campo: 'Tipo', da: 'Fattura', a: 'Nota di credito' }] })
+    expect(comeASchermo(v)).toBe('Documento corretto · Tipo da Fattura a Nota di credito')
   })
 })

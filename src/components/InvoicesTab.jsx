@@ -7,6 +7,7 @@ import { stampaNelPiano } from '../lib/limiti.js'
 import { mailFattura } from '../lib/mailFattura.js'
 import Icona from './Icona.jsx'
 import { useTestoConIcona } from '../lib/temaIcone.js'
+import { tr } from '../lib/lingua.js'
 
 // ── Gestore FATTURE di cortesia (gestionale, solo bartender) ───────────
 // Elenco delle fatture emesse dalla schermata Pagamento: numero
@@ -47,54 +48,56 @@ export default function InvoicesTab() {
     <div>
       {/* Il titolo sta nella barra in alto (vedi lib/sezioni.js). */}
       <p className="muted small" style={{ marginTop: 0 }}>
-        Fatture di cortesia emesse dalla schermata Pagamento. Non è
-        fatturazione elettronica: per lo SDI passa i dati al commercialista.
+        {tr('Fatture di cortesia emesse dalla schermata Pagamento. Non è fatturazione elettronica: per lo SDI passa i dati al commercialista.')}
       </p>
-      {error && <div className="banner">Errore: {error}</div>}
+      {error && <div className="banner">{tr('Errore: {errore}', { errore: error })}</div>}
 
       <input
         type="search"
-        placeholder={testoConIcona('cerca', 'Cerca per numero, cliente, P.IVA, email…')}
+        placeholder={testoConIcona('cerca', tr('Cerca per numero, cliente, P.IVA, email…'))}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         style={{ width: '100%', marginBottom: 10 }}
       />
 
       {filtered.length === 0 && (
-        <p className="muted">Nessuna fattura{search ? ' trovata' : ' emessa'}.</p>
+        <p className="muted">{search ? tr('Nessuna fattura trovata.') : tr('Nessuna fattura emessa.')}</p>
       )}
 
       {filtered.map((f) => (
         <div className="card" key={f.id} style={{ marginTop: 10, padding: 12 }}>
           <div className="row between" style={{ alignItems: 'baseline' }}>
-            <strong>Fattura n. {f.number}</strong>
+            <strong>{tr('Fattura n. {n}', { n: f.number })}</strong>
             <strong className="price">{formatPrice(f.total)}</strong>
           </div>
           <div className="muted small" style={{ marginTop: 2 }}>
             {String(f.created_at || '').slice(0, 10)} · {f.customer?.denominazione}
-            {f.customer?.piva ? ` · P.IVA ${f.customer.piva}` : ''}
+            {f.customer?.piva ? ` · ${tr('P.IVA {piva}', { piva: f.customer.piva })}` : ''}
             {f.order_id ? (
               <>
                 {' · '}
-                <Link to={`/ordine/${f.order_id}`}>ordine #{f.order_daily_number ?? '—'}</Link>
+                <Link to={`/ordine/${f.order_id}`}>{tr('ordine #{n}', { n: f.order_daily_number ?? '—' })}</Link>
               </>
             ) : null}
           </div>
           {f.sent_at && (
             <div className="muted small">
-              <Icona nome="email" gruppo="tasti" />{' '}Inviata{f.sent_to ? ` a ${f.sent_to}` : ''} il {String(f.sent_at).slice(0, 10)}
+              <Icona nome="email" gruppo="tasti" />{' '}
+              {f.sent_to
+                ? tr('Inviata a {email} il {data}', { email: f.sent_to, data: String(f.sent_at).slice(0, 10) })
+                : tr('Inviata il {data}', { data: String(f.sent_at).slice(0, 10) })}
             </div>
           )}
           <div className="grid-2" style={{ marginTop: 8, gap: 6 }}>
             <button className="btn ghost small" onClick={() => invia(f)}>
-              <Icona nome="email" gruppo="tasti" /> Invia via email
+              <Icona nome="email" gruppo="tasti" /> {tr('Invia via email')}
             </button>
             {stampaOn && (
               <button
                 className="btn ghost small"
-                onClick={() => printFattura(f).catch((e) => setError(`Stampa: ${e.message}`))}
+                onClick={() => printFattura(f).catch((e) => setError(tr('Stampa: {errore}', { errore: e.message })))}
               >
-                <Icona nome="stampa" gruppo="tasti" /> Stampa
+                <Icona nome="stampa" gruppo="tasti" /> {tr('Stampa')}
               </button>
             )}
           </div>

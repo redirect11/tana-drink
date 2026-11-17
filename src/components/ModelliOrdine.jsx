@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { modelloConNome, nomeModello, testoAvviso } from '../lib/modelliOrdine.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
+import { tr } from '../lib/lingua.js'
 
 // ── I MODELLI D'ORDINE, DOVE SI COMPONE (REQ-MAG-039) ────────────────
 //
@@ -93,7 +94,7 @@ export default function ModelliOrdine({
     <div className="modelli-ordine">
       <div className="modelli-riga">
         <label htmlFor="po-modello" className="muted small">
-          Modelli d’ordine
+          {tr('Modelli d’ordine')}
         </label>
         <select
           id="po-modello"
@@ -102,7 +103,7 @@ export default function ModelliOrdine({
           disabled={modelli.length === 0}
         >
           <option value="">
-            {modelli.length === 0 ? 'Nessun modello salvato' : '— Scegli un modello —'}
+            {modelli.length === 0 ? tr('Nessun modello salvato') : tr('— Scegli un modello —')}
           </option>
           {modelli.map((m) => (
             <option key={m.id} value={m.id}>
@@ -113,7 +114,7 @@ export default function ModelliOrdine({
         {/* Spenti quando non c'è un modello scelto: il motivo è la tendina qui
             accanto, che sta nella stessa riga e lo dice da sola. */}
         <button type="button" className="btn ghost small" disabled={!modello} onClick={usa}>
-          Usa il modello
+          {tr('Usa il modello')}
         </button>
         <button
           type="button"
@@ -121,7 +122,7 @@ export default function ModelliOrdine({
           disabled={!modello}
           onClick={() => apri('rinomina')}
         >
-          Rinomina
+          {tr('Rinomina')}
         </button>
         <button
           type="button"
@@ -129,7 +130,7 @@ export default function ModelliOrdine({
           disabled={!modello}
           onClick={() => setDaEliminare(modello)}
         >
-          Elimina
+          {tr('Elimina')}
         </button>
         <span className="grow" />
         <button
@@ -139,33 +140,35 @@ export default function ModelliOrdine({
           onClick={() => apri('salva')}
         >
           {righe.length === 0
-            ? 'Salva come modello'
-            : `Salva le ${righe.length} righe come modello`}
+            ? tr('Salva come modello')
+            : righe.length === 1
+              ? tr('Salva la riga come modello')
+              : tr('Salva le {n} righe come modello', { n: righe.length })}
         </button>
       </div>
 
       {modulo && (
         <form className="modelli-riga" onSubmit={conferma}>
           <label htmlFor="po-modello-nome" className="muted small">
-            {modulo === 'rinomina' ? 'Nuovo nome' : 'Nome del modello'}
+            {modulo === 'rinomina' ? tr('Nuovo nome') : tr('Nome del modello')}
           </label>
           <input
             id="po-modello-nome"
             type="text"
             value={nome}
             autoFocus
-            placeholder="Es. Giro della settimana"
+            placeholder={tr('Es. Giro della settimana')}
             onChange={(e) => setNome(e.target.value)}
           />
           <button type="submit" className="btn small" disabled={!nomeModello(nome)}>
-            Salva
+            {tr('Salva')}
           </button>
           <button type="button" className="btn ghost small" onClick={chiudi}>
-            Annulla
+            {tr('Annulla')}
           </button>
           {omonimo && (
             <span className="muted small">
-              Un modello con questo nome c’è già: viene aggiornato.
+              {tr('Un modello con questo nome c’è già: viene aggiornato.')}
             </span>
           )}
         </form>
@@ -179,13 +182,15 @@ export default function ModelliOrdine({
           <div className="row between">
             <strong className="small">
               {esito.riprese === esito.totali
-                ? `Riprese tutte le ${esito.totali} righe del modello.`
-                : `Riprese ${esito.riprese} righe su ${esito.totali}.`}
+                ? esito.totali === 1
+                  ? tr('Ripresa l’unica riga del modello.')
+                  : tr('Riprese tutte le {n} righe del modello.', { n: esito.totali })
+                : tr('Riprese {n} righe su {totale}.', { n: esito.riprese, totale: esito.totali })}
             </strong>
             <button
               type="button"
               className="btn ghost small"
-              aria-label="Chiudi il riepilogo del modello"
+              aria-label={tr('Chiudi il riepilogo del modello')}
               onClick={() => setEsito(null)}
             >
               ✕
@@ -203,9 +208,9 @@ export default function ModelliOrdine({
 
       {daEliminare && (
         <ConfirmDialog
-          title="Eliminare il modello?"
-          message={`«${daEliminare.nome}» non comparirà più fra i modelli. Gli ordini già fatti non cambiano.`}
-          confirmLabel="Elimina"
+          title={tr('Eliminare il modello?')}
+          message={tr('«{nome}» non comparirà più fra i modelli. Gli ordini già fatti non cambiano.', { nome: daEliminare.nome })}
+          confirmLabel={tr('Elimina')}
           danger
           onCancel={() => setDaEliminare(null)}
           onConfirm={elimina}

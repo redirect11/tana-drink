@@ -42,6 +42,7 @@ import {
   stiliRicettaProvabili,
 } from './stiliRicetta.js'
 import { urlFunzioneRegia, scaricaERicorda } from './funzioniRegia.js'
+import { daTradurre } from './lingua.js'
 
 const SLUG = /^[a-z0-9][a-z0-9-]{1,40}$/
 const COLORE = /^#[0-9a-f]{6}$/i
@@ -100,75 +101,78 @@ export const stileDelTema = (t) => (t?.ricetta ? t.id : t?.stile ?? null)
 // che l'app ha già, tutto gratis («per ora tutto gratis tra quelli che già
 // abbiamo»). «Notte» c'è solo dove la licenza lo dà: è un esclusivo.
 // Nessun nome di locale qui: questo catalogo arriva a tutti (marchio.test).
+// Nomi e descrizioni sono segnati: le schede del marketplace li traducono
+// con trSegnato (REQ-UI-039). Il valore resta italiano, come i temi della
+// regia, che arrivano già scritti.
 export const CATALOGO_INIZIALE = [
   {
     id: 'classico',
-    nome: 'Classico',
-    descrizione: 'Il menù di sempre, a card, coi colori di partenza: notte scura, rosa e oro.',
+    nome: daTradurre('Classico'),
+    descrizione: daTradurre('Il menù di sempre, a card, coi colori di partenza: notte scura, rosa e oro.'),
     tavolozza: { base: DEFAULT_THEME },
     stile: 'classico',
   },
   {
     id: 'lavagna',
-    nome: 'Lavagna',
-    descrizione: 'La lavagna del bistrot: gesso su ardesia verde, scritte a mano.',
+    nome: daTradurre('Lavagna'),
+    descrizione: daTradurre('La lavagna del bistrot: gesso su ardesia verde, scritte a mano.'),
     tavolozza: { base: 'lavagna' },
     stile: 'lavagna',
   },
   {
     id: 'grand-hotel',
-    nome: 'Grand Hotel',
-    descrizione: 'Anni Venti sul blu di mezzanotte: maiuscole sottili, cornici e oro.',
+    nome: daTradurre('Grand Hotel'),
+    descrizione: daTradurre('Anni Venti sul blu di mezzanotte: maiuscole sottili, cornici e oro.'),
     tavolozza: { base: 'notte-blu' },
     stile: 'deco',
   },
   {
     id: 'riviera',
-    nome: 'Riviera',
-    descrizione: 'Aperitivo all’aperto su un fondo crema: corsivi, strisce e disegni nei cerchi.',
+    nome: daTradurre('Riviera'),
+    descrizione: daTradurre('Aperitivo all’aperto su un fondo crema: corsivi, strisce e disegni nei cerchi.'),
     tavolozza: { base: 'crema' },
     stile: 'riviera',
   },
   {
     id: 'pastello',
-    nome: 'Pastello',
-    descrizione: 'Lo stile «Riviera» sui colori tenui di Catppuccin chiaro.',
+    nome: daTradurre('Pastello'),
+    descrizione: daTradurre('Lo stile «Riviera» sui colori tenui di Catppuccin chiaro.'),
     tavolozza: { base: 'catppuccin-chiaro' },
     stile: 'riviera',
   },
   {
     id: 'gazzetta',
-    nome: 'Gazzetta',
-    descrizione: 'La carta stampata, nero su bianco: testata, filetti e voci in colonna.',
+    nome: daTradurre('Gazzetta'),
+    descrizione: daTradurre('La carta stampata, nero su bianco: testata, filetti e voci in colonna.'),
     tavolozza: { base: 'chiaro' },
     stile: 'giornale',
   },
   {
     id: 'inchiostro',
-    nome: 'Inchiostro',
-    descrizione: 'Lo stile «Giornale» al rovescio: inchiostro chiaro su un fondo scuro.',
+    nome: daTradurre('Inchiostro'),
+    descrizione: daTradurre('Lo stile «Giornale» al rovescio: inchiostro chiaro su un fondo scuro.'),
     tavolozza: { base: 'pico-scuro' },
     stile: 'giornale',
   },
   {
     id: 'notte',
-    nome: 'Notte',
-    descrizione: 'La carta stampata al buio, con gli Special a tutto schermo. Esclusivo.',
+    nome: daTradurre('Notte'),
+    descrizione: daTradurre('La carta stampata al buio, con gli Special a tutto schermo. Esclusivo.'),
     tavolozza: { base: DEFAULT_THEME },
     stile: 'notte',
   },
   {
     id: 'meraviglie',
-    nome: 'Meraviglie',
-    descrizione: 'Un libro illustrato dell’Ottocento, su carta avorio: capitoli, semi di carte e frasi da Paese delle Meraviglie, dalla home al conto. Esclusivo.',
+    nome: daTradurre('Meraviglie'),
+    descrizione: daTradurre('Un libro illustrato dell’Ottocento, su carta avorio: capitoli, semi di carte e frasi da Paese delle Meraviglie, dalla home al conto. Esclusivo.'),
     tavolozza: { base: 'meraviglie' },
     stile: 'meraviglie',
   },
   {
     // Le carte bianche sul fondo scuro dello schizzo di Flavio (REQ-MENU-029).
     id: 'carte',
-    nome: 'Carte',
-    descrizione: 'Il menù come un mazzo di carte francesi sul fondo scuro: ogni sezione è una carta, e quella scelta si alza e si apre. Esclusivo.',
+    nome: daTradurre('Carte'),
+    descrizione: daTradurre('Il menù come un mazzo di carte francesi sul fondo scuro: ogni sezione è una carta, e quella scelta si alza e si apre. Esclusivo.'),
     tavolozza: { base: DEFAULT_THEME },
     stile: 'carte',
   },

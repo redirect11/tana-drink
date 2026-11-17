@@ -4,6 +4,7 @@ import Didascalia from './Didascalia.jsx'
 import MacroMonthlyTab from './MacroMonthlyTab.jsx'
 import AcquistiFatturato from './AcquistiFatturato.jsx'
 import MesiBilancio from './MesiBilancio.jsx'
+import { daTradurre, trSegnato } from '../lib/lingua.js'
 
 // ── BILANCIO: I CONTI DEL LOCALE ─────────────────────────────────────
 // Qui sta quello che Flavio teneva su ANALISI DATI.xlsx: incassi, stipendi,
@@ -19,16 +20,19 @@ import MesiBilancio from './MesiBilancio.jsx'
 // contenuto (docs/navigazione.md): su una schermata fatta di tabelle una
 // riga in più costa altezza tutto il giorno.
 const SEZIONI_BILANCIO = [
-  { id: 'mesi', icona: 'calendario', label: 'Mesi' },
-  { id: 'acquisti', icona: 'acquisti', label: 'Acquisti × Fatturato' },
-  { id: 'venduto', icona: 'raggruppa', label: 'Venduto × Incassato' },
+  { id: 'mesi', icona: 'calendario', label: daTradurre('Mesi') },
+  { id: 'acquisti', icona: 'acquisti', label: daTradurre('Acquisti × Fatturato') },
+  { id: 'venduto', icona: 'raggruppa', label: daTradurre('Venduto × Incassato') },
 ]
 
 export default function BilancioTab() {
   const [sub, setSub] = useState('mesi')
+  // Le etichette si traducono a ogni disegno, non sulla tabella: lassù un
+  // `tr` fisserebbe la lingua del primo caricamento.
+  const voci = SEZIONI_BILANCIO.map((v) => ({ ...v, label: trSegnato(v.label) }))
   return (
     <div>
-      <Sottosezioni voci={SEZIONI_BILANCIO} attiva={sub} scegli={setSub} />
+      <Sottosezioni voci={voci} attiva={sub} scegli={setSub} />
       {sub === 'mesi' && <Mesi />}
       {sub === 'acquisti' && <AcquistiFatturato />}
       {sub === 'venduto' && <VendutoIncassato />}

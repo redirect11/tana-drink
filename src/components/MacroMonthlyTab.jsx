@@ -15,6 +15,7 @@ import { BloccoMacro, BloccoTotale } from './TabellaMacro.jsx'
 import { colonneDelBilancio } from '../lib/periodiBilancio.js'
 import { unisciVendite } from '../lib/venditeStoriche.js'
 import Icona from './Icona.jsx'
+import { tr, daTradurre } from '../lib/lingua.js'
 
 // BILANCIO → VENDUTO × INCASSATO: quanto ha incassato ogni gruppo di voci
 // del menù, quanto è costata la merce che ha venduto, che margine ne resta.
@@ -35,10 +36,10 @@ import Icona from './Icona.jsx'
 // Le righe nell'ordine di questa tabella: prima quello che è entrato in
 // cassa, poi quanto è costato.
 const RIGHE = [
-  { campo: 'incasso', label: 'Incassato', cls: 'r-inc' },
-  { campo: 'costo', label: 'Costo del venduto', cls: 'r-cos' },
-  { campo: 'margine', label: 'Margine', cls: 'r-mar' },
-  { campo: 'rapporto', label: 'Inc/Costo', cls: 'r-rap' },
+  { campo: 'incasso', label: daTradurre('Incassato'), cls: 'r-inc' },
+  { campo: 'costo', label: daTradurre('Costo del venduto'), cls: 'r-cos' },
+  { campo: 'margine', label: daTradurre('Margine'), cls: 'r-mar' },
+  { campo: 'rapporto', label: daTradurre('Inc/Costo'), cls: 'r-rap' },
 ]
 
 export default function MacroMonthlyTab() {
@@ -98,41 +99,48 @@ export default function MacroMonthlyTab() {
     })
   }, [data, colonne, cutoff, settings.sale_vat])
 
-  if (error) return <div className="banner">Errore: {error}</div>
+  if (error) return <div className="banner">{tr('Errore: {errore}', { errore: error })}</div>
 
   return (
     <div>
       <div className="row between" style={{ alignItems: 'center', marginBottom: 10 }}>
-        <button className="btn ghost small" onClick={() => setYear((y) => y - 1)}>←</button>
+        <button className="btn ghost small" aria-label={tr('Anno precedente')} onClick={() => setYear((y) => y - 1)}>
+          ←
+        </button>
         <strong style={{ fontSize: '1.1rem' }}>{year}</strong>
-        <button className="btn ghost small" onClick={() => setYear((y) => y + 1)}>→</button>
+        <button className="btn ghost small" aria-label={tr('Anno successivo')} onClick={() => setYear((y) => y + 1)}>
+          →
+        </button>
       </div>
 
       <SpiegazioneTabella saleVat={settings.sale_vat} />
       {report && report.rows.some((r) => r.id === UNASSIGNED && r.tot.incasso > 0) && (
         <p className="muted small" style={{ margin: '-4px 0 10px' }}>
-          <Icona nome="informazioni" gruppo="segnali" /> In <strong>“Non attribuito”</strong> finisce l’incasso delle voci
-          che nessuna macro reclama per intero: dai loro la quota in{' '}
-          <strong>Magazzino → Macro-categorie</strong> e si sposta al posto suo.
+          <Icona nome="informazioni" gruppo="segnali" />{' '}
+          {tr(
+            'In “{voce}” finisce l’incasso delle voci che nessuna macro reclama per intero: dai loro la quota in {dove} e si sposta al posto suo.',
+            { voce: tr('Non attribuito'), dove: tr('Magazzino → Macro-categorie') }
+          )}
         </p>
       )}
 
-      {loading && <div className="empty">Carico l’andamento…</div>}
+      {loading && <div className="empty">{tr('Carico l’andamento…')}</div>}
 
       {!loading && data && data.macros.length === 0 && (
         <div className="empty">
-          Nessuna macro-categoria: creale in{' '}
-          <strong>Magazzino → Macro-categorie</strong> e dai a ogni voce del
-          menù la sua quota, poi qui vedrai incasso e costo per macro.
+          {tr(
+            'Nessuna macro-categoria: creale in {dove} e dai a ogni voce del menù la sua quota, poi qui vedrai incasso e costo per macro.',
+            { dove: tr('Magazzino → Macro-categorie') }
+          )}
         </div>
       )}
 
       {!loading && report && data.macros.length > 0 && (
         <>
           {report.rows.map((r) => (
-            <BloccoMacro key={r.id} row={r} colonne={colonne} righe={RIGHE} rapportoLabel="Inc/Costo anno" />
+            <BloccoMacro key={r.id} row={r} colonne={colonne} righe={RIGHE} rapportoLabel={tr('Inc/Costo anno')} />
           ))}
-          <BloccoTotale report={report} colonne={colonne} righe={RIGHE} incidenzaLabel="Incidenza sull’anno" />
+          <BloccoTotale report={report} colonne={colonne} righe={RIGHE} incidenzaLabel={tr('Incidenza sull’anno')} />
         </>
       )}
     </div>
@@ -146,31 +154,29 @@ export default function MacroMonthlyTab() {
 // registro del gestionale (DESIGN.md, guardrail 3).
 function SpiegazioneTabella({ saleVat }) {
   return (
-    <Soffietto titolo="Cosa misura questa tabella">
+    <Soffietto titolo={tr('Cosa misura questa tabella')}>
       <Didascalia>
-        <strong>Quanto rende ciò che si vende.</strong> Per ogni macro-categoria, l’incassato delle voci di menù
-        e il costo della merce che quelle vendite hanno consumato, calcolato dalle ricette. Ogni voce conta sulla
-        sua macro secondo la quota che ha lì, incasso e costo insieme.
+        <strong>{tr('Quanto rende ciò che si vende.')}</strong>{' '}
+        {tr(
+          'Per ogni macro-categoria, l’incassato delle voci di menù e il costo della merce che quelle vendite hanno consumato, calcolato dalle ricette. Ogni voce conta sulla sua macro secondo la quota che ha lì, incasso e costo insieme.'
+        )}
       </Didascalia>
       <Didascalia>
-        <strong>Differenza con «Acquisti × Fatturato».</strong> Qui il costo è quello della merce{' '}
-        <strong>venduta</strong> nel mese, non di quella acquistata: un acquisto di scorta non sposta il margine
-        del mese in cui entra. Trenta casse di birra comprate a giugno per l’estate qui pesano solo per le birre
-        vendute, mese per mese; in «Acquisti × Fatturato» pesano tutte su giugno, che sembra in perdita, e luglio
-        sembra in forte attivo. Sui periodi lunghi le due tabelle si avvicinano; sul singolo mese possono essere
-        molto diverse.
+        <strong>{tr('Differenza con «Acquisti × Fatturato».')}</strong>{' '}
+        {tr(
+          'Qui il costo è quello della merce venduta nel mese, non di quella acquistata: un acquisto di scorta non sposta il margine del mese in cui entra. Trenta casse di birra comprate a giugno per l’estate qui pesano solo per le birre vendute, mese per mese; in «Acquisti × Fatturato» pesano tutte su giugno, che sembra in perdita, e luglio sembra in forte attivo. Sui periodi lunghi le due tabelle si avvicinano; sul singolo mese possono essere molto diverse.'
+        )}
       </Didascalia>
       <Didascalia>
-        <strong>Margine</strong>: incassato − costo del venduto. <strong>Inc/Costo</strong>: incassato ÷ costo
-        del venduto (×4: ogni euro di merce venduta ne ha incassati quattro). <strong>Incidenza</strong>: quota
-        del margine della macro sul margine di tutte le macro del mese. <strong>Incidenza sull’anno</strong> (sui
-        totali): quota dell’incassato del mese sull’incassato dell’anno.
+        {tr(
+          'Margine: incassato − costo del venduto. Inc/Costo: incassato ÷ costo del venduto (×4: ogni euro di merce venduta ne ha incassati quattro). Incidenza: quota del margine della macro sul margine di tutte le macro del mese. Incidenza sull’anno (sui totali): quota dell’incassato del mese sull’incassato dell’anno.'
+        )}
       </Didascalia>
       <Didascalia>
-        Valori <strong>al netto dell’IVA</strong>: incassato scorporato al {saleVat}% (o all’aliquota della voce,
-        dove ne ha una sua), costo al netto dell’IVA d’acquisto. Il foglio di analisi confronta invece il
-        fatturato con la merce <strong>entrata dalla porta</strong>, al lordo: i due numeri non tornano, e non
-        devono. Le vendite di Tiller (giugno 2023 – agosto 2026) usano le ricette attuali.
+        {tr(
+          'Valori al netto dell’IVA: incassato scorporato al {iva}% (o all’aliquota della voce, dove ne ha una sua), costo al netto dell’IVA d’acquisto. Il foglio di analisi confronta invece il fatturato con la merce entrata dalla porta, al lordo: i due numeri non tornano, e non devono. Le vendite di Tiller (giugno 2023 – agosto 2026) usano le ricette attuali.',
+          { iva: saleVat }
+        )}
       </Didascalia>
     </Soffietto>
   )
