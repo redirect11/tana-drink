@@ -227,7 +227,7 @@ describe('la ricerca della coda: filtra o accende', () => {
     mostra()
     await user.click(screen.getByRole('button', { name: /Banco: coda e ordine/ }))
     expect(screen.getByRole('button', { name: /Filtra la coda/ })).toHaveClass('active')
-    expect(screen.getByRole('button', { name: /Accendi il conto e portami lì/ })).not.toHaveClass('active')
+    expect(screen.getByRole('button', { name: /Evidenzia il primo conto trovato/ })).not.toHaveClass('active')
   })
 
   it('si può passare ad accendere il conto trovato', async () => {
@@ -235,7 +235,7 @@ describe('la ricerca della coda: filtra o accende', () => {
     const { updateSettings } = await import('../../src/lib/api.js')
     mostra()
     await user.click(screen.getByRole('button', { name: /Banco: coda e ordine/ }))
-    await user.click(screen.getByRole('button', { name: /Accendi il conto e portami lì/ }))
+    await user.click(screen.getByRole('button', { name: /Evidenzia il primo conto trovato/ }))
     expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({ queue_search: 'evidenzia' }))
   })
 })
@@ -354,7 +354,7 @@ describe('gli interruttori dei tasti di incasso stanno in Pagamenti', () => {
     // Spento anche a vedersi, benché la scelta di prima sia ancora scritta
     // nelle impostazioni: quel tasto in cassa non compare.
     expect(interruttore).not.toBeChecked()
-    expect(riga).toHaveTextContent(/esce già da sola a ogni riscossione/)
+    expect(riga).toHaveTextContent(/si stampa già a ogni riscossione/)
   })
 
   it('spento l’automatico, il terzo tasto torna toccabile com’era', async () => {

@@ -104,13 +104,13 @@ export default function PrinterSetup({ gestore = true }) {
           Come configurare (prima volta)
         </summary>
         <ol style={{ fontSize: '0.85rem', lineHeight: 1.7, paddingLeft: 18, marginTop: 8 }}>
-          <li>Collega la stampante alla stessa rete Wi-Fi dell'iPad.</li>
-          <li>Assegna un IP fisso alla stampante dal router (DHCP reservation).</li>
-          <li>Apri <code>http://&lt;IP stampante&gt;</code> nel browser e abilita SSL/TLS
+          <li>Collegare la stampante alla stessa rete Wi-Fi del tablet.</li>
+          <li>Assegnare alla stampante un IP fisso dal router (DHCP reservation).</li>
+          <li>Aprire <code>http://&lt;IP stampante&gt;</code> nel browser e abilitare SSL/TLS
             dalle impostazioni di rete.</li>
-          <li>Vai su <code>https://&lt;IP stampante&gt;:8043</code> in Safari e accetta
+          <li>Aprire <code>https://&lt;IP stampante&gt;:8043</code> in Safari e accettare
             il certificato (solo la prima volta).</li>
-          <li>Inserisci l'IP qui sotto e premi "Test stampa".</li>
+          <li>Inserire l'IP qui sotto e premere «Test stampa».</li>
         </ol>
       </details>
 
@@ -161,8 +161,8 @@ export default function PrinterSetup({ gestore = true }) {
           Number(form.port) === 8008 && (
             <div className="banner" style={{ marginTop: 8 }}>
               <Icona nome="avviso" gruppo="segnali" /> L'app è in HTTPS: con la porta <strong>8008</strong> il browser
-              blocca la connessione e la stampa va in timeout. Usa la{' '}
-              <strong>8043</strong> con SSL/TLS abilitato sulla stampante.
+              blocca la connessione e la stampa va in timeout. Serve la porta{' '}
+              <strong>8043</strong>, con SSL/TLS abilitato sulla stampante.
             </div>
           )}
       </fieldset>
@@ -237,7 +237,7 @@ export default function PrinterSetup({ gestore = true }) {
               accettato su questo dispositivo: il link ci porta direttamente. */}
           {!testResult.ok && form.ip && (
             <div style={{ marginTop: 8, fontSize: '0.85rem' }}>
-              Sul <strong>questo</strong> dispositivo apri una volta{' '}
+              Su <strong>questo</strong> dispositivo aprire una volta{' '}
               <a
                 href={`https://${form.ip}:${form.port || 8043}`}
                 target="_blank"
@@ -245,10 +245,9 @@ export default function PrinterSetup({ gestore = true }) {
               >
                 https://{form.ip}:{form.port || 8043}
               </a>{' '}
-              e accetta il certificato (“Avanzate → Procedi”), poi torna qui e
-              ripremi <strong>Test stampa</strong>. Verifica anche che la
-              stampante sia accesa, sulla <strong>stessa rete Wi-Fi</strong> e
-              con SSL/TLS abilitato.
+              e accettare il certificato («Avanzate → Procedi»), poi premere di
+              nuovo <strong>Test stampa</strong>. La stampante deve essere accesa,
+              sulla <strong>stessa rete Wi-Fi</strong> e con SSL/TLS abilitato.
             </div>
           )}
         </div>

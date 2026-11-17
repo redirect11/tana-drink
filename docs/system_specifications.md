@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 310 | fatto e coperto dai test |
+| ✅ | 311 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 9 | fatto a metà |
 | ⬜ | 37 | da fare |
 | 🗑 | 8 | non più valido |
 
-**379 voci** in tutto. **334** descrivono il sistema com'è oggi e
+**380 voci** in tutto. **335** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **37** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **17** difetti noti sono ancora aperti.
@@ -59,7 +59,7 @@ come «vero oggi», non come «garantito».
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | 6 | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
-| [Interfaccia](#interfaccia) | 31 | 4 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
+| [Interfaccia](#interfaccia) | 32 | 4 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 24 | 2 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 15 | 4 |  |
@@ -77,10 +77,10 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 12 |
 | Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 188 |
-| Unità | il progetto di dettaglio: un modulo da solo | 190 |
+| Unità | il progetto di dettaglio: un modulo da solo | 191 |
 
 **21** bisogni del locale, **0** con un test di accettazione.
-**131** requisiti su 371 sono collegati a un bisogno;
+**132** requisiti su 372 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -192,7 +192,7 @@ Listino, schede, magazzino e impostazioni si usano tutti i giorni da chi li cono
 
 **Come si accetta**: Dal PC, in Menù → Marginalità listino, ogni numero sta sotto la sua intestazione; toccando «Birre» a sinistra restano solo le birre, con i filtri che contano lì dentro. Aprendo la scheda di un drink non ci sono righe d'aiuto fra un campo e l'altro; accendendo «Aiuti sotto i campi» in Aspetto tornano, scritti in frasi piane. Aggiungendo un gin alla ricetta del Negroni la riga parte in ml, come le altre; in Impostazioni → Prezzo consigliato, scritto un drink cost del 20%, il ricarico diventa ×5 (vocali del 09/11/2026). Nella ricetta del Gold Rush, accanto a 60 ml di Jim Beam si legge 1,14 € (10/11/2026). Nel menù dei clienti copiato dalla cassa le sezioni sono le categorie, chiuse in un indice; i gin selezionati in «Distillati» passano insieme in «Gin», e i prodotti senza categoria stanno in «Non categorizzati». Un drink che in cassa non c'è si crea dalla sua sezione, e appena salvato è lì.
 
-**Chi**: Gestore · **Lo realizzano**: [REQ-MENU-002](#req-menu-002--marginalità-del-listino-in-tabella-e-divisa-per-categorie), [REQ-MENU-032](#req-menu-032--marginalità-del-listino-le-categorie-a-sinistra-per-vederne-una-sola), [REQ-UI-032](#req-ui-032--gli-aiuti-sotto-i-campi-delle-schede-si-nascondono-e-i-testi-sono-riscritti), [REQ-MAG-054](#req-mag-054--un-ingrediente-nuovo-in-ricetta-parte-in-millilitri), [REQ-MENU-033](#req-menu-033--il-ricarico-del-prezzo-consigliato-si-imposta-anche-come-drink-cost), [REQ-MENU-034](#req-menu-034--ogni-riga-della-ricetta-mostra-quanto-costa), [REQ-UI-035](#req-ui-035--il-marchio-lime---smartorders-col-suo-logo-in-cima-al-menu-laterale-del-gestionale-e-in-alto-solo-per-demo-e-free), [REQ-MENU-035](#req-menu-035--leditor-del-menù-dei-clienti-è-compatto-sezioni-che-si-aprono-una-riga-per-voce-voci-spostate-insieme), [REQ-MENU-036](#req-menu-036--dal-menù-dei-clienti-si-crea-un-prodotto-della-cassa-che-non-cè-e-diventa-subito-una-voce-della-sezione), [REQ-MENU-037](#req-menu-037--le-sezioni-di-soli-special-stanno-fuori-dal-menù-e-si-aprono-dal-carosello-e-dal-qr-è-la-stessa-carta), [REQ-MENU-038](#req-menu-038--il-formato-dei-prezzi-nel-menù-dei-clienti-si-sceglie-di-partenza-il-numero-senza-simbolo-delleuro-e-senza-decimali-inutili), [REQ-MENU-039](#req-menu-039--la-foto-di-un-prodotto-si-ritaglia-nella-sua-scheda-prima-di-caricarla-tutte-nella-stessa-cornice-quadrata), [REQ-AI-005](#req-ai-005--ogni-foto-caricata-si-può-far-modificare-allai-la-proposta-accanto-alloriginale-da-accettare-scartare-o-richiedere), [REQ-AI-006](#req-ai-006--un-assistente-ai-nel-gestionale-una-chat-che-sa-fare-le-cose-dellapp-che-lai-può-fare), [REQ-AI-007](#req-ai-007--lai-nellapp-ha-tre-stati-assente-senza-credito-attiva), [REQ-MENU-040](#req-menu-040--gli-ingredienti-di-una-voce-del-menù-dei-clienti-sono-etichette-proposte-dalla-ricetta-del-prodotto-collegato), [REQ-MENU-041](#req-menu-041--la-voce-del-menù-dei-clienti-ha-una-categoria-e-le-sezioni-e-i-gruppi-possono-nascere-da-sole-dalle-categorie) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Gestore · **Lo realizzano**: [REQ-MENU-002](#req-menu-002--marginalità-del-listino-in-tabella-e-divisa-per-categorie), [REQ-MENU-032](#req-menu-032--marginalità-del-listino-le-categorie-a-sinistra-per-vederne-una-sola), [REQ-UI-032](#req-ui-032--gli-aiuti-sotto-i-campi-delle-schede-si-nascondono-e-i-testi-sono-riscritti), [REQ-MAG-054](#req-mag-054--un-ingrediente-nuovo-in-ricetta-parte-in-millilitri), [REQ-MENU-033](#req-menu-033--il-ricarico-del-prezzo-consigliato-si-imposta-anche-come-drink-cost), [REQ-MENU-034](#req-menu-034--ogni-riga-della-ricetta-mostra-quanto-costa), [REQ-UI-035](#req-ui-035--il-marchio-lime---smartorders-col-suo-logo-in-cima-al-menu-laterale-del-gestionale-e-in-alto-solo-per-demo-e-free), [REQ-UI-037](#req-ui-037--le-descrizioni-delle-impostazioni-dicono-cosa-fa-lopzione-in-una-frase), [REQ-MENU-035](#req-menu-035--leditor-del-menù-dei-clienti-è-compatto-sezioni-che-si-aprono-una-riga-per-voce-voci-spostate-insieme), [REQ-MENU-036](#req-menu-036--dal-menù-dei-clienti-si-crea-un-prodotto-della-cassa-che-non-cè-e-diventa-subito-una-voce-della-sezione), [REQ-MENU-037](#req-menu-037--le-sezioni-di-soli-special-stanno-fuori-dal-menù-e-si-aprono-dal-carosello-e-dal-qr-è-la-stessa-carta), [REQ-MENU-038](#req-menu-038--il-formato-dei-prezzi-nel-menù-dei-clienti-si-sceglie-di-partenza-il-numero-senza-simbolo-delleuro-e-senza-decimali-inutili), [REQ-MENU-039](#req-menu-039--la-foto-di-un-prodotto-si-ritaglia-nella-sua-scheda-prima-di-caricarla-tutte-nella-stessa-cornice-quadrata), [REQ-AI-005](#req-ai-005--ogni-foto-caricata-si-può-far-modificare-allai-la-proposta-accanto-alloriginale-da-accettare-scartare-o-richiedere), [REQ-AI-006](#req-ai-006--un-assistente-ai-nel-gestionale-una-chat-che-sa-fare-le-cose-dellapp-che-lai-può-fare), [REQ-AI-007](#req-ai-007--lai-nellapp-ha-tre-stati-assente-senza-credito-attiva), [REQ-MENU-040](#req-menu-040--gli-ingredienti-di-una-voce-del-menù-dei-clienti-sono-etichette-proposte-dalla-ricetta-del-prodotto-collegato), [REQ-MENU-041](#req-menu-041--la-voce-del-menù-dei-clienti-ha-una-categoria-e-le-sezioni-e-i-gruppi-possono-nascere-da-sole-dalle-categorie) · ⚠️ **Nessun test di accettazione, ancora.**
 
 #### UR-014 — La demo che si mostra a un locale nuovo non espone niente di un locale vero
 
@@ -3775,6 +3775,12 @@ FATTO (1.10.53-beta): `MarchioLime.jsx` (logo, «Lime» e la qualifica «SmartOr
 CORRETTO IL 17/11/2026, sulla 1.10.53-beta (Daniele): «deve apparire solo nel menu, non nelle pagine. Dove sta scritto Gestionale in alto nel menu. Nelle pagine logo e nome locale. Solo demo avrà quelle scritte e il free al posto del nome del locale e del logo del locale». Quindi: il marchio LIME sta nella testata del menu laterale del gestionale, al posto di «Gestionale»; nella barra in alto delle pagine tornano logo e nome del locale; solo la demo e i locali Free (`pianoFree`) mostrano lì il marchio LIME al posto del locale. Sul Free anche nelle pagine dei clienti, home e menù compresi (Daniele, 17/11/2026, alla domanda del revisore).
 
 **Dove**: `src/components/MarchioLime.jsx, src/components/StaffDrawer.jsx (testata del menu), src/App.jsx (topbar), src/lib/limiti.js (marchioDelProdottoInAlto), src/lib/sezioni.js (nelGestionale), src/index.css` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/component/MarchioLime.test.jsx`, `tests/component/AppHeader.test.jsx`
+
+#### REQ-UI-037 — Le descrizioni delle impostazioni dicono cosa fa l'opzione, in una frase
+
+Daniele, 17/11/2026, dopo «La vista del banco» (BUG-168): «nelle opzioni delle impostazioni, puoi semplicemente spiegare che cosa fa un'opzione invece di scrivere cose inutili», e poi «sì, ripassale tutte». Ogni descrizione dice cosa fa l'opzione e, se serve, cosa succede accesa e spenta, in una frase piana nel registro del gestionale (CLAUDE.md, DESIGN.md guardrail 3). Niente storie del perché, niente aneddoti, niente «adesso non c'è perché…»: il perché sta nei commenti del codice. Una scelta con una voce sola non è una scelta e non si mostra. ORA ripassate tutte, in SettingsTab e nei pannelli (stampa automatica, campi delle stampe e logo, stampante, backup, informazioni, aspetto): una frase su cosa fa l'opzione, impersonale. Una prova legge i sorgenti dei pannelli senza i commenti e boccia le forme del tu e del voi.
+
+**Dove**: `src/components/SettingsTab.jsx e i pannelli delle impostazioni (ThemeSettings, StampaAutomatica, CampiStampa, PrinterSetup, BackupPanel, InfoTab, src/lib/campiStampa.js)` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/unit/testiImpostazioni.test.js`
 
 ### Come si lavora al progetto
 
