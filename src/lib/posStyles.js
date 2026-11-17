@@ -8,8 +8,9 @@ export function catBtnStyle(active) {
     padding: '0.6em 0.5em',
     borderRadius: 10,
     border: 'none',
+    // L'accento «pieno»: quello che regge il testo sopra (REQ-UI-036).
     background: active
-      ? 'var(--accent, #b47a3c)'
+      ? 'var(--accent-pieno, var(--accent, #b47a3c))'
       : 'var(--tile-bg)',
     // L'inchiostro sopra l'accento lo sceglie il tema (applyTheme): bianco
     // su un accento scuro come il rosa della Tana, scuro su uno chiaro come

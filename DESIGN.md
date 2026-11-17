@@ -750,7 +750,7 @@ superfici delle sezioni.
 |---|---|
 | normale (< 24px, o < 19px se in grassetto) | **4,5:1** |
 | grande (≥ 24px, o ≥ 19px in grassetto) | **3:1** |
-| `--muted`, che è testo **secondario** | **3:1**, e mai da solo su un'informazione che conta |
+| `--muted`, che è testo **secondario** | **3:1**, e mai da solo su un'informazione che conta — **da rivedere** (REQ-UI-036): per WCAG AA il testo attenuato piccolo vuole 4,5:1; la soglia nuova si decide con la regia, che controlla i temi |
 
 **Un inchiostro chiaro cablato non sta su un fondo tinto.** Un pastello —
 `#c8f7da`, `#9ff5c0`, `#ffd54f` — nasce per il fondo scuro, dove si stacca
@@ -771,6 +771,20 @@ Le due vie ammesse:
   tratta le pill degli stati da sempre. Se il selettore è un elenco, di
   sotto vanno elencati **tutti**: è accodandone uno a un elenco già
   coperto che si dimentica la variante.
+
+**Il testo sopra l'accento pieno sta su `--accent-pieno`**, non su
+`--accent` (REQ-UI-036, BUG-167): `applyTheme` lo calcola con
+`accentoPieno` — l'accento scurito sotto un inchiostro chiaro, o
+schiarito sotto uno scuro, quanto basta per 4,5:1. Il rosa della Tana col
+bianco stava a 4,2:1; il lime col suo inchiostro passa già e non cambia.
+Un fondo d'accento **senza testo** (un pallino, una striscia) resta
+`--accent`.
+
+**Lo zoom non si blocca**: il viewport non ha `user-scalable=no` né
+`maximum-scale` (WCAG 1.4.4). A non ingrandire la cassa per sbaglio ci
+pensa `touch-action: manipulation`, che toglie il doppio tocco e lascia il
+pizzico. I campi restano a 1rem: sotto i 16 px Safari ingrandisce da solo
+toccandoli.
 
 Un fondo **opaco** — il blu pieno del tasto «Riscuotere», la campitura del
 riquadro Ceres — non c'entra: lì il tema non traspare e un bianco fisso è

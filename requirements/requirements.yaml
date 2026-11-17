@@ -17748,14 +17748,25 @@ requirements:
       accessi), un menu a tendina senza nome nelle impostazioni. Oltre axe,
       circa 70 comandi fatti con `div` cliccabili, le finestre di dialogo,
       i temi uno per uno. Stima mandata alla regia: 10-14 giorni.
-      DA FARE: le correzioni; la prova da misura a cancello (una violazione
-      nuova fa fallire), su più temi; la prova a mano a ogni versione
-      maggiore (tastiera, NVDA, zoom 200%); la pagina «Accessibilità»
-      collegata dal piè di pagina comune (src/App.jsx, accanto a Privacy),
-      col testo approvato da Daniele.
+      L'ORDINE (regia e Daniele, 17/11/2026): prima la conformità piena,
+      la pagina «Accessibilità» per ultima.
+      FATTO (17/11/2026): le violazioni di axe corrette (BUG-167); la prova
+      è un CANCELLO, con la serie della regia (@axe-core/playwright
+      4.14.0, axe-core 4.14.0: la 4.14.1 era uscita il giorno prima), il
+      tag `wcag22aa` e la vista a 320 px oltre a quella a 1280: 34 misure,
+      nessuna violazione, e una violazione nuova fa fallire i test di
+      sistema, obbligatori sulle PR verso develop.
+      DA FARE: la prova sul sito di test vero (dopo il prossimo tag); i
+      comandi su `div` cliccabili; il fuoco nelle finestre di dialogo; gli
+      avvisi letti; i temi uno per uno (anche `--muted` a 4,5, con la
+      regia); la prova a mano a ogni versione maggiore (tastiera, NVDA,
+      zoom 200%); infine la pagina «Accessibilità» collegata dal piè di
+      pagina comune (src/App.jsx, accanto a Privacy), col testo approvato
+      da Daniele.
     status: todo
     generate_issue: true
     labels: [accessibilita, ui, cliente, gestionale]
     priority: P2
     test_cases:
       - tests/sistema/accessibilita.spec.js
+      - tests/unit/contrastoAccento.test.js

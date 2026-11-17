@@ -6660,3 +6660,37 @@ bugs:
     priority: P1
     requisiti: [REQ-UI-033]
     test_cases: [tests/unit/temaLime.test.js]
+  - id: BUG-167
+    title: "La prova di accessibilità trova lo zoom bloccato, testi poco contrastati, comandi senza nome e tasti troppo piccoli"
+    area: "index.html (viewport), src/index.css, src/lib/themes.js (accentoPieno), src/lib/posStyles.js, src/components/PosBits.jsx, src/components/ThemeSettings.jsx, src/App.jsx (link del marchio), src/index.css (.menu-colore-spia)"
+    description: >
+      La misura con axe del 17/11/2026 (REQ-UI-036; WCAG 2.0, 2.1 e 2.2 A e
+      AA, a 1280 e a 320 px), prima di ogni correzione:
+      LO ZOOM BLOCCATO (1.4.4), su tutte le pagine: il viewport diceva
+      `maximum-scale=1.0, user-scalable=no`, per non ingrandire la cassa
+      battendo. Ora il pizzico c'è, e il doppio tocco lo ferma
+      `touch-action: manipulation` sugli elementi che si toccano (i campi
+      restano a 16 px, se no Safari ingrandisce toccandoli). Da provare
+      sull'iPad del banco.
+      IL CONTRASTO (1.4.3): sul rosa della Tana (#e52e71) né il bianco
+      (4,2:1) né il bruno (4,35:1) arrivano a 4,5, e la categoria scelta
+      nel conto, il segno «staff», il numero sulla campanella, l'avviso di
+      aggiornamento e gli estremi del periodo ci scrivono sopra. Ora quei
+      fondi usano `--accent-pieno`, che applyTheme calcola: l'accento
+      scurito (o schiarito) quanto basta. I tasti azzurri del tastierino del
+      pagamento avevano un azzurro fisso: ora è mescolato col testo del
+      tema. La scritta «test version» era attenuata a mezza opacità.
+      I NOMI (2.4.4, 4.1.2): sul telefono il link del marchio restava senza
+      testo (logo e nome nascosti); la tendina della tavolozza nelle
+      impostazioni non aveva nome.
+      I TASTI PICCOLI (2.5.8, WCAG 2.2): il triangolo del colore delle voci
+      nella gestione del menù scendeva sotto i 24 px.
+      DOPO: 34 misure, nessuna violazione; la prova è un cancello.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, accessibilita, ui]
+    severity: media
+    priority: P2
+    requisiti: [REQ-UI-036]
+    test_cases: [tests/sistema/accessibilita.spec.js, tests/unit/contrastoAccento.test.js]

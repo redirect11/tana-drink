@@ -1,24 +1,37 @@
-// LA PRIMA MISURA DI ACCESSIBILITÀ (richiesta della regia, 17/11/2026).
+// L'ACCESSIBILITÀ, PROVATA CON AXE (REQ-UI-036, UR-021).
 //
-// axe-core sulle pagine principali, con le regole WCAG 2.0 e 2.1 di livello
-// A e AA (i tag `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`). È una MISURA:
-// non fa fallire niente, scrive le violazioni pagina per pagina in un file,
-// da mandare alla regia prima di correggere qualsiasi cosa. Diventerà il
-// cancello (una violazione nuova fa fallire) quando avrà il suo requisito.
+// axe sulle pagine principali, con le regole WCAG 2.0, 2.1 e 2.2 di livello
+// A e AA (i tag `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, `wcag22aa`), la
+// stessa serie della regia (@axe-core/playwright 4.14). Ogni pagina si
+// misura due volte: a 1280 px e a 320 px, la vista stretta, che nella regia
+// ha trovato problemi invisibili da larghi.
 //
-// REQ-UI-036. Lanciata da sola:
-//   A11Y_AZZERA=1 npx firebase-tools emulators:exec --only auth,firestore //     --config firebase.collaudo.json "npx playwright test accessibilita"
+// IL CANCELLO: una violazione fa fallire la prova (`expect.soft`, così una
+// pagina che cade non nasconde le altre). Con `A11Y_SOLO_MISURA=1` non fa
+// fallire niente e si limita a scrivere le violazioni, pagina per pagina,
+// nel file (la prima misura per la regia, 17/11/2026).
+//
+//   npx firebase-tools emulators:exec --only auth,firestore \
+//     --config firebase.collaudo.json "npx playwright test accessibilita"
+//
+// Il file si azzera a mano prima del giro: Playwright ricarica questo modulo
+// a ogni ripartenza, e azzerarlo da qui buttava le misure già fatte.
 //
 // Con gli ascolti di Firestore la pagina non arriva mai a `networkidle`: si
-// aspetta `load`, un elemento della pagina e un momento, poi si inietta axe.
-import { writeFileSync, readFileSync, existsSync, rmSync, mkdirSync } from 'node:fs'
+// aspetta `load`, un elemento della pagina e un momento, poi si misura.
+import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
-import { createRequire } from 'node:module'
-import { test, entra, nuovoOrdine, batti } from './banco.mjs'
+import { AxeBuilder } from '@axe-core/playwright'
+import { test, expect, entra, nuovoOrdine, batti } from './banco.mjs'
 
-const AXE = createRequire(import.meta.url).resolve('axe-core/axe.min.js')
 const USCITA = process.env.A11Y_USCITA || 'test-results/a11y-misura.json'
-const TAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']
+const SOLO_MISURA = process.env.A11Y_SOLO_MISURA === '1'
+const TAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']
+const VISTE = [
+  { nome: 'larga', viewport: { width: 1280, height: 800 } },
+  { nome: 'stretta', viewport: { width: 320, height: 640 } },
+]
+
 // Il file si scrive a ogni misura: se una prova cade, Playwright riparte con
 // un processo nuovo, e una memoria tenuta solo in variabile si perderebbe.
 const aggiungi = (riga) => {
@@ -26,62 +39,24 @@ const aggiungi = (riga) => {
   const prima = existsSync(USCITA) ? JSON.parse(readFileSync(USCITA, 'utf8')) : []
   writeFileSync(USCITA, JSON.stringify([...prima, riga], null, 2))
 }
-if (process.env.A11Y_AZZERA === '1' && existsSync(USCITA)) rmSync(USCITA)
 
-async function misura(page, area, pagina) {
+async function misura(page, vista, area, pagina) {
   await page.waitForLoadState('load')
   await page.waitForTimeout(2500)
-  await page.addScriptTag({ path: AXE })
-  const esito = await page.evaluate(
-    (tag) => window.axe.run(document, { runOnly: { type: 'tag', values: tag }, resultTypes: ['violations'] }),
-    TAG
-  )
-  aggiungi({
-    area,
-    pagina,
-    indirizzo: new URL(page.url()).pathname + new URL(page.url()).search,
-    violazioni: esito.violations.map((v) => ({
-      regola: v.id,
-      impatto: v.impact,
-      descrizione: v.help,
-      criteri: v.tags.filter((t) => /^wcag\d{3,}$/.test(t)),
-      elementi: v.nodes.length,
-      esempi: v.nodes.slice(0, 3).map((n) => n.target.join(' ')),
-    })),
-  })
+  const esito = await new AxeBuilder({ page }).withTags(TAG).analyze()
+  const violazioni = esito.violations.map((v) => ({
+    regola: v.id,
+    impatto: v.impact,
+    descrizione: v.help,
+    criteri: v.tags.filter((t) => /^wcag\d{3,}$/.test(t)),
+    elementi: v.nodes.length,
+    esempi: v.nodes.slice(0, 3).map((n) => n.target.join(' ')),
+  }))
+  aggiungi({ vista, area, pagina, indirizzo: new URL(page.url()).pathname + new URL(page.url()).search, violazioni })
+  if (!SOLO_MISURA) {
+    expect.soft(violazioni, `${pagina} (${vista})`).toEqual([])
+  }
 }
-
-test('cliente: home, menù, accesso', async ({ page }) => {
-  await page.goto('/')
-  await misura(page, 'cliente', 'Home del locale')
-  await page.goto('/menu')
-  await page.getByText('Mojito').first().waitFor()
-  await misura(page, 'cliente', 'Menù dei clienti')
-  // Il dettaglio di un drink, se il tema lo apre al tocco del nome.
-  const aperto = await page.getByText('Mojito').first().click({ timeout: 5000 }).then(() => true, () => false)
-  if (aperto) await misura(page, 'cliente', 'Menù: dettaglio di un drink')
-  await page.goto('/accedi')
-  await misura(page, 'cliente', 'Accesso del cliente')
-})
-
-test('gestionale: accesso', async ({ page }) => {
-  await page.goto('/bar')
-  await page.getByLabel('Email').waitFor()
-  await misura(page, 'gestionale', 'Accesso dello staff')
-})
-
-test('gestionale: coda, conto, pagamento', async ({ page }) => {
-  test.setTimeout(120_000)
-  await entra(page, 'banco@tana.local')
-  await page.getByText('Cassa chiusa').waitFor()
-  await misura(page, 'gestionale', 'Coda ordini (cassa chiusa)')
-  await nuovoOrdine(page)
-  await batti(page, 'Mojito')
-  await batti(page, 'Negroni')
-  await misura(page, 'gestionale', 'Conto (POS) con due righe')
-  await page.getByRole('button', { name: /Pagamento ·/ }).click()
-  await misura(page, 'gestionale', 'Pagamento')
-})
 
 const SEZIONI = [
   ['pagamenti', 'Cassa'],
@@ -96,12 +71,53 @@ const SEZIONI = [
   ['impostazioni', 'Impostazioni'],
 ]
 
-test('gestionale: le sezioni', async ({ page }) => {
-  test.setTimeout(180_000)
-  await entra(page, 'banco@tana.local')
-  await page.getByText('Cassa chiusa').waitFor()
-  for (const [tab, nome] of SEZIONI) {
-    await page.goto(`/bar?tab=${tab}`)
-    await misura(page, 'gestionale', nome)
-  }
-})
+for (const { nome: vista, viewport } of VISTE) {
+  test.describe(`vista ${vista}`, () => {
+    test.use({ viewport })
+
+    test('cliente: home, menù, accesso', async ({ page }) => {
+      test.setTimeout(120_000)
+      await page.goto('/')
+      await misura(page, vista, 'cliente', 'Home del locale')
+      await page.goto('/menu')
+      await page.getByText('Mojito').first().waitFor()
+      await misura(page, vista, 'cliente', 'Menù dei clienti')
+      await page.goto('/accedi')
+      await misura(page, vista, 'cliente', 'Accesso del cliente')
+    })
+
+    test('gestionale: accesso', async ({ page }) => {
+      await page.goto('/bar')
+      await page.getByLabel('Email').waitFor()
+      await misura(page, vista, 'gestionale', 'Accesso dello staff')
+    })
+
+    test('gestionale: coda, conto, pagamento', async ({ page }) => {
+      test.setTimeout(240_000)
+      await entra(page, 'banco@tana.local')
+      await page.getByText('Cassa chiusa').waitFor()
+      await misura(page, vista, 'gestionale', 'Coda ordini (cassa chiusa)')
+      await nuovoOrdine(page)
+      await batti(page, 'Mojito')
+      await batti(page, 'Negroni')
+      await misura(page, vista, 'gestionale', 'Conto (POS) con due righe')
+      // Sul telefono il conto sta chiuso in basso: si apre, e il tasto del
+      // pagamento è lì dentro, e si chiama solo «Paga».
+      if (vista === 'stretta') await page.getByRole('button', { name: /tocca per aprire/ }).click()
+      // «Paga» sul telefono non sta mai fermo per Playwright (il pannello
+      // si anima): qui si misura la pagina che apre, quindi si forza.
+      await page.getByRole('button', { name: /^Pagamento ·|^Paga$/ }).click({ force: true })
+      await misura(page, vista, 'gestionale', 'Pagamento')
+    })
+
+    test('gestionale: le sezioni', async ({ page }) => {
+      test.setTimeout(180_000)
+      await entra(page, 'banco@tana.local')
+      await page.getByText('Cassa chiusa').waitFor()
+      for (const [tab, nome] of SEZIONI) {
+        await page.goto(`/bar?tab=${tab}`)
+        await misura(page, vista, 'gestionale', nome)
+      }
+    })
+  })
+}

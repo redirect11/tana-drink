@@ -163,7 +163,7 @@ export function DrinkTile({
           position: 'absolute',
           top: '1.5em',
           left: '0.55em',
-          background: 'var(--accent, #b47a3c)',
+          background: 'var(--accent-pieno, var(--accent, #b47a3c))',
           // L'inchiostro del tema, non il bianco: sul lime il numero spariva (BUG-166).
           color: 'var(--accent-ink, #fff)',
           borderRadius: '50%',

@@ -376,7 +376,12 @@ export function applyTheme(vars) {
   // Lo stesso sopra l'accento pieno (il segno «staff», il numero sulla
   // campanella): era bianco fisso, e sul lime stava a 1,5:1 (dal revisore,
   // REQ-UI-033). Sul rosa della Tana resta bianco.
-  root.style.setProperty('--accent-ink', vars['--accent-ink'] || (isLightColor(vars['--accent']) ? '#1c1305' : '#ffffff'))
+  const inchiostroAccento = vars['--accent-ink'] || (isLightColor(vars['--accent']) ? '#1c1305' : '#ffffff')
+  root.style.setProperty('--accent-ink', inchiostroAccento)
+  // E IL FONDO SOTTO QUELL'INCHIOSTRO, quando l'accento da solo non regge
+  // 4,5:1 (REQ-UI-036): accentoPieno lo scurisce, o lo schiarisce, quanto
+  // basta. Sul lime non cambia niente.
+  root.style.setProperty('--accent-pieno', accentoPieno(vars['--accent'], inchiostroAccento))
   const a2 = vars['--accent-2']
   if (a2) {
     root.style.setProperty(
@@ -397,6 +402,49 @@ export function applyTheme(vars) {
 }
 
 // Un colore esadecimale è "chiaro"? (luminanza percepita > 0.6)
+// ── IL CONTRASTO, COME LO MISURA WCAG (REQ-UI-036) ────────────────────
+// La luminanza relativa e il rapporto fra due colori (1:1 – 21:1), con la
+// formula di WCAG 2.x: è quella che usa axe, quindi un numero qui è lo
+// stesso che la prova di accessibilità misura sulla pagina.
+const lineare = (c) => {
+  const v = c / 255
+  return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
+}
+export function luminanza(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim())
+  if (!m) return null
+  const n = parseInt(m[1], 16)
+  return 0.2126 * lineare((n >> 16) & 255) + 0.7152 * lineare((n >> 8) & 255) + 0.0722 * lineare(n & 255)
+}
+export function contrasto(a, b) {
+  const la = luminanza(a)
+  const lb = luminanza(b)
+  if (la == null || lb == null) return null
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05)
+}
+const mescola = (hex, verso, quanto) => {
+  const n = parseInt(String(hex).replace('#', ''), 16)
+  const canale = (c) => Math.round(c + (verso - c) * quanto)
+  const r = canale((n >> 16) & 255)
+  const g = canale((n >> 8) & 255)
+  const b = canale(n & 255)
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`
+}
+
+// L'ACCENTO PIENO SOTTO UN TESTO (REQ-UI-036, WCAG 1.4.3). Il rosa della
+// Tana (#e52e71) col bianco sopra sta a 4,2:1, e col bruno a 4,35:1: la
+// categoria scelta nel conto e il segno «staff» non arrivavano a 4,5. Qui
+// l'accento si scurisce (sotto un inchiostro chiaro) o si schiarisce (sotto
+// uno scuro) a piccoli passi, finché il testo si legge. Un accento che regge
+// già, come il lime col suo inchiostro, resta com'è.
+export function accentoPieno(accento, inchiostro, soglia = 4.5) {
+  if (luminanza(accento) == null || luminanza(inchiostro) == null) return accento
+  const verso = luminanza(inchiostro) > 0.5 ? 0 : 255
+  let c = accento.startsWith('#') ? accento : `#${accento}`
+  for (let i = 0; i < 40 && contrasto(c, inchiostro) < soglia; i++) c = mescola(c, verso, 0.04)
+  return c
+}
+
 export function isLightColor(hex) {
   const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim())
   if (!m) return false

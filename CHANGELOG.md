@@ -15,6 +15,19 @@
   degli ordinati sulle card hanno il testo scuro: prima erano bianchi sul
   lime e non si leggevano. Con la Tana non cambia niente (BUG-166).
 
+### Accessibilità
+
+- **Si può ingrandire la pagina** col pizzico, anche al banco: il doppio
+  tocco veloce sui tasti non ingrandisce più per sbaglio, ma lo zoom non è
+  più bloccato. Da provare sull'iPad del banco (BUG-167).
+- I testi sopra il colore del tema (la categoria scelta nel conto, il segno
+  «staff», il numero sulla campanella, l'avviso di aggiornamento) si
+  leggono meglio: col rosa della Tana il fondo è un filo più scuro. Più
+  leggibili anche i tasti azzurri del tastierino del pagamento (BUG-167).
+- Il link del marchio e la tendina della tavolozza hanno un nome per i
+  lettori di schermo; il triangolo del colore delle voci, nella gestione
+  del menù, è più grande da toccare (BUG-167).
+
 ### Sicurezza e costi
 
 - Le foto dei prodotti e gli allegati delle fatture si caricano solo se la

@@ -77,7 +77,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 12 |
 | Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 188 |
-| Unità | il progetto di dettaglio: un modulo da solo | 188 |
+| Unità | il progetto di dettaglio: un modulo da solo | 189 |
 
 **21** bisogni del locale, **0** con un test di accettazione.
 **131** requisiti su 371 sono collegati a un bisogno;
@@ -4518,7 +4518,9 @@ Daniele, 15/11/2026, sulle schermate della demo da mettere nella prima pagina de
 
 CRITERIO: la build della demo si chiama «Bancone 21» nel titolo della pagina e nel manifest (nome corto «Bancone 21»), e le frasi che nominano il locale dicono «al Bancone 21».
 
-COME È FATTO (17/11/2026): clienti/demo/venue.json (nome, nome corto, «al Bancone 21», la descrizione del manifest); il logo della demo resta quello neutro di prima.
+COME È FATTO (17/11/2026): clienti/demo/venue.json (nome, nome corto, «al Bancone 21», la descrizione del manifest).
+
+IL LOGO (Daniele, 17/11/2026: «c'è già il logo di Lime SmartOrders per questa cosa. Al posto del bicchiere»): il bicchiere neutro lascia il posto alla fetta di lime della regia (drink-regia public/favicon.svg). favicon.svg è quel disegno; logo.png, icon-192/512 trasparenti; apple-touch-icon e icon-maskable-512 sul fondo di Lime scuro (#0c0f0a), la maskable col logo al 60% per il margine di Android. Se il logo della regia cambia, questi file si rifanno da lì.
 
 **Dove**: `clienti/demo/venue.json` · **Serve**: [UR-014](#ur-014--la-demo-che-si-mostra-a-un-locale-nuovo-non-espone-niente-di-un-locale-vero) · **Lo dimostrano**: `tests/unit/clienteBuild.test.js`
 
@@ -4906,9 +4908,11 @@ DA FARE: passare le altre schermate con elenchi una per una (statistiche, magazz
 
 Daniele, 17/11/2026, portata dalla regia: «sia per il menu che per la home … dobbiamo aggiungere la dichiarazione di accessibilità e mettere in atto quello che richiede la legge per l'accessibilità di tutto». Regola di Stonebit per ogni prodotto. Lo standard è WCAG 2.1 AA (EN 301 549) sul menù del cliente e gli ordini dal tavolo, sulla home del locale e la pagina di cortesia, sul gestionale.
 
-LA PRIMA MISURA (17/11/2026, prima di correggere): axe-core su 17 pagine dell'app compilata. Tre regole violate: lo zoom bloccato (`meta-viewport`, tutte le pagine, index.html), il contrasto (tastierino del pagamento, categoria «Tutti» del conto, fatture, accessi), un menu a tendina senza nome nelle impostazioni. Oltre axe, circa 70 comandi fatti con `div` cliccabili, le finestre di dialogo, i temi uno per uno. Stima mandata alla regia: 10-14 giorni.
+LA PRIMA MISURA (17/11/2026, prima di correggere): axe-core su 17 pagine dell'app compilata. Tre regole violate: lo zoom bloccato (`meta-viewport`, tutte le pagine, index.html), il contrasto (tastierino del pagamento, categoria «Tutti» del conto, fatture, accessi), un menu a tendina senza nome nelle impostazioni. Oltre axe, circa 70 comandi fatti con `div` cliccabili, le finestre di dialogo, i temi uno per uno. Stima mandata alla regia: 10-14 giorni. L'ORDINE (regia e Daniele, 17/11/2026): prima la conformità piena, la pagina «Accessibilità» per ultima.
 
-DA FARE: le correzioni; la prova da misura a cancello (una violazione nuova fa fallire), su più temi; la prova a mano a ogni versione maggiore (tastiera, NVDA, zoom 200%); la pagina «Accessibilità» collegata dal piè di pagina comune (src/App.jsx, accanto a Privacy), col testo approvato da Daniele.
+FATTO (17/11/2026): le violazioni di axe corrette (BUG-167); la prova è un CANCELLO, con la serie della regia (@axe-core/playwright 4.14.0, axe-core 4.14.0: la 4.14.1 era uscita il giorno prima), il tag `wcag22aa` e la vista a 320 px oltre a quella a 1280: 34 misure, nessuna violazione, e una violazione nuova fa fallire i test di sistema, obbligatori sulle PR verso develop.
+
+DA FARE: la prova sul sito di test vero (dopo il prossimo tag); i comandi su `div` cliccabili; il fuoco nelle finestre di dialogo; gli avvisi letti; i temi uno per uno (anche `--muted` a 4,5, con la regia); la prova a mano a ogni versione maggiore (tastiera, NVDA, zoom 200%); infine la pagina «Accessibilità» collegata dal piè di pagina comune (src/App.jsx, accanto a Privacy), col testo approvato da Daniele.
 
 **Dove**: `tests/sistema/accessibilita.spec.js (axe-core), index.html (viewport), src/index.css (contrasto), componenti con comandi su div, src/App.jsx (piè di pagina)` · **Serve**: [UR-021](#ur-021--chi-ha-una-disabilità-usa-il-menù-la-home-del-locale-e-il-gestionale-come-tutti)
 

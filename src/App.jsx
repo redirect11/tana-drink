@@ -662,9 +662,12 @@ export default function App() {
         {/* Nel gestionale il logo non porta al menu: resta sugli ordini.
             E lì il marchio è quello del prodotto, LIME - SmartOrders
             (REQ-UI-035): le pagine dei clienti restano del locale. */}
+        {/* IL NOME DEL LINK (REQ-UI-036, WCAG 2.4.4): sul telefono logo e
+            nome si nascondono, e il link restava senza niente da dire. */}
         <Link
           to={onBackoffice ? '/bar' : '/'}
           className="brand"
+          aria-label={nelGestionale(location.pathname) ? 'Lime SmartOrders, coda ordini' : `${venue.venue_name}, pagina iniziale`}
           style={{ textDecoration: 'none', color: 'inherit' }}
         >
           {nelGestionale(location.pathname) ? (
