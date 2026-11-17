@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { usePaginaPiena } from '../lib/paginaPiena.js'
+import { tr } from '../lib/lingua.js'
 
 // CATEGORIE A SINISTRA, contenuto a destra — lo stesso schema del POS
 // (PosProductPicker), riusato nel backoffice per Inventario, Menù e
@@ -81,13 +82,13 @@ export default function CategoryRail({
           title={
             stretta
               ? aIcone
-                ? 'Allarga il menu'
-                : 'Mostra le sezioni'
+                ? tr('Allarga il menu')
+                : tr('Mostra le sezioni')
               : aIcone
-                ? 'Stringi il menu a icone'
-                : 'Nascondi le sezioni'
+                ? tr('Stringi il menu a icone')
+                : tr('Nascondi le sezioni')
           }
-          aria-label={stretta ? 'Mostra le sezioni' : 'Nascondi le sezioni'}
+          aria-label={stretta ? tr('Mostra le sezioni') : tr('Nascondi le sezioni')}
         >
           {stretta ? '»' : '«'}
         </button>

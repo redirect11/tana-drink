@@ -18,6 +18,7 @@ import {
 } from '../lib/aggiornamenti.js'
 import { isAdmin } from '../lib/ruoli.js'
 import { configurazione } from '../porte/configurazione.js'
+import { tr, trSegnato } from '../lib/lingua.js'
 
 // INFORMAZIONI: che versione è, cosa è cambiato, e i dati tecnici che
 // servono quando qualcosa non va.
@@ -40,19 +41,19 @@ export default function InfoTab({ settings = null, role = null }) {
     let vivo = true
     caricaChangelog({ base: import.meta.env.BASE_URL || '/' })
       .then((t) => vivo && setChangelog(t))
-      .catch(() => vivo && setErrore('Le note di questa versione non sono disponibili.'))
+      .catch(() => vivo && setErrore(tr('Le note di questa versione non sono disponibili.')))
     return () => {
       vivo = false
     }
   }, [])
 
   const dati = [
-    ['Versione', etichettaVersione({ branch: 'main', versione: VERSIONE }) || '—'],
-    ['Ramo', BRANCH || '—'],
+    [tr('Versione'), etichettaVersione({ branch: 'main', versione: VERSIONE }) || '—'],
+    [tr('Ramo'), BRANCH || '—'],
     ['Commit', COMMIT || '—'],
     ['Build', BUILD || '—'],
-    ['Ambiente', import.meta.env.VITE_APP_ENV || 'produzione'],
-    ['Progetto', configurazione().firebase.projectId || '—'],
+    [tr('Ambiente'), import.meta.env.VITE_APP_ENV || tr('produzione')],
+    [tr('Progetto'), configurazione().firebase.projectId || '—'],
   ]
 
   const copia = () =>
@@ -61,7 +62,7 @@ export default function InfoTab({ settings = null, role = null }) {
   return (
     <div>
       <div className="card settings-section">
-        <h3>Questa versione</h3>
+        <h3>{tr('Questa versione')}</h3>
         <div className="info-dati">
           {dati.map(([k, v]) => (
             <div className="row between" key={k}>
@@ -71,19 +72,19 @@ export default function InfoTab({ settings = null, role = null }) {
           ))}
         </div>
         <p className="muted small" style={{ margin: '8px 0 0' }}>
-          Da allegare alle segnalazioni di malfunzionamento.
+          {tr('Da allegare alle segnalazioni di malfunzionamento.')}
         </p>
         <button className="btn ghost small" style={{ marginTop: 8 }} onClick={copia}>
-          Copia i dati tecnici
+          {tr('Copia i dati tecnici')}
         </button>
       </div>
 
       <Aggiornamenti settings={settings} role={role} />
 
       <div className="card settings-section">
-        <h3>Cosa è cambiato</h3>
+        <h3>{tr('Cosa è cambiato')}</h3>
         {errore && <p className="muted small">{errore}</p>}
-        {!changelog && !errore && <Caricamento piccolo testo="Carico le note…" />}
+        {!changelog && !errore && <Caricamento piccolo testo={tr('Carico le note…')} />}
         {changelog && <Changelog testo={changelog} />}
       </div>
     </div>
@@ -106,16 +107,16 @@ function Aggiornamenti({ settings, role }) {
 
   return (
     <div className="card settings-section">
-      <h3>Aggiornamenti</h3>
-      {stato === 'del_titolare' && <p className="muted small">{MESSAGGI_AGGIORNAMENTI.del_titolare}</p>}
+      <h3>{tr('Aggiornamenti')}</h3>
+      {stato === 'del_titolare' && <p className="muted small">{trSegnato(MESSAGGI_AGGIORNAMENTI.del_titolare)}</p>}
       {(stato === 'da_scegliere' || stato === 'partito') && (
         <>
           <p style={{ margin: '0 0 6px' }}>
-            Disponibile la versione <strong>{numeroVersione(proposta.tag)}</strong>.
+            {tr('Disponibile la versione')} <strong>{numeroVersione(proposta.tag)}</strong>.
           </p>
           {proposta.note && <Changelog testo={String(proposta.note)} />}
           {stato === 'partito' && (
-            <p className="muted small" style={{ margin: '8px 0 0' }}>{MESSAGGI_AGGIORNAMENTI.partito}</p>
+            <p className="muted small" style={{ margin: '8px 0 0' }}>{trSegnato(MESSAGGI_AGGIORNAMENTI.partito)}</p>
           )}
           {stato === 'da_scegliere' && !url && <SceltaDallAreaClienti settings={settings} piccolo />}
           {stato === 'da_scegliere' && url && (
@@ -126,7 +127,7 @@ function Aggiornamenti({ settings, role }) {
                 </p>
               )}
               {inCorso && (
-                <p className="muted small" style={{ margin: '8px 0 0' }}>{MESSAGGI_AGGIORNAMENTI.in_corso}</p>
+                <p className="muted small" style={{ margin: '8px 0 0' }}>{trSegnato(MESSAGGI_AGGIORNAMENTI.in_corso)}</p>
               )}
               <button
                 className="btn small"
@@ -134,7 +135,7 @@ function Aggiornamenti({ settings, role }) {
                 disabled={inCorso}
                 onClick={() => scegli(proposta.tag, SCELTE.AGGIORNA)}
               >
-                Aggiorna
+                {tr('Aggiorna')}
               </button>
             </>
           )}
@@ -150,9 +151,9 @@ function AvvisoCondizioni({ avviso }) {
   const dal = dataAvviso(avviso.dal)
   return (
     <div style={{ marginTop: 10 }}>
-      <strong className="small">Condizioni del servizio</strong>
+      <strong className="small">{tr('Condizioni del servizio')}</strong>
       <p className="small" style={{ whiteSpace: 'pre-line', margin: '4px 0 0' }}>{avviso.testo}</p>
-      {dal && <p className="muted small" style={{ margin: '4px 0 0' }}>In vigore dal {dal}.</p>}
+      {dal && <p className="muted small" style={{ margin: '4px 0 0' }}>{tr('In vigore dal {dal}.', { dal })}</p>}
     </div>
   )
 }

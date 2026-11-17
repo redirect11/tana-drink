@@ -14,6 +14,7 @@ import { formatPrice } from '../lib/orderStatus.js'
 import { perScaffale } from '../lib/scaffali.js'
 import ListaPerScaffale from './ListaPerScaffale.jsx'
 import Icona from './Icona.jsx'
+import { tr, daTradurre, trSegnato } from '../lib/lingua.js'
 
 // ── IL CONTROLLO DEL MAGAZZINO, PAGINA DI PROVA (REQ-MAG-050) ─────────
 //
@@ -46,8 +47,8 @@ import Icona from './Icona.jsx'
 const GIORNI_STORIA = 90
 const PERIODI = [7, 30, 90]
 const SCHEDE = [
-  ['conta', 'Conta'],
-  ['rapporto', 'Rapporto'],
+  ['conta', daTradurre('Conta')],
+  ['rapporto', daTradurre('Rapporto')],
 ]
 
 export default function ControlloMagazzino() {
@@ -91,28 +92,25 @@ export default function ControlloMagazzino() {
     }
   }, [])
 
-  if (errore && !items) return <div className="banner">Errore: {errore}</div>
-  if (!items) return <div className="empty">Carico il magazzino…</div>
+  if (errore && !items) return <div className="banner">{tr('Errore: {errore}', { errore })}</div>
+  if (!items) return <div className="empty">{tr('Carico il magazzino…')}</div>
 
   return (
     <div>
       <div className="card">
-        <strong><Icona nome="prova" gruppo="tasti" /> Controllo del magazzino — prova</strong>
+        <strong><Icona nome="prova" gruppo="tasti" /> {tr('Controllo del magazzino — prova')}</strong>
         <p className="muted small" style={{ margin: '6px 0 0' }}>
-          Una vista diversa dall’Inventario, da confrontare. Si conta un prodotto alla volta, quando
-          si vuole: il conteggio corregge subito la giacenza e resta nei movimenti. Il rapporto dice,
-          per il periodo scelto, cosa è entrato, cosa è stato venduto, quanto il contato si è
-          discostato da quello che risultava, e quanti giorni dura la scorta.
+          {tr('Una vista diversa dall’Inventario, da confrontare. Si conta un prodotto alla volta, quando si vuole: il conteggio corregge subito la giacenza e resta nei movimenti. Il rapporto dice, per il periodo scelto, cosa è entrato, cosa è stato venduto, quanto il contato si è discostato da quello che risultava, e quanti giorni dura la scorta.')}
         </p>
       </div>
       <div className="chips-row" style={{ margin: '8px 0' }}>
         {SCHEDE.map(([id, nome]) => (
           <button key={id} className={`chip${scheda === id ? ' active' : ''}`} onClick={() => setScheda(id)}>
-            {nome}
+            {trSegnato(nome)}
           </button>
         ))}
       </div>
-      {errore && <div className="banner">Errore: {errore}</div>}
+      {errore && <div className="banner">{tr('Errore: {errore}', { errore })}</div>}
       {scheda === 'conta' ? (
         <Conta items={items} categorie={categorie} movimenti={movimenti} cutoff={cutoff} onConta={conta} />
       ) : (
@@ -173,8 +171,10 @@ const RigaConta = memo(function RigaConta({ item: it, contatoIl, onConta }) {
         <div className="grow">
           <div className="inv-name">{it.name}</div>
           <div className="muted small">
-            Risulta {formatQty(it.stock, it.unit)} ·{' '}
-            {contatoIl ? `contato il ${contatoIl}` : `non contato negli ultimi ${GIORNI_STORIA} giorni`}
+            {tr('Risulta {quantita}', { quantita: formatQty(it.stock, it.unit) })} ·{' '}
+            {contatoIl
+              ? tr('contato il {data}', { data: contatoIl })
+              : tr('non contato negli ultimi {n} giorni', { n: GIORNI_STORIA })}
           </div>
         </div>
         <input
@@ -183,7 +183,7 @@ const RigaConta = memo(function RigaConta({ item: it, contatoIl, onConta }) {
           min="0"
           value={valore}
           placeholder={it.unit}
-          aria-label={`Quanto c'è di ${it.name}`}
+          aria-label={tr("Quanto c'è di {nome}", { nome: it.name })}
           onChange={(e) => setValore(e.target.value)}
           style={{ width: 90, textAlign: 'right' }}
         />
@@ -191,13 +191,13 @@ const RigaConta = memo(function RigaConta({ item: it, contatoIl, onConta }) {
           type="button"
           className="btn small"
           disabled={valore === ''}
-          aria-label={`Conta ${it.name}`}
+          aria-label={tr('Conta {nome}', { nome: it.name })}
           onClick={() => {
             onConta(it, valore)
             setValore('')
           }}
         >
-          Conta
+          {tr('Conta')}
         </button>
       </div>
     </div>
@@ -224,29 +224,29 @@ function Rapporto({ items, movimenti, oggi, cutoff }) {
       <div className="chips-row" style={{ marginBottom: 6 }}>
         {PERIODI.map((n) => (
           <button key={n} className={`chip${giorni === n ? ' active' : ''}`} onClick={() => setGiorni(n)}>
-            {n} giorni
+            {tr('{n} giorni', { n })}
           </button>
         ))}
       </div>
       <div className="card">
         <div className="muted small">
-          Dal {dataBreve(dal)} al {dataBreve(oggi)} · {totali.prodotti} prodotti mossi
+          {tr('Dal {da} al {a} · {n} prodotti mossi', { da: dataBreve(dal), a: dataBreve(oggi), n: totali.prodotti })}
         </div>
         <div className="summary-rows" style={{ margin: '6px 0 0' }}>
           <div className="row between">
-            <span>Acquisti</span>
+            <span>{tr('Acquisti')}</span>
             <strong>{formatPrice(totali.acq_valore)}</strong>
           </div>
           <div className="row between">
-            <span>Venduto (costo)</span>
+            <span>{tr('Venduto (costo)')}</span>
             <strong>{formatPrice(totali.cons_valore)}</strong>
           </div>
           <div className="row between">
-            <span>Differenza fra contato e risultante</span>
+            <span>{tr('Differenza fra contato e risultante')}</span>
             <strong>{formatPrice(totali.rett_valore)}</strong>
           </div>
           <div className="row between">
-            <span>Valore del magazzino a fine periodo</span>
+            <span>{tr('Valore del magazzino a fine periodo')}</span>
             <strong>{formatPrice(totali.fine_valore)}</strong>
           </div>
         </div>
@@ -269,17 +269,22 @@ function RigaRapporto({ r, giorni }) {
         <div className="grow">
           <div className="inv-name">{r.name}</div>
           <div className="muted small">
-            Inizio {q(r.dep)} · + Acquisti {q(r.acq)} · − Venduto {q(r.cons)} · ± Differenza{' '}
-            {q(r.rett)} · = Fine {q(r.fine)}
+            {tr('Inizio {inizio} · + Acquisti {acquisti} · − Venduto {venduto} · ± Differenza {differenza} · = Fine {fine}', {
+              inizio: q(r.dep),
+              acquisti: q(r.acq),
+              venduto: q(r.cons),
+              differenza: q(r.rett),
+              fine: q(r.fine),
+            })}
           </div>
           <div className="small">
             {r.rett !== 0 && (
               <>
-                Differenza <strong>{formatPrice(r.rett_valore)}</strong>
+                {tr('Differenza')} <strong>{formatPrice(r.rett_valore)}</strong>
                 {dura != null && ' · '}
               </>
             )}
-            {dura != null && `dura circa ${dura} ${dura === 1 ? 'giorno' : 'giorni'}`}
+            {dura != null && (dura === 1 ? tr('dura circa 1 giorno') : tr('dura circa {n} giorni', { n: dura }))}
           </div>
         </div>
       </div>

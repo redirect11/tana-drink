@@ -1,4 +1,5 @@
 import { urlRegia } from '../lib/limiti.js'
+import { tr, trSegnato } from '../lib/lingua.js'
 
 // UN LIMITE DEL PIANO, DETTO DOVE SI INCONTRA (REQ-LIC-003). Una frase
 // piana — cosa non si può fare in questo piano — e, se la regia ha scritto
@@ -11,10 +12,10 @@ export default function AvvisoPiano({ messaggio, impostazioni, compatto = false 
   const url = urlRegia(impostazioni)
   return (
     <div className={`avviso-piano${compatto ? ' compatto' : ' card'}`} role="note">
-      <p className="muted">{messaggio}</p>
+      <p className="muted">{trSegnato(messaggio)}</p>
       {url && (
         <a className="btn ghost small" href={url} target="_blank" rel="noopener noreferrer">
-          Vedi i piani
+          {tr('Vedi i piani')}
         </a>
       )}
     </div>

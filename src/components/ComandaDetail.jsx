@@ -21,6 +21,7 @@ import {
 import PreparazioneParziale from './PreparazioneParziale.jsx'
 import ScegliConsegna from './ScegliConsegna.jsx'
 import Icona, { ConIcona } from './Icona.jsx'
+import { tr } from '../lib/lingua.js'
 
 // ── IL DETTAGLIO DI UNA COMANDA ──────────────────────────────────────
 //
@@ -86,25 +87,25 @@ export default function ComandaDetail({
       <div className="card comanda-det-testa">
         <div className="row between comanda-det-riga1">
           <button className="btn ghost small" onClick={onIndietro}>
-            ← Torna alla coda
+            ← {tr('Torna alla coda')}
           </button>
           <button className="btn small comanda-det-conto" onClick={onApriConto}>
-            <Icona nome="coda" gruppo="tasti" />{' '}Apri il conto #{order.daily_number ?? '—'}
+            <Icona nome="coda" gruppo="tasti" /> {tr('Apri il conto #{n}', { n: order.daily_number ?? '—' })}
           </button>
         </div>
         <div className="bignum comanda-det-num">
           #{order.daily_number ?? '—'}
           {comanda.seq != null && (
-            <span className="comanda-det-seq"> · comanda {comanda.seq}</span>
+            <span className="comanda-det-seq"> · {tr('comanda {n}', { n: comanda.seq })}</span>
           )}
         </div>
         <div className="muted comanda-det-dove">
-          {destinazioneConto(order) || 'Senza tavolo né nome'}
+          {destinazioneConto(order) || tr('Senza tavolo né nome')}
         </div>
         <div className="row comanda-det-bolli">
           <span className={`pill ${comanda.status}`}>
             {divisa ? (
-              <ConIcona nome="dividi" testo="Divisa" />
+              <ConIcona nome="dividi" testo={tr('comanda|Divisa')} />
             ) : (
               <ConIcona nome={STATUS_ICONA[comanda.status]} testo={statoAlBanco(comanda.status, order.service_mode)} />
             )}
@@ -113,11 +114,11 @@ export default function ComandaDetail({
               Serve saperlo anche da qui: chi finisce la comanda spesso è
               quello che poi porta il conto al tavolo. */}
           {order.payment_status === 'parziale' && (
-            <span className="pill acconto" title={`Già incassati ${formatPrice(paidAmount(order))}`}>
-              <Icona nome="carta" gruppo="tasti" /> Acconto
+            <span className="pill acconto" title={tr('Già incassati {importo}', { importo: formatPrice(paidAmount(order)) })}>
+              <Icona nome="carta" gruppo="tasti" /> {tr('Acconto')}
             </span>
           )}
-          {order.payment_status === 'pagato' && <span className="pill pagato"><Icona nome="contanti" gruppo="tasti" /> Pagato</span>}
+          {order.payment_status === 'pagato' && <span className="pill pagato"><Icona nome="contanti" gruppo="tasti" /> {tr('Pagato')}</span>}
           <span className="muted small comanda-det-eta">
             {daQuanto(comanda.created_at || order.created_at)}
           </span>
@@ -144,8 +145,8 @@ export default function ComandaDetail({
           incassato — sta dietro il tasto in alto, che è il suo posto. */}
       <div className="comanda-det-corpo">
       <div className="card comanda-det-righe">
-        <h3 className="comanda-det-titolo">Cosa c’è da fare</h3>
-        {righe.length === 0 && <p className="muted small">Questa comanda è vuota.</p>}
+        <h3 className="comanda-det-titolo">{tr('Cosa c’è da fare')}</h3>
+        {righe.length === 0 && <p className="muted small">{tr('Questa comanda è vuota.')}</p>}
         {righe.map((i, idx) => (
           <div className="row between comanda-det-riga" key={i.line_id ?? `${i.drink_id}-${idx}`}>
             <span className="comanda-det-nome">
@@ -160,7 +161,7 @@ export default function ComandaDetail({
         ))}
         {righe.length > 0 && (
           <div className="row between comanda-det-totale">
-            <strong>Totale comanda</strong>
+            <strong>{tr('Totale comanda')}</strong>
             <strong className="price">{formatPrice(itemsTotal(righe))}</strong>
           </div>
         )}
@@ -182,13 +183,13 @@ export default function ComandaDetail({
         )}
         {!chiusa && indietro.length > 0 && (
           <div className="row comanda-det-indietro">
-            <span className="muted small">Torna a</span>
+            <span className="muted small">{tr('Torna a')}</span>
             {indietro.map((st) => (
               <button
                 key={st}
                 className="chip"
                 onClick={() => onTornaA?.(st)}
-                title={`Riporta la comanda a «${statoAlBanco(st, order.service_mode)}»`}
+                title={tr('Riporta la comanda a «{stato}»', { stato: statoAlBanco(st, order.service_mode) })}
               >
                 ↩︎ {statoAlBanco(st, order.service_mode)}
               </button>
@@ -223,7 +224,7 @@ export default function ComandaDetail({
               className="btn ghost small block comanda-det-dividi"
               onClick={() => setDividendo(true)}
             >
-              <Icona nome="dividi" gruppo="tasti" /> Preparazione parziale
+              <Icona nome="dividi" gruppo="tasti" /> {tr('Preparazione parziale')}
             </button>
           ))}
         {/* ── SERVIZIO O RITIRO ──────────────────────────────
@@ -250,7 +251,7 @@ export default function ComandaDetail({
         )}
         {onStampa && (
           <button className="btn ghost small block comanda-det-stampa" onClick={onStampa}>
-            <Icona nome="stampa" gruppo="tasti" /> Ristampa la comanda
+            <Icona nome="stampa" gruppo="tasti" /> {tr('Ristampa la comanda')}
           </button>
         )}
       </div>

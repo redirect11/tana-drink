@@ -17974,7 +17974,7 @@ requirements:
       leggiLinguaDelProfilo in api.js, la lettura al login senza farsi
       aspettare (App.jsx), il riquadro «Lingua» in Il mio profilo coi nomi
       delle lingue nella loro lingua; «Il mio profilo» tradotto (area
-      testi/en/profilo.js). Banco e cassa tradotti (17/11): coda, accesso, menu laterale, barra in alto, conto, griglia dei prodotti, pagamento, apertura e chiusura cassa, scheda Cassa (aree testi/en/coda, conto, cassa; le etichette di src/lib in comune). Anche le tabelle di src/lib che il banco mostra (coda.js, sezioni.js, ruoli.js, comande.js, storiaOrdine.js, statoStampante.js, erroriAccesso.js, pendingOrders.js): dove erano costruite al caricamento del modulo ora sono funzioni (filtriStato, etichettaRuolo, servizioEtichetta, etichettaAnnullo). LE PAGINE DEI CLIENTI RESTANO ITALIANE anche su un tablet dello staff in inglese (dalla revisione del 17/11): App.jsx dice a lib/lingua.js se la schermata è del cliente (non personale, «Vista cliente», «Mostra al cliente» ?cliente=1) e lì tr risponde in italiano, con lang=it. CHI NON HA MAI SCELTO ha l'italiano: leggiLinguaDelProfilo risponde it per un profilo senza lingua, e un collega non eredita la lingua di chi ha usato il tablet prima. Lo scontrino resta italiano (prova cartaInItaliano). DA FARE: impostazioni, magazzino, menù, fornitori, statistiche e bilancio, staff e utenti, il resto; in src/lib i modi di consegna, gli altri messaggi del piano Free, le descrizioni dei ruoli, i motivi d'errore della stampante.
+      testi/en/profilo.js). Banco e cassa tradotti (17/11): coda, accesso, menu laterale, barra in alto, conto, griglia dei prodotti, pagamento, apertura e chiusura cassa, scheda Cassa (aree testi/en/coda, conto, cassa; le etichette di src/lib in comune). Anche le tabelle di src/lib che il banco mostra (coda.js, sezioni.js, ruoli.js, comande.js, storiaOrdine.js, statoStampante.js, erroriAccesso.js, pendingOrders.js): dove erano costruite al caricamento del modulo ora sono funzioni (filtriStato, etichettaRuolo, servizioEtichetta, etichettaAnnullo). LE PAGINE DEI CLIENTI RESTANO ITALIANE anche su un tablet dello staff in inglese (dalla revisione del 17/11): App.jsx dice a lib/lingua.js se la schermata è del cliente (non personale, «Vista cliente», «Mostra al cliente» ?cliente=1) e lì tr risponde in italiano, con lang=it. CHI NON HA MAI SCELTO ha l'italiano: leggiLinguaDelProfilo risponde it per un profilo senza lingua, e un collega non eredita la lingua di chi ha usato il tablet prima. Lo scontrino resta italiano (prova cartaInItaliano). Secondo giro (17/11): impostazioni (SettingsTab e pannelli), magazzino e comanda al banco, gestione del menù (aree impostazioni, magazzino, menu). DA FARE: fornitori, statistiche e bilancio, staff e utenti, il resto; in src/lib i modi di consegna, gli altri messaggi del piano Free, le descrizioni dei ruoli, i motivi d'errore della stampante.
     status: todo
     generate_issue: true
     labels: [ui, lingue]
@@ -17985,6 +17985,9 @@ requirements:
       - tests/component/ContoInInglese.test.jsx
       - tests/component/CassaInInglese.test.jsx
       - tests/unit/cartaInItaliano.test.js
+      - tests/component/ImpostazioniInInglese.test.jsx
+      - tests/component/MagazzinoInInglese.test.jsx
+      - tests/component/MenuInInglese.test.jsx
 
   - id: REQ-SIC-007
     title: "Un elenco unico, nel codice, dei dati personali che l'app tiene"

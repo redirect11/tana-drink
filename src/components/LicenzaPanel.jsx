@@ -1,5 +1,6 @@
 import { riepilogoLicenza, STATI_LICENZA } from '../lib/licenza.js'
 import { dataAvviso } from '../lib/aggiornamenti.js'
+import { tr, daTradurre, trSegnato } from '../lib/lingua.js'
 
 // ── LA LICENZA, IN SOLA LETTURA (REQ-LIC-007) ─────────────────────────
 // «Dovrebbe esserci una parte dove si vede la licenza attuale e la sua
@@ -14,11 +15,11 @@ import { dataAvviso } from '../lib/aggiornamenti.js'
 // schermata.
 
 const STATI = {
-  [STATI_LICENZA.ATTIVA]: 'Attiva',
-  [STATI_LICENZA.SOSPESA]: 'Sospesa',
-  [STATI_LICENZA.CHIUSA]: 'Chiusa',
-  [STATI_LICENZA.NON_ATTIVATA]: 'Non attivata',
-  [STATI_LICENZA.SCADUTA]: 'Scaduta',
+  [STATI_LICENZA.ATTIVA]: daTradurre('licenza|Attiva'),
+  [STATI_LICENZA.SOSPESA]: daTradurre('licenza|Sospesa'),
+  [STATI_LICENZA.CHIUSA]: daTradurre('licenza|Chiusa'),
+  [STATI_LICENZA.NON_ATTIVATA]: daTradurre('licenza|Non attivata'),
+  [STATI_LICENZA.SCADUTA]: daTradurre('licenza|Scaduta'),
 }
 
 // L'id del listino della regia («free», «pro») con l'iniziale maiuscola:
@@ -27,28 +28,36 @@ const nomePiano = (id) => id.charAt(0).toUpperCase() + id.slice(1)
 
 function testoValidita(validita) {
   if (!validita) return null
-  if (validita.tipo === 'senza') return 'Senza scadenza'
+  if (validita.tipo === 'senza') return tr('Senza scadenza')
   const data = dataAvviso(validita.data)
-  return validita.tipo === 'scaduta' ? `Scaduta il ${data}` : `Valida fino al ${data}`
+  return validita.tipo === 'scaduta' ? tr('Scaduta il {data}', { data }) : tr('Valida fino al {data}', { data })
 }
 
 export default function LicenzaPanel({ settings }) {
   const r = riepilogoLicenza(settings)
   if (!r) return null
   const dati = [
-    ['Piano', r.piano ? nomePiano(r.piano) : null],
-    ['Stato', STATI[r.stato] ?? r.stato],
-    ['Validità', testoValidita(r.validita)],
-    ['Moduli premium inclusi', `${r.inclusi.length} su ${r.inclusi.length + r.esclusi.length}`],
-    ['Stili del menù', r.temi.length ? r.temi.join(', ') : null],
+    [tr('Piano'), r.piano ? nomePiano(r.piano) : null],
+    [tr('licenza|Stato'), trSegnato(STATI[r.stato]) ?? r.stato],
+    [tr('Validità'), testoValidita(r.validita)],
+    [
+      tr('Moduli premium inclusi'),
+      tr('{n} su {totale}', { n: r.inclusi.length, totale: r.inclusi.length + r.esclusi.length }),
+    ],
+    [tr('Stili del menù'), r.temi.length ? r.temi.join(', ') : null],
   ].filter(([, v]) => v)
 
   return (
     <div className="card settings-section">
-      <h3>Licenza</h3>
+      <h3>{tr('Licenza')}</h3>
       <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-        Cosa comprende la licenza di questa installazione. Qui si consulta soltanto: piano, moduli e limiti si
-        modificano {r.gestione ? 'dalla regia' : 'presso chi gestisce l’installazione'}.
+        {r.gestione
+          ? tr(
+              'Cosa comprende la licenza di questa installazione. Qui si consulta soltanto: piano, moduli e limiti si modificano dalla regia.'
+            )
+          : tr(
+              'Cosa comprende la licenza di questa installazione. Qui si consulta soltanto: piano, moduli e limiti si modificano presso chi gestisce l’installazione.'
+            )}
       </p>
       <div className="info-dati">
         {dati.map(([k, v]) => (
@@ -60,15 +69,15 @@ export default function LicenzaPanel({ settings }) {
       </div>
 
       <p className="muted small" style={{ margin: '8px 0 0' }}>
-        Il dettaglio dei moduli, con quelli in prova, è in Funzioni premium, qui sotto.
+        {tr('Il dettaglio dei moduli, con quelli in prova, è in Funzioni premium, qui sotto.')}
       </p>
 
       {r.limiti.length > 0 && (
         <>
-          <h4 style={{ margin: '14px 0 4px' }}>Limiti del piano</h4>
+          <h4 style={{ margin: '14px 0 4px' }}>{tr('Limiti del piano')}</h4>
           <ul className="small" style={{ margin: 0, paddingLeft: 18 }}>
             {r.limiti.map((riga) => (
-              <li key={riga}>{riga}</li>
+              <li key={riga}>{trSegnato(riga)}</li>
             ))}
           </ul>
         </>
@@ -76,7 +85,7 @@ export default function LicenzaPanel({ settings }) {
 
       {r.gestione && (
         <a className="btn small" style={{ marginTop: 12, display: 'inline-block' }} href={r.gestione}>
-          Gestisci la licenza
+          {tr('Gestisci la licenza')}
         </a>
       )}
     </div>

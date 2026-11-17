@@ -14,6 +14,7 @@ import {
 import { printAnteprima } from '../lib/printer.js'
 import { isAdmin } from '../lib/ruoli.js'
 import Icona from './Icona.jsx'
+import { tr, daTradurre, trSegnato } from '../lib/lingua.js'
 
 // ── COSA C'È SULLO SCONTRINO, E COSA C'È SULLA COMANDA ───────────────
 //
@@ -23,18 +24,17 @@ import Icona from './Icona.jsx'
 // quelli che una stampa ha, non se ne inventano di nuovi.
 
 const TITOLI = {
-  scontrino: 'Cosa c’è sullo scontrino',
-  comanda: 'Cosa c’è sulla comanda',
-  acconto: 'Cosa c’è sullo scontrino d’acconto',
+  scontrino: daTradurre('Cosa c’è sullo scontrino'),
+  comanda: daTradurre('Cosa c’è sulla comanda'),
+  acconto: daTradurre('Cosa c’è sullo scontrino d’acconto'),
 }
 
 const SPIEGAZIONI = {
-  scontrino:
-    'Prodotti e totale si stampano sempre; gli altri campi si scelgono qui.',
-  comanda:
-    'I prodotti si stampano sempre; gli altri campi si scelgono qui.',
-  acconto:
-    'La scritta ACCONTO, le righe pagate quando ci sono, l’importo versato e l’indicazione del conto ancora aperto si stampano sempre; gli altri campi si scelgono qui.',
+  scontrino: daTradurre('Prodotti e totale si stampano sempre; gli altri campi si scelgono qui.'),
+  comanda: daTradurre('I prodotti si stampano sempre; gli altri campi si scelgono qui.'),
+  acconto: daTradurre(
+    'La scritta ACCONTO, le righe pagate quando ci sono, l’importo versato e l’indicazione del conto ancora aperto si stampano sempre; gli altri campi si scelgono qui.'
+  ),
 }
 
 export default function CampiStampa({ quale, settings, onSave }) {
@@ -62,7 +62,7 @@ export default function CampiStampa({ quale, settings, onSave }) {
     setEsito(null)
     try {
       await printAnteprima(quale)
-      setEsito({ ok: true, testo: 'Prova inviata alla stampante.' })
+      setEsito({ ok: true, testo: tr('Prova inviata alla stampante.') })
     } catch (e) {
       setEsito({ ok: false, testo: e.message })
     } finally {
@@ -72,9 +72,9 @@ export default function CampiStampa({ quale, settings, onSave }) {
 
   return (
     <div className="card settings-section">
-      <h3>{TITOLI[quale]}</h3>
+      <h3>{trSegnato(TITOLI[quale])}</h3>
       <p className="muted" style={{ margin: '0 0 12px', fontSize: '0.9rem' }}>
-        {SPIEGAZIONI[quale]}
+        {trSegnato(SPIEGAZIONI[quale])}
       </p>
 
       {campi.map((campo) => {
@@ -83,13 +83,13 @@ export default function CampiStampa({ quale, settings, onSave }) {
           <div key={campo.id} style={{ marginBottom: 4 }}>
             <div className="toggle-row">
               <div>
-                <div>{campo.label}</div>
-                {campo.desc && <div className="desc">{campo.desc}</div>}
+                <div>{trSegnato(campo.label)}</div>
+                {campo.desc && <div className="desc">{trSegnato(campo.desc)}</div>}
               </div>
               <input
                 type="checkbox"
                 className="toggle"
-                aria-label={campo.label}
+                aria-label={trSegnato(campo.label)}
                 checked={acceso}
                 onChange={(e) => salva('campi', campo.id, e.target.checked)}
               />
@@ -99,7 +99,7 @@ export default function CampiStampa({ quale, settings, onSave }) {
                 casella che non serve fa perdere tempo a chi scorre. */}
             {campo.testo && acceso && (
               <div style={{ padding: '0 0 10px 12px' }}>
-                <label htmlFor={`testo-${quale}-${campo.id}`}>{campo.testo.label}</label>
+                <label htmlFor={`testo-${quale}-${campo.id}`}>{trSegnato(campo.testo.label)}</label>
                 <input
                   id={`testo-${quale}-${campo.id}`}
                   type="text"
@@ -121,10 +121,18 @@ export default function CampiStampa({ quale, settings, onSave }) {
         onClick={prova}
         disabled={stampando}
       >
-        {stampando ? 'Stampo…' : <><Icona nome="stampa" gruppo="tasti" /> Prova di stampa</>}
+        {stampando ? (
+          tr('Stampo…')
+        ) : (
+          <>
+            <Icona nome="stampa" gruppo="tasti" /> {tr('Prova di stampa')}
+          </>
+        )}
       </button>
       <p className="muted" style={{ fontSize: '0.8rem', margin: '6px 0 0' }}>
-        Stampa un {quale === 'comanda' ? 'ticket' : 'conto'} di prova con i campi scelti.
+        {quale === 'comanda'
+          ? tr('Stampa un ticket di prova con i campi scelti.')
+          : tr('Stampa un conto di prova con i campi scelti.')}
       </p>
       {esito && (
         <div className={esito.ok ? 'muted' : 'banner'} style={{ marginTop: 8, fontSize: '0.9rem' }}>
@@ -192,7 +200,7 @@ export function LogoStampe({ settings, onSave, role = null }) {
     } catch {
       setProblema({
         grave: true,
-        testo: 'Questa immagine non si riesce ad aprire. Servono un PNG o un JPG.',
+        testo: tr('Questa immagine non si riesce ad aprire. Servono un PNG o un JPG.'),
       })
     } finally {
       setLavorando(false)
@@ -201,22 +209,21 @@ export function LogoStampe({ settings, onSave, role = null }) {
 
   return (
     <div className="card settings-section">
-      <h3>Logo sulle stampe</h3>
+      <h3>{tr('Logo sulle stampe')}</h3>
       <p className="muted" style={{ margin: '0 0 12px', fontSize: '0.9rem' }}>
-        Il logo si stampa in bianco e nero, largo poco meno di metà carta,
-        sulle stampe scelte qui.
+        {tr('Il logo si stampa in bianco e nero, largo poco meno di metà carta, sulle stampe scelte qui.')}
       </p>
 
       {TIPI_LOGO.map((tipo) => (
         <div className="toggle-row" key={tipo.id}>
           <div>
-            <div>{tipo.label}</div>
-            {tipo.desc && <div className="desc">{tipo.desc}</div>}
+            <div>{trSegnato(tipo.label)}</div>
+            {tipo.desc && <div className="desc">{trSegnato(tipo.desc)}</div>}
           </div>
           <input
             type="checkbox"
             className="toggle"
-            aria-label={tipo.label}
+            aria-label={trSegnato(tipo.label)}
             checked={logoAcceso(settings, tipo.id)}
             onChange={(e) => salva({ [tipo.id]: e.target.checked })}
           />
@@ -224,13 +231,13 @@ export function LogoStampe({ settings, onSave, role = null }) {
       ))}
 
       <div style={{ marginTop: 16 }}>
-        <div style={{ marginBottom: 6 }}>L’immagine</div>
+        <div style={{ marginBottom: 6 }}>{tr('L’immagine')}</div>
         <div className="row" style={{ gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           {/* Il fondo bianco è quello della carta: su un tema scuro un
               logo nero su trasparente sembrerebbe sparito. */}
           <img
             src={immagine || `${import.meta.env.BASE_URL || '/'}logo.png`}
-            alt="Il logo come esce dalla stampante"
+            alt={tr('Il logo come esce dalla stampante')}
             style={{
               width: 110,
               background: '#fff',
@@ -242,8 +249,8 @@ export function LogoStampe({ settings, onSave, role = null }) {
           <div style={{ flex: '1 1 200px' }}>
             <p className="muted" style={{ fontSize: '0.85rem', margin: '0 0 8px' }}>
               {immagine
-                ? 'Questa è l’immagine caricata dal locale.'
-                : 'Questo è il logo di serie: caricane uno per cambiarlo.'}
+                ? tr('Questa è l’immagine caricata dal locale.')
+                : tr('Questo è il logo di serie: caricane uno per cambiarlo.')}
             </p>
             {puoCambiarla ? (
               <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
@@ -261,7 +268,13 @@ export function LogoStampe({ settings, onSave, role = null }) {
                   disabled={lavorando}
                   onClick={() => fileRef.current?.click()}
                 >
-                  {lavorando ? 'Guardo l’immagine…' : <><Icona nome="immagine" gruppo="tasti" /> Carica un’immagine</>}
+                  {lavorando ? (
+                    tr('Guardo l’immagine…')
+                  ) : (
+                    <>
+                      <Icona nome="immagine" gruppo="tasti" /> {tr('Carica un’immagine')}
+                    </>
+                  )}
                 </button>
                 {immagine && (
                   <button
@@ -272,13 +285,13 @@ export function LogoStampe({ settings, onSave, role = null }) {
                       salva({ immagine: null })
                     }}
                   >
-                    Torna a quello di serie
+                    {tr('Torna a quello di serie')}
                   </button>
                 )}
               </div>
             ) : (
               <p className="muted" style={{ fontSize: '0.85rem', margin: 0 }}>
-                L’immagine la cambia chi ha l’accesso da amministratore.
+                {tr('L’immagine la cambia chi ha l’accesso da amministratore.')}
               </p>
             )}
           </div>
@@ -290,8 +303,8 @@ export function LogoStampe({ settings, onSave, role = null }) {
             style={{ marginTop: 10, fontSize: '0.9rem' }}
           >
             {problema.grave && <><Icona nome="avviso" gruppo="segnali" />{' '}</>}
-            {problema.testo}
-            {problema.grave && ' Il logo è rimasto quello di prima.'}
+            {trSegnato(problema.testo)}
+            {problema.grave && <> {tr('Il logo è rimasto quello di prima.')}</>}
           </div>
         )}
       </div>

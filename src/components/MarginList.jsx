@@ -7,6 +7,7 @@ import SortTh from './SortTh.jsx'
 import GruppoChip from './GruppoChip.jsx'
 import Icona from './Icona.jsx'
 import CategoryRail from './CategoryRail.jsx'
+import { tr, daTradurre, trSegnato, useLingua } from '../lib/lingua.js'
 
 // MARGINALITÀ DEL LISTINO: per ogni drink con ricetta, quanto costa
 // davvero, a quanto è venduto e che ricarico ne esce. Serve a trovare le
@@ -22,30 +23,34 @@ import CategoryRail from './CategoryRail.jsx'
 // del ricarico, del margine netto, del costo e del prezzo — che prima
 // stava «scritto piccolo e sotto il nome» — e la possibilità di ordinare
 // su ognuna. «Tutto insieme» resta, per il confronto su tutto il listino.
+// Le etichette si traducono dove si mostrano (trSegnato), nella lingua di
+// quel momento.
 const FILTRI = [
-  ['tutti', 'Tutti'],
-  ['sotto', 'Da rivedere'],
-  ['ok', 'In linea'],
-  ['parziale', 'Costo incompleto'],
+  ['tutti', daTradurre('Tutti')],
+  ['sotto', daTradurre('Da rivedere')],
+  ['ok', daTradurre('In linea')],
+  ['parziale', daTradurre('Costo incompleto')],
 ]
 const VISTE = [
-  { id: 'categorie', label: 'Per categoria' },
-  { id: 'tutto', label: 'Tutto insieme' },
+  { id: 'categorie', label: daTradurre('Per categoria') },
+  { id: 'tutto', label: daTradurre('Tutto insieme') },
 ]
 // LE PAROLE E L'ORDINE SONO QUELLI DI FLAVIO (29/10/2026): «COSTO,
 // VENDITA, CONSIGLIATO, MOLTIPLICATORE e UTILE incolonnate come una
 // tabella». Il consigliato ha una colonna sua: prima stava scritto piccolo
 // sotto il nome, e solo per le voci da rivedere.
 const COLONNE = [
-  ['cost', 'Costo'],
-  ['price', 'Vendita'],
-  ['suggested', 'Consigliato'],
-  ['markup', 'Moltiplicatore'],
-  ['margin', 'Utile'],
+  ['cost', daTradurre('Costo')],
+  ['price', daTradurre('Vendita')],
+  ['suggested', daTradurre('Consigliato')],
+  ['markup', daTradurre('Moltiplicatore')],
+  ['margin', daTradurre('Utile')],
 ]
 const ricarico = (m) => (m != null ? `×${String(m).replace('.', ',')}` : '—')
 
 export default function MarginList({ drinks, inventory, categories = [], onEdit }) {
+  // La barra delle categorie si compone in un useMemo: si rifà al cambio di lingua.
+  const lingua = useLingua()
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   useEffect(() => subscribeSettings(setSettings, () => {}), [])
   const [filtro, setFiltro] = useState('tutti')
@@ -80,7 +85,7 @@ export default function MarginList({ drinks, inventory, categories = [], onEdit 
   )
   const vociBarra = useMemo(
     () => [
-      { key: 'all', label: 'Tutte', count: report.totali },
+      { key: 'all', label: tr('Tutte'), count: report.totali },
       ...perCategoria.map((g) => ({
         key: g.id,
         label: g.nome,
@@ -89,7 +94,8 @@ export default function MarginList({ drinks, inventory, categories = [], onEdit 
         icon: g.categoria?.icon || null,
       })),
     ],
-    [perCategoria, report.totali]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [perCategoria, report.totali, lingua]
   )
 
   const nellaCategoria = useMemo(
@@ -120,7 +126,7 @@ export default function MarginList({ drinks, inventory, categories = [], onEdit 
   if (report.totali === 0) {
     return (
       <div className="empty" style={{ marginTop: 8 }}>
-        Nessun drink con ingredienti: la marginalità si calcola dalla ricetta.
+        {tr('Nessun drink con ingredienti: la marginalità si calcola dalla ricetta.')}
       </div>
     )
   }
@@ -131,13 +137,15 @@ export default function MarginList({ drinks, inventory, categories = [], onEdit 
     <CategoryRail chiave="margini" items={vociBarra} selected={categoria} onSelect={setCategoria}>
       <div className="card" style={{ marginTop: 8 }}>
         <div className="row between" style={{ alignItems: 'baseline' }}>
-          <strong><Icona nome="statistiche" gruppo="tasti" /> Marginalità</strong>
-          <span className="muted small">obiettivo {ricarico(settings.price_markup)}</span>
+          <strong><Icona nome="statistiche" gruppo="tasti" /> {tr('Marginalità')}</strong>
+          <span className="muted small">{tr('obiettivo {ricarico}', { ricarico: ricarico(settings.price_markup) })}</span>
         </div>
         <p className="muted small" style={{ margin: '4px 0 8px' }}>
-          {report.sotto > 0
-            ? `${report.sotto} drink rendono meno del ${ricarico(settings.price_markup)}.`
-            : 'Tutti i drink calcolabili sono in linea.'}
+          {report.sotto === 1
+            ? tr('1 drink rende meno del {ricarico}.', { ricarico: ricarico(settings.price_markup) })
+            : report.sotto > 0
+              ? tr('{n} drink rendono meno del {ricarico}.', { n: report.sotto, ricarico: ricarico(settings.price_markup) })
+              : tr('Tutti i drink calcolabili sono in linea.')}
         </p>
 
         <div className="chips-row" style={{ marginBottom: 8 }}>
@@ -147,25 +155,27 @@ export default function MarginList({ drinks, inventory, categories = [], onEdit 
               className={`chip${filtro === k ? ' active' : ''}`}
               onClick={() => setFiltro(k)}
             >
-              {label} ({conteggi[k]})
+              {trSegnato(label)} ({conteggi[k]})
             </button>
           ))}
         </div>
-        <GruppoChip etichetta="Vista" opzioni={VISTE} valore={vista} scegli={setVista} style={{ marginBottom: 8 }} />
+        <GruppoChip
+          etichetta={tr('Vista')}
+          opzioni={VISTE.map((v) => ({ ...v, label: trSegnato(v.label) }))} valore={vista} scegli={setVista} style={{ marginBottom: 8 }} />
 
         {righe.length === 0 ? (
-          <div className="muted small">Nessun drink in questo gruppo.</div>
+          <div className="muted small">{tr('Nessun drink in questo gruppo.')}</div>
         ) : (
           <div className="table-scroll">
             <table className="margin-tab">
               <thead>
                 <tr>
                   <th className="rowhead" aria-sort={verso('name')}>
-                    <SortTh label="Voce" col="name" sort={sort} onSort={ordinaPer} />
+                    <SortTh label={tr('margini|Voce')} col="name" sort={sort} onSort={ordinaPer} />
                   </th>
                   {COLONNE.map(([col, label]) => (
                     <th key={col} aria-sort={verso(col)}>
-                      <SortTh label={label} col={col} sort={sort} onSort={ordinaPer} num />
+                      <SortTh label={trSegnato(label)} col={col} sort={sort} onSort={ordinaPer} num />
                     </th>
                   ))}
                 </tr>
@@ -185,8 +195,8 @@ export default function MarginList({ drinks, inventory, categories = [], onEdit 
                       <td />
                       <td />
                       <td />
-                      <td title="Moltiplicatore medio">{ricarico(g.ricaricoMedio)}</td>
-                      <td title="Utile medio">{g.margineMedio != null ? formatPrice(g.margineMedio) : ''}</td>
+                      <td title={tr('Moltiplicatore medio')}>{ricarico(g.ricaricoMedio)}</td>
+                      <td title={tr('Utile medio')}>{g.margineMedio != null ? formatPrice(g.margineMedio) : ''}</td>
                     </tr>
                   )}
                   {g.righe.map((r) => (
@@ -196,12 +206,12 @@ export default function MarginList({ drinks, inventory, categories = [], onEdit 
                           type="button"
                           className="margin-nome"
                           onClick={() => onEdit(r.id)}
-                          aria-label={`Modifica ${r.name}`}
+                          aria-label={tr('Modifica {nome}', { nome: r.name })}
                         >
                           {r.name}
                         </button>
                         {r.missing.length > 0 && (
-                          <span className="muted small margin-nota">manca {r.missing.join(', ')}</span>
+                          <span className="muted small margin-nota">{tr('manca {ingredienti}', { ingredienti: r.missing.join(', ') })}</span>
                         )}
                       </th>
                       <td>{formatPrice(r.cost)}</td>

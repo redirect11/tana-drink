@@ -95,7 +95,7 @@ import SectionPanels from './SectionPanels.jsx'
 import { IconFornitore } from './Icons.jsx'
 import Tendina from './Tendina.jsx'
 import FiltroAssortimento from './FiltroAssortimento.jsx'
-import { ASSORTIMENTO_NOME, toggleVoce } from '../lib/assortimento.js'
+import { toggleVoce } from '../lib/assortimento.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import { useSottosezioni } from '../lib/sottosezioni.js'
 import { usePaginaPiena } from '../lib/paginaPiena.js'
@@ -104,15 +104,18 @@ import { useTestoConIcona } from '../lib/temaIcone.js'
 import { conEmoji } from '../lib/icone.js'
 import AiutoCampo from './AiutoCampo.jsx'
 import { servizioAttivo } from '../lib/limiti.js'
+import { tr, daTradurre, trSegnato } from '../lib/lingua.js'
 
+// Le etichette si segnano qui e si traducono dove si mostrano (trSegnato):
+// un `tr` al caricamento del modulo fisserebbe la lingua (REQ-UI-039).
 const STATUS_ITEM = [
-  { value: 'assortimento', label: 'In assortimento' },
-  { value: 'linea', label: 'In linea', icona: 'in-linea' },
-  { value: 'premium', label: 'Premium', icona: 'premium' },
-  { value: 'out', label: 'Fuori assortimento', icona: 'vietato' },
+  { value: 'assortimento', label: daTradurre('In assortimento') },
+  { value: 'linea', label: daTradurre('assortimento|In linea'), icona: 'in-linea' },
+  { value: 'premium', label: daTradurre('Premium'), icona: 'premium' },
+  { value: 'out', label: daTradurre('Fuori assortimento'), icona: 'vietato' },
 ]
 
-const STATUS_LABEL = { ok: '', low: 'in esaurimento', empty: 'esaurito' }
+const STATUS_LABEL = { ok: '', low: daTradurre('in esaurimento'), empty: daTradurre('esaurito') }
 
 // Come si chiama, a parole, il modo in cui un articolo è gestito: è quello che
 // si legge nell'avviso quando lo si cambia in modifica.
@@ -130,16 +133,16 @@ const GESTIONE_LABEL = { pz: 'pezzi', g: 'peso', ml: 'liquidi', U: 'unità gener
 // scorrendo la lista, senza doverlo aprire.
 function SegnoSchedaDaCompletare({ item }) {
   if (!item?.scheda_da_completare) return null
-  return <span className="badge-segno" title="Scheda da completare"><Icona nome="modifica" gruppo="tasti" /></span>
+  return <span className="badge-segno" title={tr('Scheda da completare')}><Icona nome="modifica" gruppo="tasti" /></span>
 }
 
 function SegnoAssortimento({ item }) {
   const a = assortimentoDi(item)
   if (a === 'out') return <span className="badge-empty">OUT</span>
-  if (a === 'premium') return <span className="badge-segno" title="Premium"><Icona nome="premium" gruppo="tasti" /></span>
+  if (a === 'premium') return <span className="badge-segno" title={tr('Premium')}><Icona nome="premium" gruppo="tasti" /></span>
   // La bottiglia: ora è libera, perché la colonna scorte non la usa più per
   // contare le bottiglie rimaste (scrive "3 bott.").
-  if (a === 'linea') return <span className="badge-segno" title="In linea"><Icona nome="in-linea" gruppo="tasti" /></span>
+  if (a === 'linea') return <span className="badge-segno" title={tr('assortimento|In linea')}><Icona nome="in-linea" gruppo="tasti" /></span>
   return null
 }
 
@@ -158,7 +161,7 @@ function UnitPrice({ item, markup }) {
   return (
     <div className="inv-info-row">
       <dt className="inv-unita">
-        Al {unit}
+        {tr('Al {unit}', { unit })}
         {units.length > 1 &&
           units.map((u) => (
             <button
@@ -179,9 +182,9 @@ function UnitPrice({ item, markup }) {
           ))}
       </dt>
       <dd className="inv-unitprice">
-        <span>costo <strong>{formatPrice(cost)}</strong></span>
-        <span>consigliato ×{m} <strong className="price">{formatPrice(consigliato)}</strong></span>
-        <span className="muted">guadagno {formatPrice(guadagno)}</span>
+        <span>{tr('costo')} <strong>{formatPrice(cost)}</strong></span>
+        <span>{tr('consigliato ×{m}', { m })} <strong className="price">{formatPrice(consigliato)}</strong></span>
+        <span className="muted">{tr('guadagno {importo}', { importo: formatPrice(guadagno) })}</span>
       </dd>
     </div>
   )
@@ -197,19 +200,19 @@ function UnitPrice({ item, markup }) {
 // ma si vede solo dove il modulo lavora. L'elenco non si sdoppia apposta —
 // l'ordine delle sezioni è uno solo.
 const INV_VIEWS = [
-  ['prodotti', 'magazzino', 'Prodotti'],
+  ['prodotti', 'magazzino', daTradurre('Prodotti')],
   // «Inventario», non «Conta»: Daniele, 17/09/2026, «conta è fuorviante».
   // L'id resta `conta` perché è la chiave del modulo sui documenti veri.
-  ['conta', 'elenco', 'Inventario'],
+  ['conta', 'elenco', daTradurre('Inventario')],
   // Gli inventari chiusi (REQ-MAG-052): si accende con l'inventario
   // (lib/licenza.js, `sezioni`).
-  ['storico', 'archivio', 'Storico inventari'],
-  ['categorie', 'categorie', 'Categorie'],
-  ['macro', 'raggruppa', 'Macro-categorie'],
-  ['movimenti', 'movimenti', 'Movimenti'],
+  ['storico', 'archivio', daTradurre('Storico inventari')],
+  ['categorie', 'categorie', daTradurre('Categorie')],
+  ['macro', 'raggruppa', daTradurre('Macro-categorie')],
+  ['movimenti', 'movimenti', daTradurre('Movimenti')],
   // La pagina di prova (REQ-MAG-050): solo fuori dalla produzione e solo
   // se accesa, vedi lib/prova.js.
-  ['controllo', 'prova', 'Controllo (prova)'],
+  ['controllo', 'prova', daTradurre('Controllo (prova)')],
 ]
 
 // LE SEZIONI DEL MAGAZZINO STANNO NELLA BARRA IN ALTO. Le ho provate in due
@@ -243,7 +246,7 @@ export default function InventoryManager({ onApriMenu = null }) {
   // elenco.
   const view = voci.some(([id]) => id === sezione) ? sezione : 'prodotti'
   useSottosezioni(
-    voci.map(([id, icona, label]) => ({ id, icona, label })),
+    voci.map(([id, icona, label]) => ({ id, icona, label: trSegnato(label) })),
     view,
     setSezione
   )
@@ -316,8 +319,8 @@ function MovimentiPanel() {
       .catch(() => setMovements([]))
       .finally(() => setLoading(false))
   }, [])
-  if (loading) return <div className="empty">Carico i movimenti…</div>
-  if (movements.length === 0) return <div className="empty">Ancora nessun movimento.</div>
+  if (loading) return <div className="empty">{tr('Carico i movimenti…')}</div>
+  if (movements.length === 0) return <div className="empty">{tr('Ancora nessun movimento.')}</div>
   return (
     <div className="card inv-movimenti">
       {movements.map((m) => (
@@ -397,7 +400,7 @@ function PrevisioneCard({ item, impegnato }) {
       className={`small${p.finito ? ' inv-row-previsto finito' : ' muted'}`}
       style={{ display: 'block' }}
     >
-      a fine serata {p.testo}
+      {tr('a fine serata {quantita}', { quantita: p.testo })}
     </span>
   )
 }
@@ -606,9 +609,14 @@ function ProductsPanel({ onApriMenu = null }) {
           dire annullato (DESIGN.md). */}
       {it.scheda_da_completare && (
         <p className="badge-low" style={{ display: 'block', margin: '0 0 8px' }}>
-          <Icona nome="modifica" gruppo="segnali" /> Scheda da completare: manca {mancaNellaScheda(it).join(', ')}.
+          <Icona nome="modifica" gruppo="segnali" />{' '}
+          {tr('Scheda da completare: manca {campi}.', {
+            campi: mancaNellaScheda(it)
+              .map((m) => trSegnato(m))
+              .join(', '),
+          })}
           {!it.category_id &&
-            ' Finché manca la categoria, quello che si spende per questo prodotto resta fuori dai conti degli acquisti.'}
+            ` ${tr('Finché manca la categoria, quello che si spende per questo prodotto resta fuori dai conti degli acquisti.')}`}
         </p>
       )}
       <dl className="inv-info">
@@ -618,13 +626,13 @@ function ProductsPanel({ onApriMenu = null }) {
             «Giacenza» sopra ripeteva lo stesso numero due volte. */}
         {bd ? (
           <div className="inv-info-row">
-            <dt>Pezzi</dt>
+            <dt>{tr('Pezzi')}</dt>
             <dd>
               <strong>{formatPezzi(pezziInGiacenza(it))} pz</strong>
               {' · '}
-              {bd.full} piene
-              {bd.hasOpen && ` · 1 aperta (${fmtContenuto(bd.openRemaining, it)})`}
-              {bd.finished > 0 && ` · ${bd.finished} finite`}
+              {tr('{n} piene', { n: bd.full })}
+              {bd.hasOpen && ` · ${tr('1 aperta ({contenuto})', { contenuto: fmtContenuto(bd.openRemaining, it) })}`}
+              {bd.finished > 0 && ` · ${tr('{n} finite', { n: bd.finished })}`}
               {/* Il contenuto in cl (o g): un pezzo è la bottiglia, dentro
                   non ci sono pezzi. */}
               <span className="muted"> · 1 pz = {contenutoDelPezzo(it)}</span>
@@ -633,19 +641,19 @@ function ProductsPanel({ onApriMenu = null }) {
         ) : (
           <>
             <div className="inv-info-row">
-              <dt>Giacenza</dt>
+              <dt>{tr('Giacenza')}</dt>
               <dd>
                 <strong>{fmtItem(it.stock, it)}</strong>
               </dd>
             </div>
             {Number(it.package_size) > 0 && (
               <div className="inv-info-row">
-                <dt>Confezione</dt>
+                <dt>{tr('Confezione')}</dt>
                 <dd>
                   {it.unit === 'pz' ? (
-                    <>1 pz = {contenutoDelPezzo(it) ?? `${it.package_size} (misura non detta)`}</>
+                    <>1 pz = {contenutoDelPezzo(it) ?? tr('{n} (misura non detta)', { n: it.package_size })}</>
                   ) : (
-                    <>1 conf. = {fmtItem(it.package_size, it)}</>
+                    <>{tr('1 conf. = {quantita}', { quantita: fmtItem(it.package_size, it) })}</>
                   )}
                 </dd>
               </div>
@@ -654,7 +662,7 @@ function ProductsPanel({ onApriMenu = null }) {
         )}
         {impegnato[it.id] > 0 && (
           <div className="inv-info-row">
-            <dt>A fine serata</dt>
+            <dt>{tr('A fine serata')}</dt>
             <dd>
               {/* Il numero da solo non basta: chi legge vuole sapere
                   QUANTO è promesso, per capire se vale la pena aprire
@@ -668,24 +676,25 @@ function ProductsPanel({ onApriMenu = null }) {
               </strong>
               <span className="muted">
                 {' · '}
-                {fmtItem(impegnato[it.id], it)} sui conti ancora aperti
+                {tr('{quantita} sui conti ancora aperti', { quantita: fmtItem(impegnato[it.id], it) })}
               </span>
             </dd>
           </div>
         )}
         {Number(it.low_threshold) > 0 && (
           <div className="inv-info-row">
-            <dt>Soglia avviso</dt>
+            <dt>{tr('Soglia avviso')}</dt>
             <dd>{fmtItem(it.low_threshold, it)}</dd>
           </div>
         )}
         {it.cost != null && (
           <>
             <div className="inv-info-row">
-              <dt><Icona nome="contanti" gruppo="tasti" /> Costo</dt>
+              <dt><Icona nome="contanti" gruppo="tasti" /> {tr('Costo')}</dt>
               <dd>
-                {formatPrice(it.cost)}/pz <span className="muted">(+IVA {formatPrice(costWithVat(it.cost, it.vat))})</span>
-                {' · valore '}<strong>{formatPrice(stockValue(it))}</strong>
+                {formatPrice(it.cost)}/pz{' '}
+                <span className="muted">{tr('(+IVA {importo})', { importo: formatPrice(costWithVat(it.cost, it.vat)) })}</span>
+                {' · '}{tr('valore')} <strong>{formatPrice(stockValue(it))}</strong>
               </dd>
             </div>
             <UnitPrice item={it} markup={markup} />
@@ -710,13 +719,13 @@ function ProductsPanel({ onApriMenu = null }) {
           {bloccato ? (
             <p className="muted small" style={{ margin: '8px 0 0' }}>
               {daSistemare.has(it.id)
-                ? <ConIcona nome="modifica" testo="Questo prodotto va sistemato: aprilo e scrivi a quanto corrisponde un pezzo." gruppo="segnali" />
-                : <ConIcona nome="licenza" testo="Carico e conta tornano appena il magazzino è aggiornato." gruppo="segnali" />}
+                ? <ConIcona nome="modifica" testo={tr('Questo prodotto va sistemato: aprilo e scrivi a quanto corrisponde un pezzo.')} gruppo="segnali" />
+                : <ConIcona nome="licenza" testo={tr('Carico e conta tornano appena il magazzino è aggiornato.')} gruppo="segnali" />}
             </p>
           ) : (
             <>
               <button className="btn small block" style={{ marginTop: 8 }} onClick={() => setCaricoFor(it.id)}>
-                <Icona nome="importa" gruppo="tasti" /> Carico
+                <Icona nome="importa" gruppo="tasti" /> {tr('Carico')}
               </button>
               <button
                 className="btn secondary small block"
@@ -726,7 +735,7 @@ function ProductsPanel({ onApriMenu = null }) {
                   setRettificaFor(it.id)
                 }}
               >
-                Contenuto reale
+                {tr('Contenuto reale')}
               </button>
             </>
           )}
@@ -737,15 +746,15 @@ function ProductsPanel({ onApriMenu = null }) {
           {/* LA MOVIMENTAZIONE DEL PRODOTTO (REQ-MAG-048): si guarda, non si
               tocca niente — anche col magazzino bloccato. */}
           <button className="btn ghost small block" style={{ marginTop: 6 }} onClick={() => setMovimentiDi(it)}>
-            <Icona nome="movimenti" gruppo="tasti" /> Movimenti
+            <Icona nome="movimenti" gruppo="tasti" /> {tr('Movimenti')}
           </button>
           {/* IN QUANTE RICETTE (REQ-MAG-056): prima di cambiarlo o di
               toglierlo, si vede quali drink ne dipendono. */}
           <RicetteDelProdotto drinks={elencoDrink} itemId={it.id} />
           <div className="inv-azioni" style={{ marginTop: 6 }}>
-            <button className="btn ghost small" disabled={!modificabile(it)} onClick={() => setEditing(it)}><Icona nome="modifica" gruppo="tasti" /> Modifica</button>
-            <button className="btn ghost small" disabled={bloccato} onClick={() => duplica(it)}>⧉ Duplica</button>
-            <button className="btn ghost small" disabled={bloccato} onClick={() => remove(it)}><Icona nome="elimina" gruppo="tasti" /> Elimina</button>
+            <button className="btn ghost small" disabled={!modificabile(it)} onClick={() => setEditing(it)}><Icona nome="modifica" gruppo="tasti" /> {tr('Modifica')}</button>
+            <button className="btn ghost small" disabled={bloccato} onClick={() => duplica(it)}>⧉ {tr('Duplica')}</button>
+            <button className="btn ghost small" disabled={bloccato} onClick={() => remove(it)}><Icona nome="elimina" gruppo="tasti" /> {tr('Elimina')}</button>
           </div>
         </>
       )}
@@ -810,9 +819,9 @@ function ProductsPanel({ onApriMenu = null }) {
       else none += 1
     }
     return [
-      { key: 'all', label: 'Tutte', count: items.length },
+      { key: 'all', label: tr('Tutte'), count: items.length },
       ...categories.map((c) => ({ key: c.id, label: c.name, count: per[c.id] || 0 })),
-      ...(none ? [{ key: 'none', label: 'Senza categoria', count: none }] : []),
+      ...(none ? [{ key: 'none', label: tr('Senza categoria'), count: none }] : []),
     ]
   }, [items, categories])
 
@@ -959,7 +968,7 @@ function ProductsPanel({ onApriMenu = null }) {
   }
 
   async function remove(item) {
-    if (!confirm(`Eliminare "${item.name}" dal magazzino?`)) return
+    if (!confirm(tr('Eliminare "{nome}" dal magazzino?', { nome: item.name }))) return
     try {
       await deleteInventoryItem(item.id)
       setItems((prev) => prev.filter((x) => x.id !== item.id))
@@ -973,13 +982,18 @@ function ProductsPanel({ onApriMenu = null }) {
       <>
         {avvisaOrdine && (
           <ConfirmDialog
-            title="Il prodotto è in un ordine aperto"
-            message={`«${editing?.name || 'Questo prodotto'}» fa parte di ${
+            title={tr('Il prodotto è in un ordine aperto')}
+            message={
               avvisaOrdine.ordini.length === 1
-                ? 'un ordine ancora in attesa di consegna'
-                : `${avvisaOrdine.ordini.length} ordini ancora in attesa di consegna`
-            }. Cambiando lo stato viene tolto da quell’ordine: le righe già consegnate restano dove sono.`}
-            confirmLabel="Cambia lo stato"
+                ? tr('«{nome}» fa parte di un ordine ancora in attesa di consegna. Cambiando lo stato viene tolto da quell’ordine: le righe già consegnate restano dove sono.', {
+                    nome: editing?.name || tr('Questo prodotto'),
+                  })
+                : tr('«{nome}» fa parte di {n} ordini ancora in attesa di consegna. Cambiando lo stato viene tolto da quell’ordine: le righe già consegnate restano dove sono.', {
+                    nome: editing?.name || tr('Questo prodotto'),
+                    n: avvisaOrdine.ordini.length,
+                  })
+            }
+            confirmLabel={tr('Cambia lo stato')}
             onCancel={() => setAvvisaOrdine(null)}
             onConfirm={() => {
               const { payload, scelte, ordini } = avvisaOrdine
@@ -1007,18 +1021,21 @@ function ProductsPanel({ onApriMenu = null }) {
   // scelto costringe ad aprirla per ricordarselo.
   const nomiStato = {
     all: null,
-    in_scorta: 'In scorta',
-    low: 'In esaurimento',
-    empty: 'Esauriti',
+    in_scorta: tr('In scorta'),
+    low: tr('In esaurimento'),
+    empty: tr('Esauriti'),
   }
-  const sceltiOra = [nomiStato[statusFilter], ...assortimenti.map((k) => ASSORTIMENTO_NOME[k])]
+  // I nomi dell'assortimento sono quelli della scheda (STATUS_ITEM), che
+  // dicono le stesse cose di ASSORTIMENTO_NOME ma nella lingua di chi guarda.
+  const nomeAssortimento = (k) => trSegnato(STATUS_ITEM.find((s) => s.value === k)?.label)
+  const sceltiOra = [nomiStato[statusFilter], ...assortimenti.map(nomeAssortimento)]
     .filter(Boolean)
   const riassuntoFiltri =
     sceltiOra.length === 0
-      ? conEmoji('filtra', 'Filtra')
+      ? conEmoji('filtra', tr('Filtra'))
       : sceltiOra.length === 1
         ? conEmoji('filtra', sceltiOra[0])
-        : conEmoji('filtra', `${sceltiOra.length} filtri`)
+        : conEmoji('filtra', tr('{n} filtri', { n: sceltiOra.length }))
 
   return (
     <div className="inv-panel">
@@ -1043,12 +1060,12 @@ function ProductsPanel({ onApriMenu = null }) {
         type="search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder={testoConIcona('cerca', 'Cerca prodotto…')}
+        placeholder={testoConIcona('cerca', tr('Cerca prodotto…'))}
       />
 
       <div className="inv-testa">
         <Tendina
-          etichetta="Filtra i prodotti"
+          etichetta={tr('Filtra i prodotti')}
           attivo={statusFilter !== 'all' || assortimenti.length > 0}
           riassunto={riassuntoFiltri}
         >
@@ -1056,12 +1073,12 @@ function ProductsPanel({ onApriMenu = null }) {
               esaurimento, Esauriti» si spiegano da sole, e la scritta che
               c'era andava tolta (l'utente, 29/10/2026). */}
           {[
-            ['all', 'Tutti', summary.total],
+            ['all', tr('Tutti'), summary.total],
             // «In scorta» prima delle altre due: è la domanda che ci si fa
             // per prima — cosa c'è — e le altre sono lenti più strette.
-            ['in_scorta', 'In scorta', summary.inScorta],
-            ['low', 'In esaurimento', summary.low],
-            ['empty', 'Esauriti', summary.empty],
+            ['in_scorta', nomiStato.in_scorta, summary.inScorta],
+            ['low', nomiStato.low, summary.low],
+            ['empty', nomiStato.empty, summary.empty],
           ].map(([k, label, n]) => (
             <button
               key={k}
@@ -1084,19 +1101,19 @@ function ProductsPanel({ onApriMenu = null }) {
                 setStatusFilter('all')
               }}
             >
-              ✕ Togli i filtri
+              ✕ {tr('Togli i filtri')}
             </button>
           )}
         </Tendina>
 
         {suppliers.length > 0 && (
           <Tendina
-            etichetta="Fornitore"
+            etichetta={tr('Fornitore')}
             attivo={supplierFilter !== 'all'}
             riassunto={
               supplierFilter === 'all'
-                ? conEmoji('fornitori', 'Fornitore')
-                : conEmoji('fornitori', suppliers.find((x) => x.id === supplierFilter)?.name || 'Fornitore')
+                ? conEmoji('fornitori', tr('Fornitore'))
+                : conEmoji('fornitori', suppliers.find((x) => x.id === supplierFilter)?.name || tr('Fornitore'))
             }
           >
             {(chiudi) => (
@@ -1109,7 +1126,7 @@ function ProductsPanel({ onApriMenu = null }) {
                     chiudi()
                   }}
                 >
-                  <span>Tutti i fornitori</span>
+                  <span>{tr('Tutti i fornitori')}</span>
                 </button>
                 {suppliers.map((sup) => (
                   <button
@@ -1131,8 +1148,8 @@ function ProductsPanel({ onApriMenu = null }) {
 
         {/* Un numero senza nome non vuol dire niente: si legge «6.823,82 €»
             e ci si chiede di cosa. */}
-        <span className="inv-valore" title="Somma del costo di tutto quello che c'è in magazzino">
-          <Icona nome="contanti" gruppo="tasti" /> <span className="inv-valore-eti">Valore magazzino</span>{' '}
+        <span className="inv-valore" title={tr("Somma del costo di tutto quello che c'è in magazzino")}>
+          <Icona nome="contanti" gruppo="tasti" /> <span className="inv-valore-eti">{tr('Valore magazzino')}</span>{' '}
           <strong>{formatPrice(totalValue)}</strong>
         </span>
 
@@ -1140,10 +1157,10 @@ function ProductsPanel({ onApriMenu = null }) {
 
         {/* Card o lista: due icone, non due tasti con su scritto cosa fanno.
             È una scelta che si fa una volta e resta. */}
-        <div className="inv-vista" role="group" aria-label="Come mostrare i prodotti">
+        <div className="inv-vista" role="group" aria-label={tr('Come mostrare i prodotti')}>
           {[
-            ['card', 'griglia', 'A card'],
-            ['lista', 'lista', 'A lista'],
+            ['card', 'griglia', tr('A card')],
+            ['lista', 'lista', tr('A lista')],
           ].map(([k, icona, titolo]) => (
             <button
               key={k}
@@ -1162,10 +1179,10 @@ function ProductsPanel({ onApriMenu = null }) {
         <button
           className="btn small"
           disabled={bloccato}
-          title={bloccato ? 'Prima va aggiornato il magazzino alla nuova gestione' : undefined}
+          title={bloccato ? tr('Prima va aggiornato il magazzino alla nuova gestione') : undefined}
           onClick={() => setEditing('new')}
         >
-          + Nuovo prodotto
+          + {tr('Nuovo prodotto')}
         </button>
       </div>
 
@@ -1181,8 +1198,8 @@ function ProductsPanel({ onApriMenu = null }) {
         chiave="inv-categorie"
       >
 
-      {error && <div className="banner" style={{ marginTop: 8 }}>Errore: {error}</div>}
-      {loading && <div className="empty">Carico l’inventario…</div>}
+      {error && <div className="banner" style={{ marginTop: 8 }}>{tr('Errore: {errore}', { errore: error })}</div>}
+      {loading && <div className="empty">{tr('Carico l’inventario…')}</div>}
 
       {/* LA LEGENDA DEI DUE SEGNI. È nata da una domanda vera di Flavio
           (vocale del 20/08): «perché alcune cose hanno questa bacchettina
@@ -1194,15 +1211,15 @@ function ProductsPanel({ onApriMenu = null }) {
         <div className="inv-legenda muted small">
           <span className="inv-legenda-gruppo">
             {/* «Presente», non «c'è» (Flavio, 29/09/2026). */}
-            <span className="dot dot-ok" aria-hidden /> presente
-            <span className="dot dot-low" aria-hidden /> in esaurimento
-            <span className="dot dot-empty" aria-hidden /> esaurito
+            <span className="dot dot-ok" aria-hidden /> {tr('presente')}
+            <span className="dot dot-low" aria-hidden /> {trSegnato(STATUS_LABEL.low)}
+            <span className="dot dot-empty" aria-hidden /> {trSegnato(STATUS_LABEL.empty)}
           </span>
           <span className="inv-legenda-gruppo">
-            <span className="tacca tacca-linea" aria-hidden /> in linea
-            <span className="tacca tacca-premium" aria-hidden /> premium
-            <span className="tacca tacca-out" aria-hidden /> fuori (OUT)
-            <span className="tacca tacca-assortimento" aria-hidden /> in assortimento
+            <span className="tacca tacca-linea" aria-hidden /> {tr('in linea')}
+            <span className="tacca tacca-premium" aria-hidden /> {tr('premium')}
+            <span className="tacca tacca-out" aria-hidden /> {tr('fuori (OUT)')}
+            <span className="tacca tacca-assortimento" aria-hidden /> {tr('in assortimento')}
           </span>
         </div>
       )}
@@ -1213,14 +1230,14 @@ function ProductsPanel({ onApriMenu = null }) {
         <div className={`inv-list inv-table${mostraPrevisione ? ' con-previsione' : ''}`}>
           <div className="inv-thead">
             <span aria-hidden />
-            <SortTh label="Prodotto" col="name" sort={sort} onSort={toggleSort} />
-            <SortTh label="Categoria" col="cat" sort={sort} onSort={toggleSort} />
-            <SortTh label="IVA esclusa" col="net" sort={sort} onSort={toggleSort} num />
-            <SortTh label="IVA inclusa" col="gross" sort={sort} onSort={toggleSort} num />
+            <SortTh label={tr('Prodotto')} col="name" sort={sort} onSort={toggleSort} />
+            <SortTh label={tr('Categoria')} col="cat" sort={sort} onSort={toggleSort} />
+            <SortTh label={tr('IVA esclusa')} col="net" sort={sort} onSort={toggleSort} num />
+            <SortTh label={tr('IVA inclusa')} col="gross" sort={sort} onSort={toggleSort} num />
             <SortTh label="€/cl" col="percl" sort={sort} onSort={toggleSort} num />
-            <SortTh label="Scorte" col="stock" sort={sort} onSort={toggleSort} num />
+            <SortTh label={tr('Scorte')} col="stock" sort={sort} onSort={toggleSort} num />
             {mostraPrevisione && (
-              <SortTh label="A fine serata" col="previsto" sort={sort} onSort={toggleSort} num />
+              <SortTh label={tr('A fine serata')} col="previsto" sort={sort} onSort={toggleSort} num />
             )}
           </div>
           {sortedVisible.map((it) => {
@@ -1237,7 +1254,7 @@ function ProductsPanel({ onApriMenu = null }) {
               <div
                 className={`inv-row ass-${assortimentoDi(it)}${expanded ? ' open' : ''}`}
                 key={it.id}
-                title={ETICHETTA_ASSORTIMENTO[assortimentoDi(it)]}
+                title={trSegnato(ETICHETTA_ASSORTIMENTO[assortimentoDi(it)])}
               >
                 <button
                   type="button"
@@ -1304,11 +1321,11 @@ function ProductsPanel({ onApriMenu = null }) {
                     {it.name} <SegnoAssortimento item={it} />
                     <SegnoSchedaDaCompletare item={it} />
                   </strong>
-                  <span className={`dot dot-${st}`} title={STATUS_LABEL[st] || 'ok'} />
+                  <span className={`dot dot-${st}`} title={trSegnato(STATUS_LABEL[st]) || 'ok'} />
                 </div>
                 <div className="row between" style={{ alignItems: 'baseline' }}>
                   <span className="muted small" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {catName(it.category_id) || 'Senza categoria'}
+                    {catName(it.category_id) || tr('Senza categoria')}
                     {supNames(it) ? ` · ${supNames(it)}` : ''}
                   </span>
                   {(() => {
@@ -1340,7 +1357,7 @@ function ProductsPanel({ onApriMenu = null }) {
                 }}
                 aria-expanded={expanded}
               >
-                {expanded ? '▴ Chiudi' : '⋯ Azioni'}
+                {expanded ? `▴ ${tr('Chiudi')}` : `⋯ ${tr('Azioni')}`}
               </button>
               {expanded && itemActions(it, bottleBreakdown(it))}
             </div>
@@ -1350,10 +1367,10 @@ function ProductsPanel({ onApriMenu = null }) {
       )}
 
       {!loading && items.length === 0 && (
-        <div className="empty">Nessun prodotto in inventario. Aggiungine uno!</div>
+        <div className="empty">{tr('Nessun prodotto in inventario. Aggiungine uno!')}</div>
       )}
       {!loading && items.length > 0 && visible.length === 0 && (
-        <div className="empty">Nessun prodotto corrisponde ai filtri.</div>
+        <div className="empty">{tr('Nessun prodotto corrisponde ai filtri.')}</div>
       )}
 
       </CategoryRail>
@@ -1386,13 +1403,13 @@ function InvCategoryManager({ categories, onChange }) {
     }
   }
   async function rename(c) {
-    const n = prompt('Nuovo nome categoria:', c.name)
+    const n = prompt(tr('Nuovo nome categoria:'), c.name)
     if (n == null || !n.trim()) return
     await updateInventoryCategory(c.id, { name: n.trim() })
     await onChange()
   }
   async function remove(c) {
-    if (!confirm(`Eliminare la categoria “${c.name}”? I prodotti resteranno, senza categoria.`)) return
+    if (!confirm(tr('Eliminare la categoria “{nome}”? I prodotti resteranno, senza categoria.', { nome: c.name }))) return
     await deleteInventoryCategory(c.id)
     await onChange()
   }
@@ -1411,11 +1428,11 @@ function InvCategoryManager({ categories, onChange }) {
   return (
     <div className="card" style={{ marginTop: 8 }}>
       <div className="row" style={{ gap: 8 }}>
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nuova categoria (es. Distillati)" />
-        <button className="btn small" onClick={add} disabled={busy}>Aggiungi</button>
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder={tr('Nuova categoria (es. Distillati)')} />
+        <button className="btn small" onClick={add} disabled={busy}>{tr('Aggiungi')}</button>
       </div>
       {categories.length === 0 && (
-        <div className="muted small" style={{ marginTop: 8 }}>Nessuna categoria.</div>
+        <div className="muted small" style={{ marginTop: 8 }}>{tr('Nessuna categoria.')}</div>
       )}
       {categories.map((c, idx) => (
         <div className="row between" key={c.id} style={{ marginTop: 8 }}>
@@ -1423,8 +1440,8 @@ function InvCategoryManager({ categories, onChange }) {
           <span className="row" style={{ gap: 4 }}>
             <button className="btn ghost small" onClick={() => move(idx, -1)} disabled={idx === 0}>↑</button>
             <button className="btn ghost small" onClick={() => move(idx, 1)} disabled={idx === categories.length - 1}>↓</button>
-            <button className="btn ghost small" onClick={() => rename(c)} aria-label="Rinomina" title="Rinomina"><Icona nome="modifica" gruppo="tasti" /></button>
-            <button className="btn ghost small" onClick={() => remove(c)} aria-label="Elimina" title="Elimina"><Icona nome="elimina" gruppo="tasti" /></button>
+            <button className="btn ghost small" onClick={() => rename(c)} aria-label={tr('Rinomina')} title={tr('Rinomina')}><Icona nome="modifica" gruppo="tasti" /></button>
+            <button className="btn ghost small" onClick={() => remove(c)} aria-label={tr('Elimina')} title={tr('Elimina')}><Icona nome="elimina" gruppo="tasti" /></button>
           </span>
         </div>
       ))}
@@ -1463,12 +1480,17 @@ function SupplierManager({ suppliers, onChange, onListino = null }) {
         })
         added += 1
       }
-      toastSuccess(`Importati ${added} fornitori${rows.length - added > 0 ? ` (${rows.length - added} già presenti)` : ''}`)
+      const giaPresenti = rows.length - added
+      toastSuccess(
+        giaPresenti > 0
+          ? tr('Importati {n} fornitori ({m} già presenti)', { n: added, m: giaPresenti })
+          : tr('Importati {n} fornitori', { n: added })
+      )
       setImportText('')
       setShowImport(false)
       await onChange()
     } catch (e) {
-      toastError(`Import fornitori: ${e.message}`)
+      toastError(tr('Import fornitori: {errore}', { errore: e.message }))
     } finally {
       setBusy(false)
     }
@@ -1505,20 +1527,20 @@ function SupplierManager({ suppliers, onChange, onListino = null }) {
     await onChange()
   }
   async function rename(s) {
-    const n = prompt('Nuovo nome fornitore:', s.name)
+    const n = prompt(tr('Nuovo nome fornitore:'), s.name)
     if (n == null || !n.trim()) return
     await updateSupplier(s.id, { name: n.trim() })
     await onChange()
   }
   // Email per l'invio degli ordini d'acquisto (bottone 📧 negli Ordini).
   async function setEmail(s) {
-    const e = prompt(`Email di ${s.name} (per inviare gli ordini):`, s.email || '')
+    const e = prompt(tr('Email di {nome} (per inviare gli ordini):', { nome: s.name }), s.email || '')
     if (e == null) return
     await updateSupplier(s.id, { email: e.trim() || null })
     await onChange()
   }
   async function remove(s) {
-    if (!confirm(`Eliminare il fornitore “${s.name}”? I prodotti resteranno, senza fornitore.`)) return
+    if (!confirm(tr('Eliminare il fornitore “{nome}”? I prodotti resteranno, senza fornitore.', { nome: s.name }))) return
     await deleteSupplier(s.id)
     await onChange()
   }
@@ -1528,11 +1550,11 @@ function SupplierManager({ suppliers, onChange, onListino = null }) {
       <div className="row" style={{ gap: 8 }}>
         <PastigliaColore
           colore={colore}
-          etichetta="Colore del nuovo fornitore"
+          etichetta={tr('Colore del nuovo fornitore')}
           onClick={() => setTavolozzaPer((v) => (v === 'nuovo' ? null : 'nuovo'))}
         />
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nuovo fornitore (es. NOVA)" />
-        <button className="btn small" onClick={add} disabled={busy}>Aggiungi</button>
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder={tr('Nuovo fornitore (es. NOVA)')} />
+        <button className="btn small" onClick={add} disabled={busy}>{tr('Aggiungi')}</button>
       </div>
       {tavolozzaPer === 'nuovo' && (
         <Tavolozza scelto={colore} onScegli={(c) => { setColore(c); setTavolozzaPer(null) }} />
@@ -1542,7 +1564,7 @@ function SupplierManager({ suppliers, onChange, onListino = null }) {
         style={{ marginTop: 8 }}
         onClick={() => setShowImport((v) => !v)}
       >
-        <Icona nome="acquisti" gruppo="tasti" /> Importa elenco (incolla, uno per riga)
+        <Icona nome="acquisti" gruppo="tasti" /> {tr('Importa elenco (incolla, uno per riga)')}
       </button>
       {showImport && (
         <div style={{ marginTop: 6 }}>
@@ -1554,12 +1576,12 @@ function SupplierManager({ suppliers, onChange, onListino = null }) {
             style={{ width: '100%' }}
           />
           <button className="btn small block" style={{ marginTop: 6 }} disabled={busy} onClick={importList}>
-            Importa
+            {tr('Importa')}
           </button>
         </div>
       )}
       {suppliers.length === 0 && (
-        <div className="muted small" style={{ marginTop: 8 }}>Nessun fornitore.</div>
+        <div className="muted small" style={{ marginTop: 8 }}>{tr('Nessun fornitore.')}</div>
       )}
       {suppliers.map((s) => (
         <div key={s.id}>
@@ -1567,7 +1589,7 @@ function SupplierManager({ suppliers, onChange, onListino = null }) {
             <span className="row" style={{ gap: 8, alignItems: 'center', minWidth: 0 }}>
               <PastigliaColore
                 colore={coloreFornitore(s)}
-                etichetta={`Colore di ${s.name}`}
+                etichetta={tr('Colore di {nome}', { nome: s.name })}
                 onClick={() => setTavolozzaPer((v) => (v === s.id ? null : s.id))}
               />
               <span>
@@ -1579,15 +1601,15 @@ function SupplierManager({ suppliers, onChange, onListino = null }) {
               {onListino && (
                 <button
                   className="btn ghost small"
-                  aria-label={`Listino di ${s.name}`}
+                  aria-label={tr('Listino di {nome}', { nome: s.name })}
                   onClick={() => onListino(s.id)}
                 >
-                  <Icona nome="elenco" gruppo="tasti" /> Listino
+                  <Icona nome="elenco" gruppo="tasti" /> {tr('Listino')}
                 </button>
               )}
-              <button className="btn ghost small" title="Email per gli ordini" onClick={() => setEmail(s)}><Icona nome="email" gruppo="tasti" /></button>
-              <button className="btn ghost small" onClick={() => rename(s)} aria-label="Rinomina" title="Rinomina"><Icona nome="modifica" gruppo="tasti" /></button>
-              <button className="btn ghost small" onClick={() => remove(s)} aria-label="Elimina" title="Elimina"><Icona nome="elimina" gruppo="tasti" /></button>
+              <button className="btn ghost small" title={tr('Email per gli ordini')} onClick={() => setEmail(s)}><Icona nome="email" gruppo="tasti" /></button>
+              <button className="btn ghost small" onClick={() => rename(s)} aria-label={tr('Rinomina')} title={tr('Rinomina')}><Icona nome="modifica" gruppo="tasti" /></button>
+              <button className="btn ghost small" onClick={() => remove(s)} aria-label={tr('Elimina')} title={tr('Elimina')}><Icona nome="elimina" gruppo="tasti" /></button>
             </span>
           </div>
           {tavolozzaPer === s.id && (
@@ -1631,7 +1653,7 @@ function Tavolozza({ scelto, onScegli }) {
         <button
           key={c}
           type="button"
-          aria-label={`Colore ${c}`}
+          aria-label={tr('Colore {colore}', { colore: c })}
           onClick={() => onScegli(c)}
           style={{
             width: 24,
@@ -1686,38 +1708,33 @@ function PannelloTravaso({ travaso, passo, avanzamento, esito, onProva, onChiudi
     <>
       {!travaso.fatto && (
         <div className="banner" style={{ marginBottom: 10 }}>
-          <strong>Il magazzino va aggiornato.</strong> Da questa versione tutto
-          si conta a <strong>pezzi</strong>: {daMigrare.length > 0 && `${daMigrare.length} prodotti`}
-          {daMigrare.length > 0 && daSistemare.length > 0 && ' e '}
-          {daSistemare.length > 0 && `${daSistemare.length} da sistemare a mano`}
-          {' '}
-          {daMigrare.length + daSistemare.length === 1 ? 'aspetta' : 'aspettano'} il passaggio.
-          Fino ad allora i numeri si leggono già giusti, ma non si può caricare,
-          contare né aggiungere prodotti.
+          <strong>{tr('Il magazzino va aggiornato.')}</strong>{' '}
+          {tr('Da questa versione tutto si conta a pezzi:')}{' '}
+          <AttesaTravaso n={daMigrare.length} m={daSistemare.length} />{' '}
+          {tr('Fino ad allora i numeri si leggono già giusti, ma non si può caricare, contare né aggiungere prodotti.')}
           <div style={{ marginTop: 8 }}>
             <button type="button" className="btn small" onClick={onProva}>
-              Guarda cosa cambia
+              {tr('Guarda cosa cambia')}
             </button>
           </div>
         </div>
       )}
 
       {passo === 'prova' && (
-        <RiquadroTravaso titolo="Cosa cambia aggiornando il magazzino" onFuori={onChiudi}>
-          <h3 style={{ marginTop: 0 }}>Cosa cambia</h3>
+        <RiquadroTravaso titolo={tr('Cosa cambia aggiornando il magazzino')} onFuori={onChiudi}>
+          <h3 style={{ marginTop: 0 }}>{tr('Cosa cambia')}</h3>
           {/* PRIMA UNA PROVA A VUOTO: qui non si scrive niente. */}
           <p className="small" style={{ marginTop: 0 }}>
-            Per adesso non cambia niente: questo è solo l&apos;elenco.
+            {tr("Per adesso non cambia niente: questo è solo l'elenco.")}
           </p>
 
           {daSistemare.length > 0 ? (
             <>
               <h4 style={{ margin: '14px 0 2px' }}>
-                <Icona nome="avviso" gruppo="segnali" /> Da sistemare prima ({daSistemare.length})
+                <Icona nome="avviso" gruppo="segnali" /> {tr('Da sistemare prima ({n})', { n: daSistemare.length })}
               </h4>
               <p className="small" style={{ margin: '0 0 6px' }}>
-                Di questi non si sa a quanto corrisponde un pezzo, e nessuno
-                può indovinarlo. Aprili, scrivilo, e poi torna qui.
+                {tr('Di questi non si sa a quanto corrisponde un pezzo, e nessuno può indovinarlo. Aprili, scrivilo, e poi torna qui.')}
               </p>
               <ul className="small" style={{ margin: 0, paddingLeft: 18 }}>
                 {daSistemare.map((it) => (
@@ -1731,12 +1748,10 @@ function PannelloTravaso({ travaso, passo, avanzamento, esito, onProva, onChiudi
           ) : (
             <>
               <h4 style={{ margin: '14px 0 2px' }}>
-                <Icona nome="fatto" gruppo="segnali" /> Si aggiornano {daMigrare.length} prodotti
+                <Icona nome="fatto" gruppo="segnali" /> {tr('Si aggiornano {n} prodotti', { n: daMigrare.length })}
               </h4>
               <p className="small" style={{ margin: '0 0 6px' }}>
-                Le giacenze passano a pezzi: quello che oggi si legge sullo
-                schermo è già il numero giusto, e resterà scritto così.
-                Prezzi, ricette e menù non si toccano.
+                {tr('Le giacenze passano a pezzi: quello che oggi si legge sullo schermo è già il numero giusto, e resterà scritto così. Prezzi, ricette e menù non si toccano.')}
               </p>
               <ul className="small" style={{ margin: 0, paddingLeft: 18 }}>
                 {daMigrare.slice(0, 8).map((it) => (
@@ -1751,7 +1766,7 @@ function PannelloTravaso({ travaso, passo, avanzamento, esito, onProva, onChiudi
               </ul>
               {daMigrare.length > 8 && (
                 <p className="muted small" style={{ margin: '4px 0 0' }}>
-                  … e altri {daMigrare.length - 8}.
+                  {tr('… e altri {n}.', { n: daMigrare.length - 8 })}
                 </p>
               )}
             </>
@@ -1759,11 +1774,11 @@ function PannelloTravaso({ travaso, passo, avanzamento, esito, onProva, onChiudi
 
           <div className="grid-2" style={{ marginTop: 16 }}>
             <button type="button" className="btn ghost" onClick={onChiudi}>
-              {pronti ? 'Non adesso' : 'Chiudi'}
+              {pronti ? tr('Non adesso') : tr('Chiudi')}
             </button>
             {pronti && (
               <button type="button" className="btn" onClick={onConferma}>
-                Aggiorna {daMigrare.length} prodotti
+                {tr('Aggiorna {n} prodotti', { n: daMigrare.length })}
               </button>
             )}
           </div>
@@ -1771,34 +1786,36 @@ function PannelloTravaso({ travaso, passo, avanzamento, esito, onProva, onChiudi
       )}
 
       {passo === 'rileggo' && (
-        <RiquadroTravaso titolo="Sto guardando il magazzino">
-          <h3 style={{ marginTop: 0 }}>Sto guardando…</h3>
+        <RiquadroTravaso titolo={tr('Sto guardando il magazzino')}>
+          <h3 style={{ marginTop: 0 }}>{tr('Sto guardando…')}</h3>
           <p className="small" style={{ margin: 0 }}>
-            Un momento: rileggo i prodotti, così l&apos;elenco dice come
-            stanno le cose adesso.
+            {tr("Un momento: rileggo i prodotti, così l'elenco dice come stanno le cose adesso.")}
           </p>
         </RiquadroTravaso>
       )}
 
       {passo === 'corso' && (
-        <RiquadroTravaso titolo="Aggiornamento del magazzino">
-          <h3 style={{ marginTop: 0 }}>Sto aggiornando…</h3>
+        <RiquadroTravaso titolo={tr('Aggiornamento del magazzino')}>
+          <h3 style={{ marginTop: 0 }}>{tr('Sto aggiornando…')}</h3>
           {/* A LOTTI, e si vede: una schermata ferma al banco vuol dire
               «è bloccata». Se si interrompe si può ricominciare, che
               ogni giro guarda cos'è rimasto da fare. */}
           <p className="small" style={{ margin: 0 }}>
-            {avanzamento.fatti} di {avanzamento.totale}. Puoi ricominciare
-            da qui se si interrompe: riprende da dov&apos;era.
+            {tr("{fatti} di {totale}. Puoi ricominciare da qui se si interrompe: riprende da dov'era.", {
+              fatti: avanzamento.fatti,
+              totale: avanzamento.totale,
+            })}
           </p>
         </RiquadroTravaso>
       )}
 
       {passo === 'fatto' && (
-        <RiquadroTravaso titolo="Aggiornamento del magazzino">
-          <h3 style={{ marginTop: 0 }}><Icona nome="fatto" gruppo="segnali" /> Magazzino aggiornato</h3>
+        <RiquadroTravaso titolo={tr('Aggiornamento del magazzino')}>
+          <h3 style={{ marginTop: 0 }}><Icona nome="fatto" gruppo="segnali" /> {tr('Magazzino aggiornato')}</h3>
           <p className="small" style={{ margin: 0 }}>
-            {esito?.travasati ?? avanzamento.totale} prodotti si contano a
-            pezzi. Carico, conta e prodotti nuovi sono di nuovo a posto.
+            {tr('{n} prodotti si contano a pezzi. Carico, conta e prodotti nuovi sono di nuovo a posto.', {
+              n: esito?.travasati ?? avanzamento.totale,
+            })}
           </p>
           {/* CHI NON C'È PIÙ NON È UN ERRORE, ma va detto: un prodotto
               cancellato da un altro terminale mentre l'aggiornamento
@@ -1806,43 +1823,54 @@ function PannelloTravaso({ travaso, passo, avanzamento, esito, onProva, onChiudi
           {esito?.saltati > 0 && (
             <p className="small" style={{ margin: '8px 0 0' }}>
               {esito.saltati === 1
-                ? 'Un prodotto non c’è più: è stato saltato.'
-                : `${esito.saltati} prodotti non ci sono più: sono stati saltati.`}{' '}
-              Gli altri sono a posto.
+                ? tr('Un prodotto non c’è più: è stato saltato.')
+                : tr('{n} prodotti non ci sono più: sono stati saltati.', { n: esito.saltati })}{' '}
+              {tr('Gli altri sono a posto.')}
             </p>
           )}
           {esito?.bloccati > 0 && (
             <p className="small" style={{ margin: '8px 0 0' }}>
               {esito.bloccati === 1
-                ? 'Un prodotto non si è aggiornato'
-                : `${esito.bloccati} prodotti non si sono aggiornati`}
-              : riprova fra un momento, non fa danni — quelli già
-              aggiornati restano come sono.
+                ? tr('Un prodotto non si è aggiornato: riprova fra un momento, non fa danni — quelli già aggiornati restano come sono.')
+                : tr('{n} prodotti non si sono aggiornati: riprova fra un momento, non fa danni — quelli già aggiornati restano come sono.', {
+                    n: esito.bloccati,
+                  })}
             </p>
           )}
           <button type="button" className="btn block" style={{ marginTop: 16 }} onClick={onChiudi}>
-            Chiudi
+            {tr('Chiudi')}
           </button>
         </RiquadroTravaso>
       )}
 
       {passo === 'interrotto' && (
-        <RiquadroTravaso titolo="Aggiornamento del magazzino">
-          <h3 style={{ marginTop: 0 }}>L&apos;aggiornamento si è fermato</h3>
+        <RiquadroTravaso titolo={tr('Aggiornamento del magazzino')}>
+          <h3 style={{ marginTop: 0 }}>{tr("L'aggiornamento si è fermato")}</h3>
           <p className="small" style={{ margin: 0 }}>
             {avanzamento.fatti > 0
-              ? `${avanzamento.fatti} prodotti sono stati aggiornati e restano così.`
-              : 'Non è stato aggiornato niente.'}{' '}
-            Il resto è rimasto com&apos;era: puoi riprovare quando vuoi,
-            non fa danni — riprende da dove si era fermato.
+              ? tr('{n} prodotti sono stati aggiornati e restano così.', { n: avanzamento.fatti })
+              : tr('Non è stato aggiornato niente.')}{' '}
+            {tr("Il resto è rimasto com'era: puoi riprovare quando vuoi, non fa danni — riprende da dove si era fermato.")}
           </p>
           <button type="button" className="btn block" style={{ marginTop: 16 }} onClick={onChiudi}>
-            Chiudi
+            {tr('Chiudi')}
           </button>
         </RiquadroTravaso>
       )}
     </>
   )
+}
+
+// QUANTI PRODOTTI ASPETTANO IL PASSAGGIO, in una frase intera per ogni caso:
+// spezzata in pezzi («5 prodotti» + « e » + «2 da sistemare») non si
+// traduce, perché l'inglese mette verbo e plurale in un altro posto.
+function AttesaTravaso({ n, m }) {
+  if (n > 0 && m > 0) return tr('{n} prodotti e {m} da sistemare a mano aspettano il passaggio.', { n, m })
+  if (m > 0)
+    return m === 1
+      ? tr('1 da sistemare a mano aspetta il passaggio.')
+      : tr('{m} da sistemare a mano aspettano il passaggio.', { m })
+  return n === 1 ? tr('1 prodotto aspetta il passaggio.') : tr('{n} prodotti aspettano il passaggio.', { n })
 }
 
 // --- Contenuto reale (rettifica giacenza) -------------------------------
@@ -1869,7 +1897,7 @@ function RettificaForm({ item, onCancel, onConfirm }) {
 
   return (
     <div style={{ marginTop: 8 }}>
-      <label htmlFor={`rt-${item.id}`}>Contenuto effettivo di “{item.name}”</label>
+      <label htmlFor={`rt-${item.id}`}>{tr('Contenuto effettivo di “{nome}”', { nome: item.name })}</label>
       <div className="row" style={{ gap: 6 }}>
         <input
           id={`rt-${item.id}`}
@@ -1885,7 +1913,7 @@ function RettificaForm({ item, onCancel, onConfirm }) {
           <select
             value={unit}
             onChange={(e) => changeUnit(e.target.value)}
-            aria-label="Unità della conta"
+            aria-label={tr('Unità della conta')}
             style={{ width: 80 }}
           >
             {units.map((u) => (
@@ -1897,12 +1925,11 @@ function RettificaForm({ item, onCancel, onConfirm }) {
         )}
       </div>
       <AiutoCampo style={{ margin: '4px 0 0' }}>
-        Giacenza effettiva rilevata. Sostituisce quella a sistema; la
-        differenza è contabilizzata come rettifica.
+        {tr('Giacenza effettiva rilevata. Sostituisce quella a sistema; la differenza è contabilizzata come rettifica.')}
       </AiutoCampo>
       <div className="grid-2" style={{ marginTop: 10 }}>
-        <button className="btn ghost small" onClick={onCancel}>Annulla</button>
-        <button className="btn small" onClick={confirm}>Salva contenuto</button>
+        <button className="btn ghost small" onClick={onCancel}>{tr('Annulla')}</button>
+        <button className="btn small" onClick={confirm}>{tr('Salva contenuto')}</button>
       </div>
     </div>
   )
@@ -1992,10 +2019,10 @@ function CaricoForm({ item, onCancel, onConfirm }) {
   return (
     <div style={{ marginTop: 8 }}>
       <GruppoChip
-        etichetta="Verso del movimento"
+        etichetta={tr('Verso del movimento')}
         opzioni={[
-          { id: false, label: conEmoji('su', 'Carico') },
-          { id: true, label: conEmoji('giu', 'Reso al fornitore') },
+          { id: false, label: conEmoji('su', tr('Carico')) },
+          { id: true, label: conEmoji('giu', tr('Reso al fornitore')) },
         ]}
         valore={reso}
         scegli={setReso}
@@ -2003,8 +2030,7 @@ function CaricoForm({ item, onCancel, onConfirm }) {
       />
       {reso && (
         <p className="muted small" style={{ margin: '0 0 8px' }}>
-          Merce restituita al fornitore: esce dalla giacenza e si sottrae dagli acquisti del periodo, al costo del
-          prodotto. Non viene conteggiata come consumo.
+          {tr('Merce restituita al fornitore: esce dalla giacenza e si sottrae dagli acquisti del periodo, al costo del prodotto. Non viene conteggiata come consumo.')}
         </p>
       )}
       {!reso && (
@@ -2016,8 +2042,8 @@ function CaricoForm({ item, onCancel, onConfirm }) {
               sperando che il conto tornasse. */}
           <label className="row between" style={{ alignItems: 'center', gap: 8 }}>
             <span>
-              Carico a colli
-              <span className="muted small"> — cartoni o casse da più pezzi</span>
+              {tr('Carico a colli')}
+              <span className="muted small"> — {tr('cartoni o casse da più pezzi')}</span>
             </span>
             <input
               type="checkbox"
@@ -2042,7 +2068,7 @@ function CaricoForm({ item, onCancel, onConfirm }) {
         <div className="card" style={{ marginTop: 8, padding: 10 }}>
           <div className="grid-2">
             <div>
-              <label htmlFor="cf-collo">Pezzi per collo</label>
+              <label htmlFor="cf-collo">{tr('Pezzi per collo')}</label>
               <input
                 id="cf-collo"
                 type="number"
@@ -2054,7 +2080,7 @@ function CaricoForm({ item, onCancel, onConfirm }) {
               />
             </div>
             <div>
-              <label htmlFor="cf-cartoni">Colli ricevuti</label>
+              <label htmlFor="cf-cartoni">{tr('Colli ricevuti')}</label>
               <input
                 id="cf-cartoni"
                 type="number"
@@ -2066,7 +2092,7 @@ function CaricoForm({ item, onCancel, onConfirm }) {
               />
             </div>
           </div>
-          <label htmlFor="cf-tot" style={{ marginTop: 6 }}>Totale collo (€, netto)</label>
+          <label htmlFor="cf-tot" style={{ marginTop: 6 }}>{tr('Totale collo (€, netto)')}</label>
           <input
             id="cf-tot"
             type="number"
@@ -2074,7 +2100,7 @@ function CaricoForm({ item, onCancel, onConfirm }) {
             min="0"
             value={colloTot}
             onChange={(e) => onTot(e.target.value)}
-            placeholder="Prezzo netto del collo da listino"
+            placeholder={tr('Prezzo netto del collo da listino')}
           />
           {perN > 0 && num(cartoni) > 0 && (
             <div className="muted small" style={{ marginTop: 4 }}>
@@ -2087,7 +2113,7 @@ function CaricoForm({ item, onCancel, onConfirm }) {
       {/* A colli la quantità la fa il conto: si legge, non si scrive.
           Cambiarla a mano vorrebbe dire caricare un numero che non torna
           con quello che è arrivato. */}
-      <label htmlFor="cf-pezzi" style={{ marginTop: 8 }}>{reso ? 'Quantità resa' : 'Quantità caricata'}</label>
+      <label htmlFor="cf-pezzi" style={{ marginTop: 8 }}>{reso ? tr('Quantità resa') : tr('Quantità caricata')}</label>
       <div className="row" style={{ gap: 6 }}>
         <input
           id="cf-pezzi"
@@ -2105,7 +2131,7 @@ function CaricoForm({ item, onCancel, onConfirm }) {
           <select
             value={unit}
             onChange={(e) => setUnit(e.target.value)}
-            aria-label="Unità del carico"
+            aria-label={tr('Unità del carico')}
             style={{ width: 80 }}
           >
             {unita.map((u) => (
@@ -2121,41 +2147,43 @@ function CaricoForm({ item, onCancel, onConfirm }) {
           PRIMA di confermare. */}
       {reso && pezziResi > 0 && (
         <div className="muted small" style={{ marginTop: 4 }}>
-          Escono <strong>{formatPezzi(pezziResi)} pz</strong>
+          {tr('Escono')} <strong>{formatPezzi(pezziResi)} pz</strong>
           {item.cost != null && (
             <>
-              {' · acquisti −'}
-              <strong>{formatPrice(qtyValue(pezziResi, item, { gross: false }))}</strong> netti
+              {' · '}
+              {tr('acquisti −{importo} netti', { importo: formatPrice(qtyValue(pezziResi, item, { gross: false })) })}
             </>
           )}
         </div>
       )}
       {!reso && unitEffettiva !== 'pz' && num(quantita) > 0 && (
         <div className="muted small" style={{ marginTop: 4 }}>
-          In magazzino entrano{' '}
+          {tr('In magazzino entrano')}{' '}
           <strong>{formatPezzi(qtyInStockUnit(num(quantita), unitEffettiva, item))} pz</strong>
-          {(item.content_unit || item.unit) === 'g' && ' (stima: il peso non fa pezzi esatti)'}
+          {(item.content_unit || item.unit) === 'g' && ` ${tr('(stima: il peso non fa pezzi esatti)')}`}
         </div>
       )}
 
       {/* Prezzo: unitario ↔ totale collo (per confrontare col fornitore) */}
       {!reso && (
         <div className="card" style={{ marginTop: 10, padding: 10 }}>
-          <div className="muted small"><Icona nome="contanti" gruppo="tasti" /> Prezzo d’acquisto — da aggiornare solo se il listino è variato</div>
-          <label htmlFor="cf-unit" style={{ marginTop: 6 }}>Costo unitario (€, netto)</label>
+          <div className="muted small"><Icona nome="contanti" gruppo="tasti" /> {tr('Prezzo d’acquisto — da aggiornare solo se il listino è variato')}</div>
+          <label htmlFor="cf-unit" style={{ marginTop: 6 }}>{tr('Costo unitario (€, netto)')}</label>
           <input id="cf-unit" type="number" step="any" min="0" value={unitCost} onChange={(e) => onUnit(e.target.value)} />
           {unitN > 0 && (
             <div className="muted small" style={{ marginTop: 4 }}>
-              Unitario +IVA {formatPrice(costWithVat(unitN, item.vat))}
-              {aColli && perN > 0 && ` · Totale collo +IVA ${formatPrice(costWithVat(unitN * perN, item.vat))}`}
+              {tr('Unitario +IVA {importo}', { importo: formatPrice(costWithVat(unitN, item.vat)) })}
+              {aColli &&
+                perN > 0 &&
+                ` · ${tr('Totale collo +IVA {importo}', { importo: formatPrice(costWithVat(unitN * perN, item.vat)) })}`}
             </div>
           )}
         </div>
       )}
 
       <div className="grid-2" style={{ marginTop: 10 }}>
-        <button className="btn ghost small" onClick={onCancel}>Annulla</button>
-        <button className="btn small" onClick={confirm}>{reso ? 'Conferma reso' : 'Conferma carico'}</button>
+        <button className="btn ghost small" onClick={onCancel}>{tr('Annulla')}</button>
+        <button className="btn small" onClick={confirm}>{reso ? tr('Conferma reso') : tr('Conferma carico')}</button>
       </div>
     </div>
   )
@@ -2201,43 +2229,33 @@ function AiutoProdotto({ onClose }) {
       <div
         className="confirm-box"
         role="dialog"
-        aria-label="Come si compila questa scheda"
+        aria-label={tr('Come si compila questa scheda')}
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 style={{ marginTop: 0 }}>Come si compila questa scheda</h3>
+        <h3 style={{ marginTop: 0 }}>{tr('Come si compila questa scheda')}</h3>
 
-        <h4 style={{ margin: '14px 0 2px' }}>Si conta sempre a pezzi</h4>
+        <h4 style={{ margin: '14px 0 2px' }}>{tr('Si conta sempre a pezzi')}</h4>
         <p className="small" style={{ margin: 0 }}>
-          L&apos;unità di giacenza è il pezzo, cioè l&apos;unità fisica di
-          stoccaggio: bottiglia, lattina, barattolo, limone, cubetto. È la
-          stessa per tutti i prodotti, così che l&apos;inventario coincida con
-          il conteggio a scaffale.
+          {tr("L'unità di giacenza è il pezzo, cioè l'unità fisica di stoccaggio: bottiglia, lattina, barattolo, limone, cubetto. È la stessa per tutti i prodotti, così che l'inventario coincida con il conteggio a scaffale.")}
         </p>
 
-        <h4 style={{ margin: '14px 0 2px' }}>A quanto corrisponde un pezzo</h4>
+        <h4 style={{ margin: '14px 0 2px' }}>{tr('A quanto corrisponde un pezzo')}</h4>
         <p className="small" style={{ margin: 0 }}>
-          Contenuto nominale del pezzo (bottiglia 70 cl, cubetto 8 g,
-          confezione 10 U). Determina il costo per unità di contenuto e lo
-          scarico frazionato delle dosi. Facoltativo: senza contenuto il
-          prodotto si dosa solo a pezzi interi.
+          {tr('Contenuto nominale del pezzo (bottiglia 70 cl, cubetto 8 g, confezione 10 U). Determina il costo per unità di contenuto e lo scarico frazionato delle dosi. Facoltativo: senza contenuto il prodotto si dosa solo a pezzi interi.')}
         </p>
 
-        <h4 style={{ margin: '14px 0 2px' }}>Il collo si dichiara al carico</h4>
+        <h4 style={{ margin: '14px 0 2px' }}>{tr('Il collo si dichiara al carico')}</h4>
         <p className="small" style={{ margin: 0 }}>
-          Il numero di pezzi per collo (cartone da 24, busta da 30) si indica
-          al momento del carico, insieme al prezzo del collo: il costo
-          unitario viene ricavato dal carico stesso.
+          {tr('Il numero di pezzi per collo (cartone da 24, busta da 30) si indica al momento del carico, insieme al prezzo del collo: il costo unitario viene ricavato dal carico stesso.')}
         </p>
 
-        <h4 style={{ margin: '14px 0 2px' }}>La merce a peso si stima</h4>
+        <h4 style={{ margin: '14px 0 2px' }}>{tr('La merce a peso si stima')}</h4>
         <p className="small" style={{ margin: 0 }}>
-          La merce acquistata a peso si carica a peso; i pezzi derivano dal
-          peso unitario nominale e sono quindi una stima. Il dato di
-          riferimento resta il peso.
+          {tr('La merce acquistata a peso si carica a peso; i pezzi derivano dal peso unitario nominale e sono quindi una stima. Il dato di riferimento resta il peso.')}
         </p>
 
         <button type="button" className="btn block" style={{ marginTop: 16 }} onClick={onClose}>
-          Chiudi
+          {tr('Chiudi')}
         </button>
       </div>
     </div>
@@ -2260,33 +2278,26 @@ function AiutoPezzo({ onClose }) {
       <div
         className="confirm-box"
         role="dialog"
-        aria-label="A quanto corrisponde un pezzo"
+        aria-label={tr('A quanto corrisponde un pezzo')}
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 style={{ marginTop: 0 }}>A quanto corrisponde un pezzo</h3>
+        <h3 style={{ marginTop: 0 }}>{tr('A quanto corrisponde un pezzo')}</h3>
         <p className="small" style={{ marginTop: 0 }}>
-          È il <strong>contenuto nominale</strong> di un pezzo: bottiglia da
-          100 cl, cubetto da 8 g, confezione da 10 U. Non è la dose, che si
-          definisce nella ricetta di ciascun drink.
+          {tr('È il contenuto nominale di un pezzo: bottiglia da 100 cl, cubetto da 8 g, confezione da 10 U. Non è la dose, che si definisce nella ricetta di ciascun drink.')}
         </p>
 
-        <h4 style={{ margin: '14px 0 2px' }}>Con il contenuto indicato</h4>
+        <h4 style={{ margin: '14px 0 2px' }}>{tr('Con il contenuto indicato')}</h4>
         <p className="small" style={{ margin: 0 }}>
-          In ricetta la dose si esprime a <strong>pezzi</strong> o
-          nell&apos;unità del contenuto (<strong>cl</strong>, g, U). Lo scarico
-          è proporzionale — 4 cl da un pezzo da 100 cl scaricano 0,04 pz — e il
-          costo è calcolato per unità di contenuto.
+          {tr("In ricetta la dose si esprime a pezzi o nell'unità del contenuto (cl, g, U). Lo scarico è proporzionale — 4 cl da un pezzo da 100 cl scaricano 0,04 pz — e il costo è calcolato per unità di contenuto.")}
         </p>
 
-        <h4 style={{ margin: '14px 0 2px' }}>Senza contenuto</h4>
+        <h4 style={{ margin: '14px 0 2px' }}>{tr('Senza contenuto')}</h4>
         <p className="small" style={{ margin: 0 }}>
-          La dose si esprime <strong>solo a pezzi interi</strong> (per esempio
-          la birra servita in bottiglia). Il costo resta quello del pezzo, senza
-          costo per unità di contenuto.
+          {tr('La dose si esprime solo a pezzi interi (per esempio la birra servita in bottiglia). Il costo resta quello del pezzo, senza costo per unità di contenuto.')}
         </p>
 
         <button type="button" className="btn block" style={{ marginTop: 16 }} onClick={onClose}>
-          Chiudi
+          {tr('Chiudi')}
         </button>
       </div>
     </div>
@@ -2394,7 +2405,7 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
       if (creato?.id) setForm((f) => ({ ...f, supplier_id: creato.id }))
       setNuovoFornitore(null)
     } catch (e) {
-      setAvviso(`Il fornitore non si è salvato: ${e.message}`)
+      setAvviso(tr('Il fornitore non si è salvato: {errore}', { errore: e.message }))
     } finally {
       setSalvandoFornitore(false)
     }
@@ -2446,7 +2457,10 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
           // adesso, se no «5000» resterebbe scritto come se fossero pezzi.
           if (!(convertibile > 0)) {
             setAvviso(
-              `Scrivi a quanto corrisponde un pezzo in ${UNIT_LABEL[baseVecchia] || baseVecchia}: senza, la giacenza (${fmtItem(initial.stock, initial)}) non si può contare in pezzi.`
+              tr('Scrivi a quanto corrisponde un pezzo in {unita}: senza, la giacenza ({giacenza}) non si può contare in pezzi.', {
+                unita: UNIT_LABEL[baseVecchia] || baseVecchia,
+                giacenza: fmtItem(initial.stock, initial),
+              })
             )
             return
           }
@@ -2477,7 +2491,7 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
   return (
     <form className="card inv-scheda" onSubmit={submit}>
       <div className="row between" style={{ alignItems: 'center', gap: 8 }}>
-        <h3 style={{ margin: 0 }}>{isEdit ? 'Modifica prodotto' : 'Nuovo prodotto'}</h3>
+        <h3 style={{ margin: 0 }}>{isEdit ? tr('Modifica prodotto') : tr('Nuovo prodotto')}</h3>
         {/* IL PUNTO INTERROGATIVO. Questa scheda decide come si scala il
             magazzino e quanto costa un drink: chi la compila la prima volta
             non deve indovinare cosa vogliono dire le domande. La spiegazione
@@ -2485,8 +2499,8 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
         <button
           type="button"
           className="inv-aiuto"
-          aria-label="Come si compila questa scheda"
-          title="Come si compila questa scheda"
+          aria-label={tr('Come si compila questa scheda')}
+          title={tr('Come si compila questa scheda')}
           onClick={() => setAiuto(true)}
         >
           ?
@@ -2494,29 +2508,28 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
       </div>
       {aiuto && <AiutoProdotto onClose={() => setAiuto(false)} />}
 
-      <label htmlFor="iname">Nome *</label>
-      <input id="iname" value={form.name} onChange={set('name')} placeholder="Es. Rum Zacapa" required />
+      <label htmlFor="iname">{tr('Nome *')}</label>
+      <input id="iname" value={form.name} onChange={set('name')} placeholder={tr('Es. Rum Zacapa')} required />
 
-      <label htmlFor="icat">Categoria</label>
+      <label htmlFor="icat">{tr('Categoria')}</label>
       <select id="icat" value={form.category_id || ''} onChange={set('category_id')}>
-        <option value="">— Nessuna —</option>
+        <option value="">{tr('— Nessuna —')}</option>
         {categories.map((c) => (
           <option key={c.id} value={c.id}>{c.name}</option>
         ))}
       </select>
 
-      <label htmlFor="isup">Fornitore</label>
+      <label htmlFor="isup">{tr('Fornitore')}</label>
       <AiutoCampo style={{ margin: '0 0 4px' }}>
-        Il prezzo indicato aggiorna il listino di questo fornitore; i listini
-        degli altri fornitori restano invariati.
+        {tr('Il prezzo indicato aggiorna il listino di questo fornitore; i listini degli altri fornitori restano invariati.')}
       </AiutoCampo>
       {nuovoFornitore != null ? (
         <div className="row" style={{ gap: 8 }}>
           <input
-            aria-label="Nome nuovo fornitore"
+            aria-label={tr('Nome nuovo fornitore')}
             value={nuovoFornitore}
             onChange={(e) => setNuovoFornitore(e.target.value)}
-            placeholder="Nome nuovo fornitore"
+            placeholder={tr('Nome nuovo fornitore')}
             autoFocus
           />
           <button
@@ -2547,18 +2560,18 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
             setForm((f) => ({ ...f, supplier_id: e.target.value }))
           }}
         >
-          <option value="">— Nessuno —</option>
+          <option value="">{tr('— Nessuno —')}</option>
           {(suppliers || []).map((s) => (
             <option key={s.id} value={s.id}>{s.name}</option>
           ))}
-          {onCreateSupplier && <option value="__new__">+ Nuovo fornitore…</option>}
+          {onCreateSupplier && <option value="__new__">+ {tr('Nuovo fornitore…')}</option>}
         </select>
       )}
 
-      <label htmlFor="istatus">Stato</label>
+      <label htmlFor="istatus">{tr('Stato')}</label>
       <select id="istatus" value={form.status} onChange={set('status')}>
         {STATUS_ITEM.map((s) => (
-          <option key={s.value} value={s.value}>{s.icona ? testoConIcona(s.icona, s.label) : s.label}</option>
+          <option key={s.value} value={s.value}>{s.icona ? testoConIcona(s.icona, trSegnato(s.label)) : trSegnato(s.label)}</option>
         ))}
       </select>
 
@@ -2566,16 +2579,16 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
         <div>
           {/* Il prezzo è quello di un pezzo: l'unità non si sceglie più, e
               quello che arriva a colli si scompone al carico. */}
-          <label htmlFor="icost">Costo €/pz (netto)</label>
-          <input id="icost" type="number" step="any" min="0" value={form.cost} onChange={set('cost')} placeholder="Es. 12,9" />
+          <label htmlFor="icost">{tr('Costo €/pz (netto)')}</label>
+          <input id="icost" type="number" step="any" min="0" value={form.cost} onChange={set('cost')} placeholder={tr('Es. 12,9')} />
         </div>
         <div>
-          <label htmlFor="ivat">IVA acquisto %</label>
+          <label htmlFor="ivat">{tr('IVA acquisto %')}</label>
           <input id="ivat" type="number" step="any" min="0" value={form.vat} onChange={set('vat')} />
         </div>
       </div>
       {costNum > 0 && (
-        <div className="muted small">+IVA {formatPrice(costWithVat(costNum, form.vat))}/pz</div>
+        <div className="muted small">{tr('+IVA {importo}/pz', { importo: formatPrice(costWithVat(costNum, form.vat)) })}</div>
       )}
 
       {/* ── LA SOLA DOMANDA ───────────────────────────────────────
@@ -2584,13 +2597,13 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
           ricetta si dosa solo a pezzi. */}
       <div className="row" style={{ gap: 6, alignItems: 'center', marginTop: 8 }}>
         <label htmlFor="icontent" style={{ margin: 0 }}>
-          A quanto corrisponde un pezzo? (facoltativo)
+          {tr('A quanto corrisponde un pezzo? (facoltativo)')}
         </label>
         <button
           type="button"
           className="inv-aiuto piccolo"
-          aria-label="Come funziona il contenuto di un pezzo"
-          title="Come funziona"
+          aria-label={tr('Come funziona il contenuto di un pezzo')}
+          title={tr('Come funziona')}
           onClick={() => setAiutoPezzo(true)}
         >
           ?
@@ -2607,12 +2620,12 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
           className="grow"
           value={form.content_size}
           onChange={set('content_size')}
-          placeholder="Contenuto nominale, es. 70"
+          placeholder={tr('Contenuto nominale, es. 70')}
         />
         <select
           value={form.content_unit}
           onChange={set('content_unit')}
-          aria-label="Unità del contenuto"
+          aria-label={tr('Unità del contenuto')}
           style={{ width: 90 }}
         >
           {CONTENUTO_UNITA.map(([u, label]) => (
@@ -2622,16 +2635,15 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
       </div>
       <AiutoCampo style={{ margin: '2px 0 8px' }}>
         {contenutoPezzo > 0
-          ? 'Base del costo per unità di contenuto e dello scarico frazionato (4 cl da un pezzo da 70 cl scaricano 0,057 pz).'
-          : 'Senza contenuto il prodotto si dosa solo a pezzi interi e non ha un costo per unità di contenuto.'}
+          ? tr('Base del costo per unità di contenuto e dello scarico frazionato (4 cl da un pezzo da 70 cl scaricano 0,057 pz).')
+          : tr('Senza contenuto il prodotto si dosa solo a pezzi interi e non ha un costo per unità di contenuto.')}
       </AiutoCampo>
       {/* L'AVVERTENZA ONESTA: chi legge «47 pz» di limoni deve sapere che
           nessuno li ha contati uno per uno. */}
       {aPeso && (
         <p className="muted small" style={{ margin: '-4px 0 8px' }}>
-          <Icona nome="bilancio" gruppo="tasti" /> Acquistato a peso: la giacenza in pezzi è una <strong>stima</strong>,
-          perché il peso unitario non è costante. Il dato di riferimento resta il
-          peso.
+          <Icona nome="bilancio" gruppo="tasti" />{' '}
+          {tr('Acquistato a peso: la giacenza in pezzi è una stima, perché il peso unitario non è costante. Il dato di riferimento resta il peso.')}
         </p>
       )}
 
@@ -2641,19 +2653,17 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
           prima di salvarlo per sempre. */}
       {motivoDaSistemare && (
         <div className="banner" style={{ marginTop: 8 }}>
-          <Icona nome="avviso" gruppo="segnali" /> Questo prodotto <strong>blocca l&apos;aggiornamento</strong> del
-          magazzino: {motivoDaSistemare}.
+          <Icona nome="avviso" gruppo="segnali" />{' '}
+          {tr("Questo prodotto blocca l'aggiornamento del magazzino: {motivo}.", { motivo: motivoDaSistemare })}
           {daConvertire && (
             <>
-              {' '}La giacenza ({fmtItem(initial.stock, initial)})
-              {convertibile > 0 ? (
-                <>
-                  {' '}diventa{' '}
-                  <strong>{formatPezzi(num0(initial.stock) / convertibile)} pz</strong>.
-                </>
-              ) : (
-                <> si conterà da lì.</>
-              )}
+              {' '}
+              {convertibile > 0
+                ? tr('La giacenza ({giacenza}) diventa {n} pz.', {
+                    giacenza: fmtItem(initial.stock, initial),
+                    n: formatPezzi(num0(initial.stock) / convertibile),
+                  })
+                : tr('La giacenza ({giacenza}) si conterà da lì.', { giacenza: fmtItem(initial.stock, initial) })}
             </>
           )}
         </div>
@@ -2665,14 +2675,14 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
           spenta e mai scaricata. Il perché per esteso è in lib/inventory.js. */}
       {!isEdit && (
         <>
-          <label htmlFor="ibottles">Quantità iniziale (pz)</label>
+          <label htmlFor="ibottles">{tr('Quantità iniziale (pz)')}</label>
           <input id="ibottles" type="number" step="any" min="0" value={form.bottles} onChange={set('bottles')} />
           {contenutoPezzo > 0 && (
             <>
               {/* Il pezzo già aperto al momento del censimento: mezzo gin non
                   è né zero né uno, è la sua frazione di pezzo. */}
               <label htmlFor="iopen">
-                Confezione aperta — contenuto ({etichettaContenuto}) — opzionale
+                {tr('Confezione aperta — contenuto ({unita}) — opzionale', { unita: etichettaContenuto })}
               </label>
               <input
                 id="iopen"
@@ -2681,14 +2691,14 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
                 min="0"
                 value={form.open_content}
                 onChange={set('open_content')}
-                placeholder="Contenuto residuo della confezione aperta"
+                placeholder={tr('Contenuto residuo della confezione aperta')}
               />
             </>
           )}
         </>
       )}
 
-      <label htmlFor="ithr">Soglia di avviso (pz)</label>
+      <label htmlFor="ithr">{tr('Soglia di avviso (pz)')}</label>
       <input
         id="ithr"
         type="number"
@@ -2696,11 +2706,10 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
         min="0"
         value={form.low_threshold}
         onChange={set('low_threshold')}
-        placeholder="Scorta minima in pezzi"
+        placeholder={tr('Scorta minima in pezzi')}
       />
       <AiutoCampo style={{ margin: '2px 0 8px' }}>
-        Sotto questa soglia il prodotto risulta in esaurimento e rientra nel
-        riordino suggerito.
+        {tr('Sotto questa soglia il prodotto risulta in esaurimento e rientra nel riordino suggerito.')}
       </AiutoCampo>
 
       {/* REQ-MAG-055 (Daniele, 13/11/2026): il gin o la vodka che il
@@ -2711,11 +2720,10 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
           checked={form.scelta_cliente}
           onChange={(e) => setForm((f) => ({ ...f, scelta_cliente: e.target.checked }))}
         />
-        <span>Il cliente può sceglierlo dal menù</span>
+        <span>{tr('Il cliente può sceglierlo dal menù')}</span>
       </label>
       <AiutoCampo style={{ margin: '2px 0 8px' }}>
-        Compare fra le alternative delle voci del menù dei clienti che offrono
-        la scelta della sua categoria, finché c’è giacenza.
+        {tr('Compare fra le alternative delle voci del menù dei clienti che offrono la scelta della sua categoria, finché c’è giacenza.')}
       </AiutoCampo>
 
       {/* REQ-MENU-045 (Flavio, 16/11/2026): l'ingrediente che, finito, toglie
@@ -2727,12 +2735,10 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
           checked={form.oscura_automaticamente}
           onChange={(e) => setForm((f) => ({ ...f, oscura_automaticamente: e.target.checked }))}
         />
-        <span>Oscura automaticamente</span>
+        <span>{tr('Oscura automaticamente')}</span>
       </label>
       <AiutoCampo style={{ margin: '2px 0 8px' }}>
-        Con la giacenza a zero o sotto (o sotto la soglia di avviso, secondo
-        quanto scelto in Impostazioni → Menù clienti), le voci del menù clienti
-        che lo hanno in ricetta risultano non disponibili. Al banco restano.
+        {tr('Con la giacenza a zero o sotto (o sotto la soglia di avviso, secondo quanto scelto in Impostazioni → Menù clienti), le voci del menù clienti che lo hanno in ricetta risultano non disponibili. Al banco restano.')}
       </AiutoCampo>
 
       {avviso && (
@@ -2742,14 +2748,14 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
       )}
 
       <div className="grid-2" style={{ marginTop: 16 }}>
-        <button type="button" className="btn ghost" onClick={onCancel} disabled={saving}>Annulla</button>
-        <button type="submit" className="btn" disabled={saving}>{saving ? 'Salvataggio…' : 'Salva'}</button>
+        <button type="button" className="btn ghost" onClick={onCancel} disabled={saving}>{tr('Annulla')}</button>
+        <button type="submit" className="btn" disabled={saving}>{saving ? tr('Salvataggio…') : tr('Salva')}</button>
       </div>
       {/* IL PRODOTTO DELLA CASSA DA QUESTA BOTTIGLIA (REQ-AI-002): solo per
           un prodotto già salvato, perché la ricetta lo collega per id. */}
       {initial?.id && onCreaProdottoCassa && (
         <button type="button" className="btn ghost block" style={{ marginTop: 8 }} onClick={() => onCreaProdottoCassa(initial)} disabled={saving}>
-          Crea il prodotto della cassa
+          {tr('Crea il prodotto della cassa')}
         </button>
       )}
     </form>

@@ -1,6 +1,7 @@
 import { ASSORTIMENTI, assortimentoDi } from '../lib/inventory.js'
 import { ASSORTIMENTO_TITOLO } from '../lib/assortimento.js'
 import Icona from './Icona.jsx'
+import { tr, trSegnato } from '../lib/lingua.js'
 
 // ── IL FILTRO PER ASSORTIMENTO, UNO SOLO PER DUE SCHERMATE ───────────
 //
@@ -17,20 +18,23 @@ import Icona from './Icona.jsx'
 // nulla. Il chip del filtro porta lo STESSO segno che compare nella riga:
 // è lì che si impara cosa vuol dire il bollino, senza una legenda a parte.
 // I nomi in parole e le spiegazioni stanno in `lib/assortimento.js`.
-const ASSORTIMENTO_LABEL = {
-  assortimento: <><Icona nome="magazzino" gruppo="tasti" /> In assortimento</>,
-  linea: <><Icona nome="in-linea" gruppo="tasti" /> In linea</>,
-  premium: <><Icona nome="premium" gruppo="tasti" /> Premium</>,
-  out: (
-    <>
-      <span className="badge-empty">OUT</span> Fuori assortimento
-    </>
-  ),
-}
+// Una funzione e non una tabella: le parole si traducono al disegno, nella
+// lingua di quel momento (REQ-UI-039).
+const etichettaAssortimento = (k) =>
+  ({
+    assortimento: <><Icona nome="magazzino" gruppo="tasti" /> {tr('In assortimento')}</>,
+    linea: <><Icona nome="in-linea" gruppo="tasti" /> {tr('assortimento|In linea')}</>,
+    premium: <><Icona nome="premium" gruppo="tasti" /> {tr('Premium')}</>,
+    out: (
+      <>
+        <span className="badge-empty">OUT</span> {tr('Fuori assortimento')}
+      </>
+    ),
+  })[k]
 export default function FiltroAssortimento({ items = [], scelti = [], onToggle }) {
   return (
     <>
-      <div className="tendina-titolo">Assortimento</div>
+      <div className="tendina-titolo">{tr('Assortimento')}</div>
       {ASSORTIMENTI.map((k) => {
         const quanti = items.filter((it) => assortimentoDi(it) === k).length
         return (
@@ -39,9 +43,9 @@ export default function FiltroAssortimento({ items = [], scelti = [], onToggle }
             type="button"
             className={`tendina-voce${scelti.includes(k) ? ' scelta' : ''}`}
             onClick={() => onToggle(k)}
-            title={ASSORTIMENTO_TITOLO[k]}
+            title={trSegnato(ASSORTIMENTO_TITOLO[k])}
           >
-            <span>{ASSORTIMENTO_LABEL[k]}</span>
+            <span>{etichettaAssortimento(k)}</span>
             <strong>{quanti}</strong>
           </button>
         )

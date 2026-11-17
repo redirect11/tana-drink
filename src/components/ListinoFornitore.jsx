@@ -19,6 +19,7 @@ import { ETICHETTA_ORIGINE, origineDi, storicoDiCoppia } from '../lib/storicoPre
 import { toastError } from '../lib/toast.js'
 import Icona from './Icona.jsx'
 import AiutoCampo from './AiutoCampo.jsx'
+import { tr, trSegnato, formatoAttivo } from '../lib/lingua.js'
 
 // ── IL LISTINO DI UN FORNITORE (REQ-MAG-035) ─────────────────────────
 //
@@ -52,7 +53,7 @@ const giorno = (iso) => {
   const d = new Date(iso)
   return Number.isNaN(d.getTime())
     ? ''
-    : d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: '2-digit' })
+    : d.toLocaleDateString(formatoAttivo(), { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
 
 export default function ListinoFornitore({ fornitore, onIndietro }) {
@@ -86,7 +87,7 @@ export default function ListinoFornitore({ fornitore, onIndietro }) {
         setRighe(list.filter((r) => r.supplier_id === fornitore.id))
         setVariazioni(vars)
       } catch (e) {
-        if (vivo) toastError(`Il listino non si è caricato: ${e.message}`)
+        if (vivo) toastError(tr('Il listino non si è caricato: {errore}', { errore: e.message }))
       } finally {
         if (vivo) setCaricando(false)
       }
@@ -198,7 +199,7 @@ export default function ListinoFornitore({ fornitore, onIndietro }) {
   }
 
   function togli(riga, nome) {
-    if (!confirm(`Togliere ${nome} dal listino di ${fornitore.name}?`)) return
+    if (!confirm(tr('Togliere {nome} dal listino di {fornitore}?', { nome, fornitore: fornitore.name }))) return
     eliminaRigaListino(fornitore.id, riga.item_id)
     setRighe((prev) => prev.filter((r) => r.item_id !== riga.item_id))
     setAperta(null)
@@ -211,26 +212,23 @@ export default function ListinoFornitore({ fornitore, onIndietro }) {
     <div>
       <div className="row" style={{ gap: 8, alignItems: 'center', marginTop: 8 }}>
         <button className="btn ghost small" onClick={onIndietro}>
-          ← Fornitori
+          ← {tr('Fornitori')}
         </button>
       </div>
 
       <div className="card" style={{ marginTop: 8, borderLeft: `4px solid ${colore}` }}>
-        <h3 style={{ marginTop: 0 }}>Listino di {fornitore.name}</h3>
+        <h3 style={{ marginTop: 0 }}>{tr('Listino di {nome}', { nome: fornitore.name })}</h3>
         <p className="muted">
-          Che cosa vende questo fornitore e a quanto. Il prezzo è al netto ed è quello
-          che comparirà quando si compila un ordine: di un pezzo, oppure del collo
-          intero se questo fornitore vende a cartoni. In quel caso si indicano anche
-          i pezzi per collo, e il prezzo del singolo pezzo si calcola da sé.
+          {tr('Che cosa vende questo fornitore e a quanto. Il prezzo è al netto ed è quello che comparirà quando si compila un ordine: di un pezzo, oppure del collo intero se questo fornitore vende a cartoni. In quel caso si indicano anche i pezzi per collo, e il prezzo del singolo pezzo si calcola da sé.')}
         </p>
 
-        <label htmlFor="lf-cerca">Cerca un prodotto in magazzino</label>
+        <label htmlFor="lf-cerca">{tr('Cerca un prodotto in magazzino')}</label>
         <input
           id="lf-cerca"
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Es. Campari"
+          placeholder={tr('Es. Campari')}
         />
 
         <div className="inv-list">
@@ -240,14 +238,14 @@ export default function ListinoFornitore({ fornitore, onIndietro }) {
                 <span className="grow" style={{ minWidth: 0 }}>
                   <span className="inv-row-name">{it.name}</span>
                   <span className="muted small" style={{ display: 'block' }}>
-                    In casa: {formatQty(it.stock, it.unit)}
+                    {tr('In casa: {quantita}', { quantita: formatQty(it.stock, it.unit) })}
                     {contenutoDelPezzo(it) ? ` · 1 pz = ${contenutoDelPezzo(it)}` : ''}
-                    {it.cost > 0 ? ` · in archivio ${formatPrice(it.cost)}/pz` : ''}
+                    {it.cost > 0 ? ` · ${tr('in archivio {importo}/pz', { importo: formatPrice(it.cost) })}` : ''}
                   </span>
                 </span>
                 <button
                   className="btn small"
-                  aria-label={`Associa ${it.name} a ${fornitore.name}`}
+                  aria-label={tr('Associa {nome} a {fornitore}', { nome: it.name, fornitore: fornitore.name })}
                   onClick={() => associa(it)}
                 >
                   ＋
@@ -258,7 +256,7 @@ export default function ListinoFornitore({ fornitore, onIndietro }) {
         </div>
         {trovati.length > LIMITE_RICERCA && (
           <p className="muted small" style={{ marginTop: 6 }}>
-            Mostrati {LIMITE_RICERCA} prodotti su {trovati.length}: restringi la ricerca.
+            {tr('Mostrati {n} prodotti su {totale}: restringi la ricerca.', { n: LIMITE_RICERCA, totale: trovati.length })}
           </p>
         )}
 
@@ -268,11 +266,10 @@ export default function ListinoFornitore({ fornitore, onIndietro }) {
         {query.trim() !== '' && !esisteGia && (
           <>
             <button className="btn secondary small block" style={{ marginTop: 8 }} onClick={creaEAssocia}>
-              ＋ Crea «{query.trim()}» in magazzino
+              ＋ {tr('Crea «{nome}» in magazzino', { nome: query.trim() })}
             </button>
             <p className="muted small" style={{ marginTop: 6 }}>
-              Il prodotto entra in magazzino con la scheda da completare: categoria,
-              contenuto di un pezzo e soglia di riordino si mettono dal magazzino.
+              {tr('Il prodotto entra in magazzino con la scheda da completare: categoria, contenuto di un pezzo e soglia di riordino si mettono dal magazzino.')}
             </p>
           </>
         )}
@@ -280,23 +277,24 @@ export default function ListinoFornitore({ fornitore, onIndietro }) {
 
       <div className="card" style={{ marginTop: 8 }}>
         <div className="row between">
-          <strong>Prodotti a listino</strong>
+          <strong>{tr('Prodotti a listino')}</strong>
           <span className="muted small">{catalogo.length}</span>
         </div>
 
         {caricando && catalogo.length === 0 && (
-          <p className="muted small" style={{ marginTop: 8 }}>Caricamento…</p>
+          <p className="muted small" style={{ marginTop: 8 }}>{tr('Caricamento…')}</p>
         )}
         {!caricando && catalogo.length === 0 && (
           <p className="muted small" style={{ marginTop: 8 }}>
-            Nessun prodotto sul listino di {fornitore.name}. Cercane uno qui sopra e
-            associalo, oppure creane uno nuovo.
+            {tr('Nessun prodotto sul listino di {nome}. Cercane uno qui sopra e associalo, oppure creane uno nuovo.', {
+              nome: fornitore.name,
+            })}
           </p>
         )}
 
         <div className="inv-list">
           {catalogo.map(({ riga, item }) => {
-            const nome = item?.name || 'Prodotto non più in magazzino'
+            const nome = item?.name || tr('Prodotto non più in magazzino')
             const bozza = bozze[riga.item_id] || {}
             const prezzo = 'price' in bozza ? bozza.price : (riga.price ?? '')
             // QUELLO CHE SI LEGGE NEI CAMPI resta la cifra scritta a mano —
@@ -337,12 +335,12 @@ export default function ListinoFornitore({ fornitore, onIndietro }) {
                     <span className="inv-row-name">{nome}</span>
                     <span className="muted small" style={{ display: 'block' }}>
                       {item
-                        ? `In casa: ${formatQty(item.stock, item.unit)}`
-                        : 'La scheda del prodotto non c’è più: la riga si può togliere.'}
-                      {riga.code ? ` · cod. ${riga.code}` : ''}
+                        ? tr('In casa: {quantita}', { quantita: formatQty(item.stock, item.unit) })
+                        : tr('La scheda del prodotto non c’è più: la riga si può togliere.')}
+                      {riga.code ? ` · ${tr('cod. {codice}', { codice: riga.code })}` : ''}
                       {riga.package_label ? ` · ${riga.package_label}` : ''}
                       {ultima
-                        ? ` · ${giorno(ultima.at)}, ${ETICHETTA_ORIGINE[origineDi(ultima)]}`
+                        ? ` · ${giorno(ultima.at)}, ${trSegnato(ETICHETTA_ORIGINE[origineDi(ultima)])}`
                         : ''}
                     </span>
                   </span>
@@ -351,9 +349,9 @@ export default function ListinoFornitore({ fornitore, onIndietro }) {
                       type="number"
                       step="0.01"
                       min="0"
-                      aria-label={`Prezzo di ${nome}`}
+                      aria-label={tr('Prezzo di {nome}', { nome })}
                       value={prezzo}
-                      placeholder={`€/${ETICHETTA_UNITA_PREZZO[scala.unita]}`}
+                      placeholder={`€/${trSegnato(ETICHETTA_UNITA_PREZZO[scala.unita])}`}
                       onChange={(e) => cambia(riga.item_id, 'price', e.target.value)}
                       style={{ width: 92, textAlign: 'right' }}
                     />
@@ -373,12 +371,12 @@ export default function ListinoFornitore({ fornitore, onIndietro }) {
                   </span>
                   {daSalvare && (
                     <button className="btn small" onClick={() => salva(riga)}>
-                      Salva
+                      {tr('Salva')}
                     </button>
                   )}
                   <button
                     className="btn ghost small"
-                    aria-label={`Dettagli di ${nome}`}
+                    aria-label={tr('Dettagli di {nome}', { nome })}
                     aria-expanded={aperto}
                     onClick={() => setAperta(aperto ? null : riga.item_id)}
                   >
@@ -390,16 +388,16 @@ export default function ListinoFornitore({ fornitore, onIndietro }) {
                   <div className="inv-row-dettaglio">
                     <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
                       <span style={{ minWidth: 140, flex: 1 }}>
-                        <label htmlFor={`lf-cod-${riga.item_id}`}>Codice del fornitore</label>
+                        <label htmlFor={`lf-cod-${riga.item_id}`}>{tr('Codice del fornitore')}</label>
                         <input
                           id={`lf-cod-${riga.item_id}`}
                           value={'code' in bozza ? bozza.code : (riga.code ?? '')}
-                          placeholder="Es. CMP01"
+                          placeholder={tr('Es. CMP01')}
                           onChange={(e) => cambia(riga.item_id, 'code', e.target.value)}
                         />
                       </span>
                       <span style={{ minWidth: 140, flex: 1 }}>
-                        <label htmlFor={`lf-conf-${riga.item_id}`}>Confezione</label>
+                        <label htmlFor={`lf-conf-${riga.item_id}`}>{tr('Confezione')}</label>
                         <input
                           id={`lf-conf-${riga.item_id}`}
                           value={
@@ -407,7 +405,7 @@ export default function ListinoFornitore({ fornitore, onIndietro }) {
                               ? bozza.package_label
                               : (riga.package_label ?? '')
                           }
-                          placeholder="Es. cartone da 6"
+                          placeholder={tr('Es. cartone da 6')}
                           onChange={(e) => cambia(riga.item_id, 'package_label', e.target.value)}
                         />
                       </span>
@@ -419,14 +417,14 @@ export default function ListinoFornitore({ fornitore, onIndietro }) {
                           il contenuto. Il conto resta sempre lo stesso: prezzo
                           × contenuto del pezzo × pezzi per collo. */}
                       <span style={{ minWidth: 140, flex: 1 }}>
-                        <label htmlFor={`lf-unita-${riga.item_id}`}>Prezzo espresso per</label>
+                        <label htmlFor={`lf-unita-${riga.item_id}`}>{tr('Prezzo espresso per')}</label>
                         <select
                           id={`lf-unita-${riga.item_id}`}
                           value={scala.unita}
                           onChange={(e) => cambia(riga.item_id, 'unita_prezzo', e.target.value)}
                         >
                           {UNITA_PREZZO.map((u) => (
-                            <option key={u} value={u}>{ETICHETTA_UNITA_PREZZO[u]}</option>
+                            <option key={u} value={u}>{trSegnato(ETICHETTA_UNITA_PREZZO[u])}</option>
                           ))}
                         </select>
                       </span>
@@ -436,7 +434,7 @@ export default function ListinoFornitore({ fornitore, onIndietro }) {
                           e serve perché lo stesso prodotto da un fornitore va
                           a bottiglia e da un altro a cartone da 24. */}
                       <span style={{ minWidth: 140, flex: 1 }}>
-                        <label htmlFor={`lf-collo-${riga.item_id}`}>Pezzi per collo</label>
+                        <label htmlFor={`lf-collo-${riga.item_id}`}>{tr('Pezzi per collo')}</label>
                         <input
                           id={`lf-collo-${riga.item_id}`}
                           type="number"
@@ -444,24 +442,16 @@ export default function ListinoFornitore({ fornitore, onIndietro }) {
                           min="0"
                           inputMode="numeric"
                           value={colloScritto}
-                          placeholder="Es. 24"
+                          placeholder={tr('Es. 24')}
                           onChange={(e) => cambia(riga.item_id, 'pezzi_per_collo', e.target.value)}
                         />
                       </span>
                     </div>
                     <AiutoCampo style={{ marginTop: 6 }}>
-                      Codice e confezione sono quelli del fornitore e compaiono sull’ordine
-                      che riceve. I <strong>pezzi per collo</strong> si indicano solo se il
-                      fornitore vende a cartoni o a casse: l’ordine si conta allora in colli
-                      e a magazzino entrano i pezzi contenuti. Con 1 si acquista a pezzo,
-                      come per la maggior parte dei prodotti.
+                      {tr('Codice e confezione sono quelli del fornitore e compaiono sull’ordine che riceve. I pezzi per collo si indicano solo se il fornitore vende a cartoni o a casse: l’ordine si conta allora in colli e a magazzino entrano i pezzi contenuti. Con 1 si acquista a pezzo, come per la maggior parte dei prodotti.')}
                     </AiutoCampo>
                     <AiutoCampo style={{ marginTop: 6 }}>
-                      <strong>Prezzo espresso per</strong> indica l’unità del listino del
-                      fornitore: <em>collo</em> è l’importo fatturato, <em>pz</em> il prezzo
-                      della singola bottiglia; litri, centilitri, chili o grammi quando il
-                      prezzo è riferito al contenuto. Il prezzo al pezzo è calcolato e
-                      riportato accanto al campo.
+                      {tr('«Prezzo espresso per» indica l’unità del listino del fornitore: collo è l’importo fatturato, pz il prezzo della singola bottiglia; litri, centilitri, chili o grammi quando il prezzo è riferito al contenuto. Il prezzo al pezzo è calcolato e riportato accanto al campo.')}
                     </AiutoCampo>
 
                     <StoricoDellaRiga
@@ -473,7 +463,7 @@ export default function ListinoFornitore({ fornitore, onIndietro }) {
                       style={{ marginTop: 8 }}
                       onClick={() => togli(riga, nome)}
                     >
-                      <Icona nome="elimina" gruppo="tasti" /> Togli dal listino
+                      <Icona nome="elimina" gruppo="tasti" /> {tr('Togli dal listino')}
                     </button>
                   </div>
                 )}
@@ -493,19 +483,19 @@ function StoricoDellaRiga({ variazioni }) {
   if (variazioni.length === 0) {
     return (
       <p className="muted small" style={{ marginTop: 8 }}>
-        Nessuna variazione registrata: il prezzo si segue da qui in poi.
+        {tr('Nessuna variazione registrata: il prezzo si segue da qui in poi.')}
       </p>
     )
   }
   return (
     <>
       <p className="muted small" style={{ marginTop: 8, marginBottom: 4 }}>
-        Variazioni di prezzo
+        {tr('Variazioni di prezzo')}
       </p>
       {variazioni.slice(0, VARIAZIONI_MOSTRATE).map((v) => (
         <div className="row between small" key={v.id}>
           <span className="muted">
-            {giorno(v.at)} · {ETICHETTA_ORIGINE[origineDi(v)]}
+            {giorno(v.at)} · {trSegnato(ETICHETTA_ORIGINE[origineDi(v)])}
           </span>
           <span>
             {v.previous_price != null ? `${formatPrice(v.previous_price)} → ` : ''}
@@ -515,7 +505,7 @@ function StoricoDellaRiga({ variazioni }) {
       ))}
       {variazioni.length > VARIAZIONI_MOSTRATE && (
         <p className="muted small" style={{ marginTop: 4 }}>
-          Le ultime {VARIAZIONI_MOSTRATE} di {variazioni.length}.
+          {tr('Le ultime {n} di {totale}.', { n: VARIAZIONI_MOSTRATE, totale: variazioni.length })}
         </p>
       )}
     </>
