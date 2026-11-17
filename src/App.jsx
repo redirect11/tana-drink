@@ -336,6 +336,8 @@ export default function App() {
   // entrato: da sloggati si è un cliente qualunque, e la campanella degli
   // avvisi non lo riguarda.
   const [collegato, setCollegato] = useState(false)
+  // Il ruolo di chi è appena entrato si sta leggendo (vedi il tema, sotto).
+  const [ruoloInLettura, setRuoloInLettura] = useState(false)
   // L'ACCESSO HA RISPOSTO: si sa chi è collegato e col suo ruolo. Serve al
   // menù nascosto ai clienti, che è aperto allo staff: prima di saperlo,
   // un barista che riapre /menu leggeva per un attimo «non è disponibile»
@@ -354,8 +356,10 @@ export default function App() {
       setUidCollegato(u?.uid || null)
       if (!u) {
         setAccessoNoto(true)
+        setRuoloInLettura(false)
         return setStaffRole(null)
       }
+      setRuoloInLettura(true)
       try {
         const token = await u.getIdTokenResult()
         const role = token.claims.role
@@ -384,6 +388,7 @@ export default function App() {
         setStaffRole(null)
       } finally {
         setAccessoNoto(true)
+        setRuoloInLettura(false)
       }
     })
   }, [])
@@ -495,6 +500,15 @@ export default function App() {
     location.pathname.startsWith('/menu') &&
     new URLSearchParams(location.search).get('vista') === 'cliente'
   const staffSurface = !!staffRole && !anteprimaCliente
+  // I COLORI DEL GESTIONALE ANCHE SULLA SUA PORTA (BUG-171). Daniele,
+  // 17/11/2026: la schermata «Ti sto facendo entrare», dopo il login, non
+  // aveva il tema. Il ruolo si legge dal token, e finché non torna
+  // `staffRole` è vuoto: la schermata d'attesa — e prima il modulo di
+  // accesso su /bar — prendeva i colori dei clienti, e quelli del
+  // gestionale arrivavano un attimo dopo. Sulle pagine del gestionale vale
+  // il suo tema finché non si sa che chi è entrato è un cliente.
+  const clienteEntrato = collegato && accessoNoto && !ruoloInLettura && !staffRole
+  const vesteGestionale = staffSurface || (gestionale && !clienteEntrato)
   // E IL TEMA IN PROVA (REQ-MENU-023): dal marketplace, chi lavora vede il
   // proprio menù coi colori di un tema prima di usarlo. Solo lui.
   const temaProvato = staffRole && anteprimaCliente ? temaInProva(settings, location.search) : null
@@ -505,23 +519,23 @@ export default function App() {
   // come i colori, e le schermate ne leggono le frasi. Segue chi guarda,
   // come il tema: chi lavora vede il gestionale com'è.
   const stileCliente = stileInVista(settings, {
-    lavoro: staffSurface,
+    lavoro: vesteGestionale,
     prova: staffRole && anteprimaCliente ? new URLSearchParams(location.search).get('stile') || stileDelTema(temaProvato) : null,
   })
   // I colori propri di uno stile a ricetta (REQ-MENU-031) stanno sopra
   // quelli del tema, come la lavagna: vanno sulla radice coi colori, perché
   // il fondo della pagina è lì. La ricetta si ricompone a ogni giro: si
   // guarda il testo dei colori, non l'oggetto.
-  const coloriStile = staffSurface ? '' : JSON.stringify(ricettaDelloStile(settings, stileCliente)?.colori ?? null)
+  const coloriStile = vesteGestionale ? '' : JSON.stringify(ricettaDelloStile(settings, stileCliente)?.colori ?? null)
   useEffect(() => {
     const scope = temaProvato
       ? temaComeColori(temaProvato)
-      : staffSurface
+      : vesteGestionale
         ? settings.theme_staff
         : settings.theme_client
     const colori = coloriStile ? JSON.parse(coloriStile) : null
     applyTheme(resolveThemeVars(coloriConRicetta(scope, colori && { colori })))
-  }, [settings, staffSurface, temaProvato, coloriStile])
+  }, [settings, vesteGestionale, temaProvato, coloriStile])
 
   const stilePagine = vestePagine(stileCliente) ? stileCliente : null
   useEffect(() => {
