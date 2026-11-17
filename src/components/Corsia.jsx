@@ -4,6 +4,7 @@ import { paidAmount } from '../lib/pagamento.js'
 import { destinazioneConto } from '../lib/coda.js'
 import { COLORI_CONTO, coloreDelConto } from '../lib/coloriConto.js'
 import Icona, { ConIcona } from './Icona.jsx'
+import { tr, trSegnato } from '../lib/lingua.js'
 
 // ── QUELLO CHE LE DUE LAVAGNE A CORSIE HANNO IN COMUNE ───────────────
 //
@@ -64,7 +65,7 @@ export function Corsia({
     <section className={`corsia${classe ? ' ' + classe : ''}`} ref={refCorsia}>
       <div className={`row between corsia-testa corsia-${corsia.id}`}>
         <span className="corsia-titolo">
-          <ConIcona testo={corsia.titolo} /> <span className="muted small">{quanti}</span>
+          <ConIcona testo={trSegnato(corsia.titolo)} /> <span className="muted small">{quanti}</span>
         </span>
         <span className="price small">{formatPrice(corsia.totale)}</span>
       </div>
@@ -93,7 +94,7 @@ function CardInArrivo({ pending, onScarta }) {
           <span className="corsia-conto">#{pending.order?.daily_number ?? '…'}</span>
         </span>
         <span className="muted small">
-          {pending.state === 'error' ? 'non inviato' : 'in invio…'}
+          {pending.state === 'error' ? tr('non inviato') : tr('in invio…')}
         </span>
       </div>
       <div className="muted small corsia-dove">{destinazioneConto(pending.order || {})}</div>
@@ -101,7 +102,7 @@ function CardInArrivo({ pending, onScarta }) {
         <>
           <div className="small corsia-righe">{pending.error}</div>
           <button className="btn small block corsia-azione" onClick={() => onScarta?.(pending.tempId)}>
-            Rimuovi
+            {tr('Rimuovi')}
           </button>
         </>
       )}
@@ -151,8 +152,8 @@ export function voceColoreConto(order, onApri) {
   return {
     id: 'colore',
     icon: <PallinoColoreConto order={order} />,
-    label: 'Colore del conto',
-    hint: 'Lo portano anche tutte le sue comande',
+    label: tr('Colore del conto'),
+    hint: tr('Lo portano anche tutte le sue comande'),
     onClick: onApri,
   }
 }
@@ -191,24 +192,24 @@ export function ModaleColoreConto({ order, onScegli, onChiudi }) {
       <div
         className="confirm-box colori-conto-box"
         role="dialog"
-        aria-label="Colore del conto"
+        aria-label={tr('Colore del conto')}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="row between" style={{ alignItems: 'center' }}>
-          <h3 style={{ margin: 0 }}>Colore del conto</h3>
-          <button className="btn ghost small" onClick={onChiudi} aria-label="Chiudi">
+          <h3 style={{ margin: 0 }}>{tr('Colore del conto')}</h3>
+          <button className="btn ghost small" onClick={onChiudi} aria-label={tr('Chiudi')}>
             ✕
           </button>
         </div>
         <p className="muted small" style={{ margin: '8px 0 0' }}>
-          Lo portano anche tutte le sue comande.
+          {tr('Lo portano anche tutte le sue comande')}.
         </p>
         <div className="colori-conto-riga">
           {COLORI_CONTO.map((c) => (
             <button
               key={c}
               type="button"
-              aria-label={`Colore ${c}`}
+              aria-label={tr('Colore {c}', { c })}
               aria-pressed={attuale === c.toLowerCase()}
               className={`colore-conto${attuale === c.toLowerCase() ? ' active' : ''}`}
               style={{ background: c }}
@@ -221,8 +222,8 @@ export function ModaleColoreConto({ order, onScegli, onChiudi }) {
           <button
             type="button"
             className={`colore-conto niente${attuale ? '' : ' active'}`}
-            title="Nessun colore"
-            aria-label="Nessun colore"
+            title={tr('Nessun colore')}
+            aria-label={tr('Nessun colore')}
             aria-pressed={!attuale}
             onClick={() => onScegli?.(null)}
           >
@@ -240,8 +241,8 @@ export function ModaleColoreConto({ order, onScegli, onChiudi }) {
 export function BolloAcconto({ order }) {
   if (order?.payment_status !== 'parziale') return null
   return (
-    <span className="pill acconto small" title={`Già incassati ${formatPrice(paidAmount(order))}`}>
-      <Icona nome="carta" gruppo="tasti" /> Acconto
+    <span className="pill acconto small" title={tr('Già incassati {importo}', { importo: formatPrice(paidAmount(order)) })}>
+      <Icona nome="carta" gruppo="tasti" /> {tr('Acconto')}
     </span>
   )
 }
@@ -270,7 +271,7 @@ export function TastoAzioni({ aperto, onTocca, titolo }) {
         onTocca()
       }}
     >
-      {aperto ? '▴ Chiudi' : '⋯ Azioni'}
+      {aperto ? `▴ ${tr('Chiudi')}` : `⋯ ${tr('Azioni')}`}
     </button>
   )
 }
@@ -284,13 +285,13 @@ export function TastoCorsia({ azione, attesa = false, onPremi }) {
     <button
       className="btn small corsia-azione"
       disabled={attesa}
-      title={attesa ? 'In attesa del pagamento: non si prepara' : undefined}
+      title={attesa ? tr('In attesa del pagamento: non si prepara') : undefined}
       onClick={(e) => {
         e.stopPropagation()
         onPremi(azione)
       }}
     >
-      {azione.etichetta}
+      {trSegnato(azione.etichetta)}
     </button>
   )
 }

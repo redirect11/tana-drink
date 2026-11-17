@@ -30,6 +30,7 @@ import { visibiliNelloStorico, giorniDiStorico, MESSAGGI_PIANO, stampaConsentita
 import AvvisoPiano from './AvvisoPiano.jsx'
 import Icona from './Icona.jsx'
 import MetodoPagamento from './MetodoPagamento.jsx'
+import { tr, trSegnato, useLingua } from '../lib/lingua.js'
 
 // STORICO DELLE CHIUSURE DI CASSA: una riga per serata, dall'apertura alla
 // chiusura. Aprendo una riga il riepilogo (incassi per metodo, sconti, contante
@@ -59,6 +60,7 @@ import MetodoPagamento from './MetodoPagamento.jsx'
 const CHIAVE_RAGGRUPPAMENTO = 'drink:chiusure:raggruppamento'
 
 export default function CashSessionsList() {
+  useLingua()
   const [sessions, setSessions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -177,17 +179,18 @@ export default function CashSessionsList() {
   const periodoTrovato = chiaveTrovata
     ? periodi.find((g) => g.chiave === chiaveTrovata)
     : null
-  const dove =
-    !periodoTrovato
-      ? 'nell’elenco'
-      : raggruppamento === 'settimana'
-        ? `nella settimana ${periodoTrovato.etichetta}`
-        : `in ${periodoTrovato.etichetta}`
+  // Frasi intere, una per caso: in inglese il «dove» non si incastra nella
+  // frase italiana pezzo per pezzo.
+  const serata = giornoCercato ? businessDayLabel(giornoCercato) : ''
   const esito = !giornoCercato
     ? ''
-    : trovata
-      ? `Serata di ${businessDayLabel(giornoCercato)}: evidenziata ${dove}.`
-      : `Nessuna chiusura di cassa registrata per ${businessDayLabel(giornoCercato)}.`
+    : !trovata
+      ? tr('Nessuna chiusura di cassa registrata per {serata}.', { serata })
+      : !periodoTrovato
+        ? tr('Serata di {serata}: evidenziata nell’elenco.', { serata })
+        : raggruppamento === 'settimana'
+          ? tr('Serata di {serata}: evidenziata nella settimana {periodo}.', { serata, periodo: periodoTrovato.etichetta })
+          : tr('Serata di {serata}: evidenziata in {periodo}.', { serata, periodo: periodoTrovato.etichetta })
 
   // Trovata la serata, la si porta sotto gli occhi: la riga può stare a due
   // mesi di scorrimento da qui, e accenderla senza mostrarla non servirebbe a
@@ -289,7 +292,7 @@ export default function CashSessionsList() {
               pastiglia verde al posto dell'ora di chiusura, e la
               striscia accesa a sinistra della riga. Sono due segni,
               non uno: il colore da solo non basta (DESIGN.md). */}
-          {aperta && <span className="pill live small">in corso</span>}
+          {aperta && <span className="pill live small">{tr('in corso')}</span>}
           <span className="inv-cell-num price cash-sess-incasso">{incasso}</span>
         </button>
 
@@ -307,16 +310,16 @@ export default function CashSessionsList() {
             {/* Sempre in elenco, anche a zero: "quanto ho lasciato sul
                 tavolo stasera" è una domanda che si fa ogni sera. */}
             <div className="row between muted small">
-              <span><Icona nome="sconto" gruppo="tasti" /> Sconti concessi</span>
+              <span><Icona nome="sconto" gruppo="tasti" /> {tr('Sconti concessi')}</span>
               <span>{(snap.sconti ?? 0) > 0 ? `−${formatPrice(snap.sconti)}` : formatPrice(0)}</span>
             </div>
             <div className="row between muted small">
-              <span>Conti chiusi</span>
+              <span>{tr('Conti chiusi')}</span>
               <span>{snap.nPagati ?? 0}</span>
             </div>
             {s.counted_cash != null && (
               <div className="row between muted small">
-                <span>Contante contato</span>
+                <span>{tr('Contante contato')}</span>
                 <span>
                   {formatPrice(s.counted_cash)}
                   {s.difference != null && s.difference !== 0 && (
@@ -328,13 +331,14 @@ export default function CashSessionsList() {
 
             {/* Il dettaglio (prodotti, conti, guadagno) sta nel
                 rendiconto: qui resta il colpo d'occhio sulla cassa. */}
-            {caricando && <p className="muted small" style={{ marginTop: 8 }}>Carico la serata…</p>}
+            {caricando && <p className="muted small" style={{ marginTop: 8 }}>{tr('Carico la serata…')}</p>}
             {report?.id === s.id && report.dati && (
               <div style={{ marginTop: 10 }}>
                 <div className="row between">
                   <span className="muted small">
-                    Venduto della serata · {report.dati.nOrdini} cont
-                    {report.dati.nOrdini === 1 ? 'o' : 'i'}
+                    {report.dati.nOrdini === 1
+                      ? tr('Venduto della serata · 1 conto')
+                      : tr('Venduto della serata · {n} conti', { n: report.dati.nOrdini })}
                   </span>
                   <strong>{formatPrice(report.dati.totale)}</strong>
                 </div>
@@ -351,7 +355,7 @@ export default function CashSessionsList() {
                     })
                   }
                 >
-                  <Icona nome="statistiche" gruppo="tasti" /> Apri il rendiconto — conti, prodotti e guadagno
+                  <Icona nome="statistiche" gruppo="tasti" /> {tr('Apri il rendiconto — conti, prodotti e guadagno')}
                 </button>
               </div>
             )}
@@ -365,11 +369,11 @@ export default function CashSessionsList() {
                     by: s.closed_by?.email,
                     countedCash: s.counted_cash,
                   })
-                    .then(() => toastSuccess('Chiusura ristampata'))
-                    .catch((e) => toastError(`Stampa: ${e.message}`))
+                    .then(() => toastSuccess(tr('Chiusura ristampata')))
+                    .catch((e) => toastError(tr('Stampa: {errore}', { errore: e.message })))
                 }
               >
-                <Icona nome="stampa" gruppo="tasti" /> Ristampa chiusura
+                <Icona nome="stampa" gruppo="tasti" /> {tr('Ristampa chiusura')}
               </button>
             )}
           </div>
@@ -398,10 +402,10 @@ export default function CashSessionsList() {
       {giorniStorico != null && (
         <AvvisoPiano messaggio={MESSAGGI_PIANO.storico(giorniStorico)} impostazioni={impostazioni} compatto />
       )}
-      {error && <div className="banner">Errore: {error}</div>}
-      {loading && <p className="muted small">Carico le chiusure…</p>}
+      {error && <div className="banner">{tr('Errore: {errore}', { errore: error })}</div>}
+      {loading && <p className="muted small">{tr('Carico le chiusure…')}</p>}
       {!loading && sessions.length === 0 && (
-        <p className="muted small">Nessuna sessione di cassa registrata.</p>
+        <p className="muted small">{tr('Nessuna sessione di cassa registrata.')}</p>
       )}
 
       {/* IL CAMPO DATA STA IN CIMA, sopra la lista: è il modo di arrivare a
@@ -418,7 +422,7 @@ export default function CashSessionsList() {
               costano una riga a nessuno, e questa pagina esiste per la lista.
               Non una tendina — con tre voci bisognerebbe aprirla per sapere
               cosa c'è dentro (docs/navigazione.md). */}
-          <div className="chip-gruppo" role="group" aria-label="Raggruppa le chiusure">
+          <div className="chip-gruppo" role="group" aria-label={tr('Raggruppa le chiusure')}>
             {RAGGRUPPAMENTI.map((r) => (
               <button
                 key={r}
@@ -427,7 +431,7 @@ export default function CashSessionsList() {
                 aria-pressed={raggruppamento === r}
                 onClick={() => cambiaRaggruppamento(r)}
               >
-                {ETICHETTA_RAGGRUPPAMENTO[r]}
+                {trSegnato(ETICHETTA_RAGGRUPPAMENTO[r])}
               </button>
             ))}
           </div>
@@ -436,7 +440,7 @@ export default function CashSessionsList() {
           <div className="cerca-serata-data">
             <CalendarioServizio
               id="cerca-serata-data"
-              etichetta="Cerca per data"
+              etichetta={tr('Cerca per data')}
               servizio={giorniConCassa}
               scelto={giornoCercato}
               oggi={limiti.al || businessDayKey(new Date())}
@@ -489,13 +493,15 @@ export default function CashSessionsList() {
                 >
                   <span className="inv-row-name">{g.etichetta}</span>
                   <span className="muted small inv-row-cat">
-                    {g.nSerate} serat{g.nSerate === 1 ? 'a' : 'e'}
+                    {g.nSerate === 1 ? tr('1 serata') : tr('{n} serate', { n: g.nSerate })}
                   </span>
                   {/* La pastiglia dice perché il totale non è ancora quello
                       definitivo: dentro c'è la serata di stasera, e il suo
                       incasso si saprà alla chiusura. */}
-                  {g.inCorso && <span className="pill live small">in corso</span>}
-                  <span className="muted small inv-row-price">{formatPrice(g.media)} a serata</span>
+                  {g.inCorso && <span className="pill live small">{tr('in corso')}</span>}
+                  <span className="muted small inv-row-price">
+                    {tr('{importo} a serata', { importo: formatPrice(g.media) })}
+                  </span>
                   <span className="inv-cell-num price cash-sess-incasso">{formatPrice(g.incasso)}</span>
                 </button>
 

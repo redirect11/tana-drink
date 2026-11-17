@@ -76,7 +76,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 14 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 191 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 194 |
 | Unità | il progetto di dettaglio: un modulo da solo | 192 |
 
 **22** bisogni del locale, **0** con un test di accettazione.
@@ -4966,9 +4966,9 @@ CHI SCEGLIE (Daniele, 17/11/2026): «Chiunque può scegliere la lingua nel gesti
 
 IN CORSO sul ramo feature/gestionale-inglese.
 
-FATTO: la lingua sul profilo — profili_staff/{uid} (regole: ognuno solo il suo, solo `lingua` fra it/en; fuori dal backup, perché il titolare non potrebbe rimettere i profili degli altri), salvaLinguaDelProfilo e leggiLinguaDelProfilo in api.js, la lettura al login senza farsi aspettare (App.jsx), il riquadro «Lingua» in Il mio profilo coi nomi delle lingue nella loro lingua; «Il mio profilo» tradotto (area testi/en/profilo.js).
+FATTO: la lingua sul profilo — profili_staff/{uid} (regole: ognuno solo il suo, solo `lingua` fra it/en; fuori dal backup, perché il titolare non potrebbe rimettere i profili degli altri), salvaLinguaDelProfilo e leggiLinguaDelProfilo in api.js, la lettura al login senza farsi aspettare (App.jsx), il riquadro «Lingua» in Il mio profilo coi nomi delle lingue nella loro lingua; «Il mio profilo» tradotto (area testi/en/profilo.js). Banco e cassa tradotti (17/11): coda, accesso, menu laterale, barra in alto, conto, griglia dei prodotti, pagamento, apertura e chiusura cassa, scheda Cassa (aree testi/en/coda, conto, cassa; le etichette di src/lib in comune).
 
-DA FARE: banco e cassa, poi il resto.
+DA FARE: le tabelle di src/lib che la coda mostra ancora (coda.js, sezioni.js, ruoli.js, comande.js, storiaOrdine.js), poi impostazioni, magazzino e il resto.
 
 **Dove**: `src/pages/BartenderPage.jsx, src/components (gestionale), Il mio profilo (src/pages/StaffProfilePage.jsx), src/lib/lingua.js, firestore.rules (profili_staff)` · **Serve**: [UR-022](#ur-022--chi-non-parla-italiano-usa-il-menù-e-il-gestionale-nella-sua-lingua)
 

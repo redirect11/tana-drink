@@ -7,6 +7,8 @@
 //
 // Logica pura (niente Firebase), interamente testabile.
 
+import { tr, formatoAttivo } from './lingua.js'
+
 const TZ = 'Europe/Rome'
 
 export const DEFAULT_CUTOFF_HOUR = 5
@@ -95,10 +97,10 @@ export function coverageStart(now = new Date(), hoursBack = 36) {
 export function businessDayShort(key, now = new Date(), cutoffHour = DEFAULT_CUTOFF_HOUR) {
   if (!key) return ''
   const oggi = businessDayKey(now, cutoffHour)
-  if (key === oggi) return 'oggi'
+  if (key === oggi) return tr('oggi')
   const ieri = new Date(`${oggi}T00:00:00Z`)
   ieri.setUTCDate(ieri.getUTCDate() - 1)
-  if (key === ieri.toISOString().slice(0, 10)) return 'ieri'
+  if (key === ieri.toISOString().slice(0, 10)) return tr('ieri')
   const [, m, d] = key.split('-')
   return `${d}/${m}`
 }
@@ -107,11 +109,11 @@ export function businessDayShort(key, now = new Date(), cutoffHour = DEFAULT_CUT
 export function businessDayLabel(key, now = new Date(), cutoffHour = DEFAULT_CUTOFF_HOUR) {
   if (!key) return ''
   const oggi = businessDayKey(now, cutoffHour)
-  if (key === oggi) return 'oggi'
+  if (key === oggi) return tr('oggi')
   const ieri = new Date(`${oggi}T00:00:00Z`)
   ieri.setUTCDate(ieri.getUTCDate() - 1)
-  if (key === ieri.toISOString().slice(0, 10)) return 'ieri'
-  return new Date(`${key}T00:00:00`).toLocaleDateString('it-IT', {
+  if (key === ieri.toISOString().slice(0, 10)) return tr('ieri')
+  return new Date(`${key}T00:00:00`).toLocaleDateString(formatoAttivo(), {
     weekday: 'long',
     day: 'numeric',
     month: 'long',

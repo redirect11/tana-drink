@@ -40,6 +40,7 @@
 // che è esattamente il conto di ieri sera.
 
 import { aggregateItems } from './comande.js'
+import { daTradurre, trSegnato } from './lingua.js'
 
 export const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100
 
@@ -308,16 +309,32 @@ const pezziScontati = (items) =>
 // Con un solo sconto su tutto il conto la riga resta quella di sempre:
 // «Sconto». Appena gli sconti sono più d'uno, ognuno deve dire su che cosa
 // cadeva — se no lo scontrino elenca tre cifre e nessuno sa perché.
-export function etichettaSconto(sconto) {
+//
+// IN DUE LINGUE, MA LO SCONTRINO IN ITALIANO (REQ-UI-039). Le stesse parole
+// vanno a schermo e sulla carta: a schermo seguono la lingua di chi guarda
+// (`{ aSchermo: true }`), sullo scontrino — documento fiscale italiano —
+// restano in italiano, ed è il comportamento di partenza.
+const PAROLE_SCONTO = {
+  sconto: daTradurre('Sconto'),
+  percentuale: daTradurre('Sconto {valore}%'),
+  buono: daTradurre('Buono'),
+  suUno: daTradurre('{tipo} su 1 prodotto'),
+  suPiu: daTradurre('{tipo} su {n} prodotti'),
+}
+const inItaliano = (chiave, valori) =>
+  chiave.replace(/\{(\w+)\}/g, (segnaposto, nome) => (valori && nome in valori ? String(valori[nome]) : segnaposto))
+
+export function etichettaSconto(sconto, { aSchermo = false } = {}) {
+  const t = aSchermo ? trSegnato : inItaliano
   const tipo =
     sconto?.type === 'percent'
-      ? `Sconto ${round2(sconto.value)}%`
+      ? t(PAROLE_SCONTO.percentuale, { valore: round2(sconto.value) })
       : sconto?.type === 'buono'
-        ? 'Buono'
-        : 'Sconto'
+        ? t(PAROLE_SCONTO.buono)
+        : t(PAROLE_SCONTO.sconto)
   const n = pezziScontati(sconto?.items)
   if (!(n > 0)) return tipo
-  return `${tipo} su ${n} prodott${n === 1 ? 'o' : 'i'}`
+  return n === 1 ? t(PAROLE_SCONTO.suUno, { tipo }) : t(PAROLE_SCONTO.suPiu, { tipo, n })
 }
 
 // TUTTI gli sconti del conto, in ordine: prima i consumati (nell'ordine in cui
@@ -328,7 +345,8 @@ export function etichettaSconto(sconto) {
 // stampa un conto di ieri sera, e come si stampa il caso normale di stasera.
 // Le parole in più servono solo quando gli sconti sono più d'uno o cadevano su
 // una parte del conto: lì «Sconto −4,00 €» tre volte non spiegherebbe niente.
-export function scontiDelConto(order) {
+export function scontiDelConto(order, { aSchermo = false } = {}) {
+  const t = aSchermo ? trSegnato : inItaliano
   const grezzi = scontiConsumati(order).map((s) => ({ sconto: s, consumato: true }))
   const preparato = scontoInPreparazione(order)
   if (preparato > 0) {
@@ -346,19 +364,19 @@ export function scontiDelConto(order) {
   return grezzi.map(({ sconto, consumato }) => ({
     etichetta: unicoSuTutto
       ? sconto.type === 'buono'
-        ? 'Buono'
-        : 'Sconto'
-      : etichettaSconto(sconto),
+        ? t(PAROLE_SCONTO.buono)
+        : t(PAROLE_SCONTO.sconto)
+      : etichettaSconto(sconto, { aSchermo }),
     importo: round2(sconto.amount),
     consumato,
   }))
 }
 
-export function dettaglioIncassi(order) {
+export function dettaglioIncassi(order, { aSchermo = false } = {}) {
   // `sconto` resta il numero unico — è quello che il riepilogo mostra in una
   // riga sola — ma adesso è la SOMMA di tutti; il dettaglio sta in `sconti`.
   const sconto = scontoTotale(order)
-  const sconti = scontiDelConto(order)
+  const sconti = scontiDelConto(order, { aSchermo })
   const incassi = (order?.payments || [])
     .filter((p) => (Number(p.amount) || 0) !== 0)
     .map((p) => ({
@@ -368,7 +386,7 @@ export function dettaglioIncassi(order) {
       // Lo sconto che questa riscossione si è portata via, se ne aveva uno:
       // «−4,00 € su 2 prodotti» scritto accanto all'incasso a cui appartiene.
       sconto: p.sconto && (Number(p.sconto.amount) || 0) > 0
-        ? { importo: round2(p.sconto.amount), etichetta: etichettaSconto(p.sconto) }
+        ? { importo: round2(p.sconto.amount), etichetta: etichettaSconto(p.sconto, { aSchermo }) }
         : null,
       // Le righe coperte da quell'incasso, quando il conto è stato diviso:
       // «2 Daiquiri, 1 Birra» dice cosa ha già pagato quello che se n'è

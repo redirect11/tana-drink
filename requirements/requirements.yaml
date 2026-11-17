@@ -17974,10 +17974,13 @@ requirements:
       leggiLinguaDelProfilo in api.js, la lettura al login senza farsi
       aspettare (App.jsx), il riquadro «Lingua» in Il mio profilo coi nomi
       delle lingue nella loro lingua; «Il mio profilo» tradotto (area
-      testi/en/profilo.js). DA FARE: banco e cassa, poi il resto.
+      testi/en/profilo.js). Banco e cassa tradotti (17/11): coda, accesso, menu laterale, barra in alto, conto, griglia dei prodotti, pagamento, apertura e chiusura cassa, scheda Cassa (aree testi/en/coda, conto, cassa; le etichette di src/lib in comune). DA FARE: le tabelle di src/lib che la coda mostra ancora (coda.js, sezioni.js, ruoli.js, comande.js, storiaOrdine.js), poi impostazioni, magazzino e il resto.
     status: todo
     generate_issue: true
     labels: [ui, lingue]
     priority: P2
     test_cases:
       - tests/regole/profiliStaff.test.js
+      - tests/component/CodaInInglese.test.jsx
+      - tests/component/ContoInInglese.test.jsx
+      - tests/component/CassaInInglese.test.jsx

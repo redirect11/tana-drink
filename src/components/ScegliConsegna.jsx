@@ -1,5 +1,17 @@
 import { MODI_CONSEGNA, cambioModoPermesso } from '../lib/consegna.js'
-import Icona, { ConIcona } from './Icona.jsx'
+import { ConIcona } from './Icona.jsx'
+import { dividiIcona } from '../lib/icone.js'
+import { tr, daTradurre, trSegnato } from '../lib/lingua.js'
+
+// LE PAROLE DEI DUE MODI, NELLA LINGUA DI CHI LAVORA (REQ-UI-039). La
+// tabella di lib/consegna.js porta l'emoji incollata al testo italiano
+// (conEmoji), e una stringa composta non è una chiave del dizionario: qui
+// l'icona si prende da lì, la parola da qui. Il contesto serve perché
+// «Servizio» nel conto è anche il costo di servizio.
+const NOME_MODO = {
+  tavolo: daTradurre('consegna|Servizio'),
+  banco: daTradurre('consegna|Ritiro'),
+}
 
 // ── COME LO PRENDE: SERVIZIO O RITIRO ────────────────────────────────
 //
@@ -41,39 +53,46 @@ export default function ScegliConsegna({
 }) {
   const permesso = inCreazione ? 'si' : cambioModoPermesso(order)
   const spiegazione = inCreazione
-    ? 'Si sceglie appena il conto esiste.'
+    ? tr('Si sceglie appena il conto esiste.')
     : permesso === 'no'
-      ? 'Conto chiuso: per cambiarlo riaprilo prima.'
+      ? tr('Conto chiuso: per cambiarlo riaprilo prima.')
       : permesso === 'senza-soldi'
-        ? 'C’è già un acconto: il modo si cambia, coperto e servizio restano quelli su cui hai incassato.'
+        ? tr('C’è già un acconto: il modo si cambia, coperto e servizio restano quelli su cui hai incassato.')
         : senzaSupplementi
-          ? 'Cambia solo come arriva il drink: qui non ci sono coperto né servizio.'
-          : 'Col ritiro al banco coperto e servizio si azzerano.'
+          ? tr('Cambia solo come arriva il drink: qui non ci sono coperto né servizio.')
+          : tr('Col ritiro al banco coperto e servizio si azzerano.')
 
   return (
     <div className="scegli-consegna">
-      <label style={{ display: 'block' }}>Come lo prende</label>
+      <label style={{ display: 'block' }}>{tr('Come lo prende')}</label>
       <div className="chips-row" style={{ marginTop: 4 }}>
-        {MODI_CONSEGNA.map(([valore, etichetta]) => (
-          <button
-            key={valore}
-            type="button"
-            className={`chip ${modo === valore ? 'active' : ''}`}
-            disabled={inCreazione || permesso === 'no'}
-            aria-pressed={modo === valore}
-            onClick={() => {
-              if (inCreazione || valore === modo || permesso === 'no') return
-              onCambia?.(valore)
-            }}
-          >
-            <ConIcona testo={etichetta} />
-          </button>
-        ))}
+        {MODI_CONSEGNA.map(([valore, etichetta]) => {
+          const icona = dividiIcona(etichetta)
+          return (
+            <button
+              key={valore}
+              type="button"
+              className={`chip ${modo === valore ? 'active' : ''}`}
+              disabled={inCreazione || permesso === 'no'}
+              aria-pressed={modo === valore}
+              onClick={() => {
+                if (inCreazione || valore === modo || permesso === 'no') return
+                onCambia?.(valore)
+              }}
+            >
+              {icona && NOME_MODO[valore] ? (
+                <ConIcona nome={icona.nome} testo={trSegnato(NOME_MODO[valore])} />
+              ) : (
+                <ConIcona testo={etichetta} />
+              )}
+            </button>
+          )
+        })}
       </div>
       <p className="muted small" style={{ margin: '4px 0 0' }}>
         {perTuttoIlConto && permesso !== 'no' && (
           <>
-            Vale per tutto il conto, anche per le altre comande.{' '}
+            {tr('Vale per tutto il conto, anche per le altre comande.')}{' '}
           </>
         )}
         {spiegazione}

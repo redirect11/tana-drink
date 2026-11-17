@@ -59,6 +59,13 @@ let attiva = letta()
 
 export const linguaAttiva = () => attiva
 
+// IL FORMATO DI DATE E GIORNI nella lingua attiva («lunedì 17 novembre» /
+// «Monday 17 November»), per toLocaleDateString e simili. Inglese
+// britannico: il giorno prima del mese, come in Italia. Gli IMPORTI no:
+// formatPrice resta «7,00 €», come sugli scontrini (REQ-UI-039).
+const FORMATI = { it: 'it-IT', en: 'en-GB' }
+export const formatoAttivo = () => FORMATI[attiva] || FORMATI[LINGUA_DI_PARTENZA]
+
 export function impostaLingua(lingua) {
   if (!Object.hasOwn(LINGUE, lingua) || lingua === attiva) return
   attiva = lingua

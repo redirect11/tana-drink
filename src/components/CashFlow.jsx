@@ -15,6 +15,7 @@ import { stampaNelPiano } from '../lib/limiti.js'
 import { toastError } from '../lib/toast.js'
 import Icona from './Icona.jsx'
 import MetodoPagamento from './MetodoPagamento.jsx'
+import { tr, useLingua } from '../lib/lingua.js'
 
 // FLUSSO CASSA: apertura/chiusura della serata e andamento in tempo reale
 // degli incassi della sessione aperta. I numeri vengono dagli ordini nella
@@ -38,6 +39,7 @@ const durata = (fromIso, toIso) => {
 }
 
 export default function CashFlow() {
+  useLingua()
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const [session, setSession] = useState(null)
   const [orders, setOrders] = useState([])
@@ -87,10 +89,10 @@ export default function CashFlow() {
       <div className="card cassa-open">
         <div className="row between" style={{ alignItems: 'center' }}>
           <div>
-            <strong><Icona nome="verde" gruppo="tasti" /> Cassa aperta</strong>
+            <strong><Icona nome="verde" gruppo="tasti" /> {tr('Cassa aperta')}</strong>
             <div className="muted small">
-              dalle {fmtTime(session.opened_at)} · da {durata(session.opened_at, now)}
-              {session.fondo_cassa > 0 && ` · fondo ${formatPrice(session.fondo_cassa)}`}
+              {tr('dalle {ora} · da {durata}', { ora: fmtTime(session.opened_at), durata: durata(session.opened_at, now) })}
+              {session.fondo_cassa > 0 && ` · ${tr('fondo {importo}', { importo: formatPrice(session.fondo_cassa) })}`}
             </div>
           </div>
         </div>
@@ -102,8 +104,10 @@ export default function CashFlow() {
       <div className="card">
         <div className="row between" style={{ alignItems: 'center' }}>
           <div>
-            <strong><Icona nome="contanti" gruppo="tasti" /> Incassato serata</strong>
-            <div className="muted small">{recap.nPagati} conti chiusi</div>
+            <strong><Icona nome="contanti" gruppo="tasti" /> {tr('Incassato serata')}</strong>
+            <div className="muted small">
+              {recap.nPagati === 1 ? tr('1 conto chiuso') : tr('{n} conti chiusi', { n: recap.nPagati })}
+            </div>
           </div>
           <strong className="price" style={{ fontSize: '1.4rem' }}>{formatPrice(recap.incassato)}</strong>
         </div>
@@ -129,9 +133,12 @@ export default function CashFlow() {
           non tornano e si vuole capirlo subito. */}
       <div className="card row between" style={{ alignItems: 'center' }}>
         <div>
-          <strong><Icona nome="incasso" gruppo="tasti" /> In cassa adesso</strong>
+          <strong><Icona nome="incasso" gruppo="tasti" /> {tr('In cassa adesso')}</strong>
           <div className="muted small">
-            fondo {formatPrice(recap.fondo)} + contanti {formatPrice(recap.byMethod.banco || 0)}
+            {tr('fondo {fondo} + contanti {contanti}', {
+              fondo: formatPrice(recap.fondo),
+              contanti: formatPrice(recap.byMethod.banco || 0),
+            })}
           </div>
         </div>
         <strong className="price">{formatPrice(recap.contanteAtteso)}</strong>
@@ -143,7 +150,10 @@ export default function CashFlow() {
       {recap.nUltimaOra > 0 && (
         <div className="card row between" style={{ alignItems: 'center' }}>
           <span className="muted">
-            <Icona nome="tempo" gruppo="tasti" /> Nell'ultima ora · {recap.nUltimaOra} incass{recap.nUltimaOra === 1 ? 'o' : 'i'}
+            <Icona nome="tempo" gruppo="tasti" />{' '}
+            {recap.nUltimaOra === 1
+              ? tr("Nell'ultima ora · 1 incasso")
+              : tr("Nell'ultima ora · {n} incassi", { n: recap.nUltimaOra })}
           </span>
           <strong>{formatPrice(recap.ultimaOra)}</strong>
         </div>
@@ -155,16 +165,17 @@ export default function CashFlow() {
       {recap.contoMedio != null && (
         <div className="card row between" style={{ alignItems: 'center' }}>
           <div>
-            <strong><Icona nome="coda" gruppo="tasti" /> Conto medio</strong>
+            <strong><Icona nome="coda" gruppo="tasti" /> {tr('Conto medio')}</strong>
             <div className="muted small">
-              {recap.nPagati} cont{recap.nPagati === 1 ? 'o' : 'i'} chius{recap.nPagati === 1 ? 'o' : 'i'}
-              {recap.coperti > 0 && ` · ${recap.coperti} copert${recap.coperti === 1 ? 'o' : 'i'}`}
+              {recap.nPagati === 1 ? tr('1 conto chiuso') : tr('{n} conti chiusi', { n: recap.nPagati })}
+              {recap.coperti > 0 &&
+                ` · ${recap.coperti === 1 ? tr('1 coperto') : tr('{n} coperti', { n: recap.coperti })}`}
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
             <strong className="price">{formatPrice(recap.contoMedio)}</strong>
             {recap.perCoperto != null && (
-              <div className="muted small">{formatPrice(recap.perCoperto)} a testa</div>
+              <div className="muted small">{tr('{importo} a testa', { importo: formatPrice(recap.perCoperto) })}</div>
             )}
           </div>
         </div>
@@ -175,11 +186,11 @@ export default function CashFlow() {
           alla cassa non ha bisogno di leggerlo. */}
       {recap.perChi.length > 1 && (
         <div className="card">
-          <strong><Icona nome="profilo" gruppo="tasti" /> Chi ha incassato</strong>
+          <strong><Icona nome="profilo" gruppo="tasti" /> {tr('Chi ha incassato')}</strong>
           {recap.perChi.map((r) => (
             <div className="row between" key={r.chi} style={{ marginTop: 4 }}>
               <span className="muted">
-                {r.chi} · {r.n} incass{r.n === 1 ? 'o' : 'i'}
+                {r.chi} · {r.n === 1 ? tr('1 incasso') : tr('{n} incassi', { n: r.n })}
               </span>
               <strong>{formatPrice(r.importo)}</strong>
             </div>
@@ -189,14 +200,24 @@ export default function CashFlow() {
 
       {recap.apertoDaIncassare > 0 && (
         <div className="card row between" style={{ alignItems: 'center' }}>
-          <span className="muted"><Icona nome="giallo" gruppo="tasti" /> Ancora da incassare · {recap.nAperti} conti aperti</span>
+          <span className="muted">
+            <Icona nome="giallo" gruppo="tasti" />{' '}
+            {recap.nAperti === 1
+              ? tr('Ancora da incassare · 1 conto aperto')
+              : tr('Ancora da incassare · {n} conti aperti', { n: recap.nAperti })}
+          </span>
           <strong>{formatPrice(recap.apertoDaIncassare)}</strong>
         </div>
       )}
       {/* Chiusi impagati (REQ-CASSA-016): non bloccano la cassa, ma mancano. */}
       {recap.nImpagati > 0 && (
         <div className="card row between" style={{ alignItems: 'center' }}>
-          <span className="muted"><Icona nome="orario" gruppo="tasti" /> Da riscuotere · {recap.nImpagati} chiusi impagati</span>
+          <span className="muted">
+            <Icona nome="orario" gruppo="tasti" />{' '}
+            {recap.nImpagati === 1
+              ? tr('Da riscuotere · 1 chiuso impagato')
+              : tr('Da riscuotere · {n} chiusi impagati', { n: recap.nImpagati })}
+          </span>
           <strong>{formatPrice(recap.impagatoDaRiscuotere)}</strong>
         </div>
       )}
@@ -231,15 +252,14 @@ function ApriCassa({ cutoff, by }) {
   }
   return (
     <div className="card" style={{ textAlign: 'center' }}>
-      <strong>Cassa chiusa</strong>
+      <strong>{tr('Cassa chiusa')}</strong>
       <p className="muted small" style={{ margin: '6px 0 10px' }}>
-        Apri la cassa a inizio serata: da qui vedrai in tempo reale l’andamento
-        degli incassi fino alla chiusura.
+        {tr('Apri la cassa a inizio serata: da qui vedrai in tempo reale l’andamento degli incassi fino alla chiusura.')}
       </p>
-      <label htmlFor="fondo" style={{ display: 'block', marginBottom: 4 }}>Fondo cassa iniziale (€) — opzionale</label>
-      <input id="fondo" type="number" step="0.5" min="0" value={fondo} onChange={(e) => setFondo(e.target.value)} placeholder="Es. 50" style={{ maxWidth: 160 }} />
+      <label htmlFor="fondo" style={{ display: 'block', marginBottom: 4 }}>{tr('Fondo cassa iniziale (€) — opzionale')}</label>
+      <input id="fondo" type="number" step="0.5" min="0" value={fondo} onChange={(e) => setFondo(e.target.value)} placeholder={tr('Es. 50')} style={{ maxWidth: 160 }} />
       <button className="btn block" style={{ marginTop: 10 }} onClick={apri} disabled={busy}>
-        <Icona nome="verde" gruppo="tasti" /> Apri cassa
+        <Icona nome="verde" gruppo="tasti" /> {tr('Apri cassa')}
       </button>
     </div>
   )
@@ -265,7 +285,7 @@ function ChiudiCassa({ session, recap, by }) {
       // Nel piano senza stampa la cassa si chiude e basta (REQ-LIC-016).
       if (stampaNelPiano()) {
         printChiusuraCassa(recap, session, { by: by?.email, countedCash: counted }).catch((e) =>
-          toastError(`Chiusura non stampata: ${e.message}`)
+          toastError(tr('Chiusura non stampata: {errore}', { errore: e.message }))
         )
       }
     } finally {
@@ -277,43 +297,48 @@ function ChiudiCassa({ session, recap, by }) {
   // (altrimenti è bloccata), quindi la chiusura è un'azione diretta.
   return (
     <div className="card" style={{ marginTop: 12, border: '1px solid var(--line)' }}>
-      <strong><Icona nome="rosso" gruppo="tasti" /> Chiusura cassa</strong>
+      <strong><Icona nome="rosso" gruppo="tasti" /> {tr('Chiusura cassa')}</strong>
       <div className="row between" style={{ marginTop: 8 }}>
-        <span className="muted small">Incassato serata</span>
+        <span className="muted small">{tr('Incassato serata')}</span>
         <strong>{formatPrice(recap.incassato)}</strong>
       </div>
       <div className="row between">
-        <span className="muted small">di cui contanti</span>
+        <span className="muted small">{tr('di cui contanti')}</span>
         <span>{formatPrice(recap.byMethod.banco)}</span>
       </div>
       {recap.sconti > 0 && (
         <div className="row between">
-          <span className="muted small">Sconti concessi (già dedotti)</span>
+          <span className="muted small">{tr('Sconti concessi (già dedotti)')}</span>
           <span className="muted">−{formatPrice(recap.sconti)}</span>
         </div>
       )}
       <div className="row between" style={{ borderTop: '1px dashed var(--line)', paddingTop: 6, marginTop: 6 }}>
-        <span className="muted small">Contante atteso in cassa (fondo {formatPrice(recap.fondo)} + contanti)</span>
+        <span className="muted small">
+          {tr('Contante atteso in cassa (fondo {fondo} + contanti)', { fondo: formatPrice(recap.fondo) })}
+        </span>
         <strong>{formatPrice(recap.contanteAtteso)}</strong>
       </div>
       {bloccato ? (
         <div className="banner" style={{ marginTop: 8 }}>
-          <Icona nome="fermo" gruppo="segnali" /> Non puoi chiudere la cassa: ci sono <strong>{recap.nAperti} conti non pagati</strong>
-          {' '}({formatPrice(recap.apertoDaIncassare)} da incassare). Incassali prima di chiudere.
+          <Icona nome="fermo" gruppo="segnali" />{' '}
+          {tr('Non puoi chiudere la cassa: ci sono {n} conti non pagati ({importo} da incassare). Incassali prima di chiudere.', {
+            n: recap.nAperti,
+            importo: formatPrice(recap.apertoDaIncassare),
+          })}
         </div>
       ) : (
         <>
-          <label htmlFor="counted" style={{ display: 'block', marginTop: 8 }}>Contante contato (€) — opzionale</label>
+          <label htmlFor="counted" style={{ display: 'block', marginTop: 8 }}>{tr('Contante contato (€) — opzionale')}</label>
           <input id="counted" type="number" step="0.5" min="0" value={counted} onChange={(e) => setCounted(e.target.value)} placeholder={String(recap.contanteAtteso)} style={{ maxWidth: 160 }} />
           {diff != null && (
             <div className="small" style={{ marginTop: 4 }}>
-              Differenza: <strong className={diff < 0 ? 'neg' : ''}>{diff > 0 ? '+' : ''}{formatPrice(diff)}</strong>
+              {tr('Differenza:')} <strong className={diff < 0 ? 'neg' : ''}>{diff > 0 ? '+' : ''}{formatPrice(diff)}</strong>
             </div>
           )}
         </>
       )}
       <button className="btn danger block" style={{ marginTop: 10 }} onClick={chiudi} disabled={busy || bloccato}>
-        <Icona nome="rosso" gruppo="tasti" /> Chiudi cassa
+        <Icona nome="rosso" gruppo="tasti" /> {tr('Chiudi cassa')}
       </button>
     </div>
   )
@@ -329,7 +354,7 @@ function OraBars({ perOra }) {
   const max = Math.max(...perOra.map((x) => x.importo), 1)
   return (
     <div className="card">
-      <strong className="small"><Icona nome="andamento" gruppo="tasti" /> Andamento per ora</strong>
+      <strong className="small"><Icona nome="andamento" gruppo="tasti" /> {tr('Andamento per ora')}</strong>
       <div className="vbars" style={{ marginTop: 8 }}>
         {perOra.map((x) => {
           // Il giorno si scrive solo se la serata ne tocca due: «08:00» del

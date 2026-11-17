@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { tr } from '../lib/lingua.js'
 
 // ZOOM DELLA PAGINA — due tasti, + e −, in basso a sinistra.
 //
@@ -58,14 +59,14 @@ export default function ZoomControl({ inline = false }) {
     <div
       className={`zoom-control${inline ? ' zoom-inline' : ''}`}
       role="group"
-      aria-label="Zoom della pagina"
+      aria-label={tr('Zoom della pagina')}
     >
       <button
         type="button"
         onClick={() => cambia(-PASSO)}
         disabled={zoom <= MIN}
-        aria-label="Rimpicciolisci"
-        title="Rimpicciolisci"
+        aria-label={tr('Rimpicciolisci')}
+        title={tr('Rimpicciolisci')}
       >
         −
       </button>
@@ -76,7 +77,7 @@ export default function ZoomControl({ inline = false }) {
         className="zoom-livello"
         onClick={() => setZoom(1)}
         disabled={zoom === 1}
-        title="Torna al 100%"
+        title={tr('Torna al 100%')}
       >
         {Math.round(zoom * 100)}%
       </button>
@@ -84,8 +85,8 @@ export default function ZoomControl({ inline = false }) {
         type="button"
         onClick={() => cambia(PASSO)}
         disabled={zoom >= MAX}
-        aria-label="Ingrandisci"
-        title="Ingrandisci"
+        aria-label={tr('Ingrandisci')}
+        title={tr('Ingrandisci')}
       >
         +
       </button>

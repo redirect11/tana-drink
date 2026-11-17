@@ -98,6 +98,7 @@ import {
   itemsTotal as sumItems,
 } from './comande.js'
 import { attesaDopoLaModifica, rispostaAccettata, inAttesa, ANNULLO_RIFIUTO, MESSAGGIO_ATTESA } from './attesaCliente.js'
+import { trSegnato } from './lingua.js'
 import {
   discountAmount,
   discountAfterChange,
@@ -5047,7 +5048,7 @@ async function advanceComandaOra(orderId, comandaId, newStatus) {
   // strada: coda, conto, comanda, trascinamento, tasto dello staff. Qui e
   // non in ogni schermata, che così non se ne dimentica nessuna. Annullare
   // resta possibile.
-  if (newStatus !== ORDER_STATUSES.ANNULLATO && inAttesa({ ...raw, status: norm.status })) throw new Error(MESSAGGIO_ATTESA)
+  if (newStatus !== ORDER_STATUSES.ANNULLATO && inAttesa({ ...raw, status: norm.status })) throw new Error(trSegnato(MESSAGGIO_ATTESA))
 
   // IL MAGAZZINO SI SCALA A «PRONTO»: lì il drink è fatto, e a segnarlo è
   // chi l'ha fatto. Prima e dopo gli ingredienti sono IMPEGNATI, e si
@@ -5457,7 +5458,7 @@ export const preparazioneParziale = perConto(async function preparazioneParziale
   if (norm.status !== ORDER_OPEN) throw new Error('Conto chiuso: non più modificabile')
   // Dividere fa avanzare la parte scelta: non col cliente che deve ancora
   // accettare le modifiche (REQ-CLI-009).
-  if (inAttesa({ ...cur, status: norm.status })) throw new Error(MESSAGGIO_ATTESA)
+  if (inAttesa({ ...cur, status: norm.status })) throw new Error(trSegnato(MESSAGGIO_ATTESA))
   const comande = norm.comande.map((c) => ({ ...c }))
   const comanda = comande.find((c) => c.id === comandaId)
   if (!comanda) throw new Error('Comanda non trovata')

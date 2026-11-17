@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { inAttesa, minutiRimasti } from '../lib/attesaCliente.js'
+import { tr } from '../lib/lingua.js'
 
 // IL CONTO ASPETTA IL CLIENTE (REQ-CLI-009): il banco ha cambiato prezzo o
 // ingredienti di un ordine dal telefono, e il cliente deve accettare. Sta
@@ -16,8 +17,9 @@ export default function AttesaCliente({ order }) {
   if (!attesa) return null
   const minuti = minutiRimasti(order, adesso)
   return (
-    <span className="pill small attesa-cliente" title="Il cliente deve accettare le modifiche">
-      In attesa del cliente{minuti > 0 ? ` · ${minuti} min` : ''}
+    <span className="pill small attesa-cliente" title={tr('Il cliente deve accettare le modifiche')}>
+      {tr('In attesa del cliente')}
+      {minuti > 0 ? ` · ${minuti} min` : ''}
     </span>
   )
 }

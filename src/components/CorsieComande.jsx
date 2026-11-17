@@ -26,6 +26,7 @@ import {
   useSensors,
 } from '@dnd-kit/core'
 import AttesaCliente from './AttesaCliente.jsx'
+import { tr, trSegnato } from '../lib/lingua.js'
 
 // ── LE CORSIE DEL BANCO: UNA CARD PER COMANDA ────────────────────────
 //
@@ -116,7 +117,7 @@ function NomeComanda({ scheda }) {
     <span className="corsia-num">
       <span className="corsia-conto">#{scheda.numero ?? '—'}</span>
       {dove && <span className="corsia-chi"> {dove}</span>}
-      {scheda.seq != null && <span className="corsia-comanda"> · comanda {scheda.seq}</span>}
+      {scheda.seq != null && <span className="corsia-comanda"> · {tr('comanda {n}', { n: scheda.seq })}</span>}
     </span>
   )
 }
@@ -283,9 +284,9 @@ export default function CorsieComande({
                             facendo — e leggere «Annullata» su tutte e tre
                             manderebbe a cercare un guaio che non c'è. */}
                         {s.motivo ? (
-                          <span className="pill annullato small"><ConIcona testo={ETICHETTA_ANNULLO[s.motivo]} /></span>
+                          <span className="pill annullato small"><ConIcona testo={trSegnato(ETICHETTA_ANNULLO[s.motivo])} /></span>
                         ) : s.pagatoDaServire ? (
-                          <span className="pill pagato small">Pagato</span>
+                          <span className="pill pagato small">{tr('Pagato')}</span>
                         ) : (
                           <span className="muted small corsia-quando">
                             {daQuanto(s.comanda?.created_at || o.created_at, adesso)}
@@ -330,9 +331,9 @@ export default function CorsieComande({
                                 e.stopPropagation()
                                 onApriConto?.(o)
                               }}
-                              title={`Apri il conto #${s.numero ?? ''}`}
+                              title={tr('Apri il conto #{n}', { n: s.numero ?? '' })}
                             >
-                              <Icona nome="coda" gruppo="tasti" /> Conto
+                              <Icona nome="coda" gruppo="tasti" /> {tr('Conto')}
                             </button>
                           )}
                           {/* IL ⋯ DELLA COMANDA. Riportarla a uno stato di
@@ -344,7 +345,7 @@ export default function CorsieComande({
                           {voci.length > 0 && (
                             <TastoAzioni
                               aperto={azioniDi === s.id}
-                              titolo={`Azioni della comanda #${s.numero ?? ''}`}
+                              titolo={tr('Azioni della comanda #{n}', { n: s.numero ?? '' })}
                               onTocca={() => setAzioniDi(azioniDi === s.id ? null : s.id)}
                             />
                           )}

@@ -6,6 +6,7 @@ import PriceSuggestion from './PriceSuggestion.jsx'
 import CostoRiga from './CostoRiga.jsx'
 import Icona from './Icona.jsx'
 import { useTestoConIcona } from '../lib/temaIcone.js'
+import { tr } from '../lib/lingua.js'
 
 // PRODOTTO LIBERO: voce fuori catalogo battuta al volo (stile "custom
 // amount/item" dei POS SumUp). Bastano nome e prezzo — lo scarico
@@ -147,11 +148,21 @@ export default function CustomDrinkForm({
         onClick={(e) => e.stopPropagation()}
         onSubmit={submit}
       >
-        <h3 style={{ marginTop: 0 }}>{initial ? <><Icona nome="modifica" gruppo="tasti" /> Modifica prodotto</> : <><Icona nome="categorie" gruppo="tasti" /> Prodotto libero</>}</h3>
+        <h3 style={{ marginTop: 0 }}>
+          {initial ? (
+            <>
+              <Icona nome="modifica" gruppo="tasti" /> {tr('Modifica prodotto')}
+            </>
+          ) : (
+            <>
+              <Icona nome="categorie" gruppo="tasti" /> {tr('Prodotto libero')}
+            </>
+          )}
+        </h3>
         <p className="muted small" style={{ margin: '0 0 10px' }}>
           {initial
-            ? 'Modifica nome, prezzo e ingredienti solo per questa riga: diventa una voce a sé e non si unisce più con gli originali.'
-            : 'Nome e prezzo bastano (es. voce non in magazzino). Gli ingredienti servono solo se vuoi lo scarico magazzino.'}
+            ? tr('Modifica nome, prezzo e ingredienti solo per questa riga: diventa una voce a sé e non si unisce più con gli originali.')
+            : tr('Nome e prezzo bastano (es. voce non in magazzino). Gli ingredienti servono solo se vuoi lo scarico magazzino.')}
         </p>
 
         {/* NOME E PREZZO SULLA STESSA RIGA, il prezzo piccolo a destra
@@ -159,12 +170,12 @@ export default function CustomDrinkForm({
             riga intera a un numero di tre cifre. */}
         <div className="cd-nome-prezzo">
           <div className="grow">
-            <label htmlFor="cd-name">Nome *</label>
+            <label htmlFor="cd-name">{tr('Nome *')}</label>
             <input
               id="cd-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Es. Consumazione, Gin tonic speciale…"
+              placeholder={tr('Es. Consumazione, Gin tonic speciale…')}
               // SOLO PER UN PRODOTTO NUOVO, dove il nome va scritto comunque. Su
               // una riga da ritoccare il nome c'è già, e la tastiera aperta
               // all'avvio copriva metà della ricetta (REQ-UI-028).
@@ -173,7 +184,7 @@ export default function CustomDrinkForm({
             />
           </div>
           <div className="cd-prezzo">
-            <label htmlFor="cd-price">Prezzo (€) *</label>
+            <label htmlFor="cd-price">{tr('Prezzo (€) *')}</label>
             <input
               id="cd-price"
               type="number"
@@ -181,18 +192,18 @@ export default function CustomDrinkForm({
               min="0"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
-              placeholder="Es. 8"
+              placeholder={tr('Es. 8')}
               required
             />
           </div>
         </div>
 
-        <label htmlFor="cd-note">Nota per questa riga</label>
+        <label htmlFor="cd-note">{tr('Nota per questa riga')}</label>
         <input
           id="cd-note"
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="Es. poco ghiaccio · senza zucchero · per Maurizio"
+          placeholder={tr('Es. poco ghiaccio · senza zucchero · per Maurizio')}
         />
 
         {/* Costo reale, consigliato e guadagno: stesso riquadro del Menù. */}
@@ -210,20 +221,20 @@ export default function CustomDrinkForm({
             style={{ marginTop: 10 }}
             onClick={() => setShowRecipe(true)}
           >
-            + Ingredienti (scarico magazzino)
+            + {tr('Ingredienti (scarico magazzino)')}
           </button>
         )}
 
         {showRecipe && (
           <>
-            <label htmlFor="cd-ing" style={{ marginTop: 10 }}>Ingredienti</label>
+            <label htmlFor="cd-ing" style={{ marginTop: 10 }}>{tr('Ingredienti')}</label>
 
             {warnNoRecipe && (
               <div className="banner" style={{ margin: '6px 0' }}>
-                <Icona nome="avviso" gruppo="segnali" /> Questo prodotto non ha ingredienti configurati: forse non sono
-                mai stati inseriti nella sua scheda del Menù. Senza ingredienti
-                non c’è scarico di magazzino. Quelli che aggiungi qui valgono
-                solo per questa riga.
+                <Icona nome="avviso" gruppo="segnali" />{' '}
+                {tr(
+                  'Questo prodotto non ha ingredienti configurati: forse non sono mai stati inseriti nella sua scheda del Menù. Senza ingredienti non c’è scarico di magazzino. Quelli che aggiungi qui valgono solo per questa riga.'
+                )}
               </div>
             )}
 
@@ -243,14 +254,14 @@ export default function CustomDrinkForm({
                     min="0"
                     value={r.qty}
                     onChange={(e) => setRow(idx, { qty: e.target.value })}
-                    placeholder="Qta"
-                    aria-label={`Quantità ${r.name}`}
+                    placeholder={tr('Qta')}
+                    aria-label={tr('Quantità {nome}', { nome: r.name })}
                     autoFocus={r.inventory_item_id === appenaAggiunto}
                     style={{ width: 70 }}
                   />
                   <select
                     value={r.unit}
-                    aria-label={`Unità ${r.name}`}
+                    aria-label={tr('Unità {nome}', { nome: r.name })}
                     onChange={(e) => setRow(idx, { unit: e.target.value })}
                     style={{ width: 70 }}
                   >
@@ -270,7 +281,7 @@ export default function CustomDrinkForm({
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder={testoConIcona('cerca', 'Cerca ingrediente…')}
+              placeholder={testoConIcona('cerca', tr('Cerca ingrediente…'))}
               style={{ marginTop: 6 }}
             />
             {matches.length > 0 && (
@@ -288,7 +299,9 @@ export default function CustomDrinkForm({
               </div>
             )}
             {q && matches.length === 0 && (
-              <p className="muted small" style={{ margin: '6px 0 0' }}>Nessun ingrediente per «{search}».</p>
+              <p className="muted small" style={{ margin: '6px 0 0' }}>
+                {tr('Nessun ingrediente per «{testo}».', { testo: search })}
+              </p>
             )}
           </>
         )}
@@ -301,10 +314,10 @@ export default function CustomDrinkForm({
             foglio di stile (`.cd-azioni`). */}
         <div className="cd-azioni">
           <button type="button" className="btn ghost" onClick={onCancel}>
-            Annulla
+            {tr('Annulla')}
           </button>
           <button type="submit" className="btn" disabled={!valid}>
-            {initial ? 'Salva' : 'Aggiungi'} {priceNum > 0 ? formatPrice(priceNum) : ''}
+            {initial ? tr('Salva') : tr('Aggiungi')} {priceNum > 0 ? formatPrice(priceNum) : ''}
           </button>
           {initial && onSaveAsNew && (
             <button
@@ -313,7 +326,7 @@ export default function CustomDrinkForm({
               disabled={!valid}
               onClick={() => onSaveAsNew(composto())}
             >
-              <Icona nome="special" gruppo="tasti" /> Salva nuova
+              <Icona nome="special" gruppo="tasti" /> {tr('Salva nuova')}
             </button>
           )}
         </div>

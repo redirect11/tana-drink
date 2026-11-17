@@ -10,6 +10,7 @@ import {
 } from '../lib/api.js'
 import { RUOLO_ETICHETTA } from '../lib/ruoli.js'
 import Icona, { ConIcona } from './Icona.jsx'
+import { tr, trSegnato } from '../lib/lingua.js'
 
 // Cerca-persone direttamente nella coda del bartender: elenco del
 // personale con tasto di chiamata per ciascuno. Cliccando 📟 si apre
@@ -96,10 +97,10 @@ export default function StaffCallList({ mostraSeVuoto = false }) {
   if (vuoto) {
     return (
       <div className="card" style={{ marginTop: 8 }}>
-        <strong><Icona nome="lettore" gruppo="tasti" /> Chiama lo staff</strong>
+        <strong><Icona nome="lettore" gruppo="tasti" /> {tr('Chiama lo staff')}</strong>
         <p className="muted small" style={{ margin: '6px 0 0' }}>
-          Non c&apos;è nessun altro da chiamare: gli account dello staff si
-          creano in <strong>Utenti e ruoli</strong>.
+          {tr("Non c'è nessun altro da chiamare: gli account dello staff si creano in")}{' '}
+          <strong>{tr('Utenti e ruoli')}</strong>.
         </p>
       </div>
     )
@@ -107,9 +108,9 @@ export default function StaffCallList({ mostraSeVuoto = false }) {
 
   return (
     <div className="card" style={{ marginTop: 8 }}>
-      <strong><Icona nome="lettore" gruppo="tasti" /> Chiama lo staff</strong>
-      {error && <div className="banner">Errore: {error}</div>}
-      {users === null && !error && <div className="muted small">Carico lo staff…</div>}
+      <strong><Icona nome="lettore" gruppo="tasti" /> {tr('Chiama lo staff')}</strong>
+      {error && <div className="banner">{tr('Errore: {e}', { e: error })}</div>}
+      {users === null && !error && <div className="muted small">{tr('Carico lo staff…')}</div>}
       {list.map((u) => (
         <div key={u.uid}>
           <div className="toggle-row">
@@ -118,12 +119,12 @@ export default function StaffCallList({ mostraSeVuoto = false }) {
               {/* Sotto il nome: ruolo e, se è in servizio, da che ora. È la
                   prima cosa che si vuole sapere di chi si sta per chiamare. */}
               <div className="desc">
-                <ConIcona testo={RUOLO_ETICHETTA[u.role] ?? u.role} />
+                <ConIcona testo={trSegnato(RUOLO_ETICHETTA[u.role]) ?? u.role} />
                 {/* "dentro/fuori" si leggeva come "dentro o fuori dal locale":
                     qui si parla di TURNO, cioè di chi ha timbrato. */}
                 {turnoAperto(u.uid)
-                  ? ` · in servizio dalle ${fmtOra(turnoAperto(u.uid).clock_in)}`
-                  : ' · non in servizio'}
+                  ? ` · ${tr('in servizio dalle {ora}', { ora: fmtOra(turnoAperto(u.uid).clock_in) })}`
+                  : ` · ${tr('non in servizio')}`}
               </div>
             </div>
             <span className="row" style={{ gap: 6, flexShrink: 0 }}>
@@ -132,27 +133,27 @@ export default function StaffCallList({ mostraSeVuoto = false }) {
               <button
                 className={`btn small${turnoAperto(u.uid) ? ' ghost' : ' secondary'}`}
                 disabled={timbrando === u.uid}
-                title={turnoAperto(u.uid) ? 'Timbra l’uscita' : 'Timbra l’entrata'}
+                title={turnoAperto(u.uid) ? tr('Timbra l’uscita') : tr('Timbra l’entrata')}
                 onClick={() => timbra(u)}
               >
-                <Icona nome="orario" gruppo="tasti" />{' '}{turnoAperto(u.uid) ? 'Uscita' : 'Entrata'}
+                <Icona nome="orario" gruppo="tasti" />{' '}{turnoAperto(u.uid) ? tr('Uscita') : tr('Entrata')}
               </button>
               {pending.some((c) => c.to_uid === u.uid) ? (
-                <span className="pill in_preparazione"><Icona nome="lettore" gruppo="tasti" /> In chiamata…</span>
+                <span className="pill in_preparazione"><Icona nome="lettore" gruppo="tasti" /> {tr('In chiamata…')}</span>
               ) : target === u.uid ? (
                 <button className="btn ghost small" onClick={() => setTarget(null)}>
-                  Annulla
+                  {tr('Annulla')}
                 </button>
               ) : (
                 <button
                   className="btn small"
-                  title="Chiama (cerca-persone)"
+                  title={tr('Chiama (cerca-persone)')}
                   onClick={() => {
                     setTarget(u.uid)
                     setMessage('')
                   }}
                 >
-                  <Icona nome="lettore" gruppo="tasti" /> Chiama
+                  <Icona nome="lettore" gruppo="tasti" /> {tr('Chiama')}
                 </button>
               )}
             </span>
@@ -161,7 +162,7 @@ export default function StaffCallList({ mostraSeVuoto = false }) {
             <div style={{ margin: '0 0 10px' }}>
               <textarea
                 rows={2}
-                placeholder="Messaggio (facoltativo): es. «Vieni al bancone»"
+                placeholder={tr('Messaggio (facoltativo): es. «Vieni al bancone»')}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
               />
@@ -171,7 +172,7 @@ export default function StaffCallList({ mostraSeVuoto = false }) {
                 disabled={busy}
                 onClick={() => chiama(u)}
               >
-                {busy ? 'Chiamo…' : <><Icona nome="chiama-bancone" gruppo="tasti" /> Invia chiamata</>}
+                {busy ? tr('Chiamo…') : <><Icona nome="chiama-bancone" gruppo="tasti" /> {tr('Invia chiamata')}</>}
               </button>
             </div>
           )}

@@ -36,6 +36,7 @@
 import { NOME_PRODOTTO } from './prodotto.js'
 import { impostazioniRicordate, licenzaRicordata } from './impostazioniLocali.js'
 import { licenzaDi } from './licenzaInVigore.js'
+import { tr } from './lingua.js'
 
 export const PIANO_FREE = 'free'
 
@@ -225,8 +226,17 @@ const plurale = (n, uno, tanti) => `${n} ${n === 1 ? uno : tanti}`
 export const MESSAGGI_PIANO = {
   prodotti: (n) =>
     `Nel piano Free il menù ha al massimo ${plurale(n, 'prodotto', 'prodotti')}. Per aggiungerne passa a un piano a pagamento.`,
-  conti: (n) => `Nel piano Free puoi avere al massimo ${plurale(n, 'conto aperto', 'conti aperti')} insieme.`,
-  storico: (n) => `Nel piano Free lo storico mostra ${n === 1 ? 'l’ultimo giorno' : `gli ultimi ${n} giorni`}.`,
+  conti: (n) =>
+    n === 1
+      ? tr('Nel piano Free puoi avere al massimo 1 conto aperto insieme.')
+      : tr('Nel piano Free puoi avere al massimo {n} conti aperti insieme.', { n }),
+  // Una funzione, chiamata quando si disegna: può già parlare la lingua di
+  // chi guarda (REQ-UI-039). Gli altri messaggi del piano si traducono con
+  // le impostazioni.
+  storico: (n) =>
+    n === 1
+      ? tr('Nel piano Free lo storico mostra l’ultimo giorno.')
+      : tr('Nel piano Free lo storico mostra gli ultimi {n} giorni.', { n }),
   staff: 'Nel piano Free l’app la usa solo il titolare. Per aggiungere lo staff passa a un piano a pagamento.',
   foto: 'Le foto dei prodotti sono dei piani a pagamento.',
   stampa: 'La stampa di comande e scontrini è dei piani a pagamento.',

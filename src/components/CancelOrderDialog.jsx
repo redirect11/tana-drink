@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { CANCEL_PHRASES } from '../lib/orderStatus.js'
 import Icona from './Icona.jsx'
+import { tr } from '../lib/lingua.js'
 
 // Dialog di annullamento ordine lato bartender: scelta della frase mostrata
 // al cliente, motivazione facoltativa e notifica opzionale.
@@ -22,18 +23,18 @@ export default function CancelOrderDialog({
   const [notifyClient, setNotifyClient] = useState(true)
 
   const titles = {
-    ordine: `Annullare l'ordine #${order.daily_number}?`,
-    preparazione: `Annullare la preparazione di #${order.daily_number}?`,
+    ordine: tr("Annullare l'ordine #{n}?", { n: order.daily_number }),
+    preparazione: tr('Annullare la preparazione di #{n}?', { n: order.daily_number }),
     non_ritirato:
       order.service_mode === 'tavolo'
-        ? `Segnare #${order.daily_number} come non servito?`
-        : `Segnare #${order.daily_number} come non ritirato?`,
+        ? tr('Segnare #{n} come non servito?', { n: order.daily_number })
+        : tr('Segnare #{n} come non ritirato?', { n: order.daily_number }),
   }
 
   const hints = {
-    ordine: 'Le eventuali scorte usate verranno ripristinate.',
-    preparazione: 'Le scorte usate verranno ripristinate.',
-    non_ritirato: 'Il drink è stato preparato: le scorte restano scalate.',
+    ordine: tr('Le eventuali scorte usate verranno ripristinate.'),
+    preparazione: tr('Le scorte usate verranno ripristinate.'),
+    non_ritirato: tr('Il drink è stato preparato: le scorte restano scalate.'),
   }
 
   return (
@@ -46,7 +47,7 @@ export default function CancelOrderDialog({
         <p className="muted" style={{ marginTop: 0 }}>{hints[kind] ?? ''}</p>
 
         <p className="muted small" style={{ margin: '12px 0 6px' }}>
-          Messaggio per il cliente:
+          {tr('Messaggio per il cliente:')}
         </p>
         <div className="mode-choice">
           {Object.entries(CANCEL_PHRASES)
@@ -58,6 +59,9 @@ export default function CancelOrderDialog({
               <button
                 key={key}
                 className={`mode-option${phrase === key ? ' active' : ''}`}
+                // La frase arriva al cliente così com'è, in italiano: non si
+                // traduce per chi lavora, che deve vedere cosa leggerà lui.
+                lang="it"
                 onClick={() => setPhrase(key)}
               >
                 {text}
@@ -67,14 +71,14 @@ export default function CancelOrderDialog({
 
         <textarea
           rows={2}
-          placeholder="Motivazione per il cliente (facoltativa)"
+          placeholder={tr('Motivazione per il cliente (facoltativa)')}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           style={{ marginTop: 10 }}
         />
 
         <div className="toggle-row" style={{ borderBottom: 'none' }}>
-          <span><Icona nome="notifiche" gruppo="tasti" /> Notifica il cliente</span>
+          <span><Icona nome="notifiche" gruppo="tasti" /> {tr('Notifica il cliente')}</span>
           <input
             type="checkbox"
             className="toggle"
@@ -85,7 +89,7 @@ export default function CancelOrderDialog({
 
         <div className="row" style={{ gap: 10, marginTop: 8 }}>
           <button className="btn ghost grow" onClick={onCancel}>
-            Indietro
+            {tr('Indietro')}
           </button>
           <button
             className="btn danger grow"
@@ -93,7 +97,7 @@ export default function CancelOrderDialog({
               onConfirm({ phrase, message: message.trim() || null, notify: notifyClient })
             }
           >
-            Conferma
+            {tr('Conferma')}
           </button>
         </div>
       </div>

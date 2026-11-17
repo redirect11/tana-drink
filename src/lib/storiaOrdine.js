@@ -12,6 +12,7 @@
 // Logica pura: niente Firebase, tutto testabile.
 
 import { ORDER_STATUSES, PAYMENT_METHOD_LABELS, formatPrice } from './orderStatus.js'
+import { formatoAttivo } from './lingua.js'
 
 const iso = (v) => {
   if (!v) return null
@@ -170,7 +171,7 @@ export function quando(v) {
   if (!s) return ''
   const d = new Date(s)
   if (Number.isNaN(d.getTime())) return ''
-  return d.toLocaleString('it-IT', {
+  return d.toLocaleString(formatoAttivo(), {
     day: '2-digit',
     month: '2-digit',
     hour: '2-digit',
