@@ -265,26 +265,27 @@ body.schermo-intero {
    piccolo, sembrava tagliato. Ora si mostra INTERO (contain), senza
    maschera e senza anello: il tondo ce l'ha già suo. */
 
-/* IL MARCHIO DEL PRODOTTO, nel gestionale (REQ-UI-035): come nella barra
-   della regia — il logo, «Lime» nei titoli e la qualifica piccola in
-   maiuscolo, nel colore attenuato del tema. Sotto `.brand`, perché
-   `.brand span` (più specifico di una classe sola) le schiacciava tutte. */
-.brand .marchio-lime {
+/* IL MARCHIO DEL PRODOTTO (REQ-UI-035): nel menu laterale del gestionale e,
+   per la demo e i Free, in alto. Come nella barra della regia — il logo,
+   «Lime» nei titoli e la qualifica piccola in maiuscolo, nel colore
+   attenuato del tema. Sotto `.brand`/`.brand-mini`, perché `.brand span`
+   (più specifico di una classe sola) le schiacciava tutte. */
+:is(.brand, .brand-mini) .marchio-lime {
   display: inline-flex;
   align-items: center;
   gap: 10px;
   min-width: 0;
 }
-.brand .marchio-lime-logo {
+:is(.brand, .brand-mini) .marchio-lime-logo {
   flex: none;
   width: 1.8rem;
   height: 1.8rem;
 }
-.brand .marchio-lime-nome {
+:is(.brand, .brand-mini) .marchio-lime-nome {
   font-size: 1.1rem;
   letter-spacing: -0.01em;
 }
-.brand .marchio-lime-qualifica {
+:is(.brand, .brand-mini) .marchio-lime-qualifica {
   font-family: var(--testo, inherit);
   font-weight: 500;
   font-size: 0.6em;

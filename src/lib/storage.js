@@ -74,6 +74,23 @@ export const fotoDiFatturaLeggibile = (file) =>
 // Carica la foto di un drink su Firebase Storage e restituisce l'URL pubblico.
 // Le immagini sono salvate sotto `drinks/`: lette pubblicamente, scritte e
 // cancellate solo da banco e admin (storage.rules, BUG-160).
+// UN CARICAMENTO RIFIUTATO DALLE REGOLE SI DICE IN CHIARO (REQ-SIC-006).
+// Dal 17/11/2026 lo Storage legge la licenza, col ruolo IAM che la regia dà
+// a ogni locale: appena dato, il ruolo impiega qualche minuto a valere, e in
+// quei minuti il caricamento viene rifiutato. Il messaggio di Firebase
+// («User does not have permission… storage/unauthorized») non dice cosa
+// fare; questo sì, e la scheda resta aperta per riprovare.
+export const CARICAMENTO_NON_CONSENTITO =
+  'Caricamento non consentito in questo momento. Se il piano comprende le foto e gli allegati, il permesso può richiedere qualche minuto dopo un aggiornamento: riprovare più tardi.'
+async function carica(storageRef, file, metadati) {
+  try {
+    await uploadBytes(storageRef, file, metadati)
+  } catch (e) {
+    if (e?.code === 'storage/unauthorized') throw new Error(CARICAMENTO_NON_CONSENTITO)
+    throw e
+  }
+}
+
 export async function uploadDrinkImage(file) {
   if (senzaStorage()) throw new Error(MESSAGGI_PIANO.foto)
   const processed = await downscaleImage(file)
@@ -82,7 +99,7 @@ export async function uploadDrinkImage(file) {
   const path = `drinks/${Date.now()}-${Math.round(Math.random() * 1e6)}.${ext}`
 
   const storageRef = ref(storage, path)
-  await uploadBytes(storageRef, processed, { contentType: processed.type || file.type || 'image/jpeg' })
+  await carica(storageRef, processed, { contentType: processed.type || file.type || 'image/jpeg' })
   return getDownloadURL(storageRef)
 }
 
@@ -130,7 +147,7 @@ export async function caricaAllegatoFattura(idFattura, file) {
   const contentType = pronto.type || file.type
   const path = percorsoAllegato(idFattura, contentType)
   const storageRef = ref(storage, path)
-  await uploadBytes(storageRef, pronto, { contentType })
+  await carica(storageRef, pronto, { contentType })
   return {
     url: await getDownloadURL(storageRef),
     // IL PERCORSO SI SCRIVE ACCANTO ALL'URL, ed è quello che serve per

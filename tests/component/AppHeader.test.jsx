@@ -157,9 +157,12 @@ describe('la barra in cima è la stessa su tutte le schermate', () => {
     // nome si trovava due volte, ogni tanto: una prova ballerina è peggio di
     // una prova che manca, perché la si impara a ignorare.
     await waitFor(() => expect(document.querySelector('.topbar-io')).not.toBeNull())
-    // Il profilo di chi lavora è gestionale: in alto il marchio del
-    // prodotto, LIME - SmartOrders, non il nome del locale (REQ-UI-035).
-    expect(document.querySelector('.topbar .marchio-lime')).toHaveTextContent('SmartOrders')
+    // In alto il locale, col suo nome; il marchio del prodotto, LIME -
+    // SmartOrders, sta nel menu laterale del gestionale, al posto di
+    // «Gestionale» (REQ-UI-035, Daniele 17/11/2026).
+    expect(document.querySelector('.topbar .brand')).toHaveTextContent('La Tana del Coniglio')
+    expect(document.querySelector('.topbar .marchio-lime')).toBeNull()
+    expect(document.querySelector('nav.bar-sidebar .brand-mini .marchio-lime')).toHaveTextContent('SmartOrders')
     // A destra una cosa sola: chi è collegato, che apre il suo profilo.
     const io = document.querySelector('.topbar-io')
     expect(io).toHaveAttribute('href', '/profilo-staff')
@@ -167,6 +170,17 @@ describe('la barra in cima è la stessa su tutte le schermate', () => {
     // Le vecchie varianti sono voci del menu laterale, non della barra.
     expect(screen.queryByText(/Ciao, Capo Bar/)).toBeNull()
     expect(screen.queryByText('Torna al servizio')).toBeNull()
+  })
+
+  // REQ-UI-035: solo la demo e i locali Free hanno in alto il marchio del
+  // prodotto al posto del locale.
+  it('un locale Free ha in alto il marchio LIME al posto del suo', async () => {
+    ruoloClaim = 'admin'
+    inPiu.impostazioni = { licenza: { ...CON_LICENZA.licenza, piano: 'free' } }
+    apri('/profilo-staff')
+    await waitFor(() => expect(document.querySelector('.topbar-io')).not.toBeNull())
+    expect(document.querySelector('.topbar .brand .marchio-lime')).toHaveTextContent('SmartOrders')
+    expect(document.querySelector('.topbar .brand')).toHaveAttribute('aria-label', 'Lime SmartOrders, coda ordini')
   })
 
   it('la stessa barra nel menù usato per gli ordini manuali', async () => {

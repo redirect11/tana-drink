@@ -91,6 +91,7 @@ import { subscribeUpdateAvailable } from './lib/appVersion.js'
 import { cosaFareAllAvvio, versioneVista, segnaVersioneVista } from './lib/novita.js'
 import { leggiAvvisi, avvisoAttivo } from './lib/preferenzeNotifiche.js'
 import { titoloPagina, nelGestionale } from './lib/sezioni.js'
+import { marchioDelProdottoInAlto } from './lib/limiti.js'
 import { subscribeSottosezioni } from './lib/sottosezioni.js'
 import Tendina from './components/Tendina.jsx'
 import { recordNotif } from './lib/notifyStore.js'
@@ -116,8 +117,8 @@ const BUILD = typeof __BUILD_ID__ !== 'undefined' ? __BUILD_ID__ : ''
 export default function App() {
   const location = useLocation()
   const onBackoffice = location.pathname.startsWith('/bar')
-  // Il gestionale intero (coda, conto, profilo di chi lavora): lì in alto il
-  // marchio del prodotto, che riporta alla coda (REQ-UI-035).
+  // Il gestionale intero (coda, conto, profilo di chi lavora): lì il logo in
+  // alto riporta alla coda.
   const gestionale = nelGestionale(location.pathname)
   const { user, profile } = useCustomer()
   const hasOrders = useHasOrders()
@@ -408,6 +409,7 @@ export default function App() {
   // l'effetto qui sotto riscrive il manifest, e non deve farlo a ogni
   // disegno.
   const venue = useMemo(() => venueDi(settings), [settings])
+  const marchioInAlto = marchioDelProdottoInAlto(settings)
   const social = useMemo(() => socialDelLocale(venue), [venue])
   // Il tema delle icone, ricalcolato solo quando cambia davvero: è il
   // valore del contesto che leggono centinaia di <Icona> (memo), e un
@@ -662,22 +664,18 @@ export default function App() {
             ←
           </button>
         )}
-        {/* Nel gestionale il marchio è quello del prodotto, LIME -
-            SmartOrders, e porta alla coda; le pagine dei clienti restano del
-            locale e portano alla sua home (REQ-UI-035). Il link ha il suo
-            nome perché sul telefono logo e nome si nascondono (REQ-UI-036,
-            WCAG 2.4.4). */}
+        {/* In alto il locale, col suo logo e il suo nome; nella demo e nei
+            locali Free il marchio del prodotto al suo posto (REQ-UI-035). Nel
+            gestionale porta alla coda, altrove alla home del locale. Il link
+            ha il suo nome perché sul telefono logo e nome si nascondono
+            (REQ-UI-036, WCAG 2.4.4). */}
         <Link
           to={gestionale ? '/bar' : '/'}
           className="brand"
-          aria-label={
-            gestionale
-              ? `${NOME_CORTO_PRODOTTO} ${QUALIFICA_PRODOTTO}, coda ordini`
-              : `${venue.venue_name}, pagina iniziale`
-          }
+          aria-label={`${marchioInAlto ? `${NOME_CORTO_PRODOTTO} ${QUALIFICA_PRODOTTO}` : venue.venue_name}, ${gestionale ? 'coda ordini' : 'pagina iniziale'}`}
           style={{ textDecoration: 'none', color: 'inherit' }}
         >
-          {gestionale ? (
+          {marchioInAlto ? (
             <MarchioLime />
           ) : (
             <>

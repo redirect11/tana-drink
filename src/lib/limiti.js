@@ -64,6 +64,12 @@ const BUILD_LEGGERA = import.meta.env?.VITE_PROFILO === 'leggero'
 // gestione delle utenze) come per un locale Free.
 export const profiloLeggero = (stato) => BUILD_LEGGERA || Boolean(__DEMO__) || pianoFree(stato)
 
+// IN ALTO IL MARCHIO DEL PRODOTTO, NON IL LOCALE (REQ-UI-035): solo la demo
+// e i locali Free (Daniele, 17/11/2026: «Solo demo avrà quelle scritte e il
+// free al posto del nome del locale e del logo del locale»). Chi paga ha in
+// alto il suo logo e il suo nome; il marchio LIME sta nel menu laterale.
+export const marchioDelProdottoInAlto = (stato) => Boolean(__DEMO__) || pianoFree(stato)
+
 // La stessa domanda per chi non ha le impostazioni in mano (i wrapper delle
 // Functions e di Storage): l'ultima verità nota, ricordata da
 // subscribeSettings. Al primo avvio di un dispositivo nuovo, prima che le

@@ -718,13 +718,14 @@ dei clienti stanno in cima, in un riquadro richiudibile col filo sinistro in
   restava appesa da sola sotto il resto.
 - La topbar è sticky, traslucida sul tema (`color-mix` su `--bg-2`),
   e rispetta le safe-area dei tablet.
-- **In alto, nel gestionale, il marchio del prodotto**: il logo della
-  regia (la fetta di lime), «Lime» nei titoli e «SmartOrders» piccolo in
-  maiuscolo in `--muted`, come nella barra della regia (REQ-UI-035,
-  `MarchioLime.jsx`). Il gestionale è la coda e le sezioni (`/bar`), il
-  conto (`/pos`) e il profilo di chi lavora (`nelGestionale` in
-  `lib/prodotto.js`). Le pagine dei clienti tengono il logo e il nome del
-  locale, anche quando le apre il personale. Sul telefono resta il logo.
+- **Il marchio del prodotto sta nel menu laterale del gestionale**, in
+  cima, al posto di «Gestionale»: il logo della regia (la fetta di lime),
+  «Lime» nei titoli e «SmartOrders» piccolo in maiuscolo in `--muted`,
+  come nella barra della regia (REQ-UI-035, `MarchioLime.jsx`). **In alto
+  nelle pagine c'è il locale**, col suo logo e il suo nome; solo la demo e
+  i locali Free (`marchioDelProdottoInAlto` in `lib/limiti.js`) hanno lì
+  il marchio LIME. Nel gestionale (`nelGestionale` in `lib/sezioni.js`) il
+  logo in alto porta alla coda, altrove alla home del locale.
 
 ## Profondità
 

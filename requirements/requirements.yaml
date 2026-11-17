@@ -15886,6 +15886,12 @@ requirements:
       apple-touch-icon e icon-maskable-512 sul fondo di Lime scuro
       (#0c0f0a), la maskable col logo al 60% per il margine di Android.
       Se il logo della regia cambia, questi file si rifanno da lì.
+      LA TESTATA DEL MENÙ (Daniele, 17/11/2026, «Ok» a dare alla demo una
+      testata sua): dietro il nome del locale restava il bicchiere grigio
+      di clienti/demo/public/cocktail-hero.jpg. Ora è il fondo scuro di
+      Lime con fette di lime attenuate ai lati, il centro libero per logo
+      e nome. Tocca solo la demo: ogni cliente della build ha la sua
+      testata. Anche questa si rifà se il logo della regia cambia.
     status: implemented
     generate_issue: true
     labels: [flotta]
@@ -17691,6 +17697,10 @@ requirements:
       FATTO SULLA TANA (17/11/2026, comando lanciato su richiesta di
       Daniele): il ruolo c'è su tana-drink-test e su tana-drink, riletto
       dalla policy. Per la flotta lo fa la regia.
+      UN CARICAMENTO RIFIUTATO SI DICE IN CHIARO (la regia, 17/11/2026: il
+      ruolo appena dato impiega qualche minuto a valere): lib/storage.js
+      traduce `storage/unauthorized` in una frase che dice di riprovare, e
+      la scheda resta aperta.
       L'ORDINE DEI RILASCI (dal revisore, 17/11/2026): il deploy non
       interattivo di firebase-tools salta la concessione del ruolo senza
       dirlo, e la regia lo dà nel Terraform (REQ-FLOTTA-124) solo su
@@ -17713,6 +17723,7 @@ requirements:
     test_cases:
       - tests/regole/storage.test.js
       - tests/unit/regoleStorageLicenza.test.js
+      - tests/unit/allegatoInArchivio.test.js
 
   - id: REQ-MAG-058
     title: "Il modulo «Product Tracking»: il prodotto entra in magazzino dal telefono, scansionando etichetta o codice a barre"

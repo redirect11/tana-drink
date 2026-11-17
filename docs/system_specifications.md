@@ -3264,13 +3264,15 @@ Daniele, 17/11/2026, alla domanda della regia «Le regole di Storage leggono la 
 
 IL PREZZO, INFRASTRUTTURA: le regole che leggono Firestore dallo Storage vogliono il ruolo `roles/firebaserules.firestoreServiceAgent` al service agent dello Storage del progetto (service-<numero>@gcp-sa-firebasestorage.iam.gserviceaccount.com). Senza, la lettura fallisce e nessuno carica più foto. Va dato prima del deploy su tana-drink-test, tana-drink (col via libera di Daniele) e nei locali della flotta (il Terraform della regia).
 
-FATTO SULLA TANA (17/11/2026, comando lanciato su richiesta di Daniele): il ruolo c'è su tana-drink-test e su tana-drink, riletto dalla policy. Per la flotta lo fa la regia. L'ORDINE DEI RILASCI (dal revisore, 17/11/2026): il deploy non interattivo di firebase-tools salta la concessione del ruolo senza dirlo, e la regia lo dà nel Terraform (REQ-FLOTTA-124) solo su develop. Un tag di produzione con queste regole non deve arrivare a un locale della flotta prima che la REQ-FLOTTA-124 sia su main della regia e applicata ai locali esistenti. scripts/setup-firebase-env.sh lo concede agli ambienti nuovi. Le funzioni sulla licenza delle due regole sono le stesse, e una prova lo controlla.
+FATTO SULLA TANA (17/11/2026, comando lanciato su richiesta di Daniele): il ruolo c'è su tana-drink-test e su tana-drink, riletto dalla policy. Per la flotta lo fa la regia.
+
+UN CARICAMENTO RIFIUTATO SI DICE IN CHIARO (la regia, 17/11/2026: il ruolo appena dato impiega qualche minuto a valere): lib/storage.js traduce `storage/unauthorized` in una frase che dice di riprovare, e la scheda resta aperta. L'ORDINE DEI RILASCI (dal revisore, 17/11/2026): il deploy non interattivo di firebase-tools salta la concessione del ruolo senza dirlo, e la regia lo dà nel Terraform (REQ-FLOTTA-124) solo su develop. Un tag di produzione con queste regole non deve arrivare a un locale della flotta prima che la REQ-FLOTTA-124 sia su main della regia e applicata ai locali esistenti. scripts/setup-firebase-env.sh lo concede agli ambienti nuovi. Le funzioni sulla licenza delle due regole sono le stesse, e una prova lo controlla.
 
 LE PROVE IN CI (17/11/2026, su richiesta di Daniele): il job delle regole accende anche lo Storage (`--only firestore,storage` in .github/workflows/test.yml), e le prove di storage.rules girano.
 
 FATTO (1.10.53-beta): storage.rules legge la licenza (licenzaValida, alFree, modulo, fotoConsentite); tests/regole/storage.test.js la prova con gli emulatori di Storage e Firestore insieme, nel progetto degli emulatori.
 
-**Dove**: `storage.rules, tests/regole/storage.test.js, .github/workflows/test.yml (job delle regole), IAM dei progetti (service agent dello Storage)` · **Serve**: [UR-015](#ur-015--il-piano-del-locale-decide-cosa-si-usa-e-chi-ha-tutto-non-se-ne-accorge) · **Lo dimostrano**: `tests/regole/storage.test.js`, `tests/unit/regoleStorageLicenza.test.js`
+**Dove**: `storage.rules, tests/regole/storage.test.js, .github/workflows/test.yml (job delle regole), IAM dei progetti (service agent dello Storage)` · **Serve**: [UR-015](#ur-015--il-piano-del-locale-decide-cosa-si-usa-e-chi-ha-tutto-non-se-ne-accorge) · **Lo dimostrano**: `tests/regole/storage.test.js`, `tests/unit/regoleStorageLicenza.test.js`, `tests/unit/allegatoInArchivio.test.js`
 
 ### Si lavora anche senza rete
 
@@ -4523,6 +4525,8 @@ CRITERIO: la build della demo si chiama «Bancone 21» nel titolo della pagina e
 COME È FATTO (17/11/2026): clienti/demo/venue.json (nome, nome corto, «al Bancone 21», la descrizione del manifest).
 
 IL LOGO (Daniele, 17/11/2026: «c'è già il logo di Lime SmartOrders per questa cosa. Al posto del bicchiere»): il bicchiere neutro lascia il posto alla fetta di lime della regia (drink-regia public/favicon.svg). favicon.svg è quel disegno; logo.png, icon-192/512 trasparenti; apple-touch-icon e icon-maskable-512 sul fondo di Lime scuro (#0c0f0a), la maskable col logo al 60% per il margine di Android. Se il logo della regia cambia, questi file si rifanno da lì.
+
+LA TESTATA DEL MENÙ (Daniele, 17/11/2026, «Ok» a dare alla demo una testata sua): dietro il nome del locale restava il bicchiere grigio di clienti/demo/public/cocktail-hero.jpg. Ora è il fondo scuro di Lime con fette di lime attenuate ai lati, il centro libero per logo e nome. Tocca solo la demo: ogni cliente della build ha la sua testata. Anche questa si rifà se il logo della regia cambia.
 
 **Dove**: `clienti/demo/venue.json` · **Serve**: [UR-014](#ur-014--la-demo-che-si-mostra-a-un-locale-nuovo-non-espone-niente-di-un-locale-vero) · **Lo dimostrano**: `tests/unit/clienteBuild.test.js`
 
