@@ -21,6 +21,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from '../helpers/router.jsx'
 import '@testing-library/jest-dom/vitest'
 import { italianoRimasto } from '../helpers/nienteItaliano.js'
+import { CON_LICENZA } from '../helpers/licenza.js'
 
 let impostazioni = {}
 let ordini = []
@@ -201,22 +202,11 @@ beforeEach(() => {
 
 afterEach(() => impostaLingua('it'))
 
-// QUELLO CHE RESTA IN ITALIANO NON È DI QUESTE SCHERMATE: sono testi scritti
-// in src/lib (la voce della cassa in testata, lib/coda.js `voceCassa`; le
-// voci del menu laterale, lib/sezioni.js) o in un componente di un'altra
-// parte (VersionBadge). Si traducono là, segnandoli con `daTradurre`. La
-// lista è ESATTA apposta: un testo nuovo dimenticato qui la fa diventare
-// rossa, e quando la lib sarà tradotta diventa rossa lo stesso — ed è il
-// segnale per svuotarla e tornare a `toEqual([])`.
-const DALLA_CASSA_IN_LIB = [
-  'dal dizionario: «Chiudi»', // «Chiudi cassa»
-  'parola italiana: «Chiudi 2 conti e 2 comande»', // il perché, nel title
-  'parola italiana: «Chiudi 2 conti e 2 comande»', // e scritto sotto il tasto
-]
-const DAL_MENU_IN_LIB = [
-  'dal dizionario: «Stampa»', // la voce «Stampante» di lib/sezioni.js
-  'parola italiana: «Versione pubblicata · build test\nTocca per copiare»', // VersionBadge
-]
+// LE TABELLE DI src/lib SONO TRADOTTE: la voce della cassa in testata
+// (lib/coda.js `voceCassa`), i titoli delle colonne, le voci del menu
+// laterale (lib/sezioni.js), i ruoli (lib/ruoli.js) e la versione in fondo
+// al menu (VersionBadge). Fino al 17/11 qui c'era l'elenco esatto di quello
+// che ne restava in italiano; adesso ogni caso chiede che non resti niente.
 
 describe('la coda ordini in inglese (REQ-UI-039)', () => {
   it('la lavagna a griglia, coi suoi conti, parla inglese', async () => {
@@ -225,7 +215,10 @@ describe('la coda ordini in inglese (REQ-UI-039)', () => {
     expect(screen.getByRole('button', { name: 'Filters' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'New order' })).toBeInTheDocument()
     expect(screen.getByText('Deposit')).toBeInTheDocument()
-    expect(italianoRimasto(container)).toEqual(DALLA_CASSA_IN_LIB)
+    // La voce della cassa e il perché non si chiude, in una frase intera
+    // (lib/coda.js `voceCassa`): due conti aperti e due comande al banco.
+    expect(screen.getAllByText('Close 2 bills and 2 tickets').length).toBeGreaterThan(0)
+    expect(italianoRimasto(container)).toEqual([])
   })
 
   it('anche le azioni di una card, aperte col ⋯', async () => {
@@ -236,12 +229,11 @@ describe('la coda ordini in inglese (REQ-UI-039)', () => {
     await utente.click(within(card).getByRole('button', { name: /Actions/ }))
     expect(within(card).getByRole('button', { name: /Cancel preparation/ })).toBeInTheDocument()
     expect(within(card).getByRole('button', { name: /Bill colour/ })).toBeInTheDocument()
-    expect(italianoRimasto(container)).toEqual(DALLA_CASSA_IN_LIB)
+    expect(italianoRimasto(container)).toEqual([])
   })
 
   // Le corsie del banco: una card per comanda, col tasto grande e quello
-  // del conto. I titoli delle colonne vengono da lib/coda.js e si traducono
-  // là (in testa a questa prova): qui si guarda il resto della card.
+  // del conto. I titoli delle colonne hanno il loro caso, qui sotto.
   it('le corsie del banco', async () => {
     impostazioni = { ...impostazioni, queue_view: 'corsie', bartender_view: 'corsie' }
     ruolo = 'bartender'
@@ -250,7 +242,7 @@ describe('la coda ordini in inglese (REQ-UI-039)', () => {
     expect(screen.getAllByRole('button', { name: 'Ready' })).toHaveLength(2)
     expect(screen.getAllByRole('button', { name: /Bill/ }).length).toBeGreaterThan(0)
     expect(screen.getByText('In preparation')).toBeInTheDocument()
-    expect(italianoRimasto(container)).toEqual(DALLA_CASSA_IN_LIB)
+    expect(italianoRimasto(container)).toEqual([])
   })
 
   it('il menu laterale', async () => {
@@ -260,7 +252,41 @@ describe('la coda ordini in inglese (REQ-UI-039)', () => {
     await screen.findByText('In service')
     expect(screen.getByText('Log out')).toBeInTheDocument()
     expect(screen.getByText('Call the bar')).toBeInTheDocument()
-    expect(italianoRimasto(container.querySelector('.bar-sidebar'))).toEqual(DAL_MENU_IN_LIB)
+    expect(italianoRimasto(container.querySelector('.bar-sidebar'))).toEqual([])
+  })
+
+  // L'admin vede tutte le sezioni del gestionale: sono le voci di
+  // lib/sezioni.js, segnate da tradurre e mostrate con trSegnato.
+  it('il menu laterale dell’admin, con tutte le sezioni', async () => {
+    globalThis.__drawerVero = true
+    impostazioni = { ...impostazioni, ...CON_LICENZA }
+    const { container } = montaCoda()
+    await screen.findByText('In service')
+    const menu = container.querySelector('.bar-sidebar')
+    for (const voce of ['Order queue', 'Till', 'Statistics', 'Inventory', 'Suppliers', 'Staff', 'Settings']) {
+      expect(within(menu).getAllByText(voce).length).toBeGreaterThan(0)
+    }
+    expect(italianoRimasto(menu)).toEqual([])
+  })
+
+  // Le colonne della coda vengono da lib/coda.js: quelle dei CONTI per
+  // l'admin (in corso, chiusi, annullati) e quelle delle COMANDE per il
+  // banco (da fare, in preparazione, da servire, serviti).
+  it('le colonne della coda: dei conti e del banco', async () => {
+    impostazioni = { ...impostazioni, queue_view: 'corsie' }
+    const conti = montaCoda()
+    await screen.findByText('In service')
+    expect(screen.getByText('In progress')).toBeInTheDocument()
+    expect(italianoRimasto(conti.container)).toEqual([])
+    conti.unmount()
+
+    impostazioni = { ...impostazioni, bartender_view: 'corsie' }
+    ruolo = 'bartender'
+    const banco = montaCoda()
+    await screen.findByText('In service')
+    expect(screen.getByText('To serve/To pick up')).toBeInTheDocument()
+    expect(screen.getByText('Served/Picked up')).toBeInTheDocument()
+    expect(italianoRimasto(banco.container)).toEqual([])
   })
 
   it('il dialogo di annullo: le frasi per il cliente restano in italiano, e lo dicono', () => {

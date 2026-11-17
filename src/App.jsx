@@ -108,7 +108,7 @@ import { TemaIcone } from './lib/temaIcone.js'
 import { AiutiCampi, aiutiCampiAccesi } from './lib/aiutiCampi.js'
 import { temiIconeDi, TUTTE_EMOJI, conEmoji } from './lib/icone.js'
 import { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react'
-import { useLingua, impostaLingua, LINGUA_DI_PARTENZA, tr, trSegnato } from './lib/lingua.js'
+import { useLingua, impostaLingua, impostaPaginaCliente, LINGUA_DI_PARTENZA, tr, trSegnato } from './lib/lingua.js'
 
 /* global __APP_VERSION__, __BUILD_ID__ */
 const VERSIONE = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : ''
@@ -122,17 +122,7 @@ export default function App() {
   // Il gestionale intero (coda, conto, profilo di chi lavora): lì il logo in
   // alto riporta alla coda.
   const gestionale = nelGestionale(location.pathname)
-  // LA LINGUA DELLA PAGINA (REQ-UI-038, REQ-CLI-010). L'attributo lang dice
-  // al browser in che lingua è il testo: lo leggono i lettori di schermo per
-  // la pronuncia, e il traduttore del browser per decidere se proporsi. Nel
-  // gestionale segue la lingua scelta; le pagine dei clienti restano «it»,
-  // la lingua in cui sono scritte: con «en» il browser le crederebbe già
-  // inglesi e non proporrebbe di tradurle — anche su un tablet dello staff
-  // in inglese girato verso il cliente.
   const lingua = useLingua()
-  useEffect(() => {
-    document.documentElement.lang = gestionale ? lingua : LINGUA_DI_PARTENZA
-  }, [gestionale, lingua])
   const { user, profile } = useCustomer()
   const hasOrders = useHasOrders()
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
@@ -519,6 +509,23 @@ export default function App() {
   // il suo tema finché non si sa che chi è entrato è un cliente.
   const clienteEntrato = collegato && accessoNoto && !ruoloInLettura && !staffRole
   const vesteGestionale = staffSurface || (gestionale && !clienteEntrato)
+  // LA LINGUA DELLA PAGINA (REQ-UI-038, REQ-CLI-010). La lingua scelta vale
+  // per chi lavora; le pagine dei CLIENTI restano in italiano e le traduce il
+  // browser — anche su un tablet dello staff in inglese girato verso il
+  // cliente («Mostra al cliente», ?cliente=1) o nell'anteprima «Vista
+  // cliente». Si dice a lib/lingua.js PRIMA che i figli si disegnino (è un
+  // conto fatto dall'indirizzo e da chi guarda, sempre lo stesso a parità
+  // di dati), così ogni `tr` di questo giro risponde nella lingua giusta.
+  // L'attributo lang segue: lo leggono i lettori di schermo per la pronuncia
+  // e il traduttore del browser per decidere se proporsi.
+  const paginaCliente =
+    !vesteGestionale ||
+    (location.pathname.startsWith('/ordine/') && new URLSearchParams(location.search).get('cliente') === '1')
+  impostaPaginaCliente(paginaCliente)
+  const linguaDellaPagina = paginaCliente ? LINGUA_DI_PARTENZA : lingua
+  useEffect(() => {
+    document.documentElement.lang = linguaDellaPagina
+  }, [linguaDellaPagina])
   // E IL TEMA IN PROVA (REQ-MENU-023): dal marketplace, chi lavora vede il
   // proprio menù coi colori di un tema prima di usarlo. Solo lui.
   const temaProvato = staffRole && anteprimaCliente ? temaInProva(settings, location.search) : null
@@ -603,7 +610,7 @@ export default function App() {
     // dimenticato di ascoltare la lingua — o un testo tenuto in un useMemo —
     // resterebbe nella lingua di prima. Cambiare lingua è raro; la bozza del
     // POS è già salvata in modo sincrono e sopravvive al ridisegno.
-    <TemaIcone.Provider key={lingua} value={temaIcone}>
+    <TemaIcone.Provider key={linguaDellaPagina} value={temaIcone}>
     {/* Gli aiuti sotto i campi delle schede: di partenza nascosti (REQ-UI-032). */}
     <AiutiCampi.Provider value={aiutiCampiAccesi(settings)}>
     <div className="app">

@@ -54,7 +54,7 @@ export const STATUS_LABELS = {
 // Quindi due etichette, non una sola «corretta»: chi scrive per il banco
 // passa di qui, chi scrive per il cliente usa STATUS_LABELS.
 export function statoAlBanco(stato, serviceMode) {
-  if (stato === ORDER_STATUSES.RICEVUTO) return 'Da fare'
+  if (stato === ORDER_STATUSES.RICEVUTO) return tr('Da fare')
   // UNA PAROLA SOLA PER IL PRONTO. Lo stesso passo si chiamava in tre modi a
   // seconda di dove lo si leggeva: «Pronto» nella tabella del servizio,
   // «Pronto al servizio» sull'etichetta di stato, «Ritiro/Servizio» in testa

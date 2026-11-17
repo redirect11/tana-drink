@@ -59,12 +59,30 @@ let attiva = letta()
 
 export const linguaAttiva = () => attiva
 
-// IL FORMATO DI DATE E GIORNI nella lingua attiva («lunedì 17 novembre» /
+// ── LE PAGINE DEI CLIENTI RESTANO IN ITALIANO (REQ-CLI-010) ──────────
+//
+// La lingua scelta è di chi LAVORA. Le pagine dei clienti — il menù, lo
+// stato dell'ordine, «Mostra al cliente» sul tablet girato verso di lui —
+// sono scritte in italiano e le traduce il browser di chi le guarda: un
+// tablet dello staff in inglese non deve mostrargliele in inglese a pezzi
+// («Served» in mezzo all'italiano, con la pagina dichiarata «it»). E i
+// componenti sono gli stessi nei due mondi (la barra in alto, i dialoghi,
+// le etichette di src/lib): non è il componente a sapere dove si trova.
+// Lo sa l'app, che lo dice qui a ogni disegno (App.jsx); su una pagina
+// dei clienti `tr` risponde in italiano, qualunque sia la lingua scelta.
+let suPaginaCliente = false
+export function impostaPaginaCliente(si) {
+  suPaginaCliente = !!si
+}
+// La lingua che si vede adesso: quella scelta, o l'italiano dei clienti.
+export const linguaInUso = () => (suPaginaCliente ? LINGUA_DI_PARTENZA : attiva)
+
+// IL FORMATO DI DATE E GIORNI nella lingua in uso («lunedì 17 novembre» /
 // «Monday 17 November»), per toLocaleDateString e simili. Inglese
 // britannico: il giorno prima del mese, come in Italia. Gli IMPORTI no:
 // formatPrice resta «7,00 €», come sugli scontrini (REQ-UI-039).
 const FORMATI = { it: 'it-IT', en: 'en-GB' }
-export const formatoAttivo = () => FORMATI[attiva] || FORMATI[LINGUA_DI_PARTENZA]
+export const formatoAttivo = () => FORMATI[linguaInUso()] || FORMATI[LINGUA_DI_PARTENZA]
 
 export function impostaLingua(lingua) {
   if (!Object.hasOwn(LINGUE, lingua) || lingua === attiva) return
@@ -89,7 +107,8 @@ export function tr(chiave, valori) {
 }
 
 function traduci(chiave, valori) {
-  const dizionario = attiva !== LINGUA_DI_PARTENZA ? DIZIONARI[attiva] : null
+  const lingua = linguaInUso()
+  const dizionario = lingua !== LINGUA_DI_PARTENZA ? DIZIONARI[lingua] : null
   const tradotto = dizionario && Object.hasOwn(dizionario, chiave) ? dizionario[chiave] : italianoDi(chiave)
   if (!valori) return tradotto
   return tradotto.replace(SEGNAPOSTO, (segnaposto, nome) =>

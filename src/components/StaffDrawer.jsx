@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom'
 import { auth } from '../lib/firebaseClient.js'
 import { logoutStaff } from '../lib/logout.js'
 import { devToolsEnabled } from '../dev/devActions.js'
-import { isAdmin, isGestore, isSala, RUOLO_ETICHETTA } from '../lib/ruoli.js'
+import { isAdmin, isGestore, isSala, etichettaRuolo } from '../lib/ruoli.js'
 import { areaClientiVisibile, indirizzoAreaClienti } from '../lib/passaggioRegia.js'
 import { useSchermoLargo } from '../lib/useTelefono.js'
 import { usePaginaPiena } from '../lib/paginaPiena.js'
@@ -382,11 +382,11 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
             navigate('/profilo-staff')
           }}
         >
-          <Icona nome={RUOLO_ETICHETTA[role]?.split(' ')[0] ?? 'clienti'} />
+          <Icona nome={etichettaRuolo(role)?.split(' ')[0] ?? 'clienti'} />
           <span className="drawer-io-testo">
             <span className="drawer-io-nome">{nomeUtente}</span>
             <span className="drawer-io-ruolo">
-              {(trSegnato(RUOLO_ETICHETTA[role]) ?? tr('Utente')).replace(/^\S+\s/, '')}
+              {(etichettaRuolo(role) ?? tr('Utente')).replace(/^\S+\s/, '')}
             </span>
           </span>
         </div>

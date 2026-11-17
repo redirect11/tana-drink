@@ -1,6 +1,6 @@
 import { ORDER_STATUSES } from '../lib/orderStatus.js'
 import { azioneComanda, daQuanto, destinazioneConto, statoDelRilascio } from '../lib/coda.js'
-import { ETICHETTA_ANNULLO } from '../lib/comande.js'
+import { etichettaAnnullo } from '../lib/comande.js'
 import RigheCorsia from './RigheCorsia.jsx'
 import {
   BolloAcconto,
@@ -26,7 +26,7 @@ import {
   useSensors,
 } from '@dnd-kit/core'
 import AttesaCliente from './AttesaCliente.jsx'
-import { tr, trSegnato } from '../lib/lingua.js'
+import { tr } from '../lib/lingua.js'
 
 // ── LE CORSIE DEL BANCO: UNA CARD PER COMANDA ────────────────────────
 //
@@ -284,7 +284,7 @@ export default function CorsieComande({
                             facendo — e leggere «Annullata» su tutte e tre
                             manderebbe a cercare un guaio che non c'è. */}
                         {s.motivo ? (
-                          <span className="pill annullato small"><ConIcona testo={trSegnato(ETICHETTA_ANNULLO[s.motivo])} /></span>
+                          <span className="pill annullato small"><ConIcona testo={etichettaAnnullo(s.motivo)} /></span>
                         ) : s.pagatoDaServire ? (
                           <span className="pill pagato small">{tr('Pagato')}</span>
                         ) : (

@@ -6,7 +6,7 @@ import { logoutStaff } from '../lib/logout.js'
 import { updateDisplayName } from '../lib/customerAuth.js'
 import { salvaLinguaDelProfilo } from '../lib/api.js'
 import PasswordChanger from '../components/PasswordChanger.jsx'
-import { RUOLO_ETICHETTA, isPersonale, isGestore } from '../lib/ruoli.js'
+import { etichettaRuolo, isPersonale, isGestore } from '../lib/ruoli.js'
 import AvvisiPanel from '../components/AvvisiPanel.jsx'
 import StoricoNotifiche from '../components/StoricoNotifiche.jsx'
 import Icona, { ConIcona } from '../components/Icona.jsx'
@@ -142,13 +142,13 @@ export default function StaffProfilePage() {
     <div>
       <div className="card">
         <h2 style={{ marginTop: 0 }}>
-          <Icona nome={RUOLO_ETICHETTA[role]?.split(' ')[0] ?? 'servizio'} gruppo="tasti" /> {tr('Il mio profilo')}
+          <Icona nome={etichettaRuolo(role)?.split(' ')[0] ?? 'servizio'} gruppo="tasti" /> {tr('Il mio profilo')}
         </h2>
         <div className="summary-rows" style={{ margin: '0 0 12px' }}>
           <div className="summary-row">
             <span className="muted">{tr('Ruolo')}</span>
             <span>
-              <ConIcona testo={RUOLO_ETICHETTA[role] ?? role} />
+              <ConIcona testo={etichettaRuolo(role) ?? role} />
             </span>
           </div>
           <div className="summary-row">

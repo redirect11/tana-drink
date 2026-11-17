@@ -20,7 +20,10 @@ import profilo from './profilo.js'
 import coda from './coda.js'
 import conto from './conto.js'
 import cassa from './cassa.js'
+import impostazioni from './impostazioni.js'
+import magazzino from './magazzino.js'
+import menu from './menu.js'
 
-export const AREE = { comune, profilo, coda, conto, cassa }
+export const AREE = { comune, profilo, coda, conto, cassa, impostazioni, magazzino, menu }
 
 export default Object.assign({}, ...Object.values(AREE))

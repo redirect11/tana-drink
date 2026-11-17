@@ -71,7 +71,7 @@ import {
   CORSIE_SPENTE_ALL_INIZIO,
   sottofiltriChiusi,
   nomiDelServizio,
-  FILTRI_STATO,
+  filtriStato,
   STATO_DEFAULT,
   frasePerCodaVuota,
   autoriDeiConti,
@@ -1722,7 +1722,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               >
                 <span>
                   {v.chiave === AUTORE_CLIENTE && <><Icona nome="mondo" gruppo="tasti" />{' '}</>}
-                  {trSegnato(v.nome)}
+                  {v.nome}
                   {v.chiave === emailMia && <span className="muted small"> · {tr('sei tu')}</span>}
                 </span>
               </button>
@@ -2056,7 +2056,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             accanto compaiono «Da servire/Ritirare» e «Serviti/Ritirati»,
             attaccate nello stesso gruppo perché sono una domanda DENTRO i
             chiusi e non due filtri fratelli. */}
-        {FILTRI_STATO.map(([k, label]) => {
+        {filtriStato().map(([k, label]) => {
           const chip = (
             <button
               key={k}
@@ -2064,7 +2064,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               onClick={() => setStato(k)}
               aria-pressed={stato === k}
             >
-              <ConIcona testo={trSegnato(label)} />
+              <ConIcona testo={label} />
             </button>
           )
           if (k !== 'chiusi' || stato !== 'chiusi' || !workflowOn) return chip
@@ -2902,7 +2902,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                   <span key={v.lettera} className={v.soloOnline ? 'legenda-online' : undefined}>
                     {/* Col colore della persona, lo stesso delle card e
                         delle righe del conto (REQ-ORD-023). */}
-                    <span className="order-by staff" style={{ background: colorePersona(v.nome) }}>{v.lettera}</span> {trSegnato(v.nome)}
+                    <span className="order-by staff" style={{ background: colorePersona(v.nome) }}>{v.lettera}</span> {v.nome}
                     {/* «SEI TU» è metà del motivo per cui la cosa è stata
                         chiesta: chi si collega deve sapere con che lettera
                         si riconoscerà sulle card, prima di battere il primo
@@ -3086,7 +3086,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           {/* Avvisi (es. comanda non stampata) dagli invii in background */}
           {pend.banners.map((b) => (
             <div className="banner" key={b.id} onClick={() => dismissBanner(b.id)} style={{ cursor: 'pointer' }}>
-              <Icona nome="stampa" gruppo="tasti" />{' '}{trSegnato(b.msg)} <span className="muted">({tr('tocca per chiudere')})</span>
+              <Icona nome="stampa" gruppo="tasti" />{' '}{b.msg} <span className="muted">({tr('tocca per chiudere')})</span>
             </div>
           ))}
           {/* I FILTRI NON SONO PIÙ QUI: stanno sotto la riga dei conteggi,

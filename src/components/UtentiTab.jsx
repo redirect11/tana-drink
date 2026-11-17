@@ -20,7 +20,7 @@ import { associazioniDi, nomeOperatore } from '../lib/operatore.js'
 import {
   RUOLI,
   RUOLI_ASSEGNABILI,
-  RUOLO_ETICHETTA,
+  etichettaRuolo,
   RUOLO_DESCRIZIONE,
   isAdmin,
 } from '../lib/ruoli.js'
@@ -171,7 +171,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
           {u.disabled && <span className="pill annullato" style={{ marginLeft: 6 }}>sospeso</span>}
         </div>
         <div className="desc">
-          <ConIcona testo={RUOLO_ETICHETTA[u.role] ?? u.role} />
+          <ConIcona testo={etichettaRuolo(u.role) ?? u.role} />
           {u.name && u.email ? ` · ${u.email}` : ''}
         </div>
       </div>
@@ -311,7 +311,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
                     className={`mode-option${nuovoRuolo === value ? ' active' : ''}`}
                     onClick={() => setNuovoRuolo(value)}
                   >
-                    <ConIcona testo={RUOLO_ETICHETTA[value]} />
+                    <ConIcona testo={etichettaRuolo(value)} />
                   </button>
                 ))}
               </div>
@@ -385,7 +385,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
                   className={`mode-option${ruoloScelto === value ? ' active' : ''}`}
                   onClick={() => setRuoloScelto(value)}
                 >
-                  <ConIcona testo={RUOLO_ETICHETTA[value]} />
+                  <ConIcona testo={etichettaRuolo(value)} />
                 </button>
               ))}
             </div>

@@ -35,7 +35,7 @@ import {
   statoAlBanco,
   ritiratoLabel,
 } from '../../src/lib/orderStatus.js'
-import { SERVIZIO_ETICHETTA } from '../../src/lib/comande.js'
+import { servizioEtichetta } from '../../src/lib/comande.js'
 import { corsieComande, azioneComanda, nomiDelServizio } from '../../src/lib/coda.js'
 
 describe('al banco il passo «pronto» si chiama Pronto, e basta', () => {
@@ -69,7 +69,7 @@ describe('al banco il passo «pronto» si chiama Pronto, e basta', () => {
   })
 
   it('e la tabella del servizio dentro il conto', () => {
-    expect(SERVIZIO_ETICHETTA[ORDER_STATUSES.PRONTO]).toContain(
+    expect(servizioEtichetta(ORDER_STATUSES.PRONTO)).toContain(
       statoAlBanco(ORDER_STATUSES.PRONTO)
     )
   })
@@ -78,7 +78,7 @@ describe('al banco il passo «pronto» si chiama Pronto, e basta', () => {
 describe('gli altri passi non si sono mossi', () => {
   it('«da fare» resta «Da fare», col cliente che legge «Ordine ricevuto»', () => {
     expect(statoAlBanco(ORDER_STATUSES.RICEVUTO)).toBe('Da fare')
-    expect(SERVIZIO_ETICHETTA[ORDER_STATUSES.RICEVUTO]).toContain('Da fare')
+    expect(servizioEtichetta(ORDER_STATUSES.RICEVUTO)).toContain('Da fare')
     expect(STATUS_LABELS[ORDER_STATUSES.RICEVUTO]).toBe('Ordine ricevuto')
   })
 

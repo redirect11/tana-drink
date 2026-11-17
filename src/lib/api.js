@@ -6244,15 +6244,18 @@ export function salvaLinguaDelProfilo(uid, lingua) {
   )
 }
 
-// La lingua salvata sull'account, o null. Nessuno la aspetta: l'app parte
-// con la copia del dispositivo e cambia lingua quando questa arriva. Dal
-// server e non dalla cache, perché potrebbe averla cambiata un altro
-// dispositivo; senza rete risponde la cache.
+// La lingua dell'account. Nessuno la aspetta: l'app parte con la copia del
+// dispositivo e cambia lingua quando questa arriva. Dal server e non dalla
+// cache, perché potrebbe averla cambiata un altro dispositivo; senza rete
+// risponde la cache.
+// CHI NON HA MAI SCELTO HA L'ITALIANO, non la lingua di chi ha usato il
+// tablet prima di lui: la lingua è del profilo (dalla revisione del 17/11).
+// Solo se la lettura non riesce si risponde null, e resta quella che c'è.
 export async function leggiLinguaDelProfilo(uid) {
   if (!uid) return null
   try {
     const snap = await getDoc(profiloStaffRef(uid))
-    return snap.exists() ? (snap.data().lingua ?? null) : null
+    return (snap.exists() && snap.data().lingua) || 'it'
   } catch {
     return null
   }
