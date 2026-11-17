@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 308 | fatto e coperto dai test |
+| ✅ | 309 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 9 | fatto a metà |
-| ⬜ | 39 | da fare |
+| ⬜ | 38 | da fare |
 | 🗑 | 8 | non più valido |
 
-**379 voci** in tutto. **332** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **39** sono lavori
+**379 voci** in tutto. **333** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **38** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **17** difetti noti sono ancora aperti.
 
@@ -59,7 +59,7 @@ come «vero oggi», non come «garantito».
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | 6 | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
-| [Interfaccia](#interfaccia) | 29 | 6 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
+| [Interfaccia](#interfaccia) | 30 | 5 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 24 | 2 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 15 | 4 |  |
@@ -76,7 +76,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 12 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 187 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 188 |
 | Unità | il progetto di dettaglio: un modulo da solo | 188 |
 
 **21** bisogni del locale, **0** con un test di accettazione.
@@ -3754,6 +3754,14 @@ COME È FATTO (15/11/2026): FORME.lime (tasti piatti, 14/10px, ombra tenue, tito
 
 **Dove**: `src/lib/themes.js (FORME.lime, lime-scuro, lime-chiaro, temaDiPartenza), src/lib/api.js (DEFAULT_SETTINGS), src/components/ThemeSettings.jsx, src/index.css, src/lib/cookieConsent.js, src/components/GroupView.jsx, index.html, src/lib/venue.js, clienti/demo/venue.json, clienti/pluginCliente.js, scripts/genera-cliente.mjs, DESIGN.md` · **Serve**: [UR-014](#ur-014--la-demo-che-si-mostra-a-un-locale-nuovo-non-espone-niente-di-un-locale-vero) · **Lo dimostrano**: `tests/unit/temaLime.test.js`
 
+#### REQ-UI-035 — Nel gestionale, in alto, il marchio «LIME - SmartOrders» col suo logo
+
+Daniele, 17/11/2026: nel gestionale il titolo in alto diventa il logo LIME - SmartOrders, «lo trovi nella regia». Il logo è quello della regia (drink-regia, src/components/Logo.jsx e public/favicon.svg: una fetta di lime che sembra un grafico a torta, decisione del 09/11/2026), copiato com'è: è un'altra copia tenuta allineata a mano con la regia (REQ-DEV-025). Solo nel gestionale: le pagine dei clienti restano col logo e il nome del locale.
+
+FATTO (1.10.53-beta): `MarchioLime.jsx` (logo, «Lime» e la qualifica «SmartOrders» piccola in maiuscolo, come nella barra della regia); il gestionale è /bar, /pos e /profilo-staff (`nelGestionale` in lib/prodotto.js). Il menu laterale tiene il nome del locale.
+
+**Dove**: `src/App.jsx (topbar), un componente del marchio nuovo, src/index.css` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/component/MarchioLime.test.jsx`, `tests/component/AppHeader.test.jsx`
+
 ### Come si lavora al progetto
 
 Non è comportamento dell’app: è il metodo con cui la si costruisce.
@@ -4889,12 +4897,6 @@ DA FARE: passare le altre schermate con elenchi una per una (statistiche, magazz
 Daniele, 17/11/2026: «Gli avvisi che escono nel menu dovrebbero essere più visibili e più integrati con il tema». Sono le strisce del menù dei clienti — «Solo consultazione», «Verifico che sei al locale», «Devi essere al locale per ordinare», gli errori — che oggi usano il `.banner` generico, uguale in ogni tema e poco visibile sul fondo del menù. Diventano un avviso del menù: colori e caratteri del tema, un contrasto che si legge su ogni fondo, e in «Carte» la forma del tema. Il testo non cambia.
 
 **Dove**: `src/pages/MenuPage.jsx (avvisi: sola consultazione, posizione, errori), src/index.css, src/lib/stileMenu.js` · **Serve**: [UR-018](#ur-018--il-locale-si-presenta-al-cliente-col-suo-stile-dalla-prima-pagina-al-menù)
-
-#### REQ-UI-035 — Nel gestionale, in alto, il marchio «LIME - SmartOrders» col suo logo
-
-Daniele, 17/11/2026: nel gestionale il titolo in alto diventa il logo LIME - SmartOrders, «lo trovi nella regia». Il logo è quello della regia (drink-regia, src/components/Logo.jsx e public/favicon.svg: una fetta di lime che sembra un grafico a torta, decisione del 09/11/2026), copiato com'è: è un'altra copia tenuta allineata a mano con la regia (REQ-DEV-025). Solo nel gestionale: le pagine dei clienti restano col logo e il nome del locale.
-
-**Dove**: `src/App.jsx (topbar), un componente del marchio nuovo, src/index.css` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica)
 
 #### REQ-UI-036 — L'app è accessibile: WCAG 2.1 AA su menù, home e gestionale, provata con axe nel collaudo, con la pagina «Accessibilità»
 

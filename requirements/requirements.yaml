@@ -17631,11 +17631,17 @@ requirements:
       09/11/2026), copiato com'è: è un'altra copia tenuta allineata a mano
       con la regia (REQ-DEV-025). Solo nel gestionale: le pagine dei
       clienti restano col logo e il nome del locale.
-    status: todo
+      FATTO (1.10.53-beta): `MarchioLime.jsx` (logo, «Lime» e la qualifica
+      «SmartOrders» piccola in maiuscolo, come nella barra della regia);
+      il gestionale è /bar, /pos e /profilo-staff (`nelGestionale` in
+      lib/prodotto.js). Il menu laterale tiene il nome del locale.
+    status: implemented
     generate_issue: true
     labels: [ui, marchio, gestionale]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/component/MarchioLime.test.jsx
+      - tests/component/AppHeader.test.jsx
 
   - id: REQ-SIC-006
     title: "Lo Storage segue la licenza: le foto dove il piano le comprende, gli allegati delle fatture col loro modulo"

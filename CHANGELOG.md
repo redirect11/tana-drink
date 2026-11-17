@@ -2,18 +2,21 @@
 
 ## 1.10.53-beta — in lavorazione
 
+### Aspetto
+
+- **Nel gestionale, in alto, il marchio LIME - SmartOrders** col logo
+  della fetta di lime, al posto del nome del locale. Le pagine dei clienti
+  restano col logo e il nome del locale (REQ-UI-035).
+- Col tema «Lime» la categoria scelta nella colonna del conto e il numero
+  degli ordinati sulle card hanno il testo scuro: prima erano bianchi sul
+  lime e non si leggevano. Con la Tana non cambia niente (BUG-166).
+
 ### Sicurezza e costi
 
 - Le foto dei prodotti e gli allegati delle fatture si caricano solo se la
   licenza del locale li comprende: le foto non sul piano Free, gli allegati
   col modulo dello scadenzario o del magazzino. Vederli e cancellarli resta
   sempre possibile (REQ-SIC-006).
-
-### Aspetto
-
-- Col tema «Lime» la categoria scelta nella colonna del conto e il numero
-  degli ordinati sulle card hanno il testo scuro: prima erano bianchi sul
-  lime e non si leggevano. Con la Tana non cambia niente (BUG-166).
 
 ### Demo
 

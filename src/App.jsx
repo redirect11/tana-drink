@@ -42,6 +42,8 @@ import { useTastoAI } from './lib/statoAI.js'
 import ActionSheet from './components/ActionSheet.jsx'
 import StaffDrawer from './components/StaffDrawer.jsx'
 import ClientDrawer from './components/ClientDrawer.jsx'
+import MarchioLime from './components/MarchioLime.jsx'
+import { nelGestionale } from './lib/prodotto.js'
 import { useTelefono } from './lib/useTelefono.js'
 import { useSchermoIntero } from './lib/useSchermoIntero.js'
 import { logoutStaff } from './lib/logout.js'
@@ -657,14 +659,22 @@ export default function App() {
             ←
           </button>
         )}
-        {/* Nel gestionale il logo non porta al menu: resta sugli ordini. */}
+        {/* Nel gestionale il logo non porta al menu: resta sugli ordini.
+            E lì il marchio è quello del prodotto, LIME - SmartOrders
+            (REQ-UI-035): le pagine dei clienti restano del locale. */}
         <Link
           to={onBackoffice ? '/bar' : '/'}
           className="brand"
           style={{ textDecoration: 'none', color: 'inherit' }}
         >
-          <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
-          <span className="brand-nome">{venue.venue_name}</span>
+          {nelGestionale(location.pathname) ? (
+            <MarchioLime />
+          ) : (
+            <>
+              <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
+              <span className="brand-nome">{venue.venue_name}</span>
+            </>
+          )}
         </Link>
         {/* IL TITOLO DELLA PAGINA STA QUI, attaccato al marchio: dentro la
             pagina si prendeva una riga in cima al contenuto, e su un tablet

@@ -230,6 +230,34 @@ body.schermo-intero {
    pixel e mezzo lo mangiava sul filo: sullo schermo del telefono, dove è
    piccolo, sembrava tagliato. Ora si mostra INTERO (contain), senza
    maschera e senza anello: il tondo ce l'ha già suo. */
+/* IL MARCHIO DEL PRODOTTO, nel gestionale (REQ-UI-035): come nella barra
+   della regia — il logo, «Lime» nei titoli e la qualifica piccola in
+   maiuscolo, nel colore attenuato del tema. */
+.marchio-lime {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  font-size: 1.3rem;
+}
+.marchio-lime-logo {
+  flex: none;
+  width: 1.4em;
+  height: 1.4em;
+}
+.brand .marchio-lime-nome {
+  font-size: 1.1rem;
+  letter-spacing: -0.01em;
+}
+.marchio-lime-qualifica {
+  font-family: var(--testo, inherit);
+  font-weight: 500;
+  font-size: 0.6em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
 .brand img {
   width: 40px;
   height: 40px;

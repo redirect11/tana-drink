@@ -157,7 +157,9 @@ describe('la barra in cima è la stessa su tutte le schermate', () => {
     // nome si trovava due volte, ogni tanto: una prova ballerina è peggio di
     // una prova che manca, perché la si impara a ignorare.
     await waitFor(() => expect(document.querySelector('.topbar-io')).not.toBeNull())
-    expect(screen.getByText('La Tana del Coniglio')).toBeInTheDocument()
+    // Il profilo di chi lavora è gestionale: in alto il marchio del
+    // prodotto, LIME - SmartOrders, non il nome del locale (REQ-UI-035).
+    expect(document.querySelector('.topbar .marchio-lime')).toHaveTextContent('SmartOrders')
     // A destra una cosa sola: chi è collegato, che apre il suo profilo.
     const io = document.querySelector('.topbar-io')
     expect(io).toHaveAttribute('href', '/profilo-staff')
