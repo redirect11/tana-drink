@@ -18084,3 +18084,47 @@ requirements:
     labels: [sicurezza, privacy]
     priority: P2
     test_cases: []
+
+  - id: REQ-SIC-013
+    title: "La cancellazione dell'account fatta da sé, con 30 giorni per ripensarci"
+    area: "Il mio profilo, il profilo del cliente, una Function"
+    description: >
+      Daniele, 17/11/2026 (messaggio della regia, punto 7): «ok» ai 30 giorni e alla cancellazione fatta da sé, come nella regia (REQ-FLOTTA-134). La schermata propone prima «Scarica i miei dati» (REQ-SIC-008); l'account resta disattivato per 30 giorni, in cui si può annullare e scaricare ancora; poi si cancella da solo. Restano solo i dati che il locale deve tenere per legge (fiscali: ordini, incassi, chiusure), dichiarati nell'informativa. Per lo staff vanno chiariti i vincoli (presenze e turni che il locale deve tenere).
+    status: todo
+    generate_issue: true
+    labels: [sicurezza, privacy]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-SIC-014
+    title: "Il titolare esporta tutti i dati del locale in ogni momento"
+    area: "Backup e ripristino (src/components/BackupPanel.jsx, src/lib/backup.js)"
+    description: >
+      Messaggio della regia, punto 8: il locale è titolare dei dati dei suoi clienti e del suo personale e deve poterli avere tutti, durante il contratto e alla fine come restituzione (alla chiusura c'è già l'archivio della regia, 180 giorni). In parte esiste già: «Esporta tutto» del backup. Da verificare che comprenda tutti i dati personali dell'elenco REQ-SIC-007 (oggi alcune raccolte sono fuori dal backup apposta: presenze, profili_staff…) e che il formato sia leggibile da una macchina.
+    status: todo
+    generate_issue: true
+    labels: [sicurezza, privacy]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-SIC-015
+    title: "I dati da cui può derivare un controllo a distanza del personale, dichiarati allo staff"
+    area: "informativa per lo staff (REQ-SIC-012), presenze, chi ha battuto/incassato, tempi di preparazione"
+    description: >
+      Messaggio della regia, punto 9: lo Statuto dei lavoratori (art. 4) chiede, per gli strumenti da cui può derivare un controllo a distanza, un accordo o un'autorizzazione, o almeno un'informativa chiara al dipendente [da verificare col legale]. L'elenco di questi dati (presenza ogni 3 minuti, chi ha battuto/incassato/annullato cosa e quando, tempi di preparazione, iniziali sulle righe, storia del conto, ore e turni) entra nell'informativa per lo staff. La valutazione legale la fa Daniele col legale.
+    status: todo
+    generate_issue: true
+    labels: [sicurezza, privacy]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-SIC-016
+    title: "L'elenco dei servizi esterni a cui l'app manda dati di persone"
+    area: "REQ-SIC-007, l'accordo di trattamento della regia (REQ-FLOTTA-135)"
+    description: >
+      Messaggio della regia: per l'accordo di trattamento fra Stonebit e il locale, che elenca i sub-responsabili, serve l'elenco dei servizi esterni a cui l'app manda dati di persone (Google/Firebase e i suoi servizi, FCM, SumUp, la regia e il fornitore dell'AI, altri), verificato nel codice e tenuto insieme all'elenco dei dati personali.
+    status: todo
+    generate_issue: true
+    labels: [sicurezza, privacy]
+    priority: P2
+    test_cases: []

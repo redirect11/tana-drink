@@ -582,4 +582,8 @@ bisogni:
       - REQ-SIC-010
       - REQ-SIC-011
       - REQ-SIC-012
+      - REQ-SIC-013
+      - REQ-SIC-014
+      - REQ-SIC-015
+      - REQ-SIC-016
     test_cases: []
