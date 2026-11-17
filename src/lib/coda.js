@@ -637,10 +637,17 @@ export function spiegaOrdine(desc = true) {
 // può essere già incassato e avere comande al banco — si paga in anticipo
 // tutte le sere — e sono proprio quelle che non devono sparire da nessuna
 // parte. Un conto annullato non ha lavoro: quella roba non si fa.
+// E nemmeno una comanda SENZA RIGHE (BUG-169): svuotato un conto e tornati
+// alla coda, l'uscita lo nasconde e lo annulla; finché l'annullo non
+// arriva la sua comanda vuota è ancora «ricevuto», e contava come lavoro —
+// il conto vuoto ricompariva per un attimo, «0 prodotti · 0,00 €».
 export function haLavoroDaFare(o) {
   if (annullato(o)) return false
   return (o?.comande || []).some(
-    (c) => c.status !== ORDER_STATUSES.RITIRATO && c.status !== ORDER_STATUSES.ANNULLATO
+    (c) =>
+      c.status !== ORDER_STATUSES.RITIRATO &&
+      c.status !== ORDER_STATUSES.ANNULLATO &&
+      (c.items || []).length > 0
   )
 }
 

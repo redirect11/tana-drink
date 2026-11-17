@@ -28,7 +28,7 @@ import { useDraft, loadLayout, saveLayout, saveDraft } from '../lib/useDraft.js'
 import { dismissKeyboard } from '../lib/keyboard.js'
 import { useResizable } from '../lib/useResizable.js'
 import { useTelefono } from '../lib/useTelefono.js'
-import { nascondiOrdine, mostraOrdine } from '../lib/ordiniNascosti.js'
+import { nascondiOrdine, nascondiPerAnnullo, mostraOrdine } from '../lib/ordiniNascosti.js'
 import ZoomControl from './ZoomControl.jsx'
 import { auth } from '../lib/firebaseClient.js'
 import { onAuthStateChanged } from 'firebase/auth'
@@ -708,7 +708,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     const vuoto = contoVuotoRef.current
     if (vuoto) {
       cancelOrder(vuoto, { by: 'bartender' }).catch(() => mostraOrdine(vuoto))
-      nascondiOrdine(vuoto)
+      nascondiPerAnnullo(vuoto)
     }
     if (orderProp) return
     ricordaContoInCorso(null)
@@ -3762,7 +3762,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
               Promise.resolve(nato)
                 .then((o) => {
                   if (!o?.id) return null
-                  nascondiOrdine(o.id)
+                  nascondiPerAnnullo(o.id)
                   return cancelOrder(o.id, { by: 'bartender' })
                 })
                 .catch((e) => toastError(`Annullo non riuscito: ${e.message}`))
@@ -3775,7 +3775,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             })
             // Sparisce dalla coda SUBITO, senza aspettare il database:
             // altrimenti lo si ritrova lì per un istante e si dubita.
-            nascondiOrdine(order.id)
+            nascondiPerAnnullo(order.id)
             // SI TORNA AGLI ORDINI. Un conto annullato non si lavora più:
             // restarci davanti serve solo a chiedersi se l'annullo è andato,
             // e a rischiare di batterci sopra. Come quando si svuota da sé.

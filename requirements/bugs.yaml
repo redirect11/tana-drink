@@ -6721,3 +6721,39 @@ bugs:
     priority: P2
     requisiti: [REQ-UI-032]
     test_cases: [tests/component/SettingsTab.test.jsx]
+
+  - id: BUG-169
+    title: "Svuotato un conto, in coda la card sparisce, ricompare con «Conto ripristinato» e sparisce di nuovo"
+    area: "src/lib/coda.js (haLavoroDaFare), src/lib/ordiniNascosti.js (nascondiPerAnnullo), src/lib/api.js (subscribeActiveOrders, dallaCache)"
+    description: >
+      Daniele, 17/11/2026: con «Conto vuoto» acceso, tolta l'ultima riga il
+      conto esce e si torna alla coda; lì la card «prima scompare, poi
+      riappare, esce la notifica ripristinato e poi scompare di nuovo».
+      L'uscita nasconde il conto e lo annulla (REQ-ORD-025), e due cose lo
+      rimettevano a schermo per un attimo. La prima: il conto nascosto
+      restava visibile se aveva «lavoro da fare» (BUG-023), e la sua
+      comanda, ormai senza righe, era ancora «ricevuto» finché l'annullo
+      non arrivava — la card «0 prodotti · 0,00 €». La seconda: la coda si
+      dipinge prima con una lettura dalla cache, applicata se le liste
+      erano ancora vuote; ma l'ascolto degli aperti, arrivato dopo
+      l'annullo, era vuoto davvero, e la lettura partita un attimo prima
+      rimetteva il conto aperto — da qui il passaggio annullato → aperto e
+      l'avviso «Conto ripristinato».
+      ORA una comanda senza righe non è lavoro da fare; un conto nascosto
+      perché lo si sta annullando resta nascosto anche se la coda lo vede
+      ancora col suo ultimo drink (la rimozione parte all'uscita insieme
+      all'annullo); la lettura dalla cache si applica solo se nessun
+      ascolto ha ancora risposto. La prova
+      di sistema guarda la coda con un osservatore nella pagina, dal tocco
+      a tre secondi dopo: senza le correzioni vede la card ricomparire.
+    in_produzione: false
+    status: fixed
+    generate_issue: true
+    labels: [bug, coda, local-first]
+    severity: media
+    priority: P1
+    requisiti: [REQ-ORD-025]
+    test_cases:
+      - tests/sistema/contoSvuotato.spec.js
+      - tests/unit/ordiniNascosti.test.js
+      - tests/unit/codaCache.test.js

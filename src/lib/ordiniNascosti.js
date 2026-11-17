@@ -15,14 +15,14 @@
 
 const DURATA = 60_000 // un minuto: il tempo che la scrittura arrivi, non di più
 
-const nascosti = new Map() // id -> scadenza (ms)
+const nascosti = new Map() // id -> { scadenza (ms), annullo }
 const ascoltatori = new Set()
 
 const avvisa = () => ascoltatori.forEach((f) => f(elencoNascosti()))
 
 function pulisci(ora = Date.now()) {
   let cambiato = false
-  for (const [id, scadenza] of nascosti) {
+  for (const [id, { scadenza }] of nascosti) {
     if (scadenza <= ora) {
       nascosti.delete(id)
       cambiato = true
@@ -32,9 +32,9 @@ function pulisci(ora = Date.now()) {
 }
 
 // Nasconde un ordine dalla coda, subito.
-export function nascondiOrdine(id, durata = DURATA) {
+export function nascondiOrdine(id, durata = DURATA, { annullo = false } = {}) {
   if (!id) return
-  nascosti.set(id, Date.now() + durata)
+  nascosti.set(id, { scadenza: Date.now() + durata, annullo })
   avvisa()
   // Alla scadenza si riavvisa: se per qualche motivo l'ordine è ancora
   // aperto deve ricomparire, non restare invisibile.
@@ -48,8 +48,19 @@ export function mostraOrdine(id) {
   if (nascosti.delete(id)) avvisa()
 }
 
+// NASCOSTO PERCHÉ LO SI STA ANNULLANDO (BUG-169). Un conto annullato da
+// qui non ha lavoro da fare, per definizione: l'annullo chiude tutte le
+// comande non servite. Ma la scrittura parte in sottofondo, e nell'attimo
+// prima la coda vede il conto com'era — svuotandolo, magari ancora con
+// l'ultima riga, perché la sua rimozione parte all'uscita insieme
+// all'annullo. Con `tieni` (lavoro da fare) quel conto tornava a schermo
+// per un lampo. Annullando, quindi, si nasconde e basta.
+export function nascondiPerAnnullo(id) {
+  nascondiOrdine(id, DURATA, { annullo: true })
+}
+
 export function ordineNascosto(id) {
-  const scadenza = nascosti.get(id)
+  const scadenza = nascosti.get(id)?.scadenza
   if (!scadenza) return false
   if (scadenza <= Date.now()) {
     nascosti.delete(id)
@@ -73,7 +84,7 @@ export function elencoNascosti() {
 // (`tieni`): la regola è del dominio, non di questo cassetto.
 export function senzaNascosti(ordini, tieni = () => false) {
   if (!nascosti.size) return ordini
-  return ordini.filter((o) => !ordineNascosto(o.id) || tieni(o))
+  return ordini.filter((o) => !ordineNascosto(o.id) || (!nascosti.get(o.id)?.annullo && tieni(o)))
 }
 
 export function subscribeNascosti(cb) {

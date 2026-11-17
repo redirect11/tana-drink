@@ -75,7 +75,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Livello | Cosa verifica | File di test |
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
-| Sistema | la specifica (REQ-*), sull'app intera | 12 |
+| Sistema | la specifica (REQ-*), sull'app intera | 13 |
 | Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 188 |
 | Unità | il progetto di dettaglio: un modulo da solo | 191 |
 
@@ -450,7 +450,7 @@ Flavio, 09/11/2026: «ora che è stata aggiunta l'icona vicino a ogni item all'i
 
 Daniele, 15/11/2026: togliendo l'ultima riga il conto si annulla dopo 400 ms e si torna alla coda (REQ-ORD-004); a chi sostituisce un drink con calma la schermata si chiudeva in mano. «Facciamolo così ma opzionale. Per utente, a Flavio piace a Vittorio no. Quindi mettiamolo configurabile per chi sta usando il terminale». La scelta sta nel profilo («Il mio profilo», `/profilo-staff`), come gli avvisi: vale per l'account e per il dispositivo, e due persone che si passano lo stesso tablet non se la cambiano a vicenda. Accesa di partenza, che è il comportamento di sempre. Spenta, il conto svuotato resta aperto a schermo e si può continuare a battere; se all'uscita è ancora vuoto si annulla allora, con le stesse regole: niente annullo se qualcosa è già stato incassato, e il conto annullato esce subito dalla coda. Annullare all'uscita chiude anche la composizione nella stessa scrittura (BUG-071): l'uscita non toglie `in_creazione` per conto suo, e del conto vuoto non esce carta né notifica. Uscire da un conto vuoto prima dei 400 ms lo annulla comunque, con la scelta accesa o spenta: prima restava aperto e vuoto in coda. Uscendo da un conto vuoto non si chiede il nome: sta per essere annullato. La scelta si legge allo scadere dei 400 ms, non all'apertura: aprendo un conto già vuoto l'accesso può non aver ancora risposto.
 
-**Dove**: `src/lib/impostazioniLocali.js (contoVuotoSiChiude), src/components/OrderPosDetail.jsx, src/pages/StaffProfilePage.jsx` · **Serve**: [UR-003](#ur-003--niente-di-quello-che-si-sta-battendo-va-perso) · **Lo dimostrano**: `tests/unit/impostazioniLocali.test.js`, `tests/component/OrderPosDetail.test.jsx`, `tests/component/StaffProfilePage.test.jsx`, `tests/unit/giroInLocale.test.js`
+**Dove**: `src/lib/impostazioniLocali.js (contoVuotoSiChiude), src/components/OrderPosDetail.jsx, src/pages/StaffProfilePage.jsx` · **Serve**: [UR-003](#ur-003--niente-di-quello-che-si-sta-battendo-va-perso) · **Lo dimostrano**: `tests/unit/impostazioniLocali.test.js`, `tests/component/OrderPosDetail.test.jsx`, `tests/component/StaffProfilePage.test.jsx`, `tests/unit/giroInLocale.test.js`, `tests/sistema/contoSvuotato.spec.js`
 
 ### Cassa e POS
 

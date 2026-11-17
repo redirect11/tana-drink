@@ -3056,6 +3056,9 @@ export function subscribeActiveOrders(
   // APERTURA. Si agisce su un conto e quello svanisce, senza sapere se
   // l'operazione è andata a buon fine.
   let docsChiusi = []
+  // Ha già risposto almeno un ascolto? Da lì la lettura dalla cache non
+  // serve più (vedi dallaCache).
+  let ascoltoArrivato = false
 
   // ── LA MEMORIA VALE PER LA LISTA COME PER IL SINGOLO CONTO ───────────
   //
@@ -3167,7 +3170,18 @@ export function subscribeActiveOrders(
         getDocsFromCache(query(ordersCol, where('status', 'in', STATI_APERTI))),
         getDocsFromCache(query(ordersCol, where('created_at', '>=', copertura))),
       ])
-      if (docsAperti.length === 0 && docsRecenti.length === 0) {
+      // SOLO SE NESSUN ASCOLTO HA RISPOSTO, e non «se le liste sono vuote»:
+      // vuoto può essere la risposta. Svuotato un conto e tornati alla coda,
+      // l'uscita lo annulla e l'ascolto degli aperti non ne ha più nessuno;
+      // questa lettura, partita un attimo prima, lo aveva ancora aperto e lo
+      // rimetteva a schermo — ricompariva con «Conto ripristinato» e spariva
+      // all'ascolto dopo (BUG-169).
+      // Vale per qualunque ascolto, «chiusi» compreso, e per le due liste
+      // insieme: anche la sola lista di oggi letta dalla cache ha il conto
+      // com'era un attimo fa, e da sola lo rimetterebbe aperto. Se un
+      // ascolto ha risposto, quelli che mancano arrivano dalla cache dell'SDK
+      // per conto loro.
+      if (!ascoltoArrivato) {
         docsAperti = a.docs
         docsRecenti = r.docs
         emit(true)
@@ -3183,6 +3197,7 @@ export function subscribeActiveOrders(
   const unsubAperti = onSnapshot(
     query(ordersCol, where('status', 'in', STATI_APERTI)),
     (snap) => {
+      ascoltoArrivato = true
       docsAperti = snap.docs
       emit()
     },
@@ -3193,6 +3208,7 @@ export function subscribeActiveOrders(
   const unsubRecenti = onSnapshot(
     query(ordersCol, where('created_at', '>=', copertura)),
     (snap) => {
+      ascoltoArrivato = true
       docsRecenti = snap.docs
       emit()
     },
@@ -3205,6 +3221,7 @@ export function subscribeActiveOrders(
     ? onSnapshot(
         query(ordersCol, where('closed_in_session', '==', cashSessionId)),
         (snap) => {
+          ascoltoArrivato = true
           docsChiusi = snap.docs
           emit()
         },
