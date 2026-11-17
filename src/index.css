@@ -265,26 +265,27 @@ body.schermo-intero {
    piccolo, sembrava tagliato. Ora si mostra INTERO (contain), senza
    maschera e senza anello: il tondo ce l'ha già suo. */
 
-/* IL MARCHIO DEL PRODOTTO, nel gestionale (REQ-UI-035): come nella barra
-   della regia — il logo, «Lime» nei titoli e la qualifica piccola in
-   maiuscolo, nel colore attenuato del tema. Sotto `.brand`, perché
-   `.brand span` (più specifico di una classe sola) le schiacciava tutte. */
-.brand .marchio-lime {
+/* IL MARCHIO DEL PRODOTTO (REQ-UI-035): nel menu laterale del gestionale e,
+   per la demo e i Free, in alto. Come nella barra della regia — il logo,
+   «Lime» nei titoli e la qualifica piccola in maiuscolo, nel colore
+   attenuato del tema. Sotto `.brand`/`.brand-mini`, perché `.brand span`
+   (più specifico di una classe sola) le schiacciava tutte. */
+:is(.brand, .brand-mini) .marchio-lime {
   display: inline-flex;
   align-items: center;
   gap: 10px;
   min-width: 0;
 }
-.brand .marchio-lime-logo {
+:is(.brand, .brand-mini) .marchio-lime-logo {
   flex: none;
   width: 1.8rem;
   height: 1.8rem;
 }
-.brand .marchio-lime-nome {
+:is(.brand, .brand-mini) .marchio-lime-nome {
   font-size: 1.1rem;
   letter-spacing: -0.01em;
 }
-.brand .marchio-lime-qualifica {
+:is(.brand, .brand-mini) .marchio-lime-qualifica {
   font-family: var(--testo, inherit);
   font-weight: 500;
   font-size: 0.6em;
@@ -2948,7 +2949,9 @@ body.fullbleed .bar-content {
   .topbar-pagina:not(.topbar-pagina-tasto) {
     display: none;
   }
-  .brand-nome {
+  /* Solo in barra: lo stesso nome nel menu laterale (il marchio LIME,
+     REQ-UI-035) sul telefono deve restare. */
+  .topbar .brand-nome {
     display: none;
   }
   .topbar-back {
@@ -8711,10 +8714,12 @@ body.pagina-piena .pagina-inventario .inv-scroll {
     border-right: 1px solid var(--line);
     background: var(--bg-2);
   }
-  /* Il marchio ce l'ha già la barra qui sopra: ripeterlo dentro il menu
-     costava 60px di altezza per dire una cosa che si vede. */
+  /* Il marchio LIME sta nel menu laterale anche agganciato (REQ-UI-035):
+     la barra qui sopra, per un locale che paga, mostra il locale. Prima qui
+     si nascondeva perché ripeteva il logo della barra; ora dice un'altra
+     cosa, e si tiene, più compatto. */
   body.drawer-agganciato .bar-sidebar.agganciata .brand-mini {
-    display: none;
+    padding-bottom: 10px;
   }
   /* MENO INGOMBRO. Le voci sono parole corte: righe alte 52px e un
      rientro da 18 lasciavano mezza colonna vuota a destra. */

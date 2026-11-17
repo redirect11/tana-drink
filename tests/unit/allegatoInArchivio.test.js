@@ -28,6 +28,7 @@ const stato = {
   cancellati: [],
   cancellaFallisce: false,
   caricamentoFallisce: false,
+  caricamentoRifiutato: false,
   canvas: null,
 }
 
@@ -87,6 +88,7 @@ vi.mock('firebase/storage', () => ({
   ref: (_s, path) => ({ path }),
   uploadBytes: vi.fn(async (r, dati, meta) => {
     if (stato.caricamentoFallisce) throw new Error('rete assente')
+    if (stato.caricamentoRifiutato) throw Object.assign(new Error('Firebase Storage: User does not have permission'), { code: 'storage/unauthorized' })
     stato.caricati.push({ path: r.path, size: dati?.size, contentType: meta?.contentType })
   }),
   getDownloadURL: vi.fn(async (r) => `https://storage/${r.path}?token=abc`),
@@ -148,6 +150,7 @@ beforeEach(() => {
   stato.cancellati = []
   stato.cancellaFallisce = false
   stato.caricamentoFallisce = false
+  stato.caricamentoRifiutato = false
   stato.canvas = null
   preparaBrowser()
 })
@@ -266,5 +269,24 @@ describe('chi cancella la fattura porta via anche l’allegato', () => {
   it('una fattura senza allegato si cancella come sempre', async () => {
     await subito(api.deleteSupplierInvoice('inv-1'))
     expect(stato.cancellati).toEqual([])
+  })
+})
+
+// LO STORAGE CHE RIFIUTA SI DICE IN CHIARO (REQ-SIC-006). Le regole di
+// Storage leggono la licenza; dove il ruolo IAM è appena stato dato, per
+// qualche minuto il caricamento viene rifiutato (la regia, 17/11/2026). Il
+// messaggio di Firebase non dice cosa fare: quello dell'app sì.
+describe('un caricamento rifiutato dalle regole', () => {
+  it('l’allegato della fattura dice cosa fare, non il codice di Firebase', async () => {
+    stato.caricamentoRifiutato = true
+    const errore = await subito(api.allegaDocumentoAFattura('inv-1', PDF)).catch((e) => e)
+    expect(errore.message).toMatch(/riprovare più tardi/)
+    expect(errore.message).not.toMatch(/storage\/unauthorized|permission/)
+  })
+
+  it('anche la foto di un prodotto', async () => {
+    const { uploadDrinkImage, CARICAMENTO_NON_CONSENTITO } = await import('../../src/lib/storage.js')
+    stato.caricamentoRifiutato = true
+    await expect(subito(uploadDrinkImage({ type: 'image/png', size: 1e5, name: 'foto.png' }))).rejects.toThrow(CARICAMENTO_NON_CONSENTITO)
   })
 })

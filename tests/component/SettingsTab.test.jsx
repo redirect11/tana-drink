@@ -240,26 +240,32 @@ describe('la ricerca della coda: filtra o accende', () => {
   })
 })
 
-// LA VISTA DEL BANCO STA QUI, accanto a quella della coda: è
-// un'impostazione del LOCALE, non di chi guarda. Ad accenderla sono gli
-// stati del servizio — senza quei passi non ci sarebbe niente da mostrare —
-// e qui si sceglie soltanto come disegnarla.
+// LA VISTA DEL BANCO STA QUI, accanto a quella della coda, e dice cosa fa.
+// Fino al 17/11/2026 c'era un selettore con una voce sola («Corsie di
+// stato») e un testo che raccontava il perché di una scelta di progetto.
+// Daniele: «puoi semplicemente spiegare che cosa fa un'opzione invece di
+// scrivere cose inutili … perché?» (BUG-168). Ad accenderla sono gli stati
+// del servizio: il testo dice se è attiva, e cosa serve se non lo è.
 describe('la vista del banco', () => {
-  it('è una lista di viste possibili, e di suo è «corsie di stato»', async () => {
-    // Non un interruttore: quando se ne aggiungerà un'altra il valore già
-    // scritto su settings/bar resta buono, senza migrazioni.
+  const sezione = async () => {
     const user = userEvent.setup()
     mostra()
     await user.click(screen.getByRole('button', { name: /Banco: coda e ordine/ }))
-    const titolo = screen.getByText('La vista del banco')
-    // «corsie di stato» è anche una delle viste della CODA: qui si guarda
-    // la fila di voci che sta sotto questo titolo, non quella sopra.
-    const suoi = [
-      ...titolo.nextElementSibling.nextElementSibling.querySelectorAll('button'),
-    ]
-    expect(suoi.map((b) => b.textContent.trim())).toEqual(['Corsie di stato'])
-    expect(suoi[0]).toHaveClass('active')
-    expect(suoi[0]).toBeEnabled()
+    return screen.getByText('La vista del banco').nextElementSibling
+  }
+
+  it('dice cosa fa, e non ha una scelta con una voce sola', async () => {
+    const testo = await sezione()
+    expect(testo).toHaveTextContent('A chi ha il ruolo bartender la coda mostra le comande')
+    expect(testo).toHaveTextContent('Attiva.')
+    // «Corsie di stato» resta una delle viste della CODA, e lì sola.
+    expect(screen.getAllByRole('button', { name: /Corsie di stato/ })).toHaveLength(1)
+  })
+
+  it('con gli stati del servizio spenti dice cosa serve per averla', async () => {
+    impostazioni.workflow_enabled = false
+    const testo = await sezione()
+    expect(testo).toHaveTextContent('Non attiva: richiede «Segui la preparazione degli ordini»')
   })
 })
 

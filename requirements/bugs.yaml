@@ -6694,3 +6694,30 @@ bugs:
     priority: P2
     requisiti: [REQ-UI-036]
     test_cases: [tests/sistema/accessibilita.spec.js, tests/unit/contrastoAccento.test.js]
+  - id: BUG-168
+    title: "«La vista del banco» nelle impostazioni: un selettore con una voce sola e un testo che non dice cosa fa"
+    area: "src/components/SettingsTab.jsx (Coda ordini → La vista del banco)"
+    description: >
+      Daniele, 17/11/2026: «nelle opzioni delle impostazioni, puoi
+      semplicemente spiegare che cosa fa un'opzione invece di scrivere cose
+      inutili … e poi proprio questa opzione si può selezionare ed è
+      selezionata solo corsie di stato, perché?». Il testo raccontava il
+      perché di una scelta di progetto («chi sta al banco non guarda i
+      conti, guarda il lavoro…»), e sotto c'era un selettore con una voce
+      sola, «Corsie di stato»: l'unico modo di disegnare la vista che
+      esiste, messo come segnaposto per quelli futuri, e spento quando gli
+      stati del servizio sono spenti.
+      ORA niente selettore: una frase su cosa fa («a chi ha il ruolo
+      bartender la coda mostra le comande, una card per ticket, divise per
+      stato di preparazione») e se è attiva o cosa serve per averla.
+      `bartender_view` resta nei dati. La regola vale per tutte le
+      didascalie (CLAUDE.md, «il tono resta professionale»: dicono cosa fa
+      una cosa e a cosa serve, in una frase piana).
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, ui, impostazioni]
+    severity: lieve
+    priority: P2
+    requisiti: [REQ-UI-032]
+    test_cases: [tests/component/SettingsTab.test.jsx]

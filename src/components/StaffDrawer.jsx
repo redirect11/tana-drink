@@ -28,6 +28,7 @@ import { toastSuccess } from '../lib/toast.js'
 import { vociPerRuolo } from '../lib/sezioni.js'
 import { menuDigitaleAttivo } from '../lib/licenza.js'
 import Icona from './Icona.jsx'
+import MarchioLime from './MarchioLime.jsx'
 import { subscribeSottosezioni } from '../lib/sottosezioni.js'
 
 // Menu laterale dello staff: usato nel gestionale (onSelect cambia tab)
@@ -255,9 +256,11 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
         // «em», quindi basta questa.
         style={dock ? { width: largh, fontSize: `${(0.85 * largh) / MENU_DEFAULT}rem` } : undefined}
       >
+        {/* IL MARCHIO DEL PRODOTTO STA QUI (REQ-UI-035, Daniele 17/11/2026:
+            «dove sta scritto Gestionale in alto nel menu»): le pagine, in
+            alto, tengono il logo e il nome del locale. */}
         <div className="brand-mini">
-          <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
-          Gestionale
+          <MarchioLime />
         </div>
         {/* IL SECONDO LIVELLO STA QUI DENTRO, sotto la pagina in cui ci si
             trova. È il modo in cui si fa di solito con un menu a scomparsa:

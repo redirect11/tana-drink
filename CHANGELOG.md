@@ -1,5 +1,28 @@
 # Cosa è cambiato
 
+## 1.10.54-beta — 17/11/2026 (test)
+
+### Aspetto
+
+- **Il marchio LIME - SmartOrders sta nel menu laterale del gestionale**, in
+  cima, al posto della scritta «Gestionale». In alto nelle pagine tornano
+  il logo e il nome del locale; solo la demo e i locali col piano Free
+  hanno lì il marchio LIME (REQ-UI-035).
+- In Impostazioni → Coda ordini, «La vista del banco» dice cosa fa e se è
+  attiva, senza più un selettore con una scelta sola (BUG-168).
+
+### Demo
+
+- Nel menù della demo, dietro il nome del locale, la testata ha il fondo
+  di Lime con le fette di lime, al posto del bicchiere grigio
+  (REQ-FLOTTA-033).
+
+### Sicurezza e costi
+
+- Se lo Storage rifiuta una foto o un allegato, l'app lo dice in chiaro e
+  la scheda resta aperta per riprovare: succede per qualche minuto dopo un
+  aggiornamento che cambia i permessi (REQ-SIC-006).
+
 ## 1.10.53-beta — 17/11/2026 (test)
 
 ### Aspetto

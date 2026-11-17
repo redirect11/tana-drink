@@ -1,9 +1,10 @@
 import { NOME_CORTO_PRODOTTO, QUALIFICA_PRODOTTO } from '../lib/prodotto.js'
 
-// ── IL MARCHIO DEL PRODOTTO NEL GESTIONALE (REQ-UI-035) ─────────────────
-// Daniele, 17/11/2026: nel gestionale, in alto, il marchio LIME -
-// SmartOrders al posto del nome del locale. Le pagine dei clienti restano
-// del locale (logo e nome suoi): lì il prodotto non si firma.
+// ── IL MARCHIO DEL PRODOTTO (REQ-UI-035) ─────────────────────────────────
+// Daniele, 17/11/2026: il marchio LIME - SmartOrders sta in cima al menu
+// laterale del gestionale, al posto di «Gestionale». In alto nelle pagine
+// c'è il locale, col suo logo e il suo nome; solo la demo e i locali Free
+// hanno lì il marchio (limiti.js, marchioDelProdottoInAlto).
 //
 // IL LOGO È QUELLO DELLA REGIA, copiato com'è da drink-regia
 // `src/components/Logo.jsx` (e `public/favicon.svg`): una fetta di lime che
@@ -11,7 +12,7 @@ import { NOME_CORTO_PRODOTTO, QUALIFICA_PRODOTTO } from '../lib/prodotto.js'
 // allineata a mano (REQ-DEV-025): se la regia lo cambia, si cambia qui.
 // Il nome e la qualifica come nella barra della regia: «Lime» e, piccolo in
 // maiuscolo, «SmartOrders». Il logo è decorativo: il nome lo dice il testo.
-// La misura la dà il CSS (`.brand .marchio-lime-logo`). La stessa fetta è il
+// La misura la dà il CSS (`:is(.brand, .brand-mini) .marchio-lime-logo`). La stessa fetta è il
 // logo della demo (clienti/demo/public/favicon.svg): una prova le confronta.
 function LogoLime() {
   return (

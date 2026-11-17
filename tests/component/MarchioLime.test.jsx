@@ -39,12 +39,14 @@ describe('il marchio LIME - SmartOrders', () => {
   })
 })
 
-describe('dove si firma il prodotto', () => {
-  it('nel gestionale: coda e sezioni, conto, profilo di chi lavora', () => {
+// Dove porta il logo in alto: nel gestionale alla coda, altrove alla home
+// del locale. Dove si firma il prodotto lo dice marchioDelProdottoInAlto.
+describe('che cos’è il gestionale', () => {
+  it('coda e sezioni, conto, profilo di chi lavora', () => {
     for (const p of ['/bar', '/pos', '/profilo-staff']) expect(nelGestionale(p), p).toBe(true)
   })
 
-  it('non nelle pagine dei clienti, anche quando le apre il personale', () => {
+  it('non le pagine dei clienti, anche quando le apre il personale', () => {
     for (const p of ['/', '/menu', '/menu/special', '/ordine/abc', '/ordini', '/accedi', '/profilo', '/barca']) {
       expect(nelGestionale(p), p).toBe(false)
     }
