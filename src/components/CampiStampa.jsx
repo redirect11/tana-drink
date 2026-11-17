@@ -104,7 +104,10 @@ export default function CampiStampa({ quale, settings, onSave }) {
                   id={`testo-${quale}-${campo.id}`}
                   type="text"
                   maxLength={40}
-                  placeholder={campo.testo.placeholder || campo.testo.valore}
+                  placeholder={trSegnato(campo.testo.placeholder) || campo.testo.valore}
+                  // Senza un suggerimento si legge il testo di partenza, che
+                  // è quello STAMPATO: italiano apposta (REQ-UI-039).
+                  lang={campo.testo.placeholder ? undefined : 'it'}
                   value={cfg.testo(campo.id)}
                   onChange={(e) => salva('testi', campo.id, e.target.value)}
                 />

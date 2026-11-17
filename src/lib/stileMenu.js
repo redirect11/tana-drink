@@ -29,64 +29,69 @@
 // Uno stile che il locale non ha non si applica: resta il classico.
 import { licenzaDi } from './licenzaInVigore.js'
 import { stiliRicettaDelLocale, stiliRicettaProvabili, stiliRicordati, leggiStile, vesteRicetta } from './stiliRicetta.js'
+import { daTradurre } from './lingua.js'
+
+// Nomi e descrizioni degli stili sono segnati con `daTradurre`: il
+// gestionale li mostra con `trSegnato` (REQ-UI-039). Le pagine dei clienti
+// li leggono come sono, in italiano.
 
 export const STILI_MENU = [
   {
     id: 'classico',
-    nome: 'Classico',
+    nome: daTradurre('Classico'),
     sempre: true,
-    desc: 'Il menù a card, con le immagini dei prodotti e il carosello degli Special.',
+    desc: daTradurre('Il menù a card, con le immagini dei prodotti e il carosello degli Special.'),
   },
   {
     id: 'notte',
-    nome: 'Notte',
+    nome: daTradurre('Notte'),
     inLicenza: true,
-    desc: 'Carta a righe, senza riquadri, con titoli sottili; gli Special scorrono a tutto schermo, uno per volta.',
+    desc: daTradurre('Carta a righe, senza riquadri, con titoli sottili; gli Special scorrono a tutto schermo, uno per volta.'),
   },
   {
     id: 'meraviglie',
-    nome: 'Meraviglie',
+    nome: daTradurre('Meraviglie'),
     inLicenza: true,
     // Veste tutte le pagine dei clienti, non solo il menù, e ha le sue
     // frasi (testiStile.js).
     pagine: true,
     tavolozza: 'meraviglie',
-    desc: 'Un libro illustrato dell’Ottocento: carta avorio, caratteri da stampa d’epoca, capitoli e semi di carte da gioco. Veste anche la home e le altre pagine dei clienti.',
+    desc: daTradurre('Un libro illustrato dell’Ottocento: carta avorio, caratteri da stampa d’epoca, capitoli e semi di carte da gioco. Veste anche la home e le altre pagine dei clienti.'),
   },
   {
     // L'idea di Flavio (REQ-MENU-029): esclusivo della Tana, come «Notte»
     // e «Meraviglie». Ha una struttura sua (MenuCarte.jsx).
     id: 'carte',
-    nome: 'Carte',
+    nome: daTradurre('Carte'),
     inLicenza: true,
     // Porta con sé i disegni dei drink (disegniDelLocale, REQ-LIC-013).
     disegni: true,
-    desc: 'Il menù come un mazzo di carte francesi: ogni sezione è una carta col seme del suo gruppo, e la carta scelta si alza e si apre. Gli Special restano nel carosello in cima.',
+    desc: daTradurre('Il menù come un mazzo di carte francesi: ogni sezione è una carta col seme del suo gruppo, e la carta scelta si alza e si apre. Gli Special restano nel carosello in cima.'),
   },
   {
     id: 'lavagna',
-    nome: 'Lavagna',
+    nome: daTradurre('Lavagna'),
     gratis: true,
     tavolozza: 'lavagna',
-    desc: 'La lavagna del bistrot: scritte a mano, righe a gessetto, prezzi allineati a destra.',
+    desc: daTradurre('La lavagna del bistrot: scritte a mano, righe a gessetto, prezzi allineati a destra.'),
   },
   {
     id: 'deco',
-    nome: 'Déco',
+    nome: daTradurre('Déco'),
     gratis: true,
-    desc: 'Anni Venti: caratteri alti e sottili, cornici geometriche, impaginazione simmetrica.',
+    desc: daTradurre('Anni Venti: caratteri alti e sottili, cornici geometriche, impaginazione simmetrica.'),
   },
   {
     id: 'riviera',
-    nome: 'Riviera',
+    nome: daTradurre('Riviera'),
     gratis: true,
-    desc: 'Da aperitivo all’aperto: titoli in corsivo, disegni nei cerchi, strisce colorate.',
+    desc: daTradurre('Da aperitivo all’aperto: titoli in corsivo, disegni nei cerchi, strisce colorate.'),
   },
   {
     id: 'giornale',
-    nome: 'Giornale',
+    nome: daTradurre('Giornale'),
     gratis: true,
-    desc: 'La carta stampata: titoli grandi in serif, filetti, voci in colonna come un quotidiano.',
+    desc: daTradurre('La carta stampata: titoli grandi in serif, filetti, voci in colonna come un quotidiano.'),
   },
 ]
 

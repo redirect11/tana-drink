@@ -1,4 +1,5 @@
 import { conEmoji } from './icone.js'
+import { daTradurre, trSegnato } from './lingua.js'
 
 // ── SERVIZIO O RITIRO ────────────────────────────────────────────────
 //
@@ -22,10 +23,18 @@ import { conEmoji } from './icone.js'
 // La scelta sta sul CONTO (`order.service_mode`), non sul terminale e non
 // sul locale.
 
+// I due modi: l'icona a parte e il nome segnato, tradotto quando si mostra
+// (REQ-UI-039). Il contesto perché «Servizio» nel conto è anche il costo di
+// servizio. Un testo con l'emoji già incollata non sarebbe una chiave del
+// dizionario: le schermate prendono icona e nome separati, oppure la
+// tendina già composta da `opzioniConsegna`.
 export const MODI_CONSEGNA = [
-  ['tavolo', conEmoji('menu', 'Servizio')],
-  ['banco', conEmoji('a-piedi', 'Ritiro')],
+  ['tavolo', { icona: 'menu', nome: daTradurre('consegna|Servizio') }],
+  ['banco', { icona: 'a-piedi', nome: daTradurre('consegna|Ritiro') }],
 ]
+
+// Le voci di una tendina: [modo, icona e nome nella lingua di chi guarda].
+export const opzioniConsegna = () => MODI_CONSEGNA.map(([id, m]) => [id, conEmoji(m.icona, trSegnato(m.nome))])
 
 // ── I DUE MONDI ─────────────────────────────────────────
 //

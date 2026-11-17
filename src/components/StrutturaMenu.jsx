@@ -43,7 +43,7 @@ import ConfirmDialog from './ConfirmDialog.jsx'
 import Icona from './Icona.jsx'
 import AiutoCampo from './AiutoCampo.jsx'
 import IngredientiVoce from './IngredientiVoce.jsx'
-import { tr } from '../lib/lingua.js'
+import { tr, trSegnato } from '../lib/lingua.js'
 
 // LA STRUTTURA DEL MENÙ DEI CLIENTI, DAL GESTIONALE (REQ-MENU-025): il
 // menù del tavolo com'è, sezione per sezione, coi testi modificabili dove
@@ -132,7 +132,7 @@ function Ripristina({ etichetta, onClick }) {
 // (strutturaMenu.js, perCategoria): sono centinaia, e chi cerca «Gin Mare»
 // lo cerca fra i gin. Calcolati una volta per tutto l'editor.
 const gruppiCassa = (drinks, categories) =>
-  perCategoria(drinks, categories, NON_CATEGORIZZATI).map((g) => ({ nome: g.nome, prodotti: [...g.prodotti].sort(perNome) }))
+  perCategoria(drinks, categories, trSegnato(NON_CATEGORIZZATI)).map((g) => ({ nome: g.nome, prodotti: [...g.prodotti].sort(perNome) }))
 
 // La scelta vuota è un invito («+ Aggiungi…», «Scegliere un prodotto»), non
 // un valore: una voce senza prodotto non si può fare (REQ-MENU-025).
@@ -837,7 +837,7 @@ export default function StrutturaMenu({ carta, drinks, categories, inventory = [
                       >
                         {VISTE_SEZIONE.map((v) => (
                           <option key={v.id} value={v.id}>
-                            {v.label}
+                            {trSegnato(v.label)}
                           </option>
                         ))}
                       </select>

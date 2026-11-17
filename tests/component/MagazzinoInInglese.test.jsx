@@ -17,10 +17,9 @@
 // I DATI FINTI NON HANNO PAROLE ITALIANE («Campari», «Negroni», «Mario»,
 // numeri): il controllo cerca proprio quelle, e un nome di prodotto
 // italiano lo farebbe scattare per un dato, non per un testo dimenticato.
-// Per la stessa ragione i prodotti sono «in assortimento» e «premium»: i
-// titoli di «in linea» e «fuori assortimento» e le spiegazioni del filtro
-// stanno nelle tabelle di src/lib (inventory.js, assortimento.js), che si
-// traducono a parte.
+// I prodotti coprono i quattro assortimenti, e uno ha la scheda da
+// completare: le loro parole stanno nelle tabelle di src/lib (inventory.js,
+// assortimento.js), tradotte dove nascono.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
@@ -84,7 +83,8 @@ const ITEMS = [
     vat: 22,
     status: 'premium',
   },
-  { id: 'i3', name: 'Tonic', unit: 'pz', stock: 24, category_id: null, status: 'assortimento' },
+  { id: 'i3', name: 'Tonic', unit: 'pz', stock: 24, category_id: null, status: 'linea', scheda_da_completare: true },
+  { id: 'i4', name: 'Soda', unit: 'pz', package_size: 200, content_unit: 'ml', stock: 6, category_id: 'c1', status: 'out' },
 ]
 const CATS = [{ id: 'c1', name: 'Spirits', sort_order: 0 }]
 const SUPS = [{ id: 's1', name: 'NOVA', email: 'nova@example.com' }]
@@ -113,10 +113,13 @@ const CHIUSO = {
   ],
 }
 
-// Le vendite, e il venduto su Tiller per il mese per mese. I nomi dei tipi di
-// movimento (carico, consegna, rettifica) stanno in lib/movimentiProdotto.js,
-// fra le tabelle di src/lib che si traducono a parte.
+// Un movimento per tipo, e il venduto su Tiller per il mese per mese: i nomi
+// dei tipi stanno in lib/movimentiProdotto.js (TIPI_MOVIMENTO).
 const MOVIMENTI = [
+  { id: 'm1', item_id: 'i1', reason: 'ordine fornitore', type: 'load', qty: 6, unit: 'pz', created_at: giorniFa(6) },
+  { id: 'm3', item_id: 'i1', reason: 'carico', type: 'load', qty: 1, unit: 'pz', created_at: giorniFa(5) },
+  { id: 'm4', item_id: 'i1', reason: 'rettifica', type: 'unload', qty: 1, unit: 'pz', created_at: giorniFa(4) },
+  { id: 'm5', item_id: 'i1', reason: 'conta', type: 'unload', qty: 1, unit: 'pz', created_at: giorniFa(3) },
   { id: 'm2', item_id: 'i1', reason: 'ordine', type: 'unload', qty: 1, unit: 'pz', created_at: giorniFa(2) },
 ]
 
@@ -279,6 +282,27 @@ describe('il magazzino in inglese (REQ-UI-039)', () => {
     const finestra = await screen.findByRole('dialog', { name: 'Stock movements of Campari' })
     await user.click(within(finestra).getByRole('button', { name: 'All' }))
     expect(await within(finestra).findByText('Sold month by month')).toBeInTheDocument()
+    expect(within(finestra).getAllByText('Purchase order delivery').length).toBeGreaterThan(0)
+    expect(within(finestra).getAllByText('Stock count closure').length).toBeGreaterThan(0)
+    expect(italianoRimasto(container)).toEqual([])
+  })
+
+  it('gli assortimenti e la scheda da completare', async () => {
+    const user = userEvent.setup()
+    const { container } = render(<InventoryManager />)
+    await screen.findByText('Tonic')
+    expect(container.querySelector('[title="Core range: must never run out"]')).not.toBeNull()
+    expect(container.querySelector('[title="Out of range: not reordered"]')).not.toBeNull()
+    expect(italianoRimasto(container)).toEqual([])
+
+    // Il filtro, con le spiegazioni degli assortimenti (assortimento.js).
+    await user.click(screen.getByRole('button', { name: /Filter/ }))
+    expect(container.querySelector('[title="First to check before an evening"]')).not.toBeNull()
+    expect(italianoRimasto(container)).toEqual([])
+
+    const riga = screen.getByText('Tonic').closest('.inv-row')
+    await user.click(within(riga).getByRole('button', { name: /Tonic/ }))
+    expect(within(riga).getByText(/the category, what one piece contains, the reorder level/)).toBeInTheDocument()
     expect(italianoRimasto(container)).toEqual([])
   })
 

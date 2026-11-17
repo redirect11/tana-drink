@@ -206,44 +206,65 @@ export function limitiInChiaro(stato) {
   const conti = maxContiAperti(stato)
   const giorni = giorniDiStorico(stato)
   const utenti = maxUtenti(stato)
-  if (prodotti !== null) righe.push(`Prodotti a listino: al massimo ${prodotti}`)
-  if (conti !== null) righe.push(`Conti aperti contemporaneamente: al massimo ${conti}`)
-  if (giorni !== null) righe.push(`Storico consultabile: ${giorni === 1 ? 'l’ultimo giorno' : `gli ultimi ${giorni} giorni`}`)
-  if (utenti !== null) righe.push(`Utenti: al massimo ${utenti}`)
-  if (!scontiConsentiti(stato)) righe.push('Sconti sul conto non consentiti')
-  if (!stampaConsentita(stato)) righe.push('Stampa di comande e scontrini non compresa')
-  if (!comandeConsentite(stato)) righe.push('Comande e stati del servizio non compresi: cassa semplice')
-  if (!aiConsentita(stato)) righe.push('Funzioni AI non comprese')
-  if (rigaMarchio(stato)) righe.push('Firma del prodotto in calce allo scontrino')
+  if (prodotti !== null) righe.push(tr('Prodotti a listino: al massimo {n}', { n: prodotti }))
+  if (conti !== null) righe.push(tr('Conti aperti contemporaneamente: al massimo {n}', { n: conti }))
+  if (giorni !== null)
+    righe.push(giorni === 1 ? tr('Storico consultabile: l’ultimo giorno') : tr('Storico consultabile: gli ultimi {n} giorni', { n: giorni }))
+  if (utenti !== null) righe.push(tr('Utenti: al massimo {n}', { n: utenti }))
+  if (!scontiConsentiti(stato)) righe.push(tr('Sconti sul conto non consentiti'))
+  if (!stampaConsentita(stato)) righe.push(tr('Stampa di comande e scontrini non compresa'))
+  if (!comandeConsentite(stato)) righe.push(tr('Comande e stati del servizio non compresi: cassa semplice'))
+  if (!aiConsentita(stato)) righe.push(tr('Funzioni AI non comprese'))
+  if (rigaMarchio(stato)) righe.push(tr('Firma del prodotto in calce allo scontrino'))
   return righe
 }
 
 // ── COSA SI LEGGE ─────────────────────────────────────────────────────
 // Frasi piane, senza toni da venditore: cosa non si può fare e perché. Il
 // collegamento alla regia lo aggiunge chi le mostra (AvvisoPiano).
-const plurale = (n, uno, tanti) => `${n} ${n === 1 ? uno : tanti}`
-
+// Funzioni e GETTER, non testi fissi: si leggono quando si mostrano (o
+// quando si lancia l'errore), e parlano già la lingua di chi guarda
+// (REQ-UI-039). Un `tr` al caricamento del modulo fisserebbe la lingua.
 export const MESSAGGI_PIANO = {
   prodotti: (n) =>
-    `Nel piano Free il menù ha al massimo ${plurale(n, 'prodotto', 'prodotti')}. Per aggiungerne passa a un piano a pagamento.`,
+    n === 1
+      ? tr('Nel piano Free il menù ha al massimo 1 prodotto. Per aggiungerne passa a un piano a pagamento.')
+      : tr('Nel piano Free il menù ha al massimo {n} prodotti. Per aggiungerne passa a un piano a pagamento.', { n }),
   conti: (n) =>
     n === 1
       ? tr('Nel piano Free puoi avere al massimo 1 conto aperto insieme.')
       : tr('Nel piano Free puoi avere al massimo {n} conti aperti insieme.', { n }),
-  // Una funzione, chiamata quando si disegna: può già parlare la lingua di
-  // chi guarda (REQ-UI-039). Gli altri messaggi del piano si traducono con
-  // le impostazioni.
   storico: (n) =>
     n === 1
       ? tr('Nel piano Free lo storico mostra l’ultimo giorno.')
       : tr('Nel piano Free lo storico mostra gli ultimi {n} giorni.', { n }),
-  staff: 'Nel piano Free l’app la usa solo il titolare. Per aggiungere lo staff passa a un piano a pagamento.',
-  foto: 'Le foto dei prodotti sono dei piani a pagamento.',
-  stampa: 'La stampa di comande e scontrini è dei piani a pagamento.',
-  ai: 'Le funzioni AI sono dei piani a pagamento.',
-  comande: 'Nel piano Free la cassa è semplice: si battono le righe e si incassa. Comande, stati del servizio e preparazione sono dei piani a pagamento.',
-  allegati: 'Gli allegati delle fatture sono dei piani a pagamento.',
-  sumup: 'I pagamenti con SumUp sono dei piani a pagamento. Nel piano Free il conto si chiude in contanti o con la carta su un POS esterno.',
+  get staff() {
+    return tr('Nel piano Free l’app la usa solo il titolare. Per aggiungere lo staff passa a un piano a pagamento.')
+  },
+  get foto() {
+    return tr('Le foto dei prodotti sono dei piani a pagamento.')
+  },
+  get stampa() {
+    return tr('La stampa di comande e scontrini è dei piani a pagamento.')
+  },
+  get ai() {
+    return tr('Le funzioni AI sono dei piani a pagamento.')
+  },
+  get comande() {
+    return tr(
+      'Nel piano Free la cassa è semplice: si battono le righe e si incassa. Comande, stati del servizio e preparazione sono dei piani a pagamento.'
+    )
+  },
+  get allegati() {
+    return tr('Gli allegati delle fatture sono dei piani a pagamento.')
+  },
+  get sumup() {
+    return tr(
+      'I pagamenti con SumUp sono dei piani a pagamento. Nel piano Free il conto si chiude in contanti o con la carta su un POS esterno.'
+    )
+  },
   // Un piano a pagamento senza il modulo: non è «il piano Free».
-  sumup_modulo: 'I pagamenti con SumUp sono un modulo che il tuo piano non include: si aggiunge dalla regia.',
+  get sumup_modulo() {
+    return tr('I pagamenti con SumUp sono un modulo che il tuo piano non include: si aggiunge dalla regia.')
+  },
 }

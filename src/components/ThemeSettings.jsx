@@ -356,7 +356,7 @@ function ThemeEditor({ title, hint, value, onSave, livePreview = false }) {
       >
         {Object.entries(THEME_PRESETS).map(([id, p]) => (
           <option key={id} value={id}>
-            {trSegnato(p.label)}
+            {p.emoji} {trSegnato(p.label)}
           </option>
         ))}
       </select>

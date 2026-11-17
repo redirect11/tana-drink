@@ -7,7 +7,7 @@ import {
 } from '../lib/api.js'
 import { CANCEL_PHRASES } from '../lib/orderStatus.js'
 import {
-  MODI_CONSEGNA,
+  opzioniConsegna,
   clienteSceglie,
   fraseAnnulloDefault,
   fraseAnnulloPossibile,
@@ -28,6 +28,7 @@ import {
   moduloAttivo,
   moduloIncluso,
   basiMancanti,
+  fraseRichiede,
   scadenzaProva,
   sumupDisponibile,
 } from '../lib/licenza.js'
@@ -48,8 +49,8 @@ import { usePaginaPiena } from '../lib/paginaPiena.js'
 import { cambioDentroOrario } from '../lib/orario.js'
 import { drinkCostDi, ricaricoDaDrinkCost } from '../lib/pricing.js'
 import Icona, { ConIcona } from './Icona.jsx'
-import { conEmoji, dividiIcona } from '../lib/icone.js'
-import { tr, daTradurre, trSegnato, formatoAttivo } from '../lib/lingua.js'
+import { conEmoji } from '../lib/icone.js'
+import { tr, trSegnato, formatoAttivo } from '../lib/lingua.js'
 import FormatoPrezziMenu from './FormatoPrezziMenu.jsx'
 import CreditoAI from './CreditoAI.jsx'
 import { aiRaggiungibile } from '../lib/aiApi.js'
@@ -61,13 +62,6 @@ import { minutiAttesa } from '../lib/attesaCliente.js'
 // (REQ-LIC-016) o le comande (REQ-LIC-005).
 const SOLO_CON_STAMPA = new Set(['stampa-automatica', 'campi-scontrino', 'campi-comanda', 'campi-acconto', 'logo-stampe'])
 const SOLO_CON_COMANDE = new Set(['tempi', 'campi-comanda'])
-// I nomi dei due modi di consegna, nella lingua di chi lavora (vedi
-// modiConsegna più sotto). Il contesto perché «Servizio» nel conto è anche
-// il costo di servizio.
-const NOME_MODO = {
-  tavolo: daTradurre('consegna|Servizio'),
-  banco: daTradurre('consegna|Ritiro'),
-}
 
 export default function SettingsTab({ role = null }) {
   // La schermata sta tutta nella finestra: scorre la sezione aperta, non la
@@ -130,13 +124,7 @@ export default function SettingsTab({ role = null }) {
   // senza comande lo stesso per la preparazione, e se ne vanno tempi di
   // servizio e campi della comanda.
   const stampaOn = stampaConsentita(settings)
-  // I MODI DI CONSEGNA arrivano da lib/consegna.js con l'icona già davanti
-  // al nome (conEmoji): un testo così non è una chiave del dizionario. Si
-  // tiene l'icona e si mette il nome tradotto, come in ScegliConsegna.
-  const modiConsegna = MODI_CONSEGNA.map(([id, etichetta]) => {
-    const diviso = dividiIcona(etichetta)
-    return [id, diviso && NOME_MODO[id] ? conEmoji(diviso.nome, trSegnato(NOME_MODO[id])) : etichetta]
-  })
+  const modiConsegna = opzioniConsegna()
   const comandeOn = comandeConsentite(settings)
   const servizioOn = servizioAttivo(settings)
   const tutteLeSezioni = [
@@ -1652,16 +1640,6 @@ function ConIconaDentro({ testo, icona }) {
   )
 }
 
-// «Richiede «Magazzino e fornitori».», coi nomi dei moduli nella lingua in
-// uso. È fraseRichiede di lib/licenza.js, ricomposta qui: là la frase nasce
-// già italiana, e un pezzo di frase non si traduce.
-function fraseRichiedeTradotta(ids) {
-  const nomi = ids.map((id) => `«${trSegnato(moduliPremium().find((m) => m.id === id)?.label ?? id)}»`)
-  if (!nomi.length) return ''
-  if (nomi.length === 1) return tr('Richiede {modulo}.', { modulo: nomi[0] })
-  return tr('Richiede {moduli} e {ultimo}.', { moduli: nomi.slice(0, -1).join(', '), ultimo: nomi.at(-1) })
-}
-
 // Input numerico che salva solo al blur/invio, per non scrivere su Firestore
 // ad ogni tasto premuto.
 function AmountInput({ value, min, max, step, onCommit, label }) {
@@ -1745,7 +1723,7 @@ function FunzioniPremium({ settings, onSave }) {
         // INCLUSO MA SENZA LA SUA BASE (REQ-LIC-015): l'inventario senza il
         // magazzino non lavora. L'interruttore lo dice invece di accendersi
         // per finta.
-        const richiede = incluso ? fraseRichiedeTradotta(basiMancanti(settings, m.id)) : ''
+        const richiede = incluso ? fraseRichiede(basiMancanti(settings, m.id)) : ''
         const stato = prova
           ? tr('In prova fino al {data}.', {
               data: prova.toLocaleDateString(formatoAttivo(), { day: 'numeric', month: 'long' }),

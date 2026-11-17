@@ -1,17 +1,6 @@
 import { MODI_CONSEGNA, cambioModoPermesso } from '../lib/consegna.js'
 import { ConIcona } from './Icona.jsx'
-import { dividiIcona } from '../lib/icone.js'
-import { tr, daTradurre, trSegnato } from '../lib/lingua.js'
-
-// LE PAROLE DEI DUE MODI, NELLA LINGUA DI CHI LAVORA (REQ-UI-039). La
-// tabella di lib/consegna.js porta l'emoji incollata al testo italiano
-// (conEmoji), e una stringa composta non è una chiave del dizionario: qui
-// l'icona si prende da lì, la parola da qui. Il contesto serve perché
-// «Servizio» nel conto è anche il costo di servizio.
-const NOME_MODO = {
-  tavolo: daTradurre('consegna|Servizio'),
-  banco: daTradurre('consegna|Ritiro'),
-}
+import { tr, trSegnato } from '../lib/lingua.js'
 
 // ── COME LO PRENDE: SERVIZIO O RITIRO ────────────────────────────────
 //
@@ -66,8 +55,7 @@ export default function ScegliConsegna({
     <div className="scegli-consegna">
       <label style={{ display: 'block' }}>{tr('Come lo prende')}</label>
       <div className="chips-row" style={{ marginTop: 4 }}>
-        {MODI_CONSEGNA.map(([valore, etichetta]) => {
-          const icona = dividiIcona(etichetta)
+        {MODI_CONSEGNA.map(([valore, m]) => {
           return (
             <button
               key={valore}
@@ -80,11 +68,7 @@ export default function ScegliConsegna({
                 onCambia?.(valore)
               }}
             >
-              {icona && NOME_MODO[valore] ? (
-                <ConIcona nome={icona.nome} testo={trSegnato(NOME_MODO[valore])} />
-              ) : (
-                <ConIcona testo={etichetta} />
-              )}
+              <ConIcona nome={m.icona} testo={trSegnato(m.nome)} />
             </button>
           )
         })}

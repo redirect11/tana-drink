@@ -18,7 +18,7 @@ import {
 } from '../lib/aggiornamenti.js'
 import { isAdmin } from '../lib/ruoli.js'
 import { configurazione } from '../porte/configurazione.js'
-import { tr, trSegnato } from '../lib/lingua.js'
+import { tr } from '../lib/lingua.js'
 
 // INFORMAZIONI: che versione è, cosa è cambiato, e i dati tecnici che
 // servono quando qualcosa non va.
@@ -108,7 +108,7 @@ function Aggiornamenti({ settings, role }) {
   return (
     <div className="card settings-section">
       <h3>{tr('Aggiornamenti')}</h3>
-      {stato === 'del_titolare' && <p className="muted small">{trSegnato(MESSAGGI_AGGIORNAMENTI.del_titolare)}</p>}
+      {stato === 'del_titolare' && <p className="muted small">{MESSAGGI_AGGIORNAMENTI.del_titolare}</p>}
       {(stato === 'da_scegliere' || stato === 'partito') && (
         <>
           <p style={{ margin: '0 0 6px' }}>
@@ -116,7 +116,7 @@ function Aggiornamenti({ settings, role }) {
           </p>
           {proposta.note && <Changelog testo={String(proposta.note)} />}
           {stato === 'partito' && (
-            <p className="muted small" style={{ margin: '8px 0 0' }}>{trSegnato(MESSAGGI_AGGIORNAMENTI.partito)}</p>
+            <p className="muted small" style={{ margin: '8px 0 0' }}>{MESSAGGI_AGGIORNAMENTI.partito}</p>
           )}
           {stato === 'da_scegliere' && !url && <SceltaDallAreaClienti settings={settings} piccolo />}
           {stato === 'da_scegliere' && url && (
@@ -127,7 +127,7 @@ function Aggiornamenti({ settings, role }) {
                 </p>
               )}
               {inCorso && (
-                <p className="muted small" style={{ margin: '8px 0 0' }}>{trSegnato(MESSAGGI_AGGIORNAMENTI.in_corso)}</p>
+                <p className="muted small" style={{ margin: '8px 0 0' }}>{MESSAGGI_AGGIORNAMENTI.in_corso}</p>
               )}
               <button
                 className="btn small"

@@ -31,6 +31,7 @@
 //    si mette in mezzo.
 
 import { segnala, TIPO } from './diagnosticaStampante.js'
+import { daTradurre } from './lingua.js'
 
 const CHIAVE = 'drink:registro-stampe'
 
@@ -52,10 +53,11 @@ export const ESITO = {
   fallita: 'fallita',
 }
 
+// Si mostrano con `trSegnato` (REQ-UI-039).
 export const ETICHETTA_ESITO = {
-  inviata: 'In attesa di risposta',
-  riuscita: 'Stampata',
-  fallita: 'Non stampata',
+  inviata: daTradurre('In attesa di risposta'),
+  riuscita: daTradurre('Stampata'),
+  fallita: daTradurre('Non stampata'),
 }
 
 let _voci = null

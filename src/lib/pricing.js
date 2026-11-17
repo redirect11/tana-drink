@@ -10,6 +10,7 @@
 // Logica pura (niente Firebase), interamente testabile.
 
 import { costPerUnit } from './inventory.js'
+import { tr } from './lingua.js'
 
 export const DEFAULT_MARKUP = 3
 export const DEFAULT_ROUND_STEP = 0.5
@@ -181,7 +182,8 @@ export function marginiPerCategoria(righe, categorie) {
   const ordine = [...(categorie || [])].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
   const gruppi = new Map(ordine.map((c) => [c.id, { id: c.id, nome: c.name, categoria: c, righe: [] }]))
   const perNome = new Map(ordine.map((c) => [c.name, c.id]))
-  const senza = { id: 'none', nome: 'Senza categoria', categoria: null, righe: [] }
+  // Il nome si traduce qui, quando si disegna: è solo l'etichetta del gruppo.
+  const senza = { id: 'none', nome: tr('Senza categoria'), categoria: null, righe: [] }
   for (const r of righe || []) {
     const id = gruppi.has(r.category_id) ? r.category_id : perNome.get(r.category)
     ;(gruppi.get(id) || senza).righe.push(r)

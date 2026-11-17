@@ -42,10 +42,10 @@ export function etichettaRuolo(role) {
 }
 
 export const RUOLO_DESCRIZIONE = {
-  admin: 'Accesso completo, e in più nomina i ruoli degli altri utenti.',
-  bartender: 'Gestionale completo: cassa, ordini, inventario, menù, impostazioni.',
-  staff: 'Solo gli ordini pronti da servire e i propri ordini.',
-  cliente: 'Nessun accesso al gestionale: vede il menù e i suoi ordini.',
+  admin: daTradurre('Accesso completo, e in più nomina i ruoli degli altri utenti.'),
+  bartender: daTradurre('Gestionale completo: cassa, ordini, inventario, menù, impostazioni.'),
+  staff: daTradurre('Solo gli ordini pronti da servire e i propri ordini.'),
+  cliente: daTradurre('Nessun accesso al gestionale: vede il menù e i suoi ordini.'),
 }
 
 // Ruolo effettivo: qualunque cosa non sia un ruolo noto è un cliente.

@@ -12,7 +12,7 @@ import {
   righeSostituite,
   chiaveEtichetta as chiave,
 } from '../lib/etichetteIngredienti.js'
-import { tr } from '../lib/lingua.js'
+import { tr, trSegnato } from '../lib/lingua.js'
 
 const testo = (v) => (typeof v === 'string' ? v.trim() : '')
 const NOME_GRUPPO = Object.fromEntries(GRUPPI_SUGGERIMENTO.map((g) => [g.id, g.nome]))
@@ -117,7 +117,7 @@ export default function IngredientiVoce({ voce, drink, items = [], categorieMaga
           {lista.map((s) => (
             <li key={chiave(s)}>
               <button type="button" className={`suggerimento gruppo-${s.gruppo}`} onClick={() => aggiungi(s)}>
-                {s.nome} <span className="muted small">{NOME_GRUPPO[s.gruppo]}</span>
+                {s.nome} <span className="muted small">{trSegnato(NOME_GRUPPO[s.gruppo])}</span>
               </button>
             </li>
           ))}

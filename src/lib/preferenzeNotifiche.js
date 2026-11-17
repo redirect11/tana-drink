@@ -14,45 +14,47 @@
 // schermo, non una regola del bar.
 
 import { ORDER_STATUSES } from './orderStatus.js'
+import { daTradurre } from './lingua.js'
 
 // L'elenco è anche quello che si vede nelle impostazioni: un posto solo.
+// Nomi e descrizioni si mostrano con `trSegnato` (REQ-UI-039).
 export const AVVISI = [
   {
     id: 'nuovo_ordine',
-    label: 'Nuovo ordine',
-    desc: 'Un ordine è entrato in coda, da un altro terminale o da un cliente.',
+    label: daTradurre('Nuovo ordine'),
+    desc: daTradurre('Un ordine è entrato in coda, da un altro terminale o da un cliente.'),
   },
   {
     id: `stato_${ORDER_STATUSES.IN_PREPARAZIONE}`,
-    label: 'Passa in preparazione',
-    desc: 'Qualcuno ha iniziato a farlo.',
+    label: daTradurre('Passa in preparazione'),
+    desc: daTradurre('Qualcuno ha iniziato a farlo.'),
   },
   {
     id: `stato_${ORDER_STATUSES.PRONTO}`,
-    label: 'Diventa pronto',
-    desc: 'Da portare al tavolo o da consegnare al banco.',
+    label: daTradurre('Diventa pronto'),
+    desc: daTradurre('Da portare al tavolo o da consegnare al banco.'),
   },
   {
     id: `stato_${ORDER_STATUSES.RITIRATO}`,
-    label: 'Servito o ritirato',
-    desc: 'La comanda è arrivata al cliente.',
+    label: daTradurre('Servito o ritirato'),
+    desc: daTradurre('La comanda è arrivata al cliente.'),
   },
   {
     id: 'scorta_low',
-    label: 'Scorta in esaurimento',
-    desc: 'Un ingrediente è sceso sotto la soglia. Solo per chi tiene il magazzino.',
+    label: daTradurre('Scorta in esaurimento'),
+    desc: daTradurre('Un ingrediente è sceso sotto la soglia. Solo per chi tiene il magazzino.'),
     soloGestore: true,
   },
   {
     id: 'scorta_empty',
-    label: 'Scorta esaurita',
-    desc: 'Un ingrediente è finito: quel drink non si può più fare.',
+    label: daTradurre('Scorta esaurita'),
+    desc: daTradurre('Un ingrediente è finito: quel drink non si può più fare.'),
     soloGestore: true,
   },
   {
     id: 'nuova_versione',
-    label: 'Nuova versione dell’app',
-    desc: 'Il riquadro con le novità e il suo avviso in campanella.',
+    label: daTradurre('Nuova versione dell’app'),
+    desc: daTradurre('Il riquadro con le novità e il suo avviso in campanella.'),
   },
 ]
 

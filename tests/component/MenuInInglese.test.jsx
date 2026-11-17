@@ -112,6 +112,7 @@ vi.mock('../../src/lib/limiti.js', async (originale) => ({
 
 import MenuManager from '../../src/components/MenuManager.jsx'
 import RitaglioFoto from '../../src/components/RitaglioFoto.jsx'
+import DrinkForm from '../../src/components/DrinkForm.jsx'
 import { AiutiCampi } from '../../src/lib/aiutiCampi.js'
 import { subscribeSottosezioni } from '../../src/lib/sottosezioni.js'
 import { _azzeraStatoAI } from '../../src/lib/statoAI.js'
@@ -204,6 +205,27 @@ describe('il menù del gestionale in inglese (REQ-UI-039)', () => {
     vi.unstubAllGlobals()
   })
 
+  // Il disegno del drink (illustrazioneDrink.js): bicchieri, colori e
+  // decorazioni hanno il nome nel title e nell'aria-label, ed è un testo.
+  it('il disegno del drink: bicchieri, colori e decorazioni in inglese', async () => {
+    const { container } = render(
+      <DrinkForm
+        initial={{ ...DRINKS[0], illustrazione: { bicchiere: 'coppa', colore: 'rosa', decorazione: 'nessuna' } }}
+        categories={CATEGORIE}
+        inventory={MAGAZZINO}
+        disegniConsentiti
+        onCancel={() => {}}
+        onSave={() => {}}
+      />
+    )
+    // La scheda finisce di caricare (credito dell'AI) prima di guardarla.
+    await act(async () => {})
+    expect(screen.getByRole('button', { name: 'Coupe' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Light blue' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '«Drink me» tag' })).toBeInTheDocument()
+    expect(italianoRimasto(container)).toEqual([])
+  })
+
   it('categorie, marginalità e Special: niente italiano', async () => {
     const { container } = monta()
     await screen.findByText('Negroni')
@@ -227,8 +249,9 @@ describe('il menù del gestionale in inglese (REQ-UI-039)', () => {
     await vaiA('carta')
     expect(await screen.findByRole('button', { name: 'Prefill with the till items' })).toBeInTheDocument()
     // Il nome della sezione dei prodotti senza categoria è quello che
-    // l'app scriverà davvero (lib/strutturaMenu.js, NON_CATEGORIZZATI):
-    // un dato, finché quella tabella non si traduce.
+    // l'app scriverà davvero (lib/strutturaMenu.js, NON_CATEGORIZZATI): un
+    // DATO, che i clienti leggono in italiano, e la spiegazione lo cita
+    // com'è. Tradotto è solo dove fa da etichetta (la tendina dei prodotti).
     expect(italianoRimasto(container).filter((t) => !t.includes('Non categorizzati'))).toEqual([])
   })
 
@@ -256,7 +279,11 @@ describe('il menù del gestionale in inglese (REQ-UI-039)', () => {
     expect(screen.getByRole('group', { name: 'Selected items' })).toHaveTextContent('1 item selected')
     // Le proposte degli ingredienti mentre si scrive.
     await user.type(within(sezione).getAllByRole('textbox', { name: 'Add an ingredient' })[0], 'Gi')
-    expect(screen.getByRole('listbox', { name: 'Suggestions' })).toBeInTheDocument()
+    const proposte = screen.getByRole('listbox', { name: 'Suggestions' })
+    // Il gruppo di ogni proposta (etichetteIngredienti.js, GRUPPI_SUGGERIMENTO).
+    expect(within(proposte).getAllByText(/^(from the recipe|inventory)$/).length).toBeGreaterThan(0)
+    // La vista della sezione (strutturaMenu.js, VISTE_SEZIONE).
+    expect(within(sezione).getByRole('option', { name: 'Compact' })).toBeInTheDocument()
 
     expect(italianoRimasto(container)).toEqual([])
 

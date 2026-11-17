@@ -18,6 +18,7 @@ import { categoryColor, CATEGORY_PALETTE } from './categoryColors.js'
 // `inventory.js` e si LEGGONO da lì: sono fatti del prodotto, non del
 // listino, e riscriverli qui vorrebbe dire due verità da tenere allineate.
 import { assortimentoDi, contentBase, formatQty, fromBaseQty, motivoNonMigrabile } from './inventory.js'
+import { daTradurre, tr, trSegnato } from './lingua.js'
 
 // ── I TRE LIVELLI DELLA RIGA D'ORDINE ────────────────────────────────
 //
@@ -172,7 +173,7 @@ export function unitaPrezzo(riga) {
 }
 
 export const ETICHETTA_UNITA_PREZZO = {
-  collo: 'collo',
+  collo: daTradurre('collo'),
   pz: 'pz',
   l: 'L',
   cl: 'cl',
@@ -229,13 +230,16 @@ export function scalaListino(riga, item = null) {
 // che l'app ha già — è la stessa mancanza, e ripeterla con altre parole
 // vorrebbe dire due messaggi da tenere allineati per sempre.
 function perchePrezzoNonSiRicava(item, unita, contenuto) {
-  const eti = ETICHETTA_UNITA_PREZZO[unita] || unita
+  const eti = trSegnato(ETICHETTA_UNITA_PREZZO[unita] || unita)
   const suo = motivoNonMigrabile(item)
   if (suo) return suo
   if (contenuto) {
-    return `il prezzo è a ${eti}, ma un pezzo contiene ${formatQty(contenuto.size, contenuto.base)}: sono due misure diverse`
+    return tr('il prezzo è a {unita}, ma un pezzo contiene {quanto}: sono due misure diverse', {
+      unita: eti,
+      quanto: formatQty(contenuto.size, contenuto.base),
+    })
   }
-  return `il prezzo è a ${eti} e non si sa quanto contiene un pezzo: va detto nella scheda del prodotto`
+  return tr('il prezzo è a {unita} e non si sa quanto contiene un pezzo: va detto nella scheda del prodotto', { unita: eti })
 }
 
 // Il prezzo di UN PEZZO, ricavato lungo la scala. È la porta da cui passa

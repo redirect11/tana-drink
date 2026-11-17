@@ -77,7 +77,7 @@ export default function LicenzaPanel({ settings }) {
           <h4 style={{ margin: '14px 0 4px' }}>{tr('Limiti del piano')}</h4>
           <ul className="small" style={{ margin: 0, paddingLeft: 18 }}>
             {r.limiti.map((riga) => (
-              <li key={riga}>{trSegnato(riga)}</li>
+              <li key={riga}>{riga}</li>
             ))}
           </ul>
         </>

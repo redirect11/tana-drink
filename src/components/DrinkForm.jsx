@@ -8,7 +8,7 @@ import { MESSAGGI_PIANO } from '../lib/limiti.js'
 import AiutoCampo from './AiutoCampo.jsx'
 import RitaglioFoto from './RitaglioFoto.jsx'
 import DescrizioneAI from './DescrizioneAI.jsx'
-import { tr } from '../lib/lingua.js'
+import { tr, trSegnato } from '../lib/lingua.js'
 
 // Scheda prodotto del MENÙ: nome, foto, categoria, prezzo, descrizione,
 // ricetta/ingredienti e disponibilità. Estratta da MenuManager perché la usa
@@ -446,8 +446,8 @@ export default function DrinkForm({
                     type="button"
                     className={`illustrazione-voce${disegno.bicchiere === b.id ? ' scelta' : ''}`}
                     aria-pressed={disegno.bicchiere === b.id}
-                    aria-label={b.nome}
-                    title={b.nome}
+                    aria-label={trSegnato(b.nome)}
+                    title={trSegnato(b.nome)}
                     onClick={() => scegliDisegno({ bicchiere: b.id })}
                   >
                     <img src={urlDrink({ ...disegno, bicchiere: b.id, decorazione: 'nessuna' }, { chiaro: fondoChiaro })} alt="" />
@@ -463,8 +463,8 @@ export default function DrinkForm({
                     className={`colore-drink${disegno.colore === c.id ? ' scelta' : ''}`}
                     style={{ background: c.hex }}
                     aria-pressed={disegno.colore === c.id}
-                    aria-label={c.nome}
-                    title={c.nome}
+                    aria-label={trSegnato(c.nome)}
+                    title={trSegnato(c.nome)}
                     onClick={() => scegliDisegno({ colore: c.id })}
                   />
                 ))}
@@ -477,8 +477,8 @@ export default function DrinkForm({
                     type="button"
                     className={`illustrazione-voce${disegno.decorazione === x.id ? ' scelta' : ''}`}
                     aria-pressed={disegno.decorazione === x.id}
-                    aria-label={x.nome}
-                    title={x.nome}
+                    aria-label={trSegnato(x.nome)}
+                    title={trSegnato(x.nome)}
                     onClick={() => scegliDisegno({ decorazione: x.id })}
                   >
                     <img src={urlDrink({ ...disegno, decorazione: x.id }, { chiaro: fondoChiaro })} alt="" />

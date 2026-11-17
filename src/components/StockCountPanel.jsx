@@ -11,7 +11,7 @@ import {
   settingsIniziali,
 } from '../lib/api.js'
 import { assortimentoDi } from '../lib/inventory.js'
-import { toggleVoce } from '../lib/assortimento.js'
+import { riassuntoAssortimento, toggleVoce } from '../lib/assortimento.js'
 import { raggruppaMovimenti, righeInventario, conProdottiNuovi } from '../lib/inventarioInCorso.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { dataBreve as dataScritta } from '../lib/ore.js'
@@ -24,24 +24,7 @@ import Tendina from './Tendina.jsx'
 import FiltroAssortimento from './FiltroAssortimento.jsx'
 import Icona from './Icona.jsx'
 import { conEmoji } from '../lib/icone.js'
-import { tr, daTradurre, trSegnato } from '../lib/lingua.js'
-
-// Cosa dice il tasto del filtro. È riassuntoAssortimento (lib/assortimento.js)
-// nella lingua di chi guarda: quella tabella è scritta in italiano, e «In
-// linea» qui vuol dire la linea fissa del magazzino, non il margine «in
-// linea» del menù — per questo porta il suo contesto (REQ-UI-039).
-const NOME_ASSORTIMENTO = {
-  assortimento: daTradurre('In assortimento'),
-  linea: daTradurre('assortimento|In linea'),
-  premium: daTradurre('Premium'),
-  out: daTradurre('Fuori assortimento'),
-}
-const riassuntoAssortimento = (scelti) =>
-  scelti.length === 0
-    ? tr('Assortimento')
-    : scelti.length === 1
-      ? trSegnato(NOME_ASSORTIMENTO[scelti[0]])
-      : tr('{n} assortimenti', { n: scelti.length })
+import { tr } from '../lib/lingua.js'
 
 // L'INVENTARIO periodico, come il foglio INV di Flavio: per ogni prodotto
 // DEP · ACQ · CONS · RIM, con CONS = DEP + ACQ − RIM. La RIM è quanto c'è

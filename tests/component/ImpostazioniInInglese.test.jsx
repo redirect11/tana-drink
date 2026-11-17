@@ -124,15 +124,16 @@ describe('le impostazioni in inglese (REQ-UI-039)', () => {
     expect(italianoRimasto(container)).toEqual([])
   })
 
-  it('la coda ordini', async () => {
+  it('la coda ordini, con la vista ordine e le strisce delle card', async () => {
     const user = userEvent.setup()
-    mostra()
+    const { container } = mostra()
     await user.click(screen.getByRole('button', { name: 'Bar: queue and order' }))
-    // Il riquadro della coda. La «Vista ordine» accanto mostra le strisce
-    // delle card, che vengono da lib/strisce.js: si tradurranno lì.
     const coda = riquadro('Order queue')
     expect(within(coda).getByRole('button', { name: /Filter the queue/ })).toBeInTheDocument()
-    expect(italianoRimasto(coda)).toEqual([])
+    // La «Vista ordine» accanto mostra i modi della striscia delle card, che
+    // vengono da lib/strisce.js (MODI_STRISCIA): tradotti dove nascono.
+    expect(screen.getAllByText('Product colour').length).toBeGreaterThan(0)
+    expect(italianoRimasto(container)).toEqual([])
   })
 
   it('cassa e giornata: pagamenti, stampa automatica, giornata di lavoro', async () => {
@@ -167,6 +168,42 @@ describe('le impostazioni in inglese (REQ-UI-039)', () => {
     const { container } = mostra()
     await user.click(screen.getByRole('button', { name: gruppo }))
     expect(screen.getByRole('heading', { name: titolo })).toBeInTheDocument()
+    expect(italianoRimasto(container)).toEqual([])
+  })
+
+  // I gruppi fatti delle tabelle di src/lib: i campi di scontrino, comanda
+  // e acconto e il logo (campiStampa.js), da dove si stampa (printer.js);
+  // formato dei prezzi e stili del menù (prezzoMenu.js, stileMenu.js); le
+  // funzioni premium (licenza.js).
+  it.each([
+    ['Printer', 'Logo on prints', 'Column headings'],
+    ['Customer menu', 'Prices in the menu', 'Number with cents'],
+    ['Licence', 'Premium features', 'Inventory and suppliers'],
+  ])('il gruppo «%s», con le sue tabelle', async (gruppo, titolo, voce) => {
+    const user = userEvent.setup()
+    const { container } = mostra()
+    await user.click(screen.getByRole('button', { name: gruppo }))
+    expect(screen.getAllByText(titolo).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(voce).length).toBeGreaterThan(0)
+    expect(italianoRimasto(container)).toEqual([])
+  })
+
+  // Un locale Free: i limiti del piano in chiaro (limiti.js, limitiInChiaro)
+  // e le frasi del piano dove una funzione manca (MESSAGGI_PIANO).
+  it('la licenza di un locale Free, coi suoi limiti', async () => {
+    impostazioni.corrente = {
+      ...impostazioni.corrente,
+      licenza: {
+        piano: 'free',
+        moduli: {},
+        limiti: { prodotti_max: 10, conti_aperti_max: 5, sconti: false, storico_giorni: 7, utenti_max: 1, stampa: false },
+      },
+    }
+    const user = userEvent.setup()
+    const { container } = mostra()
+    await user.click(screen.getByRole('button', { name: 'Licence' }))
+    expect(screen.getByText('Products on the price list: at most 10')).toBeInTheDocument()
+    expect(screen.getByText('History available: the last 7 days')).toBeInTheDocument()
     expect(italianoRimasto(container)).toEqual([])
   })
 

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { trSegnato } from '../lib/lingua.js'
 import {
   catalogoOrdinabile,
   filtraCatalogo,
@@ -635,7 +636,7 @@ function RigaCatalogo({
           </span>
         </span>
         <span className="muted small ordine-scorta">
-          <span className={`dot dot-${st}`} aria-hidden /> {ETICHETTA_SCORTA[st]}
+          <span className={`dot dot-${st}`} aria-hidden /> {trSegnato(ETICHETTA_SCORTA[st])}
         </span>
         {campoFornitore(false)}
         {/* IL PREZZO DEL PEZZO STA SEMPRE IN COLONNA, ed è la difesa che vale
@@ -683,7 +684,7 @@ function RigaCatalogo({
       {aperta && (
         <div className="inv-row-dettaglio">
           <div className="muted small">
-            {ETICHETTA_ASSORTIMENTO[assortimentoDi(item)]} · {ETICHETTA_SCORTA[st]}
+            {trSegnato(ETICHETTA_ASSORTIMENTO[assortimentoDi(item)])} · {trSegnato(ETICHETTA_SCORTA[st])}
           </div>
           <div className="muted small">
             In casa: {formatQty(item.stock, item.unit)}

@@ -12,13 +12,16 @@
 // Torna le voci per la barra (CategoryRail) e i gruppi da disegnare, ognuno
 // con gli id in ordine alfabetico. Quelli senza categoria stanno in fondo.
 
+import { tr } from './lingua.js'
+
 const collator = new Intl.Collator('it')
 
 export function perScaffale(elenco, items, categorie) {
   const lista = elenco || []
   const catDi = new Map((items || []).map((i) => [i.id, i.category_id]))
   const perCat = new Map((categorie || []).map((c, i) => [c.id, { i, nome: c.name, righe: [] }]))
-  const senza = { i: Infinity, nome: 'Senza categoria', righe: [] }
+  // Le etichette si traducono qui, quando si disegna (REQ-UI-039).
+  const senza = { i: Infinity, nome: tr('Senza categoria'), righe: [] }
   for (const x of lista) (perCat.get(catDi.get(x.item_id)) || senza).righe.push(x)
   const tutti = [...perCat.entries(), ['none', senza]]
     .filter(([, g]) => g.righe.length > 0)
@@ -26,7 +29,7 @@ export function perScaffale(elenco, items, categorie) {
   for (const [, g] of tutti) g.righe.sort((a, b) => collator.compare(String(a.name), String(b.name)))
   return {
     voci: [
-      { key: 'all', label: 'Tutte', count: lista.length },
+      { key: 'all', label: tr('Tutte'), count: lista.length },
       ...tutti.map(([key, g]) => ({ key, label: g.nome, count: g.righe.length })),
     ],
     gruppi: tutti.map(([key, g]) => ({ key, nome: g.nome, ids: g.righe.map((x) => x.item_id) })),
