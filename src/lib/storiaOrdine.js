@@ -11,7 +11,19 @@
 //
 // Logica pura: niente Firebase, tutto testabile.
 
-import { ORDER_STATUSES, PAYMENT_METHOD_LABELS, formatPrice } from './orderStatus.js'
+import { ORDER_STATUSES, PAYMENT_METHOD_ICONA, paymentMethodNome, formatPrice } from './orderStatus.js'
+import { conEmoji, emojiDi } from './icone.js'
+import { formatoAttivo, tr } from './lingua.js'
+
+// Il metodo dell'incasso, con la sua icona, nella lingua di chi guarda:
+// PAYMENT_METHOD_LABELS resta in italiano, per chi scrive testo semplice.
+// «Misto» tiene le sue due icone, contanti e carta, come prima.
+const metodoConIcona = (m) =>
+  m === 'misto'
+    ? `${emojiDi('contanti')}+${emojiDi('carta')} ${paymentMethodNome(m)}`
+    : PAYMENT_METHOD_ICONA[m]
+      ? conEmoji(PAYMENT_METHOD_ICONA[m], paymentMethodNome(m))
+      : m
 
 const iso = (v) => {
   if (!v) return null
@@ -74,7 +86,7 @@ export function storiaOrdine(order) {
     eventi.push({
       at: apertura,
       tipo: 'aperto',
-      titolo: 'Conto aperto',
+      titolo: tr('storia|Conto aperto'),
       dettaglio: null,
       chi: attore(order.placed_by),
     })
@@ -88,8 +100,8 @@ export function storiaOrdine(order) {
     eventi.push({
       at: chiusura,
       tipo: 'chiuso',
-      titolo: 'Conto chiuso',
-      dettaglio: metodo ? (PAYMENT_METHOD_LABELS[metodo] || metodo) : null,
+      titolo: tr('Conto chiuso'),
+      dettaglio: metodo ? metodoConIcona(metodo) : null,
       chi: null,
     })
   }
@@ -99,7 +111,7 @@ export function storiaOrdine(order) {
     eventi.push({
       at: annullo,
       tipo: 'annullato',
-      titolo: 'Conto annullato',
+      titolo: tr('Conto annullato'),
       dettaglio: order.cancel_message || order.cancel_phrase || null,
       // La persona se c'è; sui conti annullati prima che la si scrivesse
       // resta il ruolo, che è quello che c'era.
@@ -117,7 +129,7 @@ export function storiaOrdine(order) {
     eventi.push({
       at: prima,
       tipo: r.chiudeva === 'annullato' ? 'annullato' : 'chiuso',
-      titolo: r.chiudeva === 'annullato' ? 'Conto annullato' : 'Conto chiuso',
+      titolo: r.chiudeva === 'annullato' ? tr('Conto annullato') : tr('Conto chiuso'),
       dettaglio: null,
       chi: null,
     })
@@ -128,11 +140,11 @@ export function storiaOrdine(order) {
     // esce dai guadagni della serata: se la storia non lo dice, a fine
     // turno la cassa non torna e non si capisce perché.
     const tolti = Number(r.incassi_tolti) || 0
-    const soldi = tolti > 0 ? `tolti ${formatPrice(tolti)} dagli incassi` : null
+    const soldi = tolti > 0 ? tr('tolti {importo} dagli incassi', { importo: formatPrice(tolti) }) : null
     eventi.push({
       at: iso(r.at),
       tipo: 'riaperto',
-      titolo: 'Conto riaperto',
+      titolo: tr('Conto riaperto'),
       dettaglio: [r.motivo || null, soldi].filter(Boolean).join(' · ') || null,
       chi: attore(r.chi),
     })
@@ -170,7 +182,7 @@ export function quando(v) {
   if (!s) return ''
   const d = new Date(s)
   if (Number.isNaN(d.getTime())) return ''
-  return d.toLocaleString('it-IT', {
+  return d.toLocaleString(formatoAttivo(), {
     day: '2-digit',
     month: '2-digit',
     hour: '2-digit',

@@ -76,8 +76,8 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 14 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 190 |
-| Unità | il progetto di dettaglio: un modulo da solo | 192 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 194 |
+| Unità | il progetto di dettaglio: un modulo da solo | 193 |
 
 **23** bisogni del locale, **0** con un test di accettazione.
 **142** requisiti su 382 sono collegati a un bisogno;
@@ -5007,6 +5007,16 @@ DA FARE: la prova sul sito di test vero (dopo il prossimo tag); i comandi su `di
 Daniele, 17/11/2026: dopo le pagine dei clienti, il gestionale va tradotto. Tutti i testi del banco, della cassa, delle impostazioni, del magazzino e delle altre sezioni passano dal meccanismo dei testi in due lingue (REQ-UI-038), una sezione alla volta: prima banco e cassa, poi il resto.
 
 CHI SCEGLIE (Daniele, 17/11/2026): «Chiunque può scegliere la lingua nel gestionale, qualsiasi ruolo. La lingua è legata al profilo». Quindi in «Il mio profilo» ogni persona — admin, bartender, sala — sceglie italiano o inglese, e la scelta sta sul suo account (profili_staff/{uid}, che legge e scrive solo lei): la segue su ogni tablet e telefono. Sul dispositivo ne resta una copia, perché l'app parta subito nella lingua giusta anche senza rete; all'accesso vince quella dell'account. Niente lingua di partenza del locale: si parte in italiano. Si lavora su un ramo feature/, e il selettore arriva insieme alle prime sezioni tradotte (banco e cassa): una scelta che non cambia niente non si mostra. Da decidere quando si comincia (dalla revisione di REQ-UI-038, 17/11/2026): date e importi seguono la lingua (formatPrice e le date oggi sono fissi su it-IT, serve un punto unico); i testi personalizzabili dal gestore (testo('chiave', 'predefinito') di lib/testiStile.js) e le loro versioni inglesi, insieme a REQ-MENU-046; il dizionario inglese caricato solo quando serve, se pesa sul pacchetto.
+
+IN CORSO sul ramo feature/gestionale-inglese.
+
+FATTO: la lingua sul profilo — profili_staff/{uid} (regole: ognuno solo il suo, solo `lingua` fra it/en; fuori dal backup, perché il titolare non potrebbe rimettere i profili degli altri), salvaLinguaDelProfilo e leggiLinguaDelProfilo in api.js, la lettura al login senza farsi aspettare (App.jsx), il riquadro «Lingua» in Il mio profilo coi nomi delle lingue nella loro lingua; «Il mio profilo» tradotto (area testi/en/profilo.js). Banco e cassa tradotti (17/11): coda, accesso, menu laterale, barra in alto, conto, griglia dei prodotti, pagamento, apertura e chiusura cassa, scheda Cassa (aree testi/en/coda, conto, cassa; le etichette di src/lib in comune). Anche le tabelle di src/lib che il banco mostra (coda.js, sezioni.js, ruoli.js, comande.js, storiaOrdine.js, statoStampante.js, erroriAccesso.js, pendingOrders.js): dove erano costruite al caricamento del modulo ora sono funzioni (filtriStato, etichettaRuolo, servizioEtichetta, etichettaAnnullo).
+
+LE PAGINE DEI CLIENTI RESTANO ITALIANE anche su un tablet dello staff in inglese (dalla revisione del 17/11): App.jsx dice a lib/lingua.js se la schermata è del cliente (non personale, «Vista cliente», «Mostra al cliente» ?cliente=1) e lì tr risponde in italiano, con lang=it.
+
+CHI NON HA MAI SCELTO ha l'italiano: leggiLinguaDelProfilo risponde it per un profilo senza lingua, e un collega non eredita la lingua di chi ha usato il tablet prima. Lo scontrino resta italiano (prova cartaInItaliano).
+
+DA FARE: impostazioni, magazzino, menù, fornitori, statistiche e bilancio, staff e utenti, il resto; in src/lib i modi di consegna, gli altri messaggi del piano Free, le descrizioni dei ruoli, i motivi d'errore della stampante.
 
 **Dove**: `src/pages/BartenderPage.jsx, src/components (gestionale), Il mio profilo (src/pages/StaffProfilePage.jsx), src/lib/lingua.js, firestore.rules (profili_staff)` · **Serve**: [UR-022](#ur-022--chi-non-parla-italiano-usa-il-menù-e-il-gestionale-nella-sua-lingua)
 

@@ -71,7 +71,7 @@ import {
   CORSIE_SPENTE_ALL_INIZIO,
   sottofiltriChiusi,
   nomiDelServizio,
-  FILTRI_STATO,
+  filtriStato,
   STATO_DEFAULT,
   frasePerCodaVuota,
   autoriDeiConti,
@@ -186,6 +186,7 @@ import { useTestoConIcona } from '../lib/temaIcone.js'
 import { conEmoji } from '../lib/icone.js'
 import AttesaCliente from '../components/AttesaCliente.jsx'
 import { fermoPerIlCliente as fermo, scaduta, ANNULLO_SCADUTO } from '../lib/attesaCliente.js'
+import { tr, trSegnato } from '../lib/lingua.js'
 
 // Badge accanto al numero d'ordine: la LETTERA del dipendente che l'ha aperto,
 // oppure il segno del CLIENTE se l'ha aperto lui dall'app.
@@ -314,7 +315,7 @@ export default function BartenderPage() {
   }, [wideTab, tab])
 
   if (user === undefined || (user && role === null)) {
-    return <Caricamento testo="Ti sto facendo entrare…" />
+    return <Caricamento testo={tr('Ti sto facendo entrare…')} />
   }
   if (!user) return <LoginForm />
 
@@ -322,13 +323,13 @@ export default function BartenderPage() {
   if (role === 'cliente') {
     return (
       <div className="empty">
-        <Icona nome="licenza" gruppo="segnali" /> Quest’area è riservata allo staff.
+        <Icona nome="licenza" gruppo="segnali" /> {tr('Quest’area è riservata allo staff.')}
         <br />
         {/* Anche da qui si esce dalla porta giusta: il signOut secco
             lasciava la timbratura aperta e questo terminale nella rubrica
             degli avvisi. */}
         <button className="btn ghost" style={{ marginTop: 14 }} onClick={() => logoutStaff()}>
-          Esci e accedi come staff
+          {tr('Esci e accedi come staff')}
         </button>
       </div>
     )
@@ -457,10 +458,10 @@ function LoginForm() {
   if (__DEMO__) {
     return (
       <div className="card">
-        <h2 style={{ marginTop: 0 }}>Accesso staff</h2>
-        <p className="muted">Nella demo si entra scegliendo un ruolo: titolare, bartender o sala.</p>
+        <h2 style={{ marginTop: 0 }}>{tr('Accesso staff')}</h2>
+        <p className="muted">{tr('Nella demo si entra scegliendo un ruolo: titolare, bartender o sala.')}</p>
         <button type="button" className="btn" onClick={() => signOut(auth)}>
-          Scegli il ruolo
+          {tr('Scegli il ruolo')}
         </button>
       </div>
     )
@@ -468,13 +469,13 @@ function LoginForm() {
 
   return (
     <form className="card" onSubmit={submit}>
-      <h2 style={{ marginTop: 0 }}>Accesso staff</h2>
+      <h2 style={{ marginTop: 0 }}>{tr('Accesso staff')}</h2>
       {avviso && (
         <div className="banner" role="status" style={{ marginBottom: 10 }}>
           {avviso}
         </div>
       )}
-      <label htmlFor="email">Email</label>
+      <label htmlFor="email">{tr('Email')}</label>
       <input
         id="email"
         type="email"
@@ -484,7 +485,7 @@ function LoginForm() {
         placeholder="bartender@example.com"
         required
       />
-      <label htmlFor="password" style={{ marginTop: 10 }}>Password</label>
+      <label htmlFor="password" style={{ marginTop: 10 }}>{tr('Password')}</label>
       <CampoPassword
         id="password"
         autoComplete="current-password"
@@ -495,10 +496,10 @@ function LoginForm() {
       />
       {err && <div className="banner" style={{ marginTop: 10 }}>{err}</div>}
       <button className="btn block" style={{ marginTop: 14 }} type="submit" disabled={loading}>
-        {loading ? 'Accesso…' : 'Entra'}
+        {loading ? tr('Accesso…') : tr('Entra')}
       </button>
       <button className="btn ghost block" style={{ marginTop: 8 }} type="button" onClick={conGoogle} disabled={loading}>
-        Entra con Google
+        {tr('Entra con Google')}
       </button>
     </form>
   )
@@ -506,12 +507,12 @@ function LoginForm() {
 
 function loginError(code) {
   if (code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found') {
-    return 'Email o password non corretti.'
+    return tr('Email o password non corretti.')
   }
-  if (code === 'auth/too-many-requests') return 'Troppi tentativi. Riprova tra qualche minuto.'
-  if (code === 'auth/network-request-failed') return 'Errore di rete. Controlla la connessione.'
-  if (ERRORI_GOOGLE[code]) return ERRORI_GOOGLE[code]
-  return 'Errore di accesso. Riprova.'
+  if (code === 'auth/too-many-requests') return tr('Troppi tentativi. Riprova tra qualche minuto.')
+  if (code === 'auth/network-request-failed') return tr('Errore di rete. Controlla la connessione.')
+  if (ERRORI_GOOGLE[code]) return trSegnato(ERRORI_GOOGLE[code])
+  return tr('Errore di accesso. Riprova.')
 }
 
 const STATUS_TABS = [
@@ -999,9 +1000,15 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             const prev = knownComande.current.get(o.id)
             const n = (o.comande || []).length
             if (prev != null && n > prev && o.status === 'aperto') {
-              showToast(`Aggiunta all'ordine #${o.daily_number ?? '—'}${o.customer_name ? ` (${o.customer_name})` : ''}`, {
-                icona: 'aggiungi',
-              })
+              const numero = o.daily_number ?? '—'
+              showToast(
+                o.customer_name
+                  ? tr("Aggiunta all'ordine #{n} ({nome})", { n: numero, nome: o.customer_name })
+                  : tr("Aggiunta all'ordine #{n}", { n: numero }),
+                {
+                  icona: 'aggiungi',
+                }
+              )
             }
           }
           // AVANZAMENTI FATTI ALTROVE. Chi sta in sala deve sapere che un
@@ -1036,8 +1043,8 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             const nome = statoAlBanco(ora, o.service_mode)
             if (!tornatoInCoda && !nome) continue
             notify(
-              tornatoInCoda ? AVVISO_RIPRISTINO.titolo : `${STATUS_EMOJI[ora] || '•'} ${nome}`,
-              `Ordine #${o.daily_number ?? '—'}${o.customer_name ? ` · ${o.customer_name}` : ''}`
+              tornatoInCoda ? trSegnato(AVVISO_RIPRISTINO.titolo) : `${STATUS_EMOJI[ora] || '•'} ${nome}`,
+              tr('Ordine #{n}', { n: o.daily_number ?? '—' }) + (o.customer_name ? ` · ${o.customer_name}` : '')
             )
           }
         }
@@ -1103,7 +1110,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     // attiva da sé, ed è la stessa che si è appena mossa qui.
     updateOrderStatus(order.id, ns).catch((e) => {
       setError(e.message)
-      showToast(`Avanzamento non riuscito: ${e.message}`, { kind: 'error' })
+      showToast(tr('Avanzamento non riuscito: {e}', { e: e.message }), { kind: 'error' })
       // Non è passata: si torna a quello che dice il server, che è l'unica
       // cosa vera.
       comandeLocali.scarta(order.id)
@@ -1135,7 +1142,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     )
     advanceComanda(order.id, comanda.id, ns).catch((e) => {
       setError(e.message)
-      showToast(`Avanzamento non riuscito: ${e.message}`, { kind: 'error' })
+      showToast(tr('Avanzamento non riuscito: {e}', { e: e.message }), { kind: 'error' })
       comandeLocali.scarta(order.id)
     })
   }
@@ -1150,7 +1157,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     // snapshot; in errore arriva il toast.
     cancelOrder(order.id, { by: 'bartender', kind, phrase, message, notify }).catch((e) => {
       setError(e.message)
-      showToast(`Annullo non riuscito: ${e.message}`, { kind: 'error' })
+      showToast(tr('Annullo non riuscito: {e}', { e: e.message }), { kind: 'error' })
     })
   }
 
@@ -1162,9 +1169,9 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   if (!ordersReady && pend.pending.length === 0) {
     return (
       <div>
-        {error && <div className="banner">Errore: {error}</div>}
+        {error && <div className="banner">{tr('Errore: {e}', { e: error })}</div>}
         <div className="empty">
-          Carico gli ordini…
+          {tr('Carico gli ordini…')}
           {slowLoad && (
             <>
               {/* Chi legge questo sta al bancone, non davanti al codice: gli
@@ -1178,15 +1185,15 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                   sviluppando è mandarlo a cercare dalla parte sbagliata. */}
               <p className="muted" style={{ fontSize: '0.85rem', marginTop: 12 }}>
                 {import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true'
-                  ? 'Il database locale (emulatore) non risponde: accetta le connessioni ma non manda niente. Riavvia gli emulatori — «npm run emulators».'
-                  : 'Il wifi risulta collegato ma non sta passando niente. Prova a spegnere e riaccendere il wifi, oppure passa alla rete del telefono: gli ordini già presi restano al sicuro.'}
+                  ? tr('Il database locale (emulatore) non risponde: accetta le connessioni ma non manda niente. Riavvia gli emulatori — «npm run emulators».')
+                  : tr('Il wifi risulta collegato ma non sta passando niente. Prova a spegnere e riaccendere il wifi, oppure passa alla rete del telefono: gli ordini già presi restano al sicuro.')}
               </p>
               <button
                 className="btn ghost small"
                 style={{ marginTop: 8 }}
                 onClick={() => window.location.reload()}
               >
-                <Icona nome="aggiorna" gruppo="tasti" /> Ricarica
+                <Icona nome="aggiorna" gruppo="tasti" /> {tr('Ricarica')}
               </button>
             </>
           )}
@@ -1299,6 +1306,16 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     })
   )
   const recap = ordersRecap(inCoda, isChiuso)
+  // I conteggi in testata, coi plurali per intero: l'inglese non li forma
+  // cambiando l'ultima lettera come si faceva qui («apert{o|i}»).
+  const riepilogoConti = [
+    recap.aperti === 1 ? tr('1 aperto') : tr('{n} aperti', { n: recap.aperti }),
+    recap.chiusi === 1 ? tr('1 chiuso') : tr('{n} chiusi', { n: recap.chiusi }),
+  ].join(' · ')
+  const riepilogoAnnullati =
+    recap.annullati > 0
+      ? ` · ${recap.annullati === 1 ? tr('1 annullato') : tr('{n} annullati', { n: recap.annullati })}`
+      : null
   // Quanti ticket sono ancora al banco, fra i conti di questa apertura di
   // cassa. Senza gli stati del servizio non vuol dire niente: lì le comande
   // risultano servite alla riscossione, e a bloccare la chiusura basta e
@@ -1504,6 +1521,9 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // ribattute nell'annuncio del ✂️ — rinominarne una lasciava lo screen
   // reader a dire il nome vecchio.
   const [meta1, meta2] = CORSIE_PRONTO_DIVISO.map((c) => c.titolo)
+  // I tre nomi nella lingua di chi guarda: arrivano da lib/coda.js così
+  // come sono scritti, e nelle frasi del taglio vanno tradotti uno per uno.
+  const nomiTaglio = { a: trSegnato(meta1), b: trSegnato(meta2), c: trSegnato(nomiServizio.daServire) }
   const divisioneP = corsieDelPronto({ divise: prontoSeparato, ritiroEsiste })
   const corsieDelBanco = corsieBanco
     ? corsieComande(contiInCorsia, {
@@ -1591,9 +1611,13 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
         className={`chip ${sottoChiusi === k ? 'active' : ''}`}
         onClick={() => setSottoChiusi((s) => cambiaSottoChiusi(s, k))}
         aria-pressed={sottoChiusi === k}
-        title={`Dei conti chiusi, solo quelli ${k === 'serviti' ? 'usciti per intero' : 'con ancora qualcosa da portare'}`}
+        title={
+          k === 'serviti'
+            ? tr('Dei conti chiusi, solo quelli usciti per intero')
+            : tr('Dei conti chiusi, solo quelli con ancora qualcosa da portare')
+        }
       >
-        {label}
+        {trSegnato(label)}
       </button>
     ))
 
@@ -1604,7 +1628,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // «Conti chiusi». Chi non vede lo schermo sentiva due nomi per lo stesso
   // tasto a seconda della vista.
   const gruppoChiusi = (dentro, chiave) => (
-    <div key={chiave} className="chip-gruppo" role="group" aria-label="Conti chiusi">
+    <div key={chiave} className="chip-gruppo" role="group" aria-label={tr('Conti chiusi')}>
       {dentro}
     </div>
   )
@@ -1631,8 +1655,8 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     <button
       className="btn ghost small board-icona"
       onClick={cambiaVista}
-      title={corsieBanco ? 'Torna ai conti' : 'Guarda le comande al banco'}
-      aria-label={corsieBanco ? 'Ordini' : 'Comande'}
+      title={corsieBanco ? tr('Torna ai conti') : tr('Guarda le comande al banco')}
+      aria-label={corsieBanco ? tr('Ordini') : tr('Comande')}
     >
       <Icona nome={corsieBanco ? 'coda' : 'menu'} gruppo="tasti" />
     </button>
@@ -1677,8 +1701,8 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   const tendinaStaff =
     autori.length > 0 ? (
       <Tendina
-        etichetta="Chi ha aperto il conto"
-        riassunto={conEmoji('nuovo-ordine', riassuntoStaff)}
+        etichetta={tr('Chi ha aperto il conto')}
+        riassunto={conEmoji('nuovo-ordine', trSegnato(riassuntoStaff))}
         attivo={staffFiltra}
         largo={240}
       >
@@ -1687,7 +1711,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             {/* NON SI CHIUDE AL PRIMO TOCCO: qui si deselezionano più
                 persone di fila, e una tendina che sparisce a ogni scelta va
                 riaperta ogni volta. Si chiude fuori, o con Esc. */}
-            <div className="tendina-titolo">Chi ha aperto il conto</div>
+            <div className="tendina-titolo">{tr('Chi ha aperto il conto')}</div>
             {autori.map((v) => (
               <button
                 key={v.chiave}
@@ -1699,7 +1723,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                 <span>
                   {v.chiave === AUTORE_CLIENTE && <><Icona nome="mondo" gruppo="tasti" />{' '}</>}
                   {v.nome}
-                  {v.chiave === emailMia && <span className="muted small"> · sei tu</span>}
+                  {v.chiave === emailMia && <span className="muted small"> · {tr('sei tu')}</span>}
                 </span>
               </button>
             ))}
@@ -1749,10 +1773,10 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
       aria-expanded={filtriVisibili}
       // IL NOME NON CAMBIA MAI: chi lo cerca lo cerca come «Filtri». Quello
       // che cambia è il title, che dice il gesto — aprire o chiudere.
-      aria-label="Filtri"
-      title={spiegaFiltri(filtriVisibili)}
+      aria-label={tr('Filtri')}
+      title={trSegnato(spiegaFiltri(filtriVisibili))}
     >
-      {filtriVisibili ? '▴' : '▾'} Filtri
+      {filtriVisibili ? '▴' : '▾'} {tr('Filtri')}
     </button>
   )
 
@@ -1780,8 +1804,8 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     <button
       className="coda-tastino solo-icona"
       onClick={cambiaOrdine}
-      title={verso.nome}
-      aria-label={verso.nome}
+      title={trSegnato(verso.nome)}
+      aria-label={trSegnato(verso.nome)}
     >
       <Icona nome={verso.icona} gruppo="tasti" />
     </button>
@@ -1860,11 +1884,13 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
       onClick={() => setSoloOggi((v) => !v)}
       title={
         arretrati.length
-          ? `Nascondi i ${arretrati.length} conti rimasti aperti dai giorni scorsi`
-          : 'Nascondi i conti rimasti aperti dai giorni scorsi'
+          ? arretrati.length === 1
+            ? tr('Nascondi il conto rimasto aperto dai giorni scorsi')
+            : tr('Nascondi i {n} conti rimasti aperti dai giorni scorsi', { n: arretrati.length })
+          : tr('Nascondi i conti rimasti aperti dai giorni scorsi')
       }
     >
-      <Icona nome="calendario" gruppo="tasti" />{' '}Solo oggi{arretrati.length ? ` (${arretrati.length})` : ''}
+      <Icona nome="calendario" gruppo="tasti" />{' '}{tr('Solo oggi')}{arretrati.length ? ` (${arretrati.length})` : ''}
     </button>
   )
 
@@ -1878,7 +1904,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
       onClick={() => cambiaCorsia(c.id)}
       aria-pressed={!nascoste.includes(c.id)}
     >
-      <ConIcona testo={c.titolo} />
+      <ConIcona testo={trSegnato(c.titolo)} />
     </button>
   )
 
@@ -1976,13 +2002,13 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                   onClick={cambiaPronto}
                   aria-label={
                     diviso
-                      ? `Riunisci «${meta1}» e «${meta2}» in una colonna «${nomiServizio.daServire}»`
-                      : `Dividi «${nomiServizio.daServire}» in «${meta1}» e «${meta2}»`
+                      ? tr('Riunisci «{a}» e «{b}» in una colonna «{c}»', nomiTaglio)
+                      : tr('Dividi «{c}» in «{a}» e «{b}»', nomiTaglio)
                   }
                   title={
                     diviso
-                      ? `Riunisci «${meta1}» e «${meta2}» in una colonna sola, col badge sulla card`
-                      : `Dividi «${nomiServizio.daServire}» in «${meta1}» e «${meta2}»`
+                      ? tr('Riunisci «{a}» e «{b}» in una colonna sola, col badge sulla card', nomiTaglio)
+                      : tr('Dividi «{c}» in «{a}» e «{b}»', nomiTaglio)
                   }
                 >
                   <Icona nome={diviso ? 'unisci' : 'dividi'} gruppo="tasti" />
@@ -2030,7 +2056,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             accanto compaiono «Da servire/Ritirare» e «Serviti/Ritirati»,
             attaccate nello stesso gruppo perché sono una domanda DENTRO i
             chiusi e non due filtri fratelli. */}
-        {FILTRI_STATO.map(([k, label]) => {
+        {filtriStato().map(([k, label]) => {
           const chip = (
             <button
               key={k}
@@ -2101,8 +2127,8 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   const avvisoRicerca =
     ricercaEvidenzia && q && !idAcceso
       ? altroveNonInVista
-        ? conEmoji('cerca', `«${search.trim()}» sta in un'altra scheda.`)
-        : conEmoji('cerca', `Nessun conto per «${search.trim()}».`)
+        ? conEmoji('cerca', tr("«{testo}» sta in un'altra scheda.", { testo: search.trim() }))
+        : conEmoji('cerca', tr('Nessun conto per «{testo}».', { testo: search.trim() }))
       : null
 
   async function incassaSuLettore(o) {
@@ -2110,7 +2136,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     try {
       const res = await readerCheckout(o.id)
       if (res.unavailable) {
-        setError('Lettore non disponibile in ambiente di sviluppo: simula dai DevTools.')
+        setError(tr('Lettore non disponibile in ambiente di sviluppo: simula dai DevTools.'))
       }
     } catch (e) {
       setError(e.message)
@@ -2172,16 +2198,16 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           {stampaOn && (
             <button
               className="btn ghost small"
-              onClick={() => printScontrino(o).catch((e) => setError(`Stampa: ${e.message}`))}
+              onClick={() => printScontrino(o).catch((e) => setError(tr('Stampa: {e}', { e: e.message })))}
             >
-              <Icona nome="coda" gruppo="tasti" /> Scontrino
+              <Icona nome="coda" gruppo="tasti" /> {tr('Scontrino')}
             </button>
           )}
           <button
             className="btn ghost small"
             onClick={() => setRipristinoTarget(o)}
           >
-            <Icona nome="riapri" gruppo="tasti" /> Riapri conto
+            <Icona nome="riapri" gruppo="tasti" /> {tr('Riapri conto')}
           </button>
         </div>
       )
@@ -2200,7 +2226,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
       !cassaChiusa &&
       o.payment_status !== 'pagato' &&
       (!workflowOn || [ORDER_STATUSES.PRONTO, ORDER_STATUSES.RITIRATO].includes(o.workflow_status))
-    const perchéNonIncassa = cassaChiusa ? 'Cassa chiusa: per incassare va aperta la cassa' : null
+    const perchéNonIncassa = cassaChiusa ? tr('Cassa chiusa: per incassare va aperta la cassa') : null
     return (
       <>
         {/* Coi tasti che compaiono e spariscono, quello che cercavi non è più
@@ -2216,13 +2242,13 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             spento (i ruoli non cambiano a metà serata). */}
         {comandaIlLavoro && workflowOn && statiPrimaComanda(o.workflow_status, passoDiNascita).length > 0 && (
           <div className="row" style={{ gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
-            <span className="muted small">Torna a</span>
+            <span className="muted small">{tr('Torna a')}</span>
             {statiPrimaComanda(o.workflow_status, passoDiNascita).map((st) => (
               <button
                 key={st}
                 className="chip"
                 onClick={() => advance(o, st)}
-                title={`Riporta il conto a «${statoAlBanco(st, o.service_mode)}»`}
+                title={tr('Riporta il conto a «{stato}»', { stato: statoAlBanco(st, o.service_mode) })}
               >
                 ↩︎ {statoAlBanco(st, o.service_mode)}
               </button>
@@ -2237,25 +2263,25 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             disabled={!ns || o.workflow_status === ORDER_STATUSES.RITIRATO || awaiting}
             title={
               awaiting
-                ? 'In attesa del pagamento: non si prepara'
+                ? tr('In attesa del pagamento: non si prepara')
                 : !ns || o.workflow_status === ORDER_STATUSES.RITIRATO
-                  ? 'Nessuno stato successivo'
+                  ? tr('Nessuno stato successivo')
                   : undefined
             }
             onClick={() => advance(o)}
           >
             {ns && o.workflow_status !== ORDER_STATUSES.RITIRATO
-              ? `Segna come “${statoAlBanco(ns, o.service_mode)}”`
-              : 'Servito'}
+              ? tr('Segna come “{stato}”', { stato: statoAlBanco(ns, o.service_mode) })
+              : tr('Servito')}
           </button>
         )}
         {readerPending ? (
           <div style={{ marginTop: 8 }}>
             <p className="muted small" style={{ margin: '0 0 6px', textAlign: 'center' }}>
-              <Icona nome="lettore" gruppo="tasti" /> In corso sul lettore… carta del cliente sul Solo.
+              <Icona nome="lettore" gruppo="tasti" /> {tr('In corso sul lettore… carta del cliente sul Solo.')}
             </p>
             <button className="btn ghost small block" onClick={() => annullaSuLettore(o)}>
-              <Icona nome="chiudi" gruppo="tasti" /> Annulla sul lettore
+              <Icona nome="chiudi" gruppo="tasti" /> {tr('Annulla sul lettore')}
             </button>
           </div>
         ) : (
@@ -2264,10 +2290,10 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               className="btn secondary block"
               style={{ marginTop: o.workflow_status === ORDER_STATUSES.PRONTO ? 8 : 0 }}
               disabled={!canCollect}
-              title={canCollect ? undefined : perchéNonIncassa || 'Conto già chiuso o non ancora incassabile'}
+              title={canCollect ? undefined : perchéNonIncassa || tr('Conto già chiuso o non ancora incassabile')}
               onClick={() => incassaSuLettore(o)}
             >
-              <Icona nome="lettore" gruppo="tasti" /> Incassa sul lettore
+              <Icona nome="lettore" gruppo="tasti" /> {tr('Incassa sul lettore')}
             </button>
           )
         )}
@@ -2285,14 +2311,14 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           // taceva sui conti già stampati una volta.
           <div className="grid-2" style={{ marginTop: 8 }}>
             {[
-              ['banco', conEmoji('contanti', 'Contanti')],
-              ['carta', conEmoji('carta', 'Carta')],
+              ['banco', conEmoji('contanti', tr('Contanti'))],
+              ['carta', conEmoji('carta', tr('Carta'))],
             ].map(([metodo, etichetta]) => (
               <button
                 key={metodo}
                 className="btn"
                 disabled={readerPending || !canCollect}
-                title={canCollect ? undefined : perchéNonIncassa || 'Conto già chiuso'}
+                title={canCollect ? undefined : perchéNonIncassa || tr('Conto già chiuso')}
                 onClick={() => {
                   markOrderPaid(o.id, metodo, { autoServe: !workflowOn }).catch((e) =>
                     setError(e.message)
@@ -2323,7 +2349,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                         // tutti i terminali per sempre.
                         .then(() => segnaScontrinoStampato(o.id))
                         .catch((e) => {
-                          setError(`Scontrino non stampato: ${e.message}`)
+                          setError(tr('Scontrino non stampato: {e}', { e: e.message }))
                           releaseReceiptPrint(o.id)
                         })
                     }
@@ -2342,16 +2368,16 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             {stampaComandeOn && (
               <button
                 className="btn ghost small"
-                onClick={() => printComanda(o, o.comande?.find((cc) => cc.id === o.active_comanda_id) ?? null).catch((e) => setError(`Stampa: ${e.message}`))}
+                onClick={() => printComanda(o, o.comande?.find((cc) => cc.id === o.active_comanda_id) ?? null).catch((e) => setError(tr('Stampa: {e}', { e: e.message })))}
               >
-                <Icona nome="stampa" gruppo="tasti" /> Comanda
+                <Icona nome="stampa" gruppo="tasti" /> {tr('Comanda')}
               </button>
             )}
             <button
               className="btn ghost small"
-              onClick={() => printScontrino(o).catch((e) => setError(`Stampa: ${e.message}`))}
+              onClick={() => printScontrino(o).catch((e) => setError(tr('Stampa: {e}', { e: e.message })))}
             >
-              <Icona nome="coda" gruppo="tasti" /> Scontrino
+              <Icona nome="coda" gruppo="tasti" /> {tr('Scontrino')}
             </button>
           </div>
         )}
@@ -2362,7 +2388,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             style={{ marginTop: 8 }}
             onClick={() => setCancelTarget({ order: o, kind: 'ordine' })}
           >
-            <Icona nome="chiudi" gruppo="tasti" /> Annulla ordine
+            <Icona nome="chiudi" gruppo="tasti" /> {tr('Annulla ordine')}
           </button>
         )}
         {/* Annullare è di chi versa: è il suo lavoro che si butta. */}
@@ -2372,7 +2398,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             style={{ marginTop: 8 }}
             onClick={() => setCancelTarget({ order: o, kind: 'preparazione' })}
           >
-            <Icona nome="chiudi" gruppo="tasti" /> Annulla preparazione
+            <Icona nome="chiudi" gruppo="tasti" /> {tr('Annulla preparazione')}
           </button>
         )}
         {/* Annullare è di chi versa: è il suo lavoro che si butta. */}
@@ -2382,7 +2408,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             style={{ marginTop: 8 }}
             onClick={() => setCancelTarget({ order: o, kind: 'non_ritirato' })}
           >
-            <Icona nome="vietato" gruppo="segnali" />{' '}{o.service_mode === 'tavolo' ? 'Non servito' : 'Non ritirato'}
+            <Icona nome="vietato" gruppo="segnali" />{' '}{o.service_mode === 'tavolo' ? tr('Non servito') : tr('Non ritirato')}
           </button>
         )}
         {/* IL COLORE DEL CONTO, A MANO. Sempre disponibile, che i colori
@@ -2445,7 +2471,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           <div className="grid-card-name">{o.customer_name || ' '}</div>
           <div className="grid-card-sub row between" style={{ gap: 6 }}>
             <span className="grow" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {o.table_label && <span className="muted"><Icona nome="tavolo" gruppo="tasti" /> Tavolo {o.table_label}</span>}
+              {o.table_label && <span className="muted"><Icona nome="tavolo" gruppo="tasti" /> {tr('Tavolo {t}', { t: o.table_label })}</span>}
               {o.note && <span className="muted">{o.table_label ? ' · ' : ''}{o.note}</span>}
             </span>
             {/* Pagamento allineato a DESTRA, fra il badge di stato (sopra) e
@@ -2455,23 +2481,23 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                 <span className="pill small"><Icona nome="staff" gruppo="tasti" /> {o.group_name_snapshot}</span>
               )}
               {o.payment_status === 'pagato' && o.workflow_status !== ORDER_STATUSES.PAGATO && (
-                <span className="pill pagato small"><Icona nome="carta" gruppo="tasti" /> Pagato</span>
+                <span className="pill pagato small"><Icona nome="carta" gruppo="tasti" /> {tr('Pagato')}</span>
               )}
               {o.payment_status === 'parziale' && !impagatoAperto(o) && (
-                <span className="pill ricevuto small" title={`Incassati ${formatPrice(paidAmount(o))}`}>
-                  <Icona nome="carta" gruppo="tasti" /> Acconto
+                <span className="pill ricevuto small" title={tr('Incassati {importo}', { importo: formatPrice(paidAmount(o)) })}>
+                  <Icona nome="carta" gruppo="tasti" /> {tr('Acconto')}
                 </span>
               )}
               {impagatoAperto(o) && (
-                <span className="pill ricevuto small" title={o.impagato.nota || 'Chiuso senza incasso'}>
-                  <Icona nome="orario" gruppo="tasti" /> Impagato
+                <span className="pill ricevuto small" title={o.impagato.nota || tr('Chiuso senza incasso')}>
+                  <Icona nome="orario" gruppo="tasti" /> {tr('Impagato')}
                 </span>
               )}
             </span>
           </div>
           <div className="row between" style={{ alignItems: 'baseline', marginTop: 'auto' }}>
             <span className="grid-card-meta">
-              {count} prodott{count === 1 ? 'o' : 'i'} · {apertoLabel(o)}
+              {count === 1 ? tr('1 prodotto') : tr('{n} prodotti', { n: count })} · {apertoLabel(o)}
               {/* Sconto applicato: si vede, e il totale è già quello scontato. */}
               {scontoTotale(o) > 0 && (
                 <span className="sconto-badge"> <Icona nome="sconto" gruppo="tasti" /> −{formatPrice(scontoTotale(o))}</span>
@@ -2483,7 +2509,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                 gli annullati restano fuori da cassa e statistiche). */}
             <span
               className={`grid-card-tot${annullato(o) ? ' tot-annullato' : ''}`}
-              title={annullato(o) ? 'Ordine annullato: non incassato' : undefined}
+              title={annullato(o) ? tr('Ordine annullato: non incassato') : undefined}
             >
               {formatPrice(orderTotal(o))}
             </span>
@@ -2496,7 +2522,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           onClick={() => toggleCard(o.id)}
           aria-expanded={open}
         >
-          {open ? '▴ Chiudi' : '⋯ Azioni'}
+          {open ? `▴ ${tr('Chiudi')}` : `⋯ ${tr('Azioni')}`}
         </button>
         {open && <div className="grid-card-actions">{orderActions(o)}</div>}
       </div>
@@ -2520,16 +2546,16 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             <span className="bignum">#{o.daily_number ?? '…'} <OrderBy order={o} /></span>
             <span className={`pill ${isError ? '' : o.workflow_status}`}>
               {isError
-                ? <ConIcona nome="avviso" testo="Errore invio" gruppo="segnali" />
+                ? <ConIcona nome="avviso" testo={tr('Errore invio')} gruppo="segnali" />
                 : <ConIcona nome={STATUS_ICONA[o.workflow_status]} testo={statoAlBanco(o.workflow_status, o.service_mode)} />}
             </span>
           </div>
           <div className="grid-card-sub">
             {o.customer_name && <strong>{o.customer_name}</strong>}
-            {o.table_label && <span className="muted"> · Tavolo {o.table_label}</span>}
+            {o.table_label && <span className="muted"> · {tr('Tavolo {t}', { t: o.table_label })}</span>}
           </div>
           <div className="row between" style={{ alignItems: 'baseline' }}>
-            <span className="muted">{count} prodott{count === 1 ? 'o' : 'i'}</span>
+            <span className="muted">{count === 1 ? tr('1 prodotto') : tr('{n} prodotti', { n: count })}</span>
             <span className="grid-card-tot">{formatPrice(o.total)}</span>
           </div>
         </div>
@@ -2537,14 +2563,14 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             la sincronizzazione); le azioni arrivano con l'ordine vero. */}
         {!isError && (
           <button type="button" className="grid-card-toggle" disabled>
-            ⋯ Azioni
+            ⋯ {tr('Azioni')}
           </button>
         )}
         {isError && (
           <div className="grid-card-actions">
             <p className="muted small" style={{ margin: '0 0 6px' }}>{p.error}</p>
             <button className="btn ghost small block" onClick={() => dismissPending(p.tempId)}>
-              Rimuovi
+              {tr('Rimuovi')}
             </button>
           </div>
         )}
@@ -2572,42 +2598,42 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                 </span>{' '}
                 {o.customer_name && <strong>{o.customer_name}</strong>}{' '}
                 {o.table_label && (
-                  <span className="muted">· Tavolo {o.table_label}</span>
+                  <span className="muted">· {tr('Tavolo {t}', { t: o.table_label })}</span>
                 )}{' '}
                 {o.group_name_snapshot && (
                   <span className="pill small"><Icona nome="staff" gruppo="tasti" /> {o.group_name_snapshot}</span>
                 )}{' '}
                 <span className="muted small"><Icona nome="calendario" gruppo="tasti" /> {apertoLabel(o)}</span>
                 {o.service_mode === 'banco' && (
-                  <span className="pill" style={{ marginLeft: 6 }}><Icona nome="a-piedi" gruppo="tasti" /> Ritiro al banco</span>
+                  <span className="pill" style={{ marginLeft: 6 }}><Icona nome="a-piedi" gruppo="tasti" /> {tr('Ritiro al banco')}</span>
                 )}
                 {o.service_mode === 'tavolo' && (
-                  <span className="pill" style={{ marginLeft: 6 }}><Icona nome="menu" gruppo="tasti" /> Al tavolo</span>
+                  <span className="pill" style={{ marginLeft: 6 }}><Icona nome="menu" gruppo="tasti" /> {tr('Al tavolo')}</span>
                 )}
                 {/* Stato pagamento */}
                 {o.payment_status === 'pagato' && o.workflow_status !== ORDER_STATUSES.PAGATO && (
                   <span className="pill pagato" style={{ marginLeft: 6 }}>
-                    <Icona nome="carta" gruppo="tasti" />{' '}Pagato{o.payment_method === 'online' ? ' online' : ''}
+                    <Icona nome="carta" gruppo="tasti" />{' '}{o.payment_method === 'online' ? tr('Pagato online') : tr('Pagato')}
                   </span>
                 )}
                 {o.payment_status === 'parziale' && (
                   <span className="pill ricevuto" style={{ marginLeft: 6 }}>
-                    <Icona nome="carta" gruppo="tasti" />{' '}Parziale · incassati {formatPrice(paidAmount(o))}
+                    <Icona nome="carta" gruppo="tasti" />{' '}{tr('Parziale · incassati {importo}', { importo: formatPrice(paidAmount(o)) })}
                   </span>
                 )}
                 {awaiting && (
                   <span className="pill ricevuto" style={{ marginLeft: 6 }}>
-                    <Icona nome="attesa" gruppo="segnali" /> In attesa di pagamento
+                    <Icona nome="attesa" gruppo="segnali" /> {tr('In attesa di pagamento')}
                   </span>
                 )}
                 {o.payment_status === 'fallito' && (
                   <span className="pill" style={{ marginLeft: 6, background: 'rgba(231,76,60,0.25)', color: '#ffb3a7' }}>
-                    <Icona nome="errore" gruppo="segnali" /> Pagamento fallito
+                    <Icona nome="errore" gruppo="segnali" /> {tr('Pagamento fallito')}
                   </span>
                 )}
                 {o.payment_after_cancel && (
                   <span className="pill" style={{ marginLeft: 6, background: 'rgba(231,76,60,0.25)', color: '#ffb3a7' }}>
-                    <Icona nome="avviso" gruppo="segnali" /> Pagato dopo annullo
+                    <Icona nome="avviso" gruppo="segnali" /> {tr('Pagato dopo annullo')}
                   </span>
                 )}
               </div>
@@ -2635,7 +2661,8 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             </div>
             {o.placed_by && (
               <p className="muted small" style={{ margin: '0 0 8px' }}>
-                <Icona nome="nuovo-ordine" gruppo="tasti" />{' '}Ordine manuale inserito da <strong>{placedByName(o.placed_by)}</strong> ({o.placed_by.role})
+                <Icona nome="nuovo-ordine" gruppo="tasti" />{' '}
+                {tr('Ordine manuale inserito da {nome} ({ruolo})', { nome: placedByName(o.placed_by), ruolo: o.placed_by.role })}
               </p>
             )}
             {o.note && (
@@ -2646,7 +2673,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               const m = minutesBetween(o.status_times?.in_preparazione, o.status_times?.pronto)
               return m != null && (
                 <p className="muted small" style={{ margin: '0 0 8px' }}>
-                  <Icona nome="tempo" gruppo="tasti" />{' '}Preparato in {m} min
+                  <Icona nome="tempo" gruppo="tasti" />{' '}{tr('Preparato in {m} min', { m })}
                 </p>
               )
             })()}
@@ -2654,13 +2681,13 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               const m = minutesBetween(o.status_times?.pronto, o.status_times?.ritirato)
               return m != null && (
                 <p className="muted small" style={{ margin: '0 0 8px' }}>
-                  <Icona nome="tempo" gruppo="tasti" />{' '}Servito in {m} min
+                  <Icona nome="tempo" gruppo="tasti" />{' '}{tr('Servito in {m} min', { m })}
                 </p>
               )
             })()}
             {awaiting && (
               <p className="muted small" style={{ margin: '0 0 8px' }}>
-                <Icona nome="attesa" gruppo="segnali" /> Entra in coda al pagamento: non preparare.
+                <Icona nome="attesa" gruppo="segnali" /> {tr('Entra in coda al pagamento: non preparare.')}
               </p>
             )}
             {orderActions(o)}
@@ -2679,14 +2706,16 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           nella coda, che è il posto dove gli ordini si aspettano. Toccandolo
           si aprono gli avvisi (la campanella ascolta l'evento). */}
       <FumettoAvvisi onApri={() => window.dispatchEvent(new Event('drink:apri-avvisi'))} />
-      {error && <div className="banner">Errore: {error}</div>}
+      {error && <div className="banner">{tr('Errore: {e}', { e: error })}</div>}
 
       {/* Cassa chiusa: gli ordini si battono, gli incassi aspettano che la
           si apra (REQ-CASSA-017). */}
       {!cassaLoading && !cassaAperta && (
         <div className="banner cassa-chiusa-banner">
-          <Icona nome="rosso" gruppo="segnali" />{' '}<strong>Cassa chiusa</strong> —{' '}
-          {gestore ? 'gli ordini si battono, per incassare va aperta la cassa.' : 'gli ordini si battono, per incassare la deve aprire il banco.'}{' '}
+          <Icona nome="rosso" gruppo="segnali" />{' '}<strong>{tr('Cassa chiusa')}</strong> —{' '}
+          {gestore
+            ? tr('gli ordini si battono, per incassare va aperta la cassa.')
+            : tr('gli ordini si battono, per incassare la deve aprire il banco.')}{' '}
           {/* Si apre da qui: mandare al flusso di cassa per premere un tasto e
               tornare indietro sono tre passaggi per una cosa che ne vale uno.
               La sala invece legge e basta: aprirla non è cosa sua, e un tasto
@@ -2698,7 +2727,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               style={{ marginLeft: 8 }}
               onClick={() => setApriCassa(true)}
             >
-              <Icona nome="verde" gruppo="tasti" /> Apri cassa
+              <Icona nome="verde" gruppo="tasti" /> {tr('Apri cassa')}
             </button>
           )}
         </div>
@@ -2721,14 +2750,14 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           <button
             type="button"
             className="board-burger"
-            aria-label="Menu"
-            title="Menu"
+            aria-label={tr('Menu')}
+            title={tr('Menu')}
             onClick={() => window.dispatchEvent(new Event('drink:toggle-drawer'))}
           >
             <Icona nome="menu_laterale" gruppo="tasti" />
           </button>
           <div className="board-title">
-            <strong>In servizio</strong>
+            <strong>{tr('In servizio')}</strong>
           </div>
           {/* LA RICERCA, E SUL TELEFONO I DUE TASTINI CON LEI. Da tablet in
               su questo guscio non esiste (`display: contents`) e il campo
@@ -2742,7 +2771,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             <input
               type="search"
               className="menu-search board-search"
-              placeholder={testoConIcona('cerca', 'Cerca numero, cliente, tavolo, drink…')}
+              placeholder={testoConIcona('cerca', tr('Cerca numero, cliente, tavolo, drink…'))}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -2764,8 +2793,8 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               <button
                 className={`btn ghost small board-pannelli${showPanels ? ' active' : ''}`}
                 onClick={() => setMenuBoard(true)}
-                title="Altro: pannelli e cassa"
-                aria-label="Altro"
+                title={tr('Altro: pannelli e cassa')}
+                aria-label={tr('Altro')}
               >
                 ⋯
               </button>
@@ -2773,8 +2802,8 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               <button
                 className={`btn ghost small board-icona${showPanels ? ' active' : ''}`}
                 onClick={() => setShowPanels((v) => !v)}
-                title={showPanels ? 'Nascondi i pannelli' : 'Chiamate staff e gruppi'}
-                aria-label={showPanels ? 'Nascondi i pannelli' : 'Chiamate staff e gruppi'}
+                title={showPanels ? tr('Nascondi i pannelli') : tr('Chiamate staff e gruppi')}
+                aria-label={showPanels ? tr('Nascondi i pannelli') : tr('Chiamate staff e gruppi')}
                 aria-pressed={showPanels}
               >
                 <Icona nome="lettore" gruppo="tasti" />
@@ -2829,24 +2858,24 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                     <button
                       className="btn ghost small board-cassa"
                       aria-disabled={v.disabled || undefined}
-                      title={v.hint}
+                      title={trSegnato(v.hint)}
                       onClick={() => {
-                        if (v.disabled) return showToast(v.hint, { kind: 'info' })
+                        if (v.disabled) return showToast(trSegnato(v.hint), { kind: 'info' })
                         return v.id === 'apri-cassa' ? setApriCassa(true) : setChiudiCassa(true)
                       }}
                     >
-                      <Icona nome={v.icon} gruppo="tasti" /> {v.label}
+                      <Icona nome={v.icon} gruppo="tasti" /> {trSegnato(v.label)}
                     </button>
                     {/* Solo quando è spento: a cassa chiudibile la riga
                         direbbe «conta il contante», che è quello che il
                         tasto fa già e non è un impedimento. */}
                     {v.disabled && v.hint && (
-                      <span className="board-cassa-perche muted small">{v.hint}</span>
+                      <span className="board-cassa-perche muted small">{trSegnato(v.hint)}</span>
                     )}
                   </span>
                 )
               })()}
-            <Link className="btn board-add" to="/pos" aria-label="Nuovo ordine" title="Nuovo ordine" />
+            <Link className="btn board-add" to="/pos" aria-label={tr('Nuovo ordine')} title={tr('Nuovo ordine')} />
           </div>
           {/* SECONDA RIGA: conteggi e legenda degli autori. Stavano dentro
               il titolo, e il titolo diventava alto due o tre righe: la
@@ -2855,13 +2884,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               niente. Qui sono una riga a sé, sotto e a filo a sinistra. */}
           <div className="board-sotto">
             <span className="muted board-conti">
-              {recap.aperti} apert{recap.aperti === 1 ? 'o' : 'i'} · {recap.chiusi} chius
-              {recap.chiusi === 1 ? 'o' : 'i'}
+              {riepilogoConti}
               {/* Gli annullati solo se ce ne sono: una serata pulita non
                   deve leggere «0 annullati». Fuori dal totale, che sono i
                   soldi veri. */}
-              {recap.annullati > 0 &&
-                ` · ${recap.annullati} annullat${recap.annullati === 1 ? 'o' : 'i'}`}
+              {riepilogoAnnullati}
               {' · '}
               {formatPrice(recap.total)}
             </span>
@@ -2880,11 +2907,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                         chiesta: chi si collega deve sapere con che lettera
                         si riconoscerà sulle card, prima di battere il primo
                         conto. */}
-                    {v.mio && <span className="muted small"> · sei tu</span>}
+                    {v.mio && <span className="muted small"> · {tr('sei tu')}</span>}
                   </span>
                 ))}
                 {legenda.hasClient && (
-                  <span><span className="order-by client"><Icona nome="mondo" gruppo="tasti" /></span> Cliente</span>
+                  <span><span className="order-by client"><Icona nome="mondo" gruppo="tasti" /></span> {tr('Cliente')}</span>
                 )}
               </div>
             )}
@@ -2904,11 +2931,10 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
       ) : (
         <>
           <div className="card">
-            <strong>Oggi</strong>
+            <strong>{tr('Oggi')}</strong>
             <div className="muted">
-              {recap.aperti} apert{recap.aperti === 1 ? 'o' : 'i'} · {recap.chiusi} chius{recap.chiusi === 1 ? 'o' : 'i'}
-              {recap.annullati > 0 &&
-                ` · ${recap.annullati} annullat${recap.annullati === 1 ? 'o' : 'i'}`}
+              {riepilogoConti}
+              {riepilogoAnnullati}
               {' · '}
               {formatPrice(recap.total)}
             </div>
@@ -2916,7 +2942,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
 
           <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
             <Link className="btn" to="/pos" style={{ flex: 1 }}>
-              <Icona nome="menu" gruppo="tasti" /> POS cassa
+              <Icona nome="menu" gruppo="tasti" /> {tr('POS cassa')}
             </Link>
             {/* Si chiamava «Vista cliente» ma apriva il menù dello staff,
                 quello per gli ordini al tavolo (BUG-127). La vista cliente
@@ -2926,7 +2952,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                 (menu_clienti_visibile) resta: lo staff lo usa al tavolo. */}
             {menuDigitaleAttivo(settings) && (
               <Link className="btn ghost" to="/menu" style={{ flex: 1 }}>
-                <Icona nome="ordina-dal-menu" gruppo="tasti" /> Ordina dal menù
+                <Icona nome="ordina-dal-menu" gruppo="tasti" /> {tr('Ordina dal menù')}
               </Link>
             )}
           </div>
@@ -2936,13 +2962,13 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
       <ActionSheet
         open={menuBoard}
         onClose={() => setMenuBoard(false)}
-        titolo="Coda ordini"
+        titolo={tr('Coda ordini')}
         voci={[
           {
             id: 'pannelli',
             icon: 'chiama-bancone',
-            label: showPanels ? 'Nascondi i pannelli' : 'Chiamate staff e gruppi',
-            hint: 'Il cerca-persone e i gruppi aperti',
+            label: showPanels ? tr('Nascondi i pannelli') : tr('Chiamate staff e gruppi'),
+            hint: tr('Il cerca-persone e i gruppi aperti'),
             onClick: () => setShowPanels((v) => !v),
           },
           // L'ORDINAMENTO NON STA PIÙ QUI. È sceso nella riga sotto la
@@ -2962,6 +2988,8 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             if (!v) return null
             return {
               ...v,
+              label: trSegnato(v.label),
+              hint: trSegnato(v.hint),
               onClick: () => (v.id === 'apri-cassa' ? setApriCassa(true) : setChiudiCassa(true)),
             }
           })(),
@@ -3004,10 +3032,9 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             pannelli: showPanels,
           }) === 'cartello' && (
             <div className="card" style={{ marginTop: 8 }}>
-              <strong><Icona nome="staff" gruppo="tasti" /> Gruppi</strong>
+              <strong><Icona nome="staff" gruppo="tasti" /> {tr('Gruppi')}</strong>
               <p className="muted small" style={{ margin: '6px 0 0' }}>
-                I gruppi non si mostrano in coda: si accendono in
-                Impostazioni → Gruppi.
+                {tr('I gruppi non si mostrano in coda: si accendono in Impostazioni → Gruppi.')}
               </p>
             </div>
           )}
@@ -3028,7 +3055,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             <input
               type="search"
               className="menu-search"
-              placeholder={testoConIcona('cerca', 'Cerca per numero, cliente, tavolo, drink…')}
+              placeholder={testoConIcona('cerca', tr('Cerca per numero, cliente, tavolo, drink…'))}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -3059,7 +3086,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           {/* Avvisi (es. comanda non stampata) dagli invii in background */}
           {pend.banners.map((b) => (
             <div className="banner" key={b.id} onClick={() => dismissBanner(b.id)} style={{ cursor: 'pointer' }}>
-              <Icona nome="stampa" gruppo="tasti" />{' '}{b.msg} <span className="muted">(tocca per chiudere)</span>
+              <Icona nome="stampa" gruppo="tasti" />{' '}{b.msg} <span className="muted">({tr('tocca per chiudere')})</span>
             </div>
           ))}
           {/* I FILTRI NON SONO PIÙ QUI: stanno sotto la riga dei conteggi,
@@ -3068,7 +3095,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               Erano tutti una riga a sé fra la testata e le card. */}
           {/* Griglia: ordini in invio (grigi) + ordini secondo i filtri */}
           {pend.pending.length === 0 && visibleBoard.length === 0 && (
-            <div className="empty">{frasePerCodaVuota(stato, soloOggi)}</div>
+            <div className="empty">{trSegnato(frasePerCodaVuota(stato, soloOggi))}</div>
           )}
           {/* I nuovi ordini vanno IN FONDO (numeri più alti): il placeholder
               in sync sta già lì, così alla conferma non cambia posizione. */}
@@ -3120,24 +3147,24 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                   ...(comandaIlLavoro ? indietro : []).map((st) => ({
                     id: `indietro-${st}`,
                     icon: '↩︎',
-                    label: `Torna a «${statoAlBanco(st, o?.service_mode)}»`,
-                    hint: 'Segnata per sbaglio: si rimette dov\'era',
+                    label: tr('Torna a «{stato}»', { stato: statoAlBanco(st, o?.service_mode) }),
+                    hint: tr("Segnata per sbaglio: si rimette dov'era"),
                     onClick: () => avanzaComanda(o, c, st),
                   })),
                   comandaIlLavoro && comandaDivisibile(c) && {
                     id: 'dividi',
                     icon: 'dividi',
-                    label: 'Preparazione parziale',
-                    hint: 'Ne preparo una parte adesso, il resto dopo',
+                    label: tr('Preparazione parziale'),
+                    hint: tr('Ne preparo una parte adesso, il resto dopo'),
                     onClick: () => navigate(`/ordine/${o.id}/comanda/${c.id}?dividi=1`),
                   },
                   stampaComandeOn && {
                     id: 'ristampa',
                     icon: 'stampa',
-                    label: 'Ristampa la comanda',
-                    hint: 'Se il foglio si è perso o è illeggibile',
+                    label: tr('Ristampa la comanda'),
+                    hint: tr('Se il foglio si è perso o è illeggibile'),
                     onClick: () =>
-                      printComanda(o, c).catch((e) => setError(`Stampa: ${e.message}`)),
+                      printComanda(o, c).catch((e) => setError(tr('Stampa: {e}', { e: e.message }))),
                   },
                   // IL COLORE SI DÀ ANCHE DA QUI, ed è il colore del CONTO:
                   // cambiandolo cambia il pallino di tutte le sue comande,
@@ -3204,8 +3231,8 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
       ) : listView ? (
         <>
           {/* Lista unica: stato indicato dal colore/etichetta della card */}
-          <h3 className="cat-header">In corso ({inCorso.length})</h3>
-          {inCorso.length === 0 && <div className="empty">Nessun ordine in corso.</div>}
+          <h3 className="cat-header">{tr('In corso ({n})', { n: inCorso.length })}</h3>
+          {inCorso.length === 0 && <div className="empty">{tr('Nessun ordine in corso.')}</div>}
           {groupByDay(inCorso).map(({ day, orders: gOrders }) => (
             <div key={day}>
               {separatoreGiornata(day, 'attivi')}
@@ -3213,8 +3240,8 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             </div>
           ))}
 
-          <h3 className="cat-header">Serviti/Ritirati ({evasi.length})</h3>
-          {evasi.length === 0 && <div className="empty">Ancora nessun ordine servito o ritirato.</div>}
+          <h3 className="cat-header">{tr('Serviti/Ritirati ({n})', { n: evasi.length })}</h3>
+          {evasi.length === 0 && <div className="empty">{tr('Ancora nessun ordine servito o ritirato.')}</div>}
           {evasi.map(renderCard)}
         </>
       ) : (
@@ -3235,7 +3262,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                 className={`tab ${tabSemplice === k ? 'active' : ''}`}
                 onClick={() => setTabSemplice(k)}
               >
-                {label} ({perScheda[k].length})
+                {trSegnato(label)} ({perScheda[k].length})
               </div>
             ))}
           </div>
@@ -3243,10 +3270,10 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           {perScheda[tabSemplice].length === 0 && (
             <div className="empty">
               {tabSemplice === 'attivi'
-                ? 'Nessun conto in corso.'
+                ? tr('Nessun conto in corso.')
                 : tabSemplice === 'chiusi'
-                  ? 'Nessun conto chiuso in questa cassa.'
-                  : 'Nessun conto annullato in questa cassa.'}
+                  ? tr('Nessun conto chiuso in questa cassa.')
+                  : tr('Nessun conto annullato in questa cassa.')}
             </div>
           )}
           {perScheda[tabSemplice].map(renderCard)}
@@ -3266,7 +3293,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             ))}
           </div>
 
-          {list.length === 0 && <div className="empty">Nessun ordine in questo stato.</div>}
+          {list.length === 0 && <div className="empty">{tr('Nessun ordine in questo stato.')}</div>}
           {list.map(renderCard)}
         </>
         )
@@ -3335,7 +3362,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             // scontrino deve poter uscire di nuovo (BUG-047).
             releaseReceiptPrint(o.id)
             restoreOrder(o.id, { motivo, chi: chiSonoIo() }).catch((e) =>
-              setError(`Conto non ripristinato: ${e.message}`)
+              setError(tr('Conto non ripristinato: {e}', { e: e.message }))
             )
           }}
         />

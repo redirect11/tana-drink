@@ -195,6 +195,22 @@ describe('tr e la lingua attiva', () => {
     expect(trSegnato(undefined)).toBeUndefined()
   })
 
+  // REQ-CLI-010: la lingua è di chi lavora. Su una pagina dei clienti — il
+  // menù, «Mostra al cliente» sul tablet girato — si legge l'italiano, che
+  // poi traduce il browser di chi guarda, anche se lo staff ha scelto
+  // l'inglese. Lo decide l'app (App.jsx), non il componente.
+  it('su una pagina dei clienti si legge l’italiano, qualunque sia la lingua scelta', async () => {
+    const { tr, impostaLingua, impostaPaginaCliente, linguaInUso, formatoAttivo } = await carica()
+    impostaLingua('en')
+    impostaPaginaCliente(true)
+    expect(tr('Conto chiuso')).toBe('Conto chiuso')
+    expect(linguaInUso()).toBe('it')
+    expect(formatoAttivo()).toBe('it-IT')
+    impostaPaginaCliente(false)
+    expect(tr('Conto chiuso')).toBe('Bill closed')
+    expect(formatoAttivo()).toBe('en-GB')
+  })
+
   it('la scelta si ricorda sul dispositivo', async () => {
     let lingua = await carica()
     lingua.impostaLingua('en')

@@ -18,6 +18,7 @@ import { idDispositivo } from '../lib/dispositivo.js'
 import { auth } from '../lib/firebaseClient.js'
 import { ensureNotificationPermission } from '../lib/notify.js'
 import Icona, { ConIcona } from './Icona.jsx'
+import { tr } from '../lib/lingua.js'
 
 // Campanella unica in topbar: mostra lo storico delle notifiche e, con un
 // pallino animato, lo STATO DELLA SINCRONIZZAZIONE local-first (idle / in
@@ -100,8 +101,14 @@ export default function StatusBell({ floating = false }) {
       <button
         className={`status-bell ${syncClass}${floating ? ' status-bell-float' : ''}`}
         onClick={toggle}
-        title="Notifiche e sincronizzazione"
-        aria-label={`Notifiche${notifs.unseen ? ` (${notifs.unseen} nuove)` : ''}`}
+        title={tr('Notifiche e sincronizzazione')}
+        aria-label={
+          notifs.unseen === 1
+            ? tr('Notifiche (1 nuova)')
+            : notifs.unseen
+              ? tr('Notifiche ({n} nuove)', { n: notifs.unseen })
+              : tr('Notifiche')
+        }
       >
         <Icona nome="notifiche" gruppo="tasti" />
         {badge && <span className="status-bell-badge">{badge}</span>}
@@ -110,26 +117,27 @@ export default function StatusBell({ floating = false }) {
       {open && (
         <>
           <div className="status-bell-backdrop" onClick={() => setOpen(false)} />
-          <div className={`status-bell-panel${floating ? ' basso' : ''}`} role="dialog" aria-label="Notifiche e sincronizzazione">
+          <div className={`status-bell-panel${floating ? ' basso' : ''}`} role="dialog" aria-label={tr('Notifiche e sincronizzazione')}>
             {/* Avvisi su questo dispositivo: c'è o non c'è, e dove si è
                 fermata la catena. */}
             {push === 'ok' && (
               <div className="status-bell-sync ok">
-                <Icona nome="notifiche" gruppo="tasti" /> Gli avvisi arrivano su questo terminale.
+                <Icona nome="notifiche" gruppo="tasti" /> {tr('Gli avvisi arrivano su questo terminale.')}
               </div>
             )}
             {push === 'non-attivo' && (
               <div className="status-bell-sync err">
-                <Icona nome="notifiche-spente" gruppo="segnali" /> Su questo ambiente gli avvisi di sistema non sono
-                configurati (manca la chiave delle notifiche). Con l&apos;app
-                aperta gli ordini si vedono comunque nella coda.
+                <Icona nome="notifiche-spente" gruppo="segnali" />{' '}
+                {tr(
+                  "Su questo ambiente gli avvisi di sistema non sono configurati (manca la chiave delle notifiche). Con l'app aperta gli ordini si vedono comunque nella coda."
+                )}
               </div>
             )}
             {push && push !== 'ok' && push !== 'non-attivo' && (
               <div className="status-bell-sync err">
                 {push === 'da-permettere' && (
                   <>
-                    <div><Icona nome="notifiche-spente" gruppo="segnali" /> Su questo dispositivo gli avvisi sono spenti.</div>
+                    <div><Icona nome="notifiche-spente" gruppo="segnali" /> {tr('Su questo dispositivo gli avvisi sono spenti.')}</div>
                     <button
                       className="btn small"
                       style={{ marginTop: 8 }}
@@ -138,15 +146,15 @@ export default function StatusBell({ floating = false }) {
                         setPush(await statoPush())
                       }}
                     >
-                      <Icona nome="notifiche" gruppo="tasti" /> Attiva gli avvisi qui
+                      <Icona nome="notifiche" gruppo="tasti" /> {tr('Attiva gli avvisi qui')}
                     </button>
                   </>
                 )}
                 {push === 'da-registrare' && (
                   <>
                     <div>
-                      <Icona nome="notifiche-spente" gruppo="segnali" /> Questo terminale non risulta fra quelli avvisati: gli
-                      ordini degli altri non gli arrivano.
+                      <Icona nome="notifiche-spente" gruppo="segnali" />{' '}
+                      {tr('Questo terminale non risulta fra quelli avvisati: gli ordini degli altri non gli arrivano.')}
                     </div>
                     <button
                       className="btn small"
@@ -160,24 +168,24 @@ export default function StatusBell({ floating = false }) {
                         setPush(await statoPush())
                       }}
                     >
-                      <Icona nome="notifiche" gruppo="tasti" /> Registra questo terminale
+                      <Icona nome="notifiche" gruppo="tasti" /> {tr('Registra questo terminale')}
                     </button>
                   </>
                 )}
                 {push === 'negato' && (
                   <div>
-                    <Icona nome="notifiche-spente" gruppo="segnali" /> Gli avvisi sono stati bloccati per questo sito: si
-                    riattivano dalle impostazioni del telefono o del browser,
-                    da qui non si può più chiedere.
+                    <Icona nome="notifiche-spente" gruppo="segnali" />{' '}
+                    {tr(
+                      'Gli avvisi sono stati bloccati per questo sito: si riattivano dalle impostazioni del telefono o del browser, da qui non si può più chiedere.'
+                    )}
                   </div>
                 )}
                 {push === 'non-supportato' && (
                   <div>
-                    <Icona nome="notifiche-spente" gruppo="segnali" /> Qui gli avvisi di sistema non arrivano. Su iPhone e
-                    iPad succede finché l&apos;app non è <strong>installata
-                    sulla schermata Home</strong>: è l&apos;unico modo in cui
-                    iOS li consente. Con l&apos;app aperta gli ordini si
-                    vedono lo stesso nella coda.
+                    <Icona nome="notifiche-spente" gruppo="segnali" />{' '}
+                    {tr(
+                      "Qui gli avvisi di sistema non arrivano. Su iPhone e iPad succede finché l'app non è installata sulla schermata Home: è l'unico modo in cui iOS li consente. Con l'app aperta gli ordini si vedono lo stesso nella coda."
+                    )}
                   </div>
                 )}
               </div>
@@ -187,7 +195,10 @@ export default function StatusBell({ floating = false }) {
             {sync.phase === 'error' ? (
               <div className="status-bell-sync err">
                 <div>
-                  <Icona nome="avviso" gruppo="segnali" />{' '}<strong>{sync.failedCount}</strong> modifica{sync.failedCount === 1 ? '' : 'e'} non sincronizzat{sync.failedCount === 1 ? 'a' : 'e'}
+                  <Icona nome="avviso" gruppo="segnali" />{' '}
+                  {sync.failedCount === 1
+                    ? tr('1 modifica non sincronizzata')
+                    : tr('{n} modifiche non sincronizzate', { n: sync.failedCount })}
                   {sync.lastError ? <span className="muted"> · {sync.lastError}</span> : null}
                 </div>
                 {/* QUELLE CHE NON PASSERANNO. Un documento cancellato o un
@@ -196,20 +207,20 @@ export default function StatusBell({ floating = false }) {
                 {sync.definitiveCount > 0 && (
                   <div className="muted small" style={{ marginTop: 4 }}>
                     {sync.definitiveCount === sync.failedCount
-                      ? 'Riprovare non serve: riguardano roba che non c’è più.'
-                      : `${sync.definitiveCount} riguardano roba che non c’è più: riprovare non serve.`}
+                      ? tr('Riprovare non serve: riguardano roba che non c’è più.')
+                      : tr('{n} riguardano roba che non c’è più: riprovare non serve.', { n: sync.definitiveCount })}
                   </div>
                 )}
                 <div className="row" style={{ gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
                   {sync.definitiveCount < sync.failedCount && (
                     <>
-                      <button className="btn small" onClick={retryLastSync}>↻ Riprova ultima</button>
-                      <button className="btn secondary small" onClick={retryAllSync}>↻ Riprova tutte</button>
+                      <button className="btn small" onClick={retryLastSync}>↻ {tr('Riprova ultima')}</button>
+                      <button className="btn secondary small" onClick={retryAllSync}>↻ {tr('Riprova tutte')}</button>
                     </>
                   )}
                   {sync.definitiveCount > 0 && (
                     <button className="btn ghost small" onClick={scartaFalliteDefinitive}>
-                      <Icona nome="chiudi" gruppo="tasti" /> Scarta quelle perse
+                      <Icona nome="chiudi" gruppo="tasti" /> {tr('Scarta quelle perse')}
                     </button>
                   )}
                 </div>
@@ -217,8 +228,8 @@ export default function StatusBell({ floating = false }) {
             ) : (
               <div className="status-bell-sync ok">
                 {sync.phase === 'syncing'
-                  ? `⟳ Sincronizzo…${sync.pending ? ` (${sync.pending})` : ''}`
-                  : '✓ Tutto sincronizzato'}
+                  ? `⟳ ${tr('Sincronizzo…')}${sync.pending ? ` (${sync.pending})` : ''}`
+                  : `✓ ${tr('Tutto sincronizzato')}`}
               </div>
             )}
 
@@ -236,7 +247,7 @@ export default function StatusBell({ floating = false }) {
                 <div className="status-bell-list">
                   {lista.length === 0 && (
                     <div className="muted small" style={{ padding: '10px 8px' }}>
-                      {storico ? 'Lo storico è vuoto.' : 'Nessuna notifica da leggere.'}
+                      {storico ? tr('Lo storico è vuoto.') : tr('Nessuna notifica da leggere.')}
                     </div>
                   )}
                   {lista.map((n) =>
@@ -261,7 +272,7 @@ export default function StatusBell({ floating = false }) {
                         className={`status-bell-item status-bell-link${n.letta ? ' letta' : ''}`}
                         key={n.id}
                         onClick={() => segnaLetta(n.id)}
-                        title={n.letta ? undefined : 'Tocca per segnarla letta'}
+                        title={n.letta ? undefined : tr('Tocca per segnarla letta')}
                       >
                         {riga(n)}
                       </button>
@@ -276,18 +287,18 @@ export default function StatusBell({ floating = false }) {
                 className="btn ghost small grow"
                 onClick={() => setStorico((v) => !v)}
               >
-                {storico ? '← Da leggere' : <><Icona nome="movimenti" gruppo="tasti" /> Storico{notifs.archivio.length ? ` (${notifs.archivio.length})` : ''}</>}
+                {storico ? `← ${tr('Da leggere')}` : <><Icona nome="movimenti" gruppo="tasti" /> {tr('Storico')}{notifs.archivio.length ? ` (${notifs.archivio.length})` : ''}</>}
               </button>
               {storico ? (
                 notifs.archivio.length > 0 && (
                   <button className="btn ghost small grow" onClick={svuotaArchivio}>
-                    <Icona nome="pulisci" gruppo="tasti" /> Svuota storico
+                    <Icona nome="pulisci" gruppo="tasti" /> {tr('Svuota storico')}
                   </button>
                 )
               ) : (
                 notifs.items.length > 0 && (
                   <button className="btn ghost small grow" onClick={segnaTutteLette}>
-                    ✓ Segna tutte lette
+                    ✓ {tr('Segna tutte lette')}
                   </button>
                 )
               )}

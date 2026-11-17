@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useStatoStampante } from '../lib/statoStampante.js'
 import { salaStampaDaSe, loadPrinterSettings } from '../lib/printer.js'
 import Icona from './Icona.jsx'
+import { tr, trSegnato } from '../lib/lingua.js'
 
 // ── SI STAMPERÀ? ─────────────────────────────────────────────────────
 // Un pallino nella coda ordini, per tutti: chi sta al banco e chi sta in
@@ -21,14 +22,18 @@ export default function PallinoStampante({ gestore = false }) {
   const [aperto, setAperto] = useState(false)
   const rimbalzo = !salaStampaDaSe(loadPrinterSettings())
   const punto = PUNTO[stato] ?? PUNTO.ignota
+  // Il motivo arriva da lib/statoStampante.js così com'è scritto lì: per la
+  // stampante spenta è sempre lo stesso, e qui si dice nella lingua di chi
+  // guarda; per un guasto è quello che ha risposto la stampante.
+  const perche = stato === 'spenta' ? tr('Stampante non configurata') : trSegnato(motivo)
 
   // In sala con la stampa "di rimbalzo" il pallino di QUESTO telefono non
   // vuol dire niente: a stampare è il banco. Dirlo, invece di mostrare un
   // rosso che non si può sistemare.
   if (rimbalzo && !gestore) {
     return (
-      <span className="btn ghost small pallino-stampante rimbalzo" title="Le comande le stampa il banco">
-        <Icona nome="stampante" gruppo="tasti" /> <span className="pallino-testo">Stampa il banco</span>
+      <span className="btn ghost small pallino-stampante rimbalzo" title={tr('Le comande le stampa il banco')}>
+        <Icona nome="stampante" gruppo="tasti" /> <span className="pallino-testo">{tr('Stampa il banco')}</span>
       </span>
     )
   }
@@ -42,8 +47,10 @@ export default function PallinoStampante({ gestore = false }) {
           setAperto((v) => !v)
           ricontrolla()
         }}
-        aria-label={`Stampante: ${stato === 'ok' ? 'risponde' : motivo || 'in verifica'}`}
-        title={stato === 'ok' ? 'La stampante risponde' : motivo || 'Controllo in corso…'}
+        aria-label={tr('Stampante: {stato}', {
+          stato: stato === 'ok' ? tr('risponde') : perche || tr('in verifica'),
+        })}
+        title={stato === 'ok' ? tr('La stampante risponde') : perche || tr('Controllo in corso…')}
       >
         <Icona nome="stampante" gruppo="tasti" />{' '}
         <span className="pallino-punto">
@@ -53,21 +60,21 @@ export default function PallinoStampante({ gestore = false }) {
 
       {aperto && (
         <div className="pallino-bolla" role="status">
-          {stato === 'ok' && <p>La stampante risponde: le comande escono.</p>}
+          {stato === 'ok' && <p>{tr('La stampante risponde: le comande escono.')}</p>}
           {stato === 'spenta' && (
             <p>
-              Qui non c'è nessuna stampante impostata.{' '}
-              {gestore ? 'Mettila in Impostazioni → Stampante.' : 'Impostala dal menu, in Stampante.'}
+              {tr("Qui non c'è nessuna stampante impostata.")}{' '}
+              {gestore ? tr('Mettila in Impostazioni → Stampante.') : tr('Impostala dal menu, in Stampante.')}
             </p>
           )}
           {stato === 'ko' && (
             <>
-              <p>Adesso la comanda non uscirebbe: {motivo}</p>
+              <p>{tr('Adesso la comanda non uscirebbe: {motivo}', { motivo: perche })}</p>
               {/* Il guasto più frequente non è la stampante spenta: è il
                   certificato che il telefono non accetta più. Si sistema
                   aprendo l'indirizzo della stampante e dicendo di sì. */}
               <p className="muted">
-                Se la stampante è accesa, apri{' '}
+                {tr('Se la stampante è accesa, apri')}{' '}
                 <a
                   href={`https://${loadPrinterSettings().ip}:${loadPrinterSettings().port}`}
                   target="_blank"
@@ -75,11 +82,11 @@ export default function PallinoStampante({ gestore = false }) {
                 >
                   https://{loadPrinterSettings().ip}:{loadPrinterSettings().port}
                 </a>{' '}
-                e accetta l'avviso di sicurezza: è l'eccezione che scade.
+                {tr("e accetta l'avviso di sicurezza: è l'eccezione che scade.")}
               </p>
             </>
           )}
-          {stato === 'ignota' && <p>Sto chiedendo alla stampante…</p>}
+          {stato === 'ignota' && <p>{tr('Sto chiedendo alla stampante…')}</p>}
         </div>
       )}
     </span>

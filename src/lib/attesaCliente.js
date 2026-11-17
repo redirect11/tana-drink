@@ -19,6 +19,7 @@
 //
 // Logica pura: l'ora la passa chi chiama.
 
+import { daTradurre, trSegnato } from './lingua.js'
 import { lineSignature } from './orderLines.js'
 
 const MINUTI_ATTESA_PREDEFINITI = 10
@@ -138,10 +139,12 @@ export const rispostaAccettata = ({ adesso = new Date(), alBanco = false } = {})
 // il controllo delle schermate: una volta sola. Il blocco vero sta in
 // api.js (advanceComandaOra, preparazioneParziale); qui si avvisa prima
 // che il gesto si veda a schermo. `avvisa` è il toast di chi chiama.
-export const MESSAGGIO_ATTESA = 'Il cliente deve ancora accettare le modifiche.'
+// Segnato da tradurre (REQ-UI-039): si traduce dove arriva a schermo,
+// nell'avviso qui sotto e negli errori di api.js.
+export const MESSAGGIO_ATTESA = daTradurre('Il cliente deve ancora accettare le modifiche.')
 export function fermoPerIlCliente(ordine, avvisa) {
   if (!inAttesa(ordine)) return false
-  avvisa(MESSAGGIO_ATTESA)
+  avvisa(trSegnato(MESSAGGIO_ATTESA))
   return true
 }
 

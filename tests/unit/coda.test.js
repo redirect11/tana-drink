@@ -25,7 +25,7 @@ import {
   cambiaSottoChiusi,
   nomiDelServizio,
   sottofiltriChiusi,
-  FILTRI_STATO,
+  filtriStato,
   ID_FILTRI_STATO,
   STATO_DEFAULT,
   restaInCoda,
@@ -296,12 +296,12 @@ describe('i filtri di stato della coda', () => {
   const annullato = { id: 'x', status: 'annullato' }
 
   it('sono tre e la scheda «Tutti» non esiste più', () => {
-    expect(FILTRI_STATO.map(([k]) => k)).toEqual(['attivi', 'chiusi', 'annullati'])
-    expect(FILTRI_STATO.map(([, l]) => l)).not.toContain('Tutti')
+    expect(filtriStato().map(([k]) => k)).toEqual(['attivi', 'chiusi', 'annullati'])
+    expect(filtriStato().map(([, l]) => l)).not.toContain('Tutti')
   })
 
   it('«In corso» si chiama «Aperti», come la riga dei conteggi', () => {
-    expect(FILTRI_STATO[0][1]).toBe('Aperti')
+    expect(filtriStato()[0][1]).toBe('Aperti')
   })
 
   it('la coda si apre con i soli aperti', () => {

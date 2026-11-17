@@ -1,4 +1,5 @@
 import { formatPrice } from '../lib/orderStatus.js'
+import { tr } from '../lib/lingua.js'
 
 // Quante righe si vedono senza chiedere. QUATTRO: erano sei, e una card
 // da sei righe più la testata più i tasti arrivava a mangiarsi mezza
@@ -65,7 +66,7 @@ export default function RigheCorsia({ items, aperto = false, onApri }) {
           }}
           aria-expanded={aperto}
         >
-          {aperto ? '▴ mostra meno' : `▾ altre ${righe.length - RIGHE_A_VISTA}`}
+          {aperto ? `▴ ${tr('mostra meno')}` : `▾ ${tr('altre {n}', { n: righe.length - RIGHE_A_VISTA })}`}
         </button>
       )}
     </div>

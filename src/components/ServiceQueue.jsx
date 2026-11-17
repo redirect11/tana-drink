@@ -13,6 +13,7 @@ import { idDispositivo } from '../lib/dispositivo.js'
 import { ORDER_STATUSES, formatPrice, placedByName } from '../lib/orderStatus.js'
 import { ensureNotificationPermission } from '../lib/notify.js'
 import Icona from './Icona.jsx'
+import { tr } from '../lib/lingua.js'
 
 // Vista cameriera: SOLO gli ordini pronti da servire ai tavoli, con il
 // tasto per segnarli come serviti. Nessun'altra funzione del gestionale.
@@ -98,9 +99,9 @@ export default function ServiceQueue() {
   return (
     <div>
       <div className="card">
-        <strong><Icona nome="servizio" gruppo="tasti" /> Servizio ai tavoli</strong>
+        <strong><Icona nome="servizio" gruppo="tasti" /> {tr('Servizio ai tavoli')}</strong>
         <div className="muted">
-          {`${daServire.length} da servire`}
+          {tr('{n} da servire', { n: daServire.length })}
         </div>
         {/* «Aggiungi ordine» porta dove porta il «+» della coda: la
             schermata del conto, con la griglia. Prima mandava al menù —
@@ -108,26 +109,29 @@ export default function ServiceQueue() {
             la strada lunga: si scorre una carta fatta per chi ordina,
             invece della griglia fatta per chi batte. */}
         <Link className="btn block" style={{ marginTop: 12 }} to="/pos">
-          <Icona nome="aggiungi" gruppo="tasti" /> Aggiungi ordine
+          <Icona nome="aggiungi" gruppo="tasti" /> {tr('Aggiungi ordine')}
         </Link>
       </div>
 
-      {error && <div className="banner">Errore: {error}</div>}
+      {error && <div className="banner">{tr('Errore: {e}', { e: error })}</div>}
 
       {mance > 0 && (
         <div className="card row between" style={{ alignItems: 'center' }}>
-          <span className="muted"><Icona nome="contanti" gruppo="tasti" /> Mance di oggi</span>
+          <span className="muted"><Icona nome="contanti" gruppo="tasti" /> {tr('Mance di oggi')}</span>
           <span>
             <strong className="price">{formatPrice(mance)}</strong>{' '}
             <span className="muted small">
-              · {formatPrice(mance / membri)} a testa ({membri} membri)
+              ·{' '}
+              {membri === 1
+                ? tr('{quota} a testa (1 membro)', { quota: formatPrice(mance) })
+                : tr('{quota} a testa ({n} membri)', { quota: formatPrice(mance / membri), n: membri })}
             </span>
           </span>
         </div>
       )}
 
       {daServire.length === 0 && (
-        <div className="empty">Nessun drink pronto da servire. <Icona nome="festa" gruppo="tasti" /></div>
+        <div className="empty">{tr('Nessun drink pronto da servire.')} <Icona nome="festa" gruppo="tasti" /></div>
       )}
 
       {daServire.map((o) => (
@@ -138,7 +142,7 @@ export default function ServiceQueue() {
                 #{o.daily_number ?? '—'}
               </span>{' '}
               {o.customer_name && <strong>{o.customer_name}</strong>}{' '}
-              {o.table_label && <span className="muted">· Tavolo {o.table_label}</span>}
+              {o.table_label && <span className="muted">· {tr('Tavolo {t}', { t: o.table_label })}</span>}
             </div>
             <span className="price">{formatPrice(o.total)}</span>
           </div>
@@ -156,7 +160,7 @@ export default function ServiceQueue() {
           </div>
           {o.placed_by && (
             <p className="muted small" style={{ margin: '0 0 8px' }}>
-              <Icona nome="nuovo-ordine" gruppo="tasti" />{' '}Inserito da {placedByName(o.placed_by)}
+              <Icona nome="nuovo-ordine" gruppo="tasti" />{' '}{tr('Inserito da {nome}', { nome: placedByName(o.placed_by) })}
             </p>
           )}
           {o.note && <div className="order-note"><Icona nome="note" gruppo="tasti" /> {o.note}</div>}
@@ -165,7 +169,7 @@ export default function ServiceQueue() {
             disabled={busyId === o.id}
             onClick={() => servito(o)}
           >
-            {busyId === o.id ? 'Segno…' : '✓ Servito'}
+            {busyId === o.id ? tr('Segno…') : `✓ ${tr('Servito')}`}
           </button>
         </div>
       ))}

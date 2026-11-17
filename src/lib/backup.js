@@ -87,6 +87,11 @@ export const FUORI_DAL_BACKUP = Object.freeze([
   // minuti. Una copia di ieri non dice niente, e il titolare non potrebbe
   // rimettere quella degli altri.
   'presenze',
+  // Le scelte personali di chi lavora (la lingua del gestionale,
+  // REQ-UI-039): ognuno scrive solo il suo profilo, quindi il titolare non
+  // potrebbe rimettere quelli degli altri — e un documento rifiutato ferma
+  // il ripristino a metà. Perderle vuol dire rifare una scelta.
+  'profili_staff',
   // Il registro tecnico della stampante, per capire un guasto: non sono
   // dati del locale.
   'diagnostica_stampante',

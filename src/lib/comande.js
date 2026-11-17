@@ -21,6 +21,7 @@
 
 import { ORDER_STATUSES } from './orderStatus.js'
 import { conEmoji } from './icone.js'
+import { tr, daTradurre, trSegnato } from './lingua.js'
 import { mergeLines } from './orderLines.js'
 
 // Stati dell'ORDINE (conto).
@@ -646,12 +647,23 @@ export function firmaLavoro(comande) {
 // qualunque passo del servizio — dalla cassa è chiuso, dal banco magari no,
 // perché una comanda è ancora in preparazione. Il gruppo «Pagati» dice la
 // prima cosa, i gruppi del servizio la seconda.
-export const SERVIZIO_ETICHETTA = {
-  [ORDER_STATUSES.RICEVUTO]: conEmoji('coda', 'Da fare'),
-  [ORDER_STATUSES.IN_PREPARAZIONE]: conEmoji('in-preparazione', 'In preparazione'),
-  [ORDER_STATUSES.PRONTO]: conEmoji('pronto', 'Pronto'),
-  [ORDER_STATUSES.RITIRATO]: conEmoji('fatto', 'Servito'),
-  [ORDER_STATUSES.ANNULLATO]: conEmoji('annullato', 'Annullato'),
+//
+// Icona e nome stanno separati, e l'etichetta si compone quando si disegna,
+// nella lingua di chi guarda (REQ-UI-039): composta al caricamento del
+// modulo resterebbe nella lingua di quel momento.
+const SERVIZIO_VOCE = {
+  [ORDER_STATUSES.RICEVUTO]: ['coda', daTradurre('Da fare')],
+  [ORDER_STATUSES.IN_PREPARAZIONE]: ['in-preparazione', daTradurre('In preparazione')],
+  [ORDER_STATUSES.PRONTO]: ['pronto', daTradurre('banco|Pronto')],
+  [ORDER_STATUSES.RITIRATO]: ['fatto', daTradurre('Servito')],
+  [ORDER_STATUSES.ANNULLATO]: ['annullato', daTradurre('Annullato')],
+}
+
+// L'icona e il nome di un passo del servizio, come etichetta («🍹 In
+// preparazione»); undefined per uno sconosciuto.
+export function servizioEtichetta(stato) {
+  const v = Object.hasOwn(SERVIZIO_VOCE, stato ?? '') ? SERVIZIO_VOCE[stato] : null
+  return v ? conEmoji(v[0], trSegnato(v[1])) : undefined
 }
 
 // A quale gruppo appartiene una riga del conto. Le righe della BOZZA — non
@@ -680,8 +692,8 @@ export function gruppiDelConto(righe, { conServizio = true } = {}) {
 }
 
 export function titoloGruppo(gruppo) {
-  if (gruppo === 'pagati') return conEmoji('carta', 'Pagati')
-  return SERVIZIO_ETICHETTA[gruppo] || null
+  if (gruppo === 'pagati') return conEmoji('carta', tr('Pagati'))
+  return servizioEtichetta(gruppo) || null
 }
 
 // ── I PASSI DI UNA COMANDA, CON L'ORA ────────────────────────────────
@@ -761,10 +773,17 @@ export const MOTIVO_ANNULLO = {
   MANO: 'mano',
 }
 
-export const ETICHETTA_ANNULLO = {
-  [MOTIVO_ANNULLO.DIVISIONE]: conEmoji('dividi', 'Divisa'),
-  [MOTIVO_ANNULLO.CONTO]: conEmoji('annullato', 'Conto annullato'),
-  [MOTIVO_ANNULLO.MANO]: conEmoji('annullato', 'Annullata'),
+// Come per i passi del servizio: icona e nome separati, l'etichetta si
+// compone quando si disegna, nella lingua di chi guarda (REQ-UI-039).
+const VOCE_ANNULLO = {
+  [MOTIVO_ANNULLO.DIVISIONE]: ['dividi', daTradurre('Divisa')],
+  [MOTIVO_ANNULLO.CONTO]: ['annullato', daTradurre('Conto annullato')],
+  [MOTIVO_ANNULLO.MANO]: ['annullato', daTradurre('Annullata')],
+}
+
+export function etichettaAnnullo(motivo) {
+  const v = Object.hasOwn(VOCE_ANNULLO, motivo ?? '') ? VOCE_ANNULLO[motivo] : null
+  return v ? conEmoji(v[0], trSegnato(v[1])) : undefined
 }
 
 export function motivoAnnullo(comanda, order) {

@@ -14,8 +14,8 @@
 // perché a chi sta lavorando arrivassero i colori pensati per il cliente,
 // in mezzo alla serata. Ora segue il ruolo.
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor, within, act } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, waitFor, within, act, cleanup } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from '../helpers/router.jsx'
 import '@testing-library/jest-dom/vitest'
@@ -65,6 +65,8 @@ vi.mock('../../src/lib/customerAuth.js', () => ({
 const TEMA_STAFF = { preset: 'notte-blu', custom: null }
 const TEMA_CLIENTE = { preset: 'crema', custom: null }
 vi.mock('../../src/lib/api.js', () => ({
+  // La lingua del profilo (REQ-UI-039): l'account non ne ha una sua.
+  leggiLinguaDelProfilo: vi.fn(() => Promise.resolve(null)),
   // La presentazione alla regia (REQ-FLOTTA-026) qui non parte: nei test
   // non c'è VITE_REGIA_PROGETTO, ma l'app la importa comunque.
   presentaAllaRegia: vi.fn(() => Promise.resolve({ ok: false, status: 0, errore: null })),
@@ -133,6 +135,7 @@ vi.mock('../../src/pages/AccountPages.jsx', () => ({
 
 import App from '../../src/App.jsx'
 import { THEME_PRESETS } from '../../src/lib/themes.js'
+import { impostaLingua, linguaInUso } from '../../src/lib/lingua.js'
 
 function apri(percorso) {
   return render(
@@ -293,6 +296,43 @@ describe('il menu laterale risponde anche al cliente', () => {
     expect(menu().getByText('Il mio profilo')).toBeInTheDocument()
     expect(menu().getByText('Esci')).toBeInTheDocument()
     expect(menu().queryByText('Registrati')).toBeNull()
+  })
+})
+
+// LA LINGUA È DI CHI LAVORA, LE PAGINE DEI CLIENTI RESTANO ITALIANE
+// (REQ-UI-039, REQ-CLI-010). Dalla revisione del 17/11: un tablet dello
+// staff in inglese, girato verso il cliente, gli mostrava pezzi d'inglese
+// in mezzo all'italiano. L'attributo lang dice in che lingua è la pagina:
+// «en» nel gestionale, «it» dove guarda il cliente.
+describe('la lingua della pagina segue chi guarda', () => {
+  // Si smonta PRIMA di rimettere l'italiano: con l'app ancora a schermo, il
+  // cambio di lingua la ridisegnerebbe da capo fuori dalla prova.
+  afterEach(() => {
+    cleanup()
+    impostaLingua('it')
+  })
+
+  it('al banco, in inglese', async () => {
+    ruoloClaim = 'admin'
+    impostaLingua('en')
+    apri('/bar')
+    await waitFor(() => expect(document.documentElement.lang).toBe('en'))
+    await screen.findByText('PAGINA CODA')
+    expect(document.documentElement.lang).toBe('en')
+  })
+
+  it('«Mostra al cliente» resta italiana, anche girata dal tablet dello staff', async () => {
+    ruoloClaim = 'admin'
+    impostaLingua('en')
+    apri('/ordine/o1?cliente=1')
+    await waitFor(() => expect(document.documentElement.lang).toBe('it'))
+    expect(linguaInUso()).toBe('it')
+  })
+
+  it('e il menù dei clienti anche', async () => {
+    impostaLingua('en')
+    apri('/menu')
+    await waitFor(() => expect(document.documentElement.lang).toBe('it'))
   })
 })
 

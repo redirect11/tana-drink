@@ -98,6 +98,7 @@ import {
   itemsTotal as sumItems,
 } from './comande.js'
 import { attesaDopoLaModifica, rispostaAccettata, inAttesa, ANNULLO_RIFIUTO, MESSAGGIO_ATTESA } from './attesaCliente.js'
+import { trSegnato } from './lingua.js'
 import {
   discountAmount,
   discountAfterChange,
@@ -5047,7 +5048,7 @@ async function advanceComandaOra(orderId, comandaId, newStatus) {
   // strada: coda, conto, comanda, trascinamento, tasto dello staff. Qui e
   // non in ogni schermata, che così non se ne dimentica nessuna. Annullare
   // resta possibile.
-  if (newStatus !== ORDER_STATUSES.ANNULLATO && inAttesa({ ...raw, status: norm.status })) throw new Error(MESSAGGIO_ATTESA)
+  if (newStatus !== ORDER_STATUSES.ANNULLATO && inAttesa({ ...raw, status: norm.status })) throw new Error(trSegnato(MESSAGGIO_ATTESA))
 
   // IL MAGAZZINO SI SCALA A «PRONTO»: lì il drink è fatto, e a segnarlo è
   // chi l'ha fatto. Prima e dopo gli ingredienti sono IMPEGNATI, e si
@@ -5457,7 +5458,7 @@ export const preparazioneParziale = perConto(async function preparazioneParziale
   if (norm.status !== ORDER_OPEN) throw new Error('Conto chiuso: non più modificabile')
   // Dividere fa avanzare la parte scelta: non col cliente che deve ancora
   // accettare le modifiche (REQ-CLI-009).
-  if (inAttesa({ ...cur, status: norm.status })) throw new Error(MESSAGGIO_ATTESA)
+  if (inAttesa({ ...cur, status: norm.status })) throw new Error(trSegnato(MESSAGGIO_ATTESA))
   const comande = norm.comande.map((c) => ({ ...c }))
   const comanda = comande.find((c) => c.id === comandaId)
   if (!comanda) throw new Error('Comanda non trovata')
@@ -6224,6 +6225,40 @@ export async function updateStaffShift(id, patch) {
     p.open = false
   }
   await updateDoc(doc(staffShiftsCol, id), p)
+}
+
+// ── IL PROFILO DI CHI LAVORA (REQ-UI-039) ─────────────────────────────
+//
+// Le scelte che seguono la persona su ogni dispositivo: per ora la lingua
+// del gestionale. Daniele, 17/11/2026: «la lingua è legata al profilo».
+// Ognuno legge e scrive solo il suo (firestore.rules, profili_staff).
+const profiloStaffRef = (uid) => doc(db, 'profili_staff', uid)
+
+// Si scrive in sottofondo: la scelta vale subito sul dispositivo
+// (impostaLingua), l'account la riceve quando c'è rete.
+export function salvaLinguaDelProfilo(uid, lingua) {
+  if (!uid) return
+  bgWrite(
+    () => setDoc(profiloStaffRef(uid), { lingua, aggiornato: serverTimestamp() }, { merge: true }),
+    'lingua del profilo'
+  )
+}
+
+// La lingua dell'account. Nessuno la aspetta: l'app parte con la copia del
+// dispositivo e cambia lingua quando questa arriva. Dal server e non dalla
+// cache, perché potrebbe averla cambiata un altro dispositivo; senza rete
+// risponde la cache.
+// CHI NON HA MAI SCELTO HA L'ITALIANO, non la lingua di chi ha usato il
+// tablet prima di lui: la lingua è del profilo (dalla revisione del 17/11).
+// Solo se la lettura non riesce si risponde null, e resta quella che c'è.
+export async function leggiLinguaDelProfilo(uid) {
+  if (!uid) return null
+  try {
+    const snap = await getDoc(profiloStaffRef(uid))
+    return (snap.exists() && snap.data().lingua) || 'it'
+  } catch {
+    return null
+  }
 }
 
 export async function deleteStaffShift(id) {

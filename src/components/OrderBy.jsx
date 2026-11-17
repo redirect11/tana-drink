@@ -1,6 +1,7 @@
 import { placedByName, placedByLetter } from '../lib/orderStatus.js'
 import { colorePersona } from '../lib/colorePersona.js'
 import Icona from './Icona.jsx'
+import { tr } from '../lib/lingua.js'
 
 // CHI HA BATTUTO IL CONTO, in un segno solo accanto al numero: l'iniziale
 // del dipendente, oppure il mondo se l'ordine è arrivato dall'app del
@@ -11,18 +12,18 @@ import Icona from './Icona.jsx'
 // ANCHE PER UNA RIGA SOLA (REQ-ORD-023): con `persona` il segno dice chi ha
 // battuto quella riga, con `titolo` «Aggiunto». Ogni persona ha il suo
 // colore (lib/colorePersona.js), lo stesso sulla card e sulle righe.
-export default function OrderBy({ order, persona = order?.placed_by, titolo = 'Aperto' }) {
+export default function OrderBy({ order, persona = order?.placed_by, titolo = tr('autore|Aperto') }) {
   const L = placedByLetter(persona)
   return L ? (
     <span
       className="order-by staff"
       style={{ background: colorePersona(persona) }}
-      title={`${titolo} da ${placedByName(persona)}`}
+      title={tr('{azione} da {nome}', { azione: titolo, nome: placedByName(persona) })}
     >
       {L}
     </span>
   ) : (
-    <span className="order-by client" title={`${titolo} dal cliente (app)`}>
+    <span className="order-by client" title={tr('{azione} dal cliente (app)', { azione: titolo })}>
       <Icona nome="mondo" gruppo="tasti" />
     </span>
   )

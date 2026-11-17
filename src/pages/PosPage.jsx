@@ -6,6 +6,7 @@ import AvvisoPiano from '../components/AvvisoPiano.jsx'
 import { subscribeSettings, settingsIniziali } from '../lib/api.js'
 import { maxContiAperti, puoAprireConto, MESSAGGI_PIANO } from '../lib/limiti.js'
 import { useContiAperti } from '../lib/useContiAperti.js'
+import { tr } from '../lib/lingua.js'
 
 // ── POS cassa: CREAZIONE di un ordine nuovo ────────────────────────────────
 // Stessa identica schermata della modifica: un solo componente
@@ -42,13 +43,13 @@ export default function PosPage() {
     setPieno(!puoAprireConto(impostazioni, aperti))
   }, [pieno, max, aperti, impostazioni])
 
-  if (pieno === null && max != null) return <Caricamento testo="Apro il conto…" />
+  if (pieno === null && max != null) return <Caricamento testo={tr('Apro il conto…')} />
   if (pieno) {
     return (
       <div style={{ marginTop: 16 }}>
         <AvvisoPiano messaggio={MESSAGGI_PIANO.conti(max)} impostazioni={impostazioni} />
         <Link className="btn ghost small block" style={{ marginTop: 8 }} to="/bar">
-          ← Torna agli ordini
+          ← {tr('Torna agli ordini')}
         </Link>
       </div>
     )
