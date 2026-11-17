@@ -774,23 +774,23 @@ export default function MenuPage({ speciali = false }) {
         <div className="avviso-menu" role="status">📍 Verifico che sei al locale…</div>
       )}
       {geoActive && geoGate === 'denied' && (
-        <div className="avviso-menu row between" role="status">
+        <div className="avviso-menu" role="status">
           <span>
             📍 Per ordinare serve la tua posizione: attiva la localizzazione e
             consenti l’accesso (verifichiamo solo che sei al locale).
           </span>
-          <button className="btn small" style={{ flexShrink: 0 }} onClick={runGeoCheck}>
+          <button className="btn small" onClick={runGeoCheck}>
             Riprova
           </button>
         </div>
       )}
       {geoActive && geoGate === 'out_of_range' && (
-        <div className="avviso-menu row between" role="status">
+        <div className="avviso-menu" role="status">
           <span>
             📍 Devi essere al locale per ordinare
             {geoInfo ? ` (sei a ~${geoInfo.distance} m, massimo ${geoInfo.radius} m)` : ''}.
           </span>
-          <button className="btn small" style={{ flexShrink: 0 }} onClick={runGeoCheck}>
+          <button className="btn small" onClick={runGeoCheck}>
             Riprova
           </button>
         </div>

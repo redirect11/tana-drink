@@ -70,6 +70,9 @@
      scuro su un accento chiaro come il lime, dove il bianco sta a 1,5:1.
      Lo riscrive applyTheme dal colore dell'accento (REQ-UI-033). */
   --accent-ink: #fff;
+  /* L'accento sotto un testo: applyTheme lo scurisce quanto basta perché
+     l'inchiostro sopra regga 4,5:1 (REQ-UI-036, accentoPieno). */
+  --accent-pieno: var(--accent);
   --ombra-btn: 0 4px 14px color-mix(in srgb, var(--btn) 25%, transparent);
   --ombra-card: 0 4px 18px rgba(0, 0, 0, 0.25);
   --forma-titoli: 'Playfair Display', Georgia, 'Times New Roman', serif;
@@ -109,6 +112,16 @@ textarea,
 label,
 [role='button'] {
   touch-action: manipulation;
+}
+/* Sui touch i campi non scendono sotto i 16 px: con lo zoom sbloccato,
+   toccandone uno più piccolo Safari ingrandisce la pagina e la lascia
+   così. Nel gestionale ci sono campi compatti a 0,85-0,9rem. */
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
 }
 
 body {
@@ -251,26 +264,27 @@ body.schermo-intero {
    pixel e mezzo lo mangiava sul filo: sullo schermo del telefono, dove è
    piccolo, sembrava tagliato. Ora si mostra INTERO (contain), senza
    maschera e senza anello: il tondo ce l'ha già suo. */
+
 /* IL MARCHIO DEL PRODOTTO, nel gestionale (REQ-UI-035): come nella barra
    della regia — il logo, «Lime» nei titoli e la qualifica piccola in
-   maiuscolo, nel colore attenuato del tema. */
-.marchio-lime {
+   maiuscolo, nel colore attenuato del tema. Sotto `.brand`, perché
+   `.brand span` (più specifico di una classe sola) le schiacciava tutte. */
+.brand .marchio-lime {
   display: inline-flex;
   align-items: center;
   gap: 10px;
   min-width: 0;
-  font-size: 1.3rem;
 }
-.marchio-lime-logo {
+.brand .marchio-lime-logo {
   flex: none;
-  width: 1.4em;
-  height: 1.4em;
+  width: 1.8rem;
+  height: 1.8rem;
 }
 .brand .marchio-lime-nome {
   font-size: 1.1rem;
   letter-spacing: -0.01em;
 }
-.marchio-lime-qualifica {
+.brand .marchio-lime-qualifica {
   font-family: var(--testo, inherit);
   font-weight: 500;
   font-size: 0.6em;
@@ -1661,6 +1675,7 @@ label {
 .avviso-menu {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
   margin: 12px 0;
   padding: 14px 16px;
@@ -2949,7 +2964,8 @@ body.fullbleed .bar-content {
 /* Schermi piccolissimi: va via anche il marchio. Restano menu, dove sono, e
    cosa posso fare. */
 @media (max-width: 400px) {
-  .topbar .brand img {
+  .topbar .brand img,
+  .topbar .brand .marchio-lime-logo {
     display: none;
   }
 }
@@ -2996,7 +3012,7 @@ body.fullbleed .bar-content {
   transform: translateY(-0.12em);
 }
 .order-by.staff {
-  background: var(--accent-pieno, var(--accent, #b47a3c));
+  background: var(--accent-pieno);
   color: var(--accent-ink);
 }
 .order-by.client {
@@ -4076,7 +4092,7 @@ body.bar-wide .app {
   position: absolute;
   top: -2px;
   right: -2px;
-  background: var(--accent-pieno, var(--accent, #e52e71));
+  background: var(--accent-pieno);
   color: var(--accent-ink);
   font-size: 0.6rem;
   font-weight: 700;
@@ -5244,7 +5260,9 @@ button.cat-chip {
 .tip-input {
   width: 100px;
   padding: 7px 10px;
-  font-size: 0.95rem;
+  /* 1rem: sotto i 16 px Safari ingrandisce la pagina toccando il campo,
+     ora che lo zoom non è più bloccato (BUG-167). */
+  font-size: 1rem;
   text-align: right;
 }
 
@@ -6721,7 +6739,7 @@ body.fullbleed,
   border: 1px solid var(--line);
   border-radius: 999px;
   padding: 10px 18px;
-  background: var(--accent-pieno, var(--accent, #b47a3c));
+  background: var(--accent-pieno);
   color: var(--accent-ink);
   font-weight: 700;
   font-size: 0.9rem;
@@ -6906,7 +6924,9 @@ body.fullbleed,
   color: color-mix(in srgb, #3f7ce0 55%, var(--text));
 }
 .paypad-key.danger {
-  color: #e74c3c;
+  /* Come l'azzurro: il rosso fisso stava sotto 4,5:1 su quasi tutti i
+     temi (REQ-UI-036). */
+  color: color-mix(in srgb, #e74c3c 55%, var(--text));
 }
 .paypad-key:active {
   filter: brightness(1.25);
@@ -6916,7 +6936,9 @@ body.fullbleed,
   flex-shrink: 0;
   font-size: 1.15rem;
   padding: 14px;
-  background: linear-gradient(135deg, #2f6bd8, #3f7ce0);
+  /* Il secondo azzurro era #3f7ce0, e col bianco sopra stava a 4,06:1:
+     questo è il suo accento pieno (accentoPieno), a 4,5 (REQ-UI-036). */
+  background: linear-gradient(135deg, #2f6bd8, #3a72ce);
   color: #fff;
 }
 /* LE ALTRE VIE PER INCASSARE — «senza stampa» e «riscuoti e servi» — in
@@ -8953,7 +8975,7 @@ a.storico-notifica:hover {
   border-radius: 0;
 }
 .periodo-giorno.estremo {
-  background: var(--accent-pieno, var(--accent));
+  background: var(--accent-pieno);
   color: var(--accent-ink);
   border-radius: 8px;
   font-weight: 600;

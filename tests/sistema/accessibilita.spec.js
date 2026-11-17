@@ -23,6 +23,7 @@ import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { AxeBuilder } from '@axe-core/playwright'
 import { test, expect, entra, nuovoOrdine, batti } from './banco.mjs'
+import { NAV_GESTIONALE } from '../../src/lib/sezioni.js'
 
 const USCITA = process.env.A11Y_USCITA || 'test-results/a11y-misura.json'
 const SOLO_MISURA = process.env.A11Y_SOLO_MISURA === '1'
@@ -42,7 +43,11 @@ const aggiungi = (riga) => {
 
 async function misura(page, vista, area, pagina) {
   await page.waitForLoadState('load')
-  await page.waitForTimeout(2500)
+  // I caratteri caricati e un attimo per gli ascolti di Firestore: non si
+  // misura uno stato a metà. Con «riduci movimento» (test.use, sotto) non ci
+  // sono animazioni da aspettare.
+  await page.evaluate(() => document.fonts.ready)
+  await page.waitForTimeout(800)
   const esito = await new AxeBuilder({ page }).withTags(TAG).analyze()
   const violazioni = esito.violations.map((v) => ({
     regola: v.id,
@@ -58,22 +63,19 @@ async function misura(page, vista, area, pagina) {
   }
 }
 
-const SEZIONI = [
-  ['pagamenti', 'Cassa'],
-  ['fatture', 'Fatture'],
-  ['stats', 'Statistiche'],
-  ['bilancio', 'Bilancio'],
-  ['menu', 'Menù (gestione)'],
-  ['inventario', 'Magazzino'],
-  ['fornitori', 'Fornitori'],
-  ['staff', 'Staff'],
-  ['utenti', 'Utenti e ruoli'],
-  ['impostazioni', 'Impostazioni'],
-]
+// LE SEZIONI DAL MENU DEL GESTIONALE (lib/sezioni.js), non un elenco
+// scritto qui: una sezione nuova si misura da sola, e un indirizzo
+// rinominato non fa misurare di nascosto un'altra pagina. Fuori la coda
+// (misurata a parte), la vista cliente e il marketplace.
+const ESCLUSE = new Set(['coda', 'vista-cliente', 'marketplace'])
+const SEZIONI = NAV_GESTIONALE.filter(([id]) => !ESCLUSE.has(id)).map(([id, , titolo]) => [id, titolo])
+
+// Un secondo giro non dice niente di nuovo: axe dà lo stesso esito.
+test.describe.configure({ retries: 0 })
 
 for (const { nome: vista, viewport } of VISTE) {
   test.describe(`vista ${vista}`, () => {
-    test.use({ viewport })
+    test.use({ viewport, reducedMotion: 'reduce' })
 
     test('cliente: home, menù, accesso', async ({ page }) => {
       test.setTimeout(120_000)
@@ -101,12 +103,19 @@ for (const { nome: vista, viewport } of VISTE) {
       await batti(page, 'Mojito')
       await batti(page, 'Negroni')
       await misura(page, vista, 'gestionale', 'Conto (POS) con due righe')
+      // L'avviso dell'emulatore di Firebase («Running in emulator mode»)
+      // sta in basso e a 320 px copre i tasti del conto: c'è solo con gli
+      // emulatori, e si toglie di mezzo.
+      await page.addStyleTag({ content: '.firebase-emulator-warning { display: none !important; }' })
       // Sul telefono il conto sta chiuso in basso: si apre, e il tasto del
       // pagamento è lì dentro, e si chiama solo «Paga».
       if (vista === 'stretta') await page.getByRole('button', { name: /tocca per aprire/ }).click()
       // «Paga» sul telefono non sta mai fermo per Playwright (il pannello
       // si anima): qui si misura la pagina che apre, quindi si forza.
-      await page.getByRole('button', { name: /^Pagamento ·|^Paga$/ }).click({ force: true })
+      await page.getByRole('button', { name: /^Pagamento ·|^Paga$/ }).click()
+      // Il clic forzato non garantisce di essere arrivati: si misura solo
+      // quando la schermata del pagamento c'è davvero.
+      await page.getByRole('button', { name: /Riscuotere/ }).first().waitFor()
       await misura(page, vista, 'gestionale', 'Pagamento')
     })
 
@@ -116,6 +125,7 @@ for (const { nome: vista, viewport } of VISTE) {
       await page.getByText('Cassa chiusa').waitFor()
       for (const [tab, nome] of SEZIONI) {
         await page.goto(`/bar?tab=${tab}`)
+        await page.locator('main').first().waitFor()
         await misura(page, vista, 'gestionale', nome)
       }
     })

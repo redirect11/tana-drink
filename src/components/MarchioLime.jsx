@@ -11,12 +11,12 @@ import { NOME_CORTO_PRODOTTO, QUALIFICA_PRODOTTO } from '../lib/prodotto.js'
 // allineata a mano (REQ-DEV-025): se la regia lo cambia, si cambia qui.
 // Il nome e la qualifica come nella barra della regia: «Lime» e, piccolo in
 // maiuscolo, «SmartOrders». Il logo è decorativo: il nome lo dice il testo.
-export function LogoLime({ dimensione = '1.25em', className = '' }) {
+// La misura la dà il CSS (`.brand .marchio-lime-logo`). La stessa fetta è il
+// logo della demo (clienti/demo/public/favicon.svg): una prova le confronta.
+function LogoLime() {
   return (
     <svg
-      className={`marchio-lime-logo ${className}`.trim()}
-      width={dimensione}
-      height={dimensione}
+      className="marchio-lime-logo"
       viewBox="0 0 32 32"
       aria-hidden="true"
       focusable="false"

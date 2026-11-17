@@ -22,12 +22,3 @@ export const NOME_CORTO_PRODOTTO = 'Lime'
 // (drink-regia `src/lib/prodotto.js`, QUALIFICA): «Lime» e, piccolo,
 // «SmartOrders» (REQ-UI-035).
 export const QUALIFICA_PRODOTTO = 'SmartOrders'
-
-// SIAMO NEL GESTIONALE? Lì in alto c'è il marchio del prodotto, non il nome
-// del locale (REQ-UI-035): la coda e le sezioni (/bar), il conto al banco
-// (/pos) e il profilo di chi lavora. Le pagine dei clienti — la home, il
-// menù anche quando lo apre il personale, lo stato di un ordine — restano
-// del locale.
-const DEL_GESTIONALE = ['/bar', '/pos', '/profilo-staff']
-export const nelGestionale = (percorso) =>
-  DEL_GESTIONALE.some((p) => percorso === p || String(percorso || '').startsWith(`${p}/`))

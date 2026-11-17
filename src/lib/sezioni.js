@@ -80,7 +80,19 @@ export const NAV_SALA = [
 // Dove sono finite le sezioni che non ci sono più.
 const VECCHI_INDIRIZZI = { storico: 'pagamenti' }
 
-// Le pagine fuori dal gestionale che hanno comunque una testata visibile.
+// SIAMO NEL GESTIONALE? Lì in alto c'è il marchio del prodotto, non il nome
+// del locale, e il marchio porta alla coda (REQ-UI-035): la coda e le
+// sezioni (/bar), il conto al banco (/pos) e il profilo di chi lavora. Le
+// pagine dei clienti — la home, il menù anche quando lo apre il personale,
+// lo stato di un ordine — restano del locale. Il profilo di chi lavora sta
+// qui E fra le pagine con la testata qui sotto: quell'elenco dice chi ha un
+// titolo in barra, non chi è del gestionale.
+const DEL_GESTIONALE = ['/bar', '/pos', '/profilo-staff']
+const sotto = (pathname, p) => pathname === p || String(pathname || '').startsWith(`${p}/`)
+export const nelGestionale = (pathname) => DEL_GESTIONALE.some((p) => sotto(pathname, p))
+
+// Le pagine fuori dalle sezioni del gestionale che hanno comunque una
+// testata visibile.
 const FUORI = [
   ['/profilo-staff', 'profilo', 'Il mio profilo'],
   ['/profilo', 'profilo', 'Il mio profilo'],
@@ -107,7 +119,7 @@ export function titoloPagina(pathname = '', search = '') {
       NAV_SALA.find(([id]) => id === effettivo)
     return voce ? { icona: voce[1], titolo: voce[2] } : null
   }
-  const voce = FUORI.find(([p]) => pathname === p || pathname.startsWith(`${p}/`))
+  const voce = FUORI.find(([p]) => sotto(pathname, p))
   return voce ? { icona: voce[1], titolo: voce[2] } : null
 }
 

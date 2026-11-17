@@ -77,7 +77,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 12 |
 | Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 188 |
-| Unità | il progetto di dettaglio: un modulo da solo | 189 |
+| Unità | il progetto di dettaglio: un modulo da solo | 190 |
 
 **21** bisogni del locale, **0** con un test di accettazione.
 **131** requisiti su 371 sono collegati a un bisogno;
@@ -3264,13 +3264,13 @@ Daniele, 17/11/2026, alla domanda della regia «Le regole di Storage leggono la 
 
 IL PREZZO, INFRASTRUTTURA: le regole che leggono Firestore dallo Storage vogliono il ruolo `roles/firebaserules.firestoreServiceAgent` al service agent dello Storage del progetto (service-<numero>@gcp-sa-firebasestorage.iam.gserviceaccount.com). Senza, la lettura fallisce e nessuno carica più foto. Va dato prima del deploy su tana-drink-test, tana-drink (col via libera di Daniele) e nei locali della flotta (il Terraform della regia).
 
-FATTO SULLA TANA (17/11/2026, comando lanciato su richiesta di Daniele): il ruolo c'è su tana-drink-test e su tana-drink, riletto dalla policy. Per la flotta lo fa la regia.
+FATTO SULLA TANA (17/11/2026, comando lanciato su richiesta di Daniele): il ruolo c'è su tana-drink-test e su tana-drink, riletto dalla policy. Per la flotta lo fa la regia. L'ORDINE DEI RILASCI (dal revisore, 17/11/2026): il deploy non interattivo di firebase-tools salta la concessione del ruolo senza dirlo, e la regia lo dà nel Terraform (REQ-FLOTTA-124) solo su develop. Un tag di produzione con queste regole non deve arrivare a un locale della flotta prima che la REQ-FLOTTA-124 sia su main della regia e applicata ai locali esistenti. scripts/setup-firebase-env.sh lo concede agli ambienti nuovi. Le funzioni sulla licenza delle due regole sono le stesse, e una prova lo controlla.
 
 LE PROVE IN CI (17/11/2026, su richiesta di Daniele): il job delle regole accende anche lo Storage (`--only firestore,storage` in .github/workflows/test.yml), e le prove di storage.rules girano.
 
 FATTO (1.10.53-beta): storage.rules legge la licenza (licenzaValida, alFree, modulo, fotoConsentite); tests/regole/storage.test.js la prova con gli emulatori di Storage e Firestore insieme, nel progetto degli emulatori.
 
-**Dove**: `storage.rules, tests/regole/storage.test.js, .github/workflows/test.yml (job delle regole), IAM dei progetti (service agent dello Storage)` · **Serve**: [UR-015](#ur-015--il-piano-del-locale-decide-cosa-si-usa-e-chi-ha-tutto-non-se-ne-accorge) · **Lo dimostrano**: `tests/regole/storage.test.js`
+**Dove**: `storage.rules, tests/regole/storage.test.js, .github/workflows/test.yml (job delle regole), IAM dei progetti (service agent dello Storage)` · **Serve**: [UR-015](#ur-015--il-piano-del-locale-decide-cosa-si-usa-e-chi-ha-tutto-non-se-ne-accorge) · **Lo dimostrano**: `tests/regole/storage.test.js`, `tests/unit/regoleStorageLicenza.test.js`
 
 ### Si lavora anche senza rete
 
@@ -4928,7 +4928,7 @@ Il cancello ora misura TUTTO il codice di prodotto, con una soglia per area tara
 
 Dalla regia, contratto delle interfacce del 14/11/2026: alcuni valori stanno in tutti e due i repository e vanno tenuti allineati a mano — LIMITI_FREE con piani.json della regia, MODULI_PREMIUM con l'elenco della regia, il vocabolario di temi e stili con temi.js e stili.js, lib-titolare.js con titolare.js, l'ora del taglio (5). Cambiarne una senza l'altra è un cambio d'interfaccia (CLAUDE.md, «Le interfacce con la regia»). Da decidere: un controllo automatico (un test che confronta con una copia del contratto) o una fonte sola che la regia pubblica e l'app legge.
 
-**Dove**: `src/lib/licenzaInVigore.js (LIMITI_FREE), src/lib/licenza.js (MODULI_PREMIUM), src/lib/themes.js, src/lib/stileMenu.js, src/lib/stiliRicetta.js, src/lib/marketplaceTemi.js, scripts/lib-titolare.js, l'ora del taglio` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera)
+**Dove**: `src/lib/licenzaInVigore.js (LIMITI_FREE), src/lib/licenza.js (MODULI_PREMIUM), src/lib/themes.js, src/lib/stileMenu.js, src/lib/stiliRicetta.js, src/lib/marketplaceTemi.js, scripts/lib-titolare.js, l'ora del taglio, src/components/MarchioLime.jsx e clienti/demo/public/favicon.svg (il logo), src/lib/prodotto.js (NOME_PRODOTTO, QUALIFICA_PRODOTTO)` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera)
 
 ### LIC
 
