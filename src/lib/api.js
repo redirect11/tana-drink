@@ -6226,6 +6226,37 @@ export async function updateStaffShift(id, patch) {
   await updateDoc(doc(staffShiftsCol, id), p)
 }
 
+// ── IL PROFILO DI CHI LAVORA (REQ-UI-039) ─────────────────────────────
+//
+// Le scelte che seguono la persona su ogni dispositivo: per ora la lingua
+// del gestionale. Daniele, 17/11/2026: «la lingua è legata al profilo».
+// Ognuno legge e scrive solo il suo (firestore.rules, profili_staff).
+const profiloStaffRef = (uid) => doc(db, 'profili_staff', uid)
+
+// Si scrive in sottofondo: la scelta vale subito sul dispositivo
+// (impostaLingua), l'account la riceve quando c'è rete.
+export function salvaLinguaDelProfilo(uid, lingua) {
+  if (!uid) return
+  bgWrite(
+    () => setDoc(profiloStaffRef(uid), { lingua, aggiornato: serverTimestamp() }, { merge: true }),
+    'lingua del profilo'
+  )
+}
+
+// La lingua salvata sull'account, o null. Nessuno la aspetta: l'app parte
+// con la copia del dispositivo e cambia lingua quando questa arriva. Dal
+// server e non dalla cache, perché potrebbe averla cambiata un altro
+// dispositivo; senza rete risponde la cache.
+export async function leggiLinguaDelProfilo(uid) {
+  if (!uid) return null
+  try {
+    const snap = await getDoc(profiloStaffRef(uid))
+    return snap.exists() ? (snap.data().lingua ?? null) : null
+  } catch {
+    return null
+  }
+}
+
 export async function deleteStaffShift(id) {
   await deleteDoc(doc(staffShiftsCol, id))
 }

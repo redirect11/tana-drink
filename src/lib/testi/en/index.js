@@ -16,7 +16,8 @@
 // comuni, nel gestionale il registro del mestiere, sempre impersonale.
 
 import comune from './comune.js'
+import profilo from './profilo.js'
 
-export const AREE = { comune }
+export const AREE = { comune, profilo }
 
 export default Object.assign({}, ...Object.values(AREE))

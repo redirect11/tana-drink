@@ -24,6 +24,7 @@ import {
   subscribePrinterConfig,
   saveStaffToken,
   presentaAllaRegia,
+  leggiLinguaDelProfilo,
 } from './lib/api.js'
 import { usePresentazione } from './lib/usePresentazione.js'
 import { precaricaMenu } from './lib/menuCache.js'
@@ -107,7 +108,7 @@ import { TemaIcone } from './lib/temaIcone.js'
 import { AiutiCampi, aiutiCampiAccesi } from './lib/aiutiCampi.js'
 import { temiIconeDi, TUTTE_EMOJI, conEmoji } from './lib/icone.js'
 import { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react'
-import { useLingua, LINGUA_DI_PARTENZA } from './lib/lingua.js'
+import { useLingua, impostaLingua, LINGUA_DI_PARTENZA } from './lib/lingua.js'
 
 /* global __APP_VERSION__, __BUILD_ID__ */
 const VERSIONE = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : ''
@@ -374,6 +375,15 @@ export default function App() {
         // Badge virtuale: timbra l'entrata (idempotente, non duplica al
         // refresh). Best-effort: se fallisce non blocca l'accesso.
         if (isStaff) clockIn({ uid: u.uid, name: nome }).catch(() => {})
+        // LA LINGUA È DEL PROFILO (REQ-UI-039): si parte con quella del
+        // dispositivo e, se l'account ne ha un'altra, si passa a quella.
+        // Nessuno la aspetta; e se nel frattempo è entrato un altro, la sua
+        // risposta non conta.
+        if (isStaff) {
+          leggiLinguaDelProfilo(u.uid).then((l) => {
+            if (l && auth.currentUser?.uid === u.uid) impostaLingua(l)
+          })
+        }
         // E GLI AVVISI SI RIACCENDONO. Uscendo, il dispositivo viene tolto
         // dai destinatari (vedi logoutStaff): rientrando va rimesso, senza
         // aspettare che si passi dalla coda.

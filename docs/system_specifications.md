@@ -76,7 +76,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 14 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 190 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 191 |
 | Unità | il progetto di dettaglio: un modulo da solo | 192 |
 
 **22** bisogni del locale, **0** con un test di accettazione.
@@ -4963,6 +4963,12 @@ DA FARE: la prova sul sito di test vero (dopo il prossimo tag); i comandi su `di
 Daniele, 17/11/2026: dopo le pagine dei clienti, il gestionale va tradotto. Tutti i testi del banco, della cassa, delle impostazioni, del magazzino e delle altre sezioni passano dal meccanismo dei testi in due lingue (REQ-UI-038), una sezione alla volta: prima banco e cassa, poi il resto.
 
 CHI SCEGLIE (Daniele, 17/11/2026): «Chiunque può scegliere la lingua nel gestionale, qualsiasi ruolo. La lingua è legata al profilo». Quindi in «Il mio profilo» ogni persona — admin, bartender, sala — sceglie italiano o inglese, e la scelta sta sul suo account (profili_staff/{uid}, che legge e scrive solo lei): la segue su ogni tablet e telefono. Sul dispositivo ne resta una copia, perché l'app parta subito nella lingua giusta anche senza rete; all'accesso vince quella dell'account. Niente lingua di partenza del locale: si parte in italiano. Si lavora su un ramo feature/, e il selettore arriva insieme alle prime sezioni tradotte (banco e cassa): una scelta che non cambia niente non si mostra. Da decidere quando si comincia (dalla revisione di REQ-UI-038, 17/11/2026): date e importi seguono la lingua (formatPrice e le date oggi sono fissi su it-IT, serve un punto unico); i testi personalizzabili dal gestore (testo('chiave', 'predefinito') di lib/testiStile.js) e le loro versioni inglesi, insieme a REQ-MENU-046; il dizionario inglese caricato solo quando serve, se pesa sul pacchetto.
+
+IN CORSO sul ramo feature/gestionale-inglese.
+
+FATTO: la lingua sul profilo — profili_staff/{uid} (regole: ognuno solo il suo, solo `lingua` fra it/en; fuori dal backup, perché il titolare non potrebbe rimettere i profili degli altri), salvaLinguaDelProfilo e leggiLinguaDelProfilo in api.js, la lettura al login senza farsi aspettare (App.jsx), il riquadro «Lingua» in Il mio profilo coi nomi delle lingue nella loro lingua; «Il mio profilo» tradotto (area testi/en/profilo.js).
+
+DA FARE: banco e cassa, poi il resto.
 
 **Dove**: `src/pages/BartenderPage.jsx, src/components (gestionale), Il mio profilo (src/pages/StaffProfilePage.jsx), src/lib/lingua.js, firestore.rules (profili_staff)` · **Serve**: [UR-022](#ur-022--chi-non-parla-italiano-usa-il-menù-e-il-gestionale-nella-sua-lingua)
 
