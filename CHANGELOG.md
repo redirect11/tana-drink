@@ -1,6 +1,8 @@
 # Cosa è cambiato
 
-## 1.10.55-beta — in lavorazione
+## 1.10.56-beta — in lavorazione
+
+## 1.10.55-beta — 17/11/2026 (test)
 
 ### Coda ordini
 
