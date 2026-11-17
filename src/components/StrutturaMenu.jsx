@@ -683,11 +683,22 @@ export default function StrutturaMenu({ carta, drinks, categories, inventory = [
             </dl>
           </>
         ) : (
+          // IL NOME DELLA SEZIONE È UN DATO, in italiano: è quello che l'app
+          // scriverà davvero e che i clienti leggeranno (NON_CATEGORIZZATI).
+          // Sta in un pezzo suo, dichiarato italiano, dentro la frase tradotta.
           <p className="muted small" style={{ margin: '0 0 8px' }}>
-            {tr(
-              "Il menù dei clienti è diviso come le categorie della cassa, con tutti i prodotti disponibili. Per personalizzarlo si parte da una copia: una sezione per categoria, con dentro i suoi prodotti già collegati, e una sezione «{nome}» per i prodotti senza categoria. Da lì sezioni e voci si aggiungono, si spostano, si rinominano e si nascondono liberamente. Un prodotto aggiunto in cassa in seguito non entra da solo: compare nell'elenco dei prodotti non presenti, da cui si aggiunge.",
-              { nome: NON_CATEGORIZZATI }
-            )}
+            {(() => {
+              const [prima, dopo] = tr(
+                "Il menù dei clienti è diviso come le categorie della cassa, con tutti i prodotti disponibili. Per personalizzarlo si parte da una copia: una sezione per categoria, con dentro i suoi prodotti già collegati, e una sezione «{nome}» per i prodotti senza categoria. Da lì sezioni e voci si aggiungono, si spostano, si rinominano e si nascondono liberamente. Un prodotto aggiunto in cassa in seguito non entra da solo: compare nell'elenco dei prodotti non presenti, da cui si aggiunge."
+              ).split('{nome}')
+              return (
+                <>
+                  {prima}
+                  <span lang="it">{NON_CATEGORIZZATI}</span>
+                  {dopo}
+                </>
+              )
+            })()}
           </p>
         )}
         <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>

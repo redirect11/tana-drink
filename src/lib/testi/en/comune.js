@@ -12,7 +12,6 @@ export default {
   '{tipo} su {n} prodotti': '{tipo} on {n} items',
   '{tipo} su 1 prodotto': '{tipo} on 1 item',
   '1 giorno': '1 day',
-  'A dopo!': 'See you later',
   'A sinistra la scritta, a destra quanti pezzi.': 'Label on the left, number of items on the right.',
   'Accento secondario': 'Secondary accent',
   'Accesso completo, e in più nomina i ruoli degli altri utenti.': 'Full access, plus assigning roles to other users.',
@@ -148,7 +147,6 @@ export default {
   Giallo: 'Yellow',
   Giornale: 'Newspaper',
   'Gli allegati delle fatture sono dei piani a pagamento.': 'Invoice attachments are available on paid plans.',
-  'Grazie e a presto!': 'Thank you, see you soon',
   Hurricane: 'Hurricane',
   'I pagamenti con SumUp sono dei piani a pagamento. Nel piano Free il conto si chiude in contanti o con la carta su un POS esterno.':
     'SumUp payments are available on paid plans. On the Free plan the bill is closed in cash or by card on an external terminal.',
@@ -188,9 +186,9 @@ export default {
   'Il piano Free non comprende gli aggiornamenti: arrivano solo le correzioni di sicurezza e di compatibilità.':
     'The Free plan does not include updates: only security and compatibility fixes are delivered.',
   'il prezzo è a {unita} e non si sa quanto contiene un pezzo: va detto nella scheda del prodotto':
-    'the price is per {unita} and the content of one piece is unknown: set it in the product record',
+    'the price is by the {unita} and the content of one piece is unknown: set it in the product record',
   'il prezzo è a {unita}, ma un pezzo contiene {quanto}: sono due misure diverse':
-    'the price is per {unita}, but one piece contains {quanto}: two different measures',
+    'the price is by the {unita}, but one piece contains {quanto}: two different measures',
   'Il riepilogo di fine serata.': 'The end-of-evening summary.',
   'Il riquadro con le novità e il suo avviso in campanella.': "The what's-new panel and its bell notification.",
   'Il servizio AI è occupato in questo momento. Si può riprovare fra poco.':
@@ -428,7 +426,6 @@ export default {
   'Totale, quanto è stato versato in tutto e quanto resta da pagare.': 'Total, amount paid so far and balance due.',
   'Tumbler alto': 'Highball',
   'Tumbler basso': 'Rocks glass',
-  'Turno di sala': 'Floor shift',
   'Un ingrediente è finito: quel drink non si può più fare.':
     'An ingredient has run out: that drink can no longer be made.',
   'Un ingrediente è sceso sotto la soglia. Solo per chi tiene il magazzino.':

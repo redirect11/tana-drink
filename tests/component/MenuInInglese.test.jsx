@@ -251,8 +251,9 @@ describe('il menù del gestionale in inglese (REQ-UI-039)', () => {
     // Il nome della sezione dei prodotti senza categoria è quello che
     // l'app scriverà davvero (lib/strutturaMenu.js, NON_CATEGORIZZATI): un
     // DATO, che i clienti leggono in italiano, e la spiegazione lo cita
-    // com'è. Tradotto è solo dove fa da etichetta (la tendina dei prodotti).
-    expect(italianoRimasto(container).filter((t) => !t.includes('Non categorizzati'))).toEqual([])
+    // com'è, in un pezzo lang="it" che il controllo salta. Tradotto è solo
+    // dove fa da etichetta (la tendina dei prodotti).
+    expect(italianoRimasto(container)).toEqual([])
   })
 
   it('il menù dei clienti personalizzato, con una sezione e una voce aperte: niente italiano', async () => {

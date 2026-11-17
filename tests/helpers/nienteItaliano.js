@@ -19,7 +19,7 @@ import en from '../../src/lib/testi/en/index.js'
 
 const PAROLE = [
   'il', 'lo', 'gli', 'della', 'delle', 'dello', 'degli', 'del', 'dei', 'nel', 'nella', 'alla', 'allo',
-  'che', 'non', 'con', 'una', 'uno', 'sono', 'questo', 'questa', 'ancora', 'tutti', 'tutte',
+  'che', 'non', 'per', 'con', 'una', 'uno', 'sono', 'questo', 'questa', 'ancora', 'tutti', 'tutte',
   'conto', 'conti', 'ordine', 'ordini', 'coda', 'annulla', 'salva', 'chiudi', 'incassa', 'paga',
   'cerca', 'nuovo', 'nuova', 'aggiungi', 'togli', 'modifica', 'indietro', 'totale', 'resto',
   'riscuoti', 'stampa', 'comanda', 'comande', 'tavolo', 'banco', 'servizio', 'ritiro', 'cassa',

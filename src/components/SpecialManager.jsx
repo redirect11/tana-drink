@@ -77,7 +77,9 @@ export default function SpecialManager({ drinks, onEdit }) {
         value={sottotitolo ?? settings.special_sottotitolo ?? ''}
         onChange={(e) => setSottotitolo(e.target.value)}
         onBlur={(e) => salva('special_sottotitolo', e.target.value)}
-        placeholder={tr('Alice nel Paese delle Meraviglie')}
+        // Italiano, come il titolo che il cliente leggerà.
+        lang="it"
+        placeholder="Alice nel Paese delle Meraviglie"
       />
 
       <h4 style={{ margin: '14px 0 6px' }}>{tr('Drink speciali ({n})', { n: speciali.length })}</h4>

@@ -40,7 +40,6 @@ export default {
   'Aggiungi un prodotto a {nome}': 'Add a product to {nome}',
   'Al tavolo non si vedono. Un prodotto aggiunto in cassa dopo la personalizzazione compare qui.':
     'Not visible at the table. A product added to the till after customisation appears here.',
-  'Alice nel Paese delle Meraviglie': 'Alice in Wonderland',
   'Anteprima del disegno': 'Drawing preview',
   'Anteprima del menù dei clienti': 'Customer menu preview',
   'Anteprima drink': 'Drink preview',
@@ -130,7 +129,6 @@ export default {
   etichetta: 'label',
   Foto: 'Photo',
   'fuori menù': 'off menu',
-  'Gin, basilico, lime, zucchero': 'Gin, basil, lime, sugar',
   Gruppo: 'Group',
   'Gruppo della sezione {nome}': 'Group of section {nome}',
   'I prodotti della cassa restano.': 'The till products remain.',
@@ -139,7 +137,7 @@ export default {
   'Il menù consultato al tavolo, nell\'ordine in cui compare. Ogni sezione si apre sulle sue voci; ogni voce si sposta, si riordina o si toglie dalla sua riga, e si apre sui suoi testi. Più voci selezionate si spostano insieme in un\'altra sezione. Il personale ordina sempre dal menù della cassa.':
     'The menu browsed at the table, in display order. Each section expands to its items; each item is moved, reordered or removed from its row, and expands to its texts. Several selected items move together to another section. Staff always order from the till menu.',
   'Il menù dei clienti è diviso come le categorie della cassa, con tutti i prodotti disponibili. Per personalizzarlo si parte da una copia: una sezione per categoria, con dentro i suoi prodotti già collegati, e una sezione «{nome}» per i prodotti senza categoria. Da lì sezioni e voci si aggiungono, si spostano, si rinominano e si nascondono liberamente. Un prodotto aggiunto in cassa in seguito non entra da solo: compare nell\'elenco dei prodotti non presenti, da cui si aggiunge.':
-    'The customer menu follows the till categories, with all available products. Customisation starts from a copy: one section per category, with its products already linked, and a «{nome}» section for products without a category. From there, sections and items can be added, moved, renamed and hidden freely. A product added to the till later is not included automatically: it appears in the list of missing products, from which it can be added.',
+    'The customer menu follows the till categories, with all available products. Customisation starts from a copy: one section for each category, with its products already linked, and a «{nome}» section for products without a category. From there, sections and items can be added, moved, renamed and hidden freely. A product added to the till later is not included automatically: it appears in the list of missing products, from which it can be added.',
   'Il menù dei clienti segue le giacenze': 'The customer menu follows stock levels',
   'In «{sezione}»': 'In «{sezione}»',
   'In linea': 'On target',

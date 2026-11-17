@@ -103,7 +103,7 @@ export const CAMPI_SCONTRINO = [
     label: daTradurre('Riga di saluto'),
     desc: daTradurre('Una riga di testo libero, in fondo allo scontrino.'),
     acceso: false,
-    testo: { valore: '', label: daTradurre('Cosa c’è scritto'), placeholder: daTradurre('Grazie e a presto!') },
+    testo: { valore: '', label: daTradurre('Cosa c’è scritto'), placeholder: 'Grazie e a presto!' },
   },
 ]
 
@@ -173,7 +173,7 @@ export const CAMPI_COMANDA = [
     id: 'riga_cortesia',
     label: daTradurre('Riga libera in fondo'),
     acceso: false,
-    testo: { valore: '', label: daTradurre('Cosa c’è scritto'), placeholder: daTradurre('Turno di sala') },
+    testo: { valore: '', label: daTradurre('Cosa c’è scritto'), placeholder: 'Turno di sala' },
   },
 ]
 
@@ -261,7 +261,7 @@ export const CAMPI_ACCONTO = [
     label: daTradurre('Riga di saluto'),
     desc: daTradurre('Una riga di testo libero, in fondo.'),
     acceso: false,
-    testo: { valore: '', label: daTradurre('Cosa c’è scritto'), placeholder: daTradurre('A dopo!') },
+    testo: { valore: '', label: daTradurre('Cosa c’è scritto'), placeholder: 'A dopo!' },
   },
 ]
 

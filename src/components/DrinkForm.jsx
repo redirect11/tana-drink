@@ -322,7 +322,10 @@ export default function DrinkForm({
         id="ingredienti"
         value={form.ingredienti || ''}
         onChange={set('ingredienti')}
-        placeholder={tr('Gin, basilico, lime, zucchero')}
+        // L'esempio resta italiano: l'elenco lo legge il cliente, in italiano
+        // (lo traduce il suo browser), e va scritto in italiano.
+        lang="it"
+        placeholder="Gin, basilico, lime, zucchero"
       />
       <AiutoCampo>
         {tr('Elenco mostrato al cliente nel menù, separato da virgole. Se vuoto si ricava dalla ricetta, esclusi ghiaccio, lavorazioni e confezioni.')}
