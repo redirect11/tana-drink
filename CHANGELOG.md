@@ -1,6 +1,50 @@
 # Cosa è cambiato
 
-## 1.10.52-beta — in lavorazione
+## 1.10.53-beta — 17/11/2026 (test)
+
+### Aspetto
+
+- **Nel gestionale, in alto, il marchio LIME - SmartOrders** col logo
+  della fetta di lime, al posto del nome del locale. Le pagine dei clienti
+  restano col logo e il nome del locale (REQ-UI-035).
+- **Gli avvisi del menù dei clienti** («Solo consultazione», «Devi essere
+  al locale per ordinare», gli errori) prendono i colori del tema invece
+  della striscia gialla, sono più grandi e si staccano dal fondo; con
+  «Carte» sono una carta del mazzo (REQ-UI-034).
+- Col tema «Lime» la categoria scelta nella colonna del conto e il numero
+  degli ordinati sulle card hanno il testo scuro: prima erano bianchi sul
+  lime e non si leggevano. Con la Tana non cambia niente (BUG-166).
+
+### Accessibilità
+
+- **Si può ingrandire la pagina** col pizzico, anche al banco: il doppio
+  tocco veloce sui tasti non ingrandisce più per sbaglio, ma lo zoom non è
+  più bloccato. Da provare sull'iPad del banco (BUG-167).
+- I testi sopra il colore del tema (la categoria scelta nel conto, il segno
+  «staff», il numero sulla campanella, l'avviso di aggiornamento) si
+  leggono meglio: col rosa della Tana il fondo è un filo più scuro. Più
+  leggibili anche i tasti azzurri del tastierino del pagamento (BUG-167).
+- Il link del marchio e la tendina della tavolozza hanno un nome per i
+  lettori di schermo; il triangolo del colore delle voci, nella gestione
+  del menù, è più grande da toccare (BUG-167).
+
+### Sicurezza e costi
+
+- Le foto dei prodotti e gli allegati delle fatture si caricano solo se la
+  licenza del locale li comprende: le foto non sul piano Free, gli allegati
+  col modulo dello scadenzario o del magazzino. Vederli e cancellarli resta
+  sempre possibile (REQ-SIC-006).
+
+### Demo
+
+- Il locale della demo si chiama «Bancone 21» invece di «Bar Demo»: un
+  nome inventato ma credibile, per le schermate del prodotto
+  (REQ-FLOTTA-033).
+- Il logo della demo è la fetta di lime di Lime - SmartOrders, al posto
+  del bicchiere: nella barra, nel menù del cliente e nelle icone da
+  installare sul telefono (REQ-FLOTTA-033).
+
+## 1.10.52-beta — 17/11/2026 (test)
 
 ### Aspetto
 

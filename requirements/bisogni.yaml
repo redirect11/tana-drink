@@ -341,6 +341,7 @@ bisogni:
       - REQ-MAG-054
       - REQ-MENU-033
       - REQ-MENU-034
+      - REQ-UI-035
       - REQ-MENU-035
       - REQ-MENU-036
       - REQ-MENU-037
@@ -370,6 +371,7 @@ bisogni:
     requisiti:
       - REQ-SIC-005
       - REQ-UI-033
+      - REQ-FLOTTA-033
     test_cases: []
 
   - id: UR-015
@@ -393,6 +395,7 @@ bisogni:
       - REQ-LIC-016
       - REQ-LIC-017
       - REQ-LIC-018
+      - REQ-SIC-006
     test_cases: []
 
   - id: UR-016
@@ -457,6 +460,12 @@ bisogni:
       insieme pagina iniziale e menù.
     requisiti:
       - REQ-MENU-044
+      - REQ-SITO-001
+      - REQ-SITO-002
+      - REQ-SITO-003
+      - REQ-SITO-004
+      - REQ-SITO-005
+      - REQ-UI-034
     test_cases: []
 
   - id: UR-019
@@ -497,5 +506,25 @@ bisogni:
     requisiti:
       - REQ-TAVOLI-003
       - REQ-MAG-057
+      - REQ-MAG-058
       - REQ-LIC-019
+    test_cases: []
+
+  - id: UR-021
+    title: "Chi ha una disabilità usa il menù, la home del locale e il gestionale come tutti"
+    area: "Cliente, Banco, Sala, Gestore"
+    description: >
+      Daniele, 17/11/2026: la dichiarazione di accessibilità e quello che
+      la legge chiede per l'accessibilità di tutto. Il menù e la home sono
+      servizi ai consumatori (European Accessibility Act, D.Lgs. 82/2022):
+      il prodotto deve essere conforme di serie, così nessun locale deve
+      rifare niente.
+    accettazione: >
+      Da sola tastiera si ordina dal menù e si batte e si incassa un conto;
+      con un lettore di schermo ogni comando dice cosa fa; con lo zoom al
+      200% non si perde niente; la prova axe sulle pagine principali non
+      trova violazioni WCAG 2.1 A e AA; dal piè di pagina si arriva alla
+      pagina «Accessibilità».
+    requisiti:
+      - REQ-UI-036
     test_cases: []

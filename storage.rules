@@ -11,6 +11,45 @@ service firebase.storage {
         && request.auth.token.role in ['admin', 'bartender'];
     }
 
+    // LO STORAGE SEGUE LA LICENZA (REQ-SIC-006). Col Free col profilo
+    // completo lo Storage c'è anche dove il piano non lo comprende, e l'app
+    // che nasconde le foto non basta: chiamandolo a mano un admin di un Free
+    // caricava foto a spese di Stonebit. La licenza si legge da Firestore
+    // con la stessa domanda di firestore.rules (licenzaValida, alFree,
+    // modulo): se cambia là, cambia qui — tests/regole/storage.test.js
+    // prova i casi.
+    // PREREQUISITO: il service agent dello Storage del progetto deve avere
+    // `roles/firebaserules.firestoreServiceAgent`, se no la lettura fallisce
+    // e non si carica più niente (REQ-SIC-006).
+    // Solo i caricamenti la chiedono: leggere e cancellare restano, perché
+    // un locale fermo deve poter vedere i suoi documenti e fare pulizia.
+    function licenzaScritta() {
+      return firestore.exists(/databases/(default)/documents/licenza/attuale);
+    }
+    function licenza() {
+      return firestore.get(/databases/(default)/documents/licenza/attuale).data;
+    }
+    function scaduta() {
+      let fino = licenza().get('valida_fino_ts', null);
+      return fino is timestamp && request.time >= fino;
+    }
+    function alFree() {
+      return scaduta() && licenza().get('alla_scadenza', 'ferma') == 'free';
+    }
+    function licenzaValida() {
+      return licenzaScritta()
+        && !(licenza().get('stato', 'attiva') in ['sospesa', 'chiusa', 'non_attivata'])
+        && (!scaduta() || alFree());
+    }
+    function modulo(id) {
+      return licenzaValida() && !alFree() && licenza().get('moduli', {}).get(id, false) == true;
+    }
+    // Le foto, come l'app (limiti.js, `fotoConsentite`): non sul Free, né
+    // scritto (`piano: 'free'`) né arrivato per scadenza.
+    function fotoConsentite() {
+      return licenzaValida() && !alFree() && licenza().get('piano', '') != 'free';
+    }
+
     // Foto dei drink: lettura pubblica (mostrate nel menù cliente).
     // CARICARE E CANCELLARE È DEL BANCO, non di chiunque abbia un account
     // (BUG-160): i clienti si registrano, e con `request.auth != null` un
@@ -22,6 +61,7 @@ service firebase.storage {
       allow delete: if isBartender();
       // Solo immagini, sotto i 5 MB.
       allow create, update: if isBartender()
+                            && fotoConsentite()
                             && request.resource.size < 5 * 1024 * 1024
                             && request.resource.contentType.matches('image/.*');
     }
@@ -45,7 +85,9 @@ service firebase.storage {
       // 8 MB: lo stesso numero di PESO_MASSIMO in src/lib/allegati.js, dove
       // è spiegato il perché. QUI c'è il limite vero — quello nell'app serve
       // a dirlo prima, invece di far fallire un caricamento già partito.
+      // Il modulo è quello della collezione delle fatture in firestore.rules.
       allow create, update: if isBartender()
+                            && (modulo('scadenzario') || modulo('magazzino'))
                             && request.resource.size < 8 * 1024 * 1024
                             && (request.resource.contentType.matches('image/.*')
                                 || request.resource.contentType == 'application/pdf');

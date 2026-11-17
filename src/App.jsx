@@ -42,6 +42,8 @@ import { useTastoAI } from './lib/statoAI.js'
 import ActionSheet from './components/ActionSheet.jsx'
 import StaffDrawer from './components/StaffDrawer.jsx'
 import ClientDrawer from './components/ClientDrawer.jsx'
+import MarchioLime from './components/MarchioLime.jsx'
+import { NOME_CORTO_PRODOTTO, QUALIFICA_PRODOTTO } from './lib/prodotto.js'
 import { useTelefono } from './lib/useTelefono.js'
 import { useSchermoIntero } from './lib/useSchermoIntero.js'
 import { logoutStaff } from './lib/logout.js'
@@ -88,7 +90,7 @@ import { openCookiePreferences } from './lib/cookieConsent.js'
 import { subscribeUpdateAvailable } from './lib/appVersion.js'
 import { cosaFareAllAvvio, versioneVista, segnaVersioneVista } from './lib/novita.js'
 import { leggiAvvisi, avvisoAttivo } from './lib/preferenzeNotifiche.js'
-import { titoloPagina } from './lib/sezioni.js'
+import { titoloPagina, nelGestionale } from './lib/sezioni.js'
 import { subscribeSottosezioni } from './lib/sottosezioni.js'
 import Tendina from './components/Tendina.jsx'
 import { recordNotif } from './lib/notifyStore.js'
@@ -114,6 +116,9 @@ const BUILD = typeof __BUILD_ID__ !== 'undefined' ? __BUILD_ID__ : ''
 export default function App() {
   const location = useLocation()
   const onBackoffice = location.pathname.startsWith('/bar')
+  // Il gestionale intero (coda, conto, profilo di chi lavora): lì in alto il
+  // marchio del prodotto, che riporta alla coda (REQ-UI-035).
+  const gestionale = nelGestionale(location.pathname)
   const { user, profile } = useCustomer()
   const hasOrders = useHasOrders()
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
@@ -657,14 +662,29 @@ export default function App() {
             ←
           </button>
         )}
-        {/* Nel gestionale il logo non porta al menu: resta sugli ordini. */}
+        {/* Nel gestionale il marchio è quello del prodotto, LIME -
+            SmartOrders, e porta alla coda; le pagine dei clienti restano del
+            locale e portano alla sua home (REQ-UI-035). Il link ha il suo
+            nome perché sul telefono logo e nome si nascondono (REQ-UI-036,
+            WCAG 2.4.4). */}
         <Link
-          to={onBackoffice ? '/bar' : '/'}
+          to={gestionale ? '/bar' : '/'}
           className="brand"
+          aria-label={
+            gestionale
+              ? `${NOME_CORTO_PRODOTTO} ${QUALIFICA_PRODOTTO}, coda ordini`
+              : `${venue.venue_name}, pagina iniziale`
+          }
           style={{ textDecoration: 'none', color: 'inherit' }}
         >
-          <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
-          <span className="brand-nome">{venue.venue_name}</span>
+          {gestionale ? (
+            <MarchioLime />
+          ) : (
+            <>
+              <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
+              <span className="brand-nome">{venue.venue_name}</span>
+            </>
+          )}
         </Link>
         {/* IL TITOLO DELLA PAGINA STA QUI, attaccato al marchio: dentro la
             pagina si prendeva una riga in cima al contenuto, e su un tablet

@@ -70,6 +70,9 @@
      scuro su un accento chiaro come il lime, dove il bianco sta a 1,5:1.
      Lo riscrive applyTheme dal colore dell'accento (REQ-UI-033). */
   --accent-ink: #fff;
+  /* L'accento sotto un testo: applyTheme lo scurisce quanto basta perché
+     l'inchiostro sopra regga 4,5:1 (REQ-UI-036, accentoPieno). */
+  --accent-pieno: var(--accent);
   --ombra-btn: 0 4px 14px color-mix(in srgb, var(--btn) 25%, transparent);
   --ombra-card: 0 4px 18px rgba(0, 0, 0, 0.25);
   --forma-titoli: 'Playfair Display', Georgia, 'Times New Roman', serif;
@@ -88,6 +91,37 @@ body,
 #root {
   margin: 0;
   min-height: 100%;
+}
+
+/* LO ZOOM NON SI BLOCCA PIÙ (REQ-UI-036, WCAG 1.4.4). Il viewport diceva
+   `user-scalable=no`, per non ingrandire la cassa per sbaglio battendo di
+   corsa: così però chi vede poco non poteva ingrandire niente. Adesso il
+   pizzico c'è, e a fermare l'ingrandimento accidentale — il doppio tocco
+   veloce sui tasti del conto — è `touch-action: manipulation`, che toglie
+   solo quello. Sugli elementi che si toccano, perché Safari lo guarda lì.
+   Le maniglie che trascinano tengono il loro `touch-action: none`, che è
+   più specifico. I campi stanno a 1rem (16 px): sotto, Safari
+   ingrandirebbe da solo toccandoli. */
+html,
+body,
+a,
+button,
+input,
+select,
+textarea,
+label,
+[role='button'] {
+  touch-action: manipulation;
+}
+/* Sui touch i campi non scendono sotto i 16 px: con lo zoom sbloccato,
+   toccandone uno più piccolo Safari ingrandisce la pagina e la lascia
+   così. Nel gestionale ci sono campi compatti a 0,85-0,9rem. */
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
 }
 
 body {
@@ -230,6 +264,35 @@ body.schermo-intero {
    pixel e mezzo lo mangiava sul filo: sullo schermo del telefono, dove è
    piccolo, sembrava tagliato. Ora si mostra INTERO (contain), senza
    maschera e senza anello: il tondo ce l'ha già suo. */
+
+/* IL MARCHIO DEL PRODOTTO, nel gestionale (REQ-UI-035): come nella barra
+   della regia — il logo, «Lime» nei titoli e la qualifica piccola in
+   maiuscolo, nel colore attenuato del tema. Sotto `.brand`, perché
+   `.brand span` (più specifico di una classe sola) le schiacciava tutte. */
+.brand .marchio-lime {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.brand .marchio-lime-logo {
+  flex: none;
+  width: 1.8rem;
+  height: 1.8rem;
+}
+.brand .marchio-lime-nome {
+  font-size: 1.1rem;
+  letter-spacing: -0.01em;
+}
+.brand .marchio-lime-qualifica {
+  font-family: var(--testo, inherit);
+  font-weight: 500;
+  font-size: 0.6em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
 .brand img {
   width: 40px;
   height: 40px;
@@ -1601,6 +1664,49 @@ label {
   font-size: 0.9rem;
 }
 
+/* GLI AVVISI DEL MENÙ DEI CLIENTI (REQ-UI-034). Daniele, 17/11/2026:
+   «dovrebbero essere più visibili e più integrati con il tema». Prima erano
+   il `.banner` del gestionale, giallo fisso col testo rosso: uguale in ogni
+   tema e, sul fondo del menù, poco visibile. Ora un avviso del menù: il
+   fondo del tema tinto dell'accento (opaco, come le card: il contrasto è
+   quello che si vede), un filo d'accento a sinistra, il testo del tema, più
+   grande e con un'ombra che lo stacca. In «Carte» è un biglietto: la carta,
+   l'inchiostro e il rosso del mazzo. Il testo non cambia. */
+.avviso-menu {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 12px 0;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 14%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--card));
+  border-left: 5px solid var(--accent);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 1rem;
+  line-height: 1.4;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+.avviso-menu.errore {
+  border-left-color: #c0392b;
+}
+.avviso-menu .btn {
+  flex-shrink: 0;
+}
+.stile-carte .avviso-menu {
+  background: var(--k-carta);
+  color: var(--k-inchiostro);
+  border: 1px solid var(--k-filo);
+  border-left: 5px solid var(--k-rosso);
+  border-radius: 10px;
+  font-family: var(--k-scrittura);
+  font-weight: 400;
+  font-size: 1.08rem;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
 .toast {
   position: fixed;
   left: 50%;
@@ -2858,7 +2964,8 @@ body.fullbleed .bar-content {
 /* Schermi piccolissimi: va via anche il marchio. Restano menu, dove sono, e
    cosa posso fare. */
 @media (max-width: 400px) {
-  .topbar .brand img {
+  .topbar .brand img,
+  .topbar .brand .marchio-lime-logo {
     display: none;
   }
 }
@@ -2905,7 +3012,7 @@ body.fullbleed .bar-content {
   transform: translateY(-0.12em);
 }
 .order-by.staff {
-  background: var(--accent, #b47a3c);
+  background: var(--accent-pieno);
   color: var(--accent-ink);
 }
 .order-by.client {
@@ -3985,7 +4092,7 @@ body.bar-wide .app {
   position: absolute;
   top: -2px;
   right: -2px;
-  background: var(--accent, #e52e71);
+  background: var(--accent-pieno);
   color: var(--accent-ink);
   font-size: 0.6rem;
   font-weight: 700;
@@ -5153,7 +5260,9 @@ button.cat-chip {
 .tip-input {
   width: 100px;
   padding: 7px 10px;
-  font-size: 0.95rem;
+  /* 1rem: sotto i 16 px Safari ingrandisce la pagina toccando il campo,
+     ora che lo zoom non è più bloccato (BUG-167). */
+  font-size: 1rem;
   text-align: right;
 }
 
@@ -5599,8 +5708,14 @@ body.fullbleed,
   z-index: 5;
   font-size: 0.6rem;
   letter-spacing: 0.5px;
-  color: var(--muted);
-  opacity: 0.5;
+  /* Leggibile (REQ-UI-036): prima era `--muted` a mezza opacità, sotto la
+     soglia di contrasto — e la prova di accessibilità gira proprio sul
+     test, dove questa scritta c'è. Discreta per misura, non per colore. */
+  color: var(--text);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 1px 6px;
   pointer-events: none;
   text-transform: lowercase;
 }
@@ -6624,7 +6739,7 @@ body.fullbleed,
   border: 1px solid var(--line);
   border-radius: 999px;
   padding: 10px 18px;
-  background: var(--accent, #b47a3c);
+  background: var(--accent-pieno);
   color: var(--accent-ink);
   font-weight: 700;
   font-size: 0.9rem;
@@ -6803,10 +6918,15 @@ body.fullbleed,
   min-height: calc(44px / var(--zoom, 1));
 }
 .paypad-key.accent {
-  color: #3f7ce0;
+  /* L'azzurro mescolato col testo del tema (REQ-UI-036): fisso, sul tasto
+     scuro della Tana non arrivava a 4,5:1. Così si schiarisce sui temi
+     scuri e si scurisce su quelli chiari, e resta azzurro. */
+  color: color-mix(in srgb, #3f7ce0 55%, var(--text));
 }
 .paypad-key.danger {
-  color: #e74c3c;
+  /* Come l'azzurro: il rosso fisso stava sotto 4,5:1 su quasi tutti i
+     temi (REQ-UI-036). */
+  color: color-mix(in srgb, #e74c3c 55%, var(--text));
 }
 .paypad-key:active {
   filter: brightness(1.25);
@@ -6816,7 +6936,9 @@ body.fullbleed,
   flex-shrink: 0;
   font-size: 1.15rem;
   padding: 14px;
-  background: linear-gradient(135deg, #2f6bd8, #3f7ce0);
+  /* Il secondo azzurro era #3f7ce0, e col bianco sopra stava a 4,06:1:
+     questo è il suo accento pieno (accentoPieno), a 4,5 (REQ-UI-036). */
+  background: linear-gradient(135deg, #2f6bd8, #3a72ce);
   color: #fff;
 }
 /* LE ALTRE VIE PER INCASSARE — «senza stampa» e «riscuoti e servi» — in
@@ -7594,8 +7716,10 @@ body.fullbleed .cat-rail {
   height: 0;
   padding: 0;
   border: none;
-  border-top: 1.7em solid var(--menu-colore, transparent);
-  border-right: 1.7em solid transparent;
+  /* Almeno 24 px: è un tasto (WCAG 2.5.8, REQ-UI-036), e col carattere
+     piccolo del menù 1,7em restava sotto. */
+  border-top: max(1.7em, 24px) solid var(--menu-colore, transparent);
+  border-right: max(1.7em, 24px) solid transparent;
   border-top-left-radius: 12px;
   background: none;
   cursor: pointer;
@@ -8851,7 +8975,7 @@ a.storico-notifica:hover {
   border-radius: 0;
 }
 .periodo-giorno.estremo {
-  background: var(--accent);
+  background: var(--accent-pieno);
   color: var(--accent-ink);
   border-radius: 8px;
   font-weight: 600;

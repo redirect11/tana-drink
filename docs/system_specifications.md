@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 16 novembre 2026.
+> Generato il 17 novembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,16 +22,16 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 306 | fatto e coperto dai test |
+| ✅ | 310 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 9 | fatto a metà |
-| ⬜ | 30 | da fare |
+| ⬜ | 37 | da fare |
 | 🗑 | 8 | non più valido |
 
-**368 voci** in tutto. **330** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
+**379 voci** in tutto. **334** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **37** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
-cosa che l'app fa; **18** difetti noti sono ancora aperti.
+cosa che l'app fa; **17** difetti noti sono ancora aperti.
 
 Le voci ⚠️ sono la parte scomoda: funzionano, ma **nessun test le tiene**.
 Sono quelle che si rompono senza che nessuno se ne accorga, e vanno lette
@@ -48,23 +48,24 @@ come «vero oggi», non come «garantito».
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 3 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 40 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 51 | 6 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Magazzino](#magazzino) | 51 | 7 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 16 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 20 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 9 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
 | [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 14 | 2 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
-| [Sicurezza](#sicurezza) | 3 | 2 | Regole di accesso, App Check, e cosa protegge cosa. |
+| [Sicurezza](#sicurezza) | 4 | 2 | Regole di accesso, App Check, e cosa protegge cosa. |
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | 6 | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
-| [Interfaccia](#interfaccia) | 29 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
+| [Interfaccia](#interfaccia) | 31 | 4 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 24 | 2 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 15 | 4 |  |
 | [VENUE](#venue) | 6 | — |  |
-| [FLOTTA](#flotta) | 10 | — |  |
+| [FLOTTA](#flotta) | 11 | — |  |
+| [SITO](#sito) | — | 5 |  |
 
 ### Le prove, livello per livello
 
@@ -74,12 +75,12 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Livello | Cosa verifica | File di test |
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
-| Sistema | la specifica (REQ-*), sull'app intera | 11 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 187 |
-| Unità | il progetto di dettaglio: un modulo da solo | 188 |
+| Sistema | la specifica (REQ-*), sull'app intera | 12 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 188 |
+| Unità | il progetto di dettaglio: un modulo da solo | 190 |
 
-**20** bisogni del locale, **0** con un test di accettazione.
-**120** requisiti su 360 sono collegati a un bisogno;
+**21** bisogni del locale, **0** con un test di accettazione.
+**131** requisiti su 371 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -191,7 +192,7 @@ Listino, schede, magazzino e impostazioni si usano tutti i giorni da chi li cono
 
 **Come si accetta**: Dal PC, in Menù → Marginalità listino, ogni numero sta sotto la sua intestazione; toccando «Birre» a sinistra restano solo le birre, con i filtri che contano lì dentro. Aprendo la scheda di un drink non ci sono righe d'aiuto fra un campo e l'altro; accendendo «Aiuti sotto i campi» in Aspetto tornano, scritti in frasi piane. Aggiungendo un gin alla ricetta del Negroni la riga parte in ml, come le altre; in Impostazioni → Prezzo consigliato, scritto un drink cost del 20%, il ricarico diventa ×5 (vocali del 09/11/2026). Nella ricetta del Gold Rush, accanto a 60 ml di Jim Beam si legge 1,14 € (10/11/2026). Nel menù dei clienti copiato dalla cassa le sezioni sono le categorie, chiuse in un indice; i gin selezionati in «Distillati» passano insieme in «Gin», e i prodotti senza categoria stanno in «Non categorizzati». Un drink che in cassa non c'è si crea dalla sua sezione, e appena salvato è lì.
 
-**Chi**: Gestore · **Lo realizzano**: [REQ-MENU-002](#req-menu-002--marginalità-del-listino-in-tabella-e-divisa-per-categorie), [REQ-MENU-032](#req-menu-032--marginalità-del-listino-le-categorie-a-sinistra-per-vederne-una-sola), [REQ-UI-032](#req-ui-032--gli-aiuti-sotto-i-campi-delle-schede-si-nascondono-e-i-testi-sono-riscritti), [REQ-MAG-054](#req-mag-054--un-ingrediente-nuovo-in-ricetta-parte-in-millilitri), [REQ-MENU-033](#req-menu-033--il-ricarico-del-prezzo-consigliato-si-imposta-anche-come-drink-cost), [REQ-MENU-034](#req-menu-034--ogni-riga-della-ricetta-mostra-quanto-costa), [REQ-MENU-035](#req-menu-035--leditor-del-menù-dei-clienti-è-compatto-sezioni-che-si-aprono-una-riga-per-voce-voci-spostate-insieme), [REQ-MENU-036](#req-menu-036--dal-menù-dei-clienti-si-crea-un-prodotto-della-cassa-che-non-cè-e-diventa-subito-una-voce-della-sezione), [REQ-MENU-037](#req-menu-037--le-sezioni-di-soli-special-stanno-fuori-dal-menù-e-si-aprono-dal-carosello-e-dal-qr-è-la-stessa-carta), [REQ-MENU-038](#req-menu-038--il-formato-dei-prezzi-nel-menù-dei-clienti-si-sceglie-di-partenza-il-numero-senza-simbolo-delleuro-e-senza-decimali-inutili), [REQ-MENU-039](#req-menu-039--la-foto-di-un-prodotto-si-ritaglia-nella-sua-scheda-prima-di-caricarla-tutte-nella-stessa-cornice-quadrata), [REQ-AI-005](#req-ai-005--ogni-foto-caricata-si-può-far-modificare-allai-la-proposta-accanto-alloriginale-da-accettare-scartare-o-richiedere), [REQ-AI-006](#req-ai-006--un-assistente-ai-nel-gestionale-una-chat-che-sa-fare-le-cose-dellapp-che-lai-può-fare), [REQ-AI-007](#req-ai-007--lai-nellapp-ha-tre-stati-assente-senza-credito-attiva), [REQ-MENU-040](#req-menu-040--gli-ingredienti-di-una-voce-del-menù-dei-clienti-sono-etichette-proposte-dalla-ricetta-del-prodotto-collegato), [REQ-MENU-041](#req-menu-041--la-voce-del-menù-dei-clienti-ha-una-categoria-e-le-sezioni-e-i-gruppi-possono-nascere-da-sole-dalle-categorie) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Gestore · **Lo realizzano**: [REQ-MENU-002](#req-menu-002--marginalità-del-listino-in-tabella-e-divisa-per-categorie), [REQ-MENU-032](#req-menu-032--marginalità-del-listino-le-categorie-a-sinistra-per-vederne-una-sola), [REQ-UI-032](#req-ui-032--gli-aiuti-sotto-i-campi-delle-schede-si-nascondono-e-i-testi-sono-riscritti), [REQ-MAG-054](#req-mag-054--un-ingrediente-nuovo-in-ricetta-parte-in-millilitri), [REQ-MENU-033](#req-menu-033--il-ricarico-del-prezzo-consigliato-si-imposta-anche-come-drink-cost), [REQ-MENU-034](#req-menu-034--ogni-riga-della-ricetta-mostra-quanto-costa), [REQ-UI-035](#req-ui-035--nel-gestionale-in-alto-il-marchio-lime---smartorders-col-suo-logo), [REQ-MENU-035](#req-menu-035--leditor-del-menù-dei-clienti-è-compatto-sezioni-che-si-aprono-una-riga-per-voce-voci-spostate-insieme), [REQ-MENU-036](#req-menu-036--dal-menù-dei-clienti-si-crea-un-prodotto-della-cassa-che-non-cè-e-diventa-subito-una-voce-della-sezione), [REQ-MENU-037](#req-menu-037--le-sezioni-di-soli-special-stanno-fuori-dal-menù-e-si-aprono-dal-carosello-e-dal-qr-è-la-stessa-carta), [REQ-MENU-038](#req-menu-038--il-formato-dei-prezzi-nel-menù-dei-clienti-si-sceglie-di-partenza-il-numero-senza-simbolo-delleuro-e-senza-decimali-inutili), [REQ-MENU-039](#req-menu-039--la-foto-di-un-prodotto-si-ritaglia-nella-sua-scheda-prima-di-caricarla-tutte-nella-stessa-cornice-quadrata), [REQ-AI-005](#req-ai-005--ogni-foto-caricata-si-può-far-modificare-allai-la-proposta-accanto-alloriginale-da-accettare-scartare-o-richiedere), [REQ-AI-006](#req-ai-006--un-assistente-ai-nel-gestionale-una-chat-che-sa-fare-le-cose-dellapp-che-lai-può-fare), [REQ-AI-007](#req-ai-007--lai-nellapp-ha-tre-stati-assente-senza-credito-attiva), [REQ-MENU-040](#req-menu-040--gli-ingredienti-di-una-voce-del-menù-dei-clienti-sono-etichette-proposte-dalla-ricetta-del-prodotto-collegato), [REQ-MENU-041](#req-menu-041--la-voce-del-menù-dei-clienti-ha-una-categoria-e-le-sezioni-e-i-gruppi-possono-nascere-da-sole-dalle-categorie) · ⚠️ **Nessun test di accettazione, ancora.**
 
 #### UR-014 — La demo che si mostra a un locale nuovo non espone niente di un locale vero
 
@@ -199,7 +200,7 @@ La demo pubblica si fa provare a chi ancora non è cliente, senza account. Non d
 
 **Come si accetta**: Aperta la demo da un browser qualunque, nella pagina non c'è niente della Tana (nomi, foto, fornitori, informativa privacy) e nessuna richiesta parte verso la regia o verso Firebase; un link social scritto con «javascript:» non diventa un link.
 
-**Chi**: Gestore · **Lo realizzano**: [REQ-SIC-005](#req-sic-005--la-demo-pubblica-in-sicurezza-lo-script-dei-clienti-niente-regia-configurazione-finta-informativa-per-cliente), [REQ-UI-033](#req-ui-033--il-tema-lime-scuro-e-chiaro-di-lime---smartorders-ed-è-quello-di-partenza-dei-locali-nuovi) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Gestore · **Lo realizzano**: [REQ-SIC-005](#req-sic-005--la-demo-pubblica-in-sicurezza-lo-script-dei-clienti-niente-regia-configurazione-finta-informativa-per-cliente), [REQ-UI-033](#req-ui-033--il-tema-lime-scuro-e-chiaro-di-lime---smartorders-ed-è-quello-di-partenza-dei-locali-nuovi), [REQ-FLOTTA-033](#req-flotta-033--il-locale-della-demo-ha-un-nome-credibile-bancone-21) · ⚠️ **Nessun test di accettazione, ancora.**
 
 #### UR-015 — Il piano del locale decide cosa si usa, e chi ha tutto non se ne accorge
 
@@ -207,7 +208,7 @@ Un locale col piano Free prova l'app con una cassa semplice; uno con un piano a 
 
 **Come si accetta**: Su un locale Free con `stampa: false` nei limiti si batte un conto, lo si incassa e si chiude la cassa senza che esca niente dalla stampante, senza tasti «Stampa» e senza le impostazioni della stampante; dove si cercherebbero c'è la frase del piano. Sulla Tana, con la stessa versione, comanda e scontrino escono come sempre.
 
-**Chi**: Gestore · **Lo realizzano**: [REQ-LIC-005](#req-lic-005--il-free-è-una-cassa-semplice-si-battono-le-righe-e-si-incassa-senza-comande), [REQ-LIC-016](#req-lic-016--nel-free-non-si-stampa-niente-né-comande-né-scontrini-né-il-resto), [REQ-LIC-017](#req-lic-017--nel-free-non-cè-lai-niente-tasti-ai-chat-né-credito), [REQ-LIC-018](#req-lic-018--il-locale-fermo-si-mostra-secondo-chi-apre-pagina-neutra-al-pubblico-il-titolare-al-rinnovo-e-ai-suoi-dati) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Gestore · **Lo realizzano**: [REQ-LIC-005](#req-lic-005--il-free-è-una-cassa-semplice-si-battono-le-righe-e-si-incassa-senza-comande), [REQ-LIC-016](#req-lic-016--nel-free-non-si-stampa-niente-né-comande-né-scontrini-né-il-resto), [REQ-LIC-017](#req-lic-017--nel-free-non-cè-lai-niente-tasti-ai-chat-né-credito), [REQ-LIC-018](#req-lic-018--il-locale-fermo-si-mostra-secondo-chi-apre-pagina-neutra-al-pubblico-il-titolare-al-rinnovo-e-ai-suoi-dati), [REQ-SIC-006](#req-sic-006--lo-storage-segue-la-licenza-le-foto-dove-il-piano-le-comprende-gli-allegati-delle-fatture-col-loro-modulo) · ⚠️ **Nessun test di accettazione, ancora.**
 
 #### UR-016 — Il cliente ordina il drink come lo vuole, e paga quello che ha accettato
 
@@ -231,7 +232,7 @@ Daniele, 14/11/2026: il tema che il locale sceglie non deve valere solo per il m
 
 **Come si accetta**: Con «Carte» come tema, la pagina iniziale della Tana (benvenuto, contatti, tasto del menù) ha i colori, i caratteri e le frasi di «Carte», come il menù; cambiando tema in Impostazioni cambiano insieme pagina iniziale e menù.
 
-**Chi**: Cliente, Gestore · **Lo realizzano**: [REQ-MENU-044](#req-menu-044--il-tema-del-locale-veste-anche-la-pagina-iniziale-coi-contatti-non-solo-il-menù) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Cliente, Gestore · **Lo realizzano**: [REQ-MENU-044](#req-menu-044--il-tema-del-locale-veste-anche-la-pagina-iniziale-coi-contatti-non-solo-il-menù), [REQ-SITO-001](#req-sito-001--le-sezioni-del-sito-del-locale-sempre-raggiungibili-dal-menu-laterale-della-vista-cliente), [REQ-SITO-002](#req-sito-002--il-tema-del-menù-veste-anche-le-pagine-del-sito-la-tana-ha-carte-anche-in-chi-siamo-e-contatti), [REQ-SITO-003](#req-sito-003--la-foto-del-banner-della-pagina-iniziale-la-sceglie-il-locale), [REQ-SITO-004](#req-sito-004--la-home-del-locale-è-un-modulo-senza-lindirizzo-del-locale-apre-il-menù-o-una-pagina-di-cortesia), [REQ-SITO-005](#req-sito-005--leditor-della-home-le-sezioni-fisse-si-mostrano-o-si-nascondono), [REQ-UI-034](#req-ui-034--gli-avvisi-del-menù-dei-clienti-si-vedono-e-vestono-il-tema) · ⚠️ **Nessun test di accettazione, ancora.**
 
 #### UR-019 — Il locale non paga i servizi che fanno girare l'app oltre quello che usa davvero
 
@@ -247,7 +248,15 @@ Daniele, 16/11/2026: l'app va integrata per i ristoranti. In sala si lavora per 
 
 **Come si accetta**: Con il modulo «ristorante», accanto agli ordini c'è la Sala: la pianta coi tavoli al loro posto (disposti dal gestore nell'editor della sala), ogni tavolo libero o occupato, e toccandolo i suoi conti e i suoi ordini. Nella scheda di un prodotto si scrivono scadenza, apertura e decadimento, e il gestionale dice quando il prodotto va consumato.
 
-**Chi**: Sala, Gestore · **Lo realizzano**: [REQ-TAVOLI-003](#req-tavoli-003--la-sala-in-pianta-una-schermata-coi-tavoli-al-loro-posto-i-loro-conti-e-i-loro-ordini-e-un-editor-per-disporli), [REQ-MAG-057](#req-mag-057--nella-scheda-del-prodotto-scadenza-apertura-e-decadimento), [REQ-LIC-019](#req-lic-019--il-modulo-ristorante-le-personalizzazioni-per-i-ristoranti-vendute-insieme-quando-nella-regia-si-sceglie-ristorante) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Sala, Gestore · **Lo realizzano**: [REQ-TAVOLI-003](#req-tavoli-003--la-sala-in-pianta-una-schermata-coi-tavoli-al-loro-posto-i-loro-conti-e-i-loro-ordini-e-un-editor-per-disporli), [REQ-MAG-057](#req-mag-057--nella-scheda-del-prodotto-scadenza-apertura-e-decadimento), [REQ-MAG-058](#req-mag-058--il-modulo-product-tracking-il-prodotto-entra-in-magazzino-dal-telefono-scansionando-etichetta-o-codice-a-barre), [REQ-LIC-019](#req-lic-019--il-modulo-ristorante-le-personalizzazioni-per-i-ristoranti-vendute-insieme-quando-nella-regia-si-sceglie-ristorante) · ⚠️ **Nessun test di accettazione, ancora.**
+
+#### UR-021 — Chi ha una disabilità usa il menù, la home del locale e il gestionale come tutti
+
+Daniele, 17/11/2026: la dichiarazione di accessibilità e quello che la legge chiede per l'accessibilità di tutto. Il menù e la home sono servizi ai consumatori (European Accessibility Act, D.Lgs. 82/2022): il prodotto deve essere conforme di serie, così nessun locale deve rifare niente.
+
+**Come si accetta**: Da sola tastiera si ordina dal menù e si batte e si incassa un conto; con un lettore di schermo ogni comando dice cosa fa; con lo zoom al 200% non si perde niente; la prova axe sulle pagine principali non trova violazioni WCAG 2.1 A e AA; dal piè di pagina si arriva alla pagina «Accessibilità».
+
+**Chi**: Cliente, Banco, Sala, Gestore · **Lo realizzano**: [REQ-UI-036](#req-ui-036--lapp-è-accessibile-wcag-21-aa-su-menù-home-e-gestionale-provata-con-axe-nel-collaudo-con-la-pagina-accessibilità) · ⚠️ **Nessun test di accettazione, ancora.**
 
 ## Cosa fa il sistema
 
@@ -3249,6 +3258,20 @@ L'utente, 30/10/2026: «i font per questioni sulla privacy ... devono essere sem
 
 **Dove**: `src/main.jsx (@fontsource), index.html, public/privacy-policy.html, public/cookie-policy.html, package.json (gsap, @fontsource)` · **Lo dimostrano**: `tests/unit/risorseEsterne.test.js`
 
+#### REQ-SIC-006 — Lo Storage segue la licenza: le foto dove il piano le comprende, gli allegati delle fatture col loro modulo
+
+Daniele, 17/11/2026, alla domanda della regia «Le regole di Storage leggono la licenza?»: sì. Col Free col profilo completo (REQ-FLOTTA-122 della regia) lo Storage c'è anche dove il piano non lo comprende: l'app nasconde le foto sul Free (limiti.js, `fotoConsentite`), ma le regole di Storage non leggevano la licenza, e un admin di un Free poteva caricare foto chiamando lo Storage a mano, a spese di Stonebit. ORA le regole di Storage leggono `licenza/attuale` da Firestore, con la stessa domanda delle regole di Firestore (licenza valida, scaduta, al Free, moduli): le foto dei prodotti si caricano solo con una licenza valida e non Free; gli allegati delle fatture solo col modulo `scadenzario` o `magazzino`, come la loro collezione. Cancellare e leggere non chiedono la licenza: un locale fermo deve poter fare pulizia e vedere i suoi documenti.
+
+IL PREZZO, INFRASTRUTTURA: le regole che leggono Firestore dallo Storage vogliono il ruolo `roles/firebaserules.firestoreServiceAgent` al service agent dello Storage del progetto (service-<numero>@gcp-sa-firebasestorage.iam.gserviceaccount.com). Senza, la lettura fallisce e nessuno carica più foto. Va dato prima del deploy su tana-drink-test, tana-drink (col via libera di Daniele) e nei locali della flotta (il Terraform della regia).
+
+FATTO SULLA TANA (17/11/2026, comando lanciato su richiesta di Daniele): il ruolo c'è su tana-drink-test e su tana-drink, riletto dalla policy. Per la flotta lo fa la regia. L'ORDINE DEI RILASCI (dal revisore, 17/11/2026): il deploy non interattivo di firebase-tools salta la concessione del ruolo senza dirlo, e la regia lo dà nel Terraform (REQ-FLOTTA-124) solo su develop. Un tag di produzione con queste regole non deve arrivare a un locale della flotta prima che la REQ-FLOTTA-124 sia su main della regia e applicata ai locali esistenti. scripts/setup-firebase-env.sh lo concede agli ambienti nuovi. Le funzioni sulla licenza delle due regole sono le stesse, e una prova lo controlla.
+
+LE PROVE IN CI (17/11/2026, su richiesta di Daniele): il job delle regole accende anche lo Storage (`--only firestore,storage` in .github/workflows/test.yml), e le prove di storage.rules girano.
+
+FATTO (1.10.53-beta): storage.rules legge la licenza (licenzaValida, alFree, modulo, fotoConsentite); tests/regole/storage.test.js la prova con gli emulatori di Storage e Firestore insieme, nel progetto degli emulatori.
+
+**Dove**: `storage.rules, tests/regole/storage.test.js, .github/workflows/test.yml (job delle regole), IAM dei progetti (service agent dello Storage)` · **Serve**: [UR-015](#ur-015--il-piano-del-locale-decide-cosa-si-usa-e-chi-ha-tutto-non-se-ne-accorge) · **Lo dimostrano**: `tests/regole/storage.test.js`, `tests/unit/regoleStorageLicenza.test.js`
+
 ### Si lavora anche senza rete
 
 Cosa continua a funzionare quando la rete non c’è, e come lo si vede.
@@ -3732,6 +3755,22 @@ CRITERIO: i preset `lime-scuro` e `lime-chiaro` con la famiglia di forme `lime` 
 COME È FATTO (15/11/2026): FORME.lime (tasti piatti, 14/10px, ombra tenue, titoli in Playfair, il pallino sulle card) e i preset lime-scuro/lime-chiaro in src/lib/themes.js, con i COLORI DELLA REGIA (drink-regia src/index.css, «LA PALETTE LIME», 11/11/2026; Daniele, 15/11: «il sito dovrebbe già averli e anche il backoffice in parte»): lime #b4ec2b pieno, #c6f25a per il testo, #16210a sopra il lime (il preset dichiara --btn-ink e --accent-ink); sul chiaro il lime resta un riempimento e il testo in colore è #2f6b0f. `temaDiPartenza(cliente)` sceglie dal cliente della build, e lo usano DEFAULT_SETTINGS (theme_staff, theme_client), resolveThemeVars senza preset e il selettore in Aspetto. DEFAULT_THEME resta tana-scuro: è il tema di casa del catalogo. Il colore della barra del browser della demo e dei locali generati (venue_theme_color) è il fondo di Lime scuro. Tocca il vocabolario dei temi condiviso con la regia (REQ-DEV-025): due id nuovi, da comunicarle. Daniele, lo stesso giorno: «sia per vista cliente sia per il gestionale». Le velature dorate scritte a mano nel foglio (24 punti: tab, voce attiva, ricerca del menù, attesa del cliente, totale del riepilogo) e il banner dei cookie prendono i token del tema; restano fissi solo gli stati (pagato, sincronizzazione) e il riquadro Ceres. Il theme-color della pagina d'ingresso viene da venue_theme_color.
 
 **Dove**: `src/lib/themes.js (FORME.lime, lime-scuro, lime-chiaro, temaDiPartenza), src/lib/api.js (DEFAULT_SETTINGS), src/components/ThemeSettings.jsx, src/index.css, src/lib/cookieConsent.js, src/components/GroupView.jsx, index.html, src/lib/venue.js, clienti/demo/venue.json, clienti/pluginCliente.js, scripts/genera-cliente.mjs, DESIGN.md` · **Serve**: [UR-014](#ur-014--la-demo-che-si-mostra-a-un-locale-nuovo-non-espone-niente-di-un-locale-vero) · **Lo dimostrano**: `tests/unit/temaLime.test.js`
+
+#### REQ-UI-034 — Gli avvisi del menù dei clienti si vedono, e vestono il tema
+
+Daniele, 17/11/2026: «Gli avvisi che escono nel menu dovrebbero essere più visibili e più integrati con il tema». Sono le strisce del menù dei clienti — «Solo consultazione», «Verifico che sei al locale», «Devi essere al locale per ordinare», gli errori — che oggi usano il `.banner` generico, uguale in ogni tema e poco visibile sul fondo del menù. Diventano un avviso del menù: colori e caratteri del tema, un contrasto che si legge su ogni fondo, e in «Carte» la forma del tema. Il testo non cambia.
+
+FATTO (1.10.53-beta): `.avviso-menu` in index.css (fondo del tema tinto d'accento, filo d'accento, testo del tema; in «Carte» la carta del mazzo); le strisce del menù lo usano, con `role="status"` (e `role="alert"` per gli errori), che le fa annunciare ai lettori di schermo (REQ-UI-036).
+
+**Dove**: `src/pages/MenuPage.jsx (avvisi: sola consultazione, posizione, errori), src/index.css, src/lib/stileMenu.js` · **Serve**: [UR-018](#ur-018--il-locale-si-presenta-al-cliente-col-suo-stile-dalla-prima-pagina-al-menù) · **Lo dimostrano**: `tests/component/MenuPage.test.jsx`
+
+#### REQ-UI-035 — Nel gestionale, in alto, il marchio «LIME - SmartOrders» col suo logo
+
+Daniele, 17/11/2026: nel gestionale il titolo in alto diventa il logo LIME - SmartOrders, «lo trovi nella regia». Il logo è quello della regia (drink-regia, src/components/Logo.jsx e public/favicon.svg: una fetta di lime che sembra un grafico a torta, decisione del 09/11/2026), copiato com'è: è un'altra copia tenuta allineata a mano con la regia (REQ-DEV-025). Solo nel gestionale: le pagine dei clienti restano col logo e il nome del locale.
+
+FATTO (1.10.53-beta): `MarchioLime.jsx` (logo, «Lime» e la qualifica «SmartOrders» piccola in maiuscolo, come nella barra della regia); il gestionale è /bar, /pos e /profilo-staff (`nelGestionale` in lib/prodotto.js). Il menu laterale tiene il nome del locale.
+
+**Dove**: `src/App.jsx (topbar), un componente del marchio nuovo, src/index.css` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/component/MarchioLime.test.jsx`, `tests/component/AppHeader.test.jsx`
 
 ### Come si lavora al progetto
 
@@ -4473,6 +4512,18 @@ DA FARE: accesso, file, server, notifiche e l'ospite Firebase delle Functions.
 
 **Dove**: `src/porte/configurazione.js, src/porte/dati.js, src/adattatori/firebase/, src/lib/firebaseClient.js, src/lib/api.js, src/lib/storage.js, src/lib/push.js, public/sw.js, functions/index.js, functions/lib/, docs/porte-e-adattatori.md` · **Lo dimostrano**: `tests/unit/configurazione.test.js`, `tests/unit/confineFirebase.test.js`, `tests/unit/portaDati.test.js`, `tests/regole/contrattoDati.test.js`, `tests/regole/permessi.test.js`
 
+#### REQ-FLOTTA-033 — Il locale della demo ha un nome credibile: «Bancone 21»
+
+Daniele, 15/11/2026, sulle schermate della demo da mettere nella prima pagina della regia: «servirebbe un nome più credibile», e poi «usa bancone 21 per ora». «Bar Demo» si legge come un segnaposto, e nelle foto del prodotto fa sembrare finta l'app intera. Il nome resta inventato: non è un locale vero, e la demo continua a dire nella sua fascia che i dati sono di prova (REQ-FLOTTA-019).
+
+CRITERIO: la build della demo si chiama «Bancone 21» nel titolo della pagina e nel manifest (nome corto «Bancone 21»), e le frasi che nominano il locale dicono «al Bancone 21».
+
+COME È FATTO (17/11/2026): clienti/demo/venue.json (nome, nome corto, «al Bancone 21», la descrizione del manifest).
+
+IL LOGO (Daniele, 17/11/2026: «c'è già il logo di Lime SmartOrders per questa cosa. Al posto del bicchiere»): il bicchiere neutro lascia il posto alla fetta di lime della regia (drink-regia public/favicon.svg). favicon.svg è quel disegno; logo.png, icon-192/512 trasparenti; apple-touch-icon e icon-maskable-512 sul fondo di Lime scuro (#0c0f0a), la maskable col logo al 60% per il margine di Android. Se il logo della regia cambia, questi file si rifanno da lì.
+
+**Dove**: `clienti/demo/venue.json` · **Serve**: [UR-014](#ur-014--la-demo-che-si-mostra-a-un-locale-nuovo-non-espone-niente-di-un-locale-vero) · **Lo dimostrano**: `tests/unit/clienteBuild.test.js`
+
 ## Lavori previsti
 
 Roba decisa e non ancora scritta. **Non è quello che il sistema fa**: sta
@@ -4552,6 +4603,8 @@ PRECISATO LO STESSO GIORNO (Daniele, 16/11/2026): non dentro la coda, ma UNA SCH
 Daniele, 14/11/2026: «la home con i contatti e la front page dovrebbe essere parte del tema. Nel senso il tema non dovrebbe valere solo per il menù». Oggi solo «Meraviglie» veste anche le altre pagine dei clienti (`pagine: true`, REQ-MENU-027); gli altri temi, «Carte» della Tana compreso, cambiano solo il menù, e la pagina iniziale resta quella di sempre. Ogni tema deve portare anche la sua pagina iniziale (benvenuto, slogan, chi siamo, contatti, il tasto del menù quando c'è), almeno nei colori, nei caratteri e nelle frasi, così chi apre il sito vede già il locale e non un'app generica. Da decidere con Daniele: se ogni tema ha una pagina iniziale sua (come il menù di «Carte» ha una struttura sua) o una veste comune ai temi; e come si lega ai temi modulari in discussione (manifest, interfacce).
 
 DANIELE, STESSO GIORNO: il tema riguarda tutto; un tema per la home e un tema per il menù; il sito ha pagine predefinite che il locale sceglie (home, contatti…), le pagine libere sono da decidere; un sito minimale già pubblicato, che può essere un modulo a parte. Il concetto, con le domande aperte e il primo passo proposto, è in docs/tema-del-sito.md.
+
+DANIELE, 17/11/2026, decide e scende nei requisiti: le sezioni del sito (Chi siamo, Contatti, Menù, altre da decidere) sempre raggiungibili dal menu laterale della vista cliente (REQ-SITO-001); il tema del menù si propaga alle pagine del sito, e per la Tana «Carte» veste Chi siamo e Contatti (REQ-SITO-002); la foto del banner della Home si sceglie (REQ-SITO-003); la home è un modulo a parte, e senza il modulo l'indirizzo del locale apre il menù o una pagina di cortesia (REQ-SITO-004); l'editor della home mostra o nasconde le sezioni fisse (REQ-SITO-005). Niente pagine libere.
 
 **Dove**: `docs/tema-del-sito.md (il concetto), src/pages/LandingPage.jsx, src/lib/stileMenu.js (pagine, vestePagine), src/lib/testiStile.js, src/lib/marketplaceTemi.js, src/index.css` · **Serve**: [UR-018](#ur-018--il-locale-si-presenta-al-cliente-col-suo-stile-dalla-prima-pagina-al-menù)
 
@@ -4688,6 +4741,16 @@ DECISO (Daniele, 16/11/2026): a una scadenza vicina o passata, «un avviso e un 
 DA CONFERMARE (proposta, senza risposta il 16/11): il decadimento è un dato del prodotto, scadenza e apertura sono della confezione in uso; l'apertura si registra dal gestionale.
 
 **Dove**: `scheda del prodotto di magazzino (InventoryManager), src/lib/inventory.js` · **Serve**: [UR-020](#ur-020--un-ristorante-lavora-coi-suoi-tavoli-e-coi-suoi-prodotti-freschi)
+
+#### REQ-MAG-058 — Il modulo «Product Tracking»: il prodotto entra in magazzino dal telefono, scansionando etichetta o codice a barre
+
+Daniele, 17/11/2026: «altro modulo da aggiungere è Product Tracking che in pratica ti consente di aggiungere all'inventario da smartphone direttamente scansionando l'etichetta del prodotto o il codice a barre per recuperare informazioni sulla scadenza, fornitore etc. Cerca KitchenTracker, dobbiamo fare quello che fa questa app». Un'app con quel nome esatto non si trova; la più vicina è KitchenTrace, HACCP per cucine professionali: si inquadra l'etichetta, l'app legge codice a barre e testo stampato (prodotto, fornitore, lotto, scadenza, allergeni) e chiede conferma dei valori incerti; i lotti si legano alle preparazioni, così un lotto richiamato si ritrova in pochi secondi.
+
+PER NOI: dal telefono, nel carico del magazzino, si inquadra l'etichetta o il codice a barre; l'app riconosce il prodotto già a listino (dal codice) o propone di crearlo, e compila quantità, fornitore, lotto e scadenza da confermare. Si appoggia alle scadenze di REQ-MAG-057 (avviso ed elenco). È un modulo a parte: va concordato con la regia (REQ-DEV-025).
+
+DA DECIDERE con Daniele: il nome del modulo (proposta `tracciabilita`); se legge anche il testo dell'etichetta (con l'AI, che costa credito, o sul telefono) o solo il codice a barre; da dove vengono i dati di un codice sconosciuto (anagrafiche pubbliche come Open Food Facts, o niente); se tiene i lotti legati alle preparazioni e ai drink venduti (tracciabilità HACCP e richiami) o solo il carico; il prezzo; per chi (ristoranti, o anche i bar).
+
+**Dove**: `magazzino (carico, scheda prodotto), src/lib/licenza.js (MODULI_PREMIUM), la regia (elenco dei moduli)` · **Serve**: [UR-020](#ur-020--un-ristorante-lavora-coi-suoi-tavoli-e-coi-suoi-prodotti-freschi)
 
 ### Cassa di serata e statistiche
 
@@ -4841,6 +4904,18 @@ DA FARE: passare le altre schermate con elenchi una per una (statistiche, magazz
 
 **Dove**: `DESIGN.md (guardrail 8), tutte le schermate con elenchi`
 
+#### REQ-UI-036 — L'app è accessibile: WCAG 2.1 AA su menù, home e gestionale, provata con axe nel collaudo, con la pagina «Accessibilità»
+
+Daniele, 17/11/2026, portata dalla regia: «sia per il menu che per la home … dobbiamo aggiungere la dichiarazione di accessibilità e mettere in atto quello che richiede la legge per l'accessibilità di tutto». Regola di Stonebit per ogni prodotto. Lo standard è WCAG 2.1 AA (EN 301 549) sul menù del cliente e gli ordini dal tavolo, sulla home del locale e la pagina di cortesia, sul gestionale.
+
+LA PRIMA MISURA (17/11/2026, prima di correggere): axe-core su 17 pagine dell'app compilata. Tre regole violate: lo zoom bloccato (`meta-viewport`, tutte le pagine, index.html), il contrasto (tastierino del pagamento, categoria «Tutti» del conto, fatture, accessi), un menu a tendina senza nome nelle impostazioni. Oltre axe, circa 70 comandi fatti con `div` cliccabili, le finestre di dialogo, i temi uno per uno. Stima mandata alla regia: 10-14 giorni. L'ORDINE (regia e Daniele, 17/11/2026): prima la conformità piena, la pagina «Accessibilità» per ultima.
+
+FATTO (17/11/2026): le violazioni di axe corrette (BUG-167); la prova è un CANCELLO, con la serie della regia (@axe-core/playwright 4.14.0, axe-core 4.14.0: la 4.14.1 era uscita il giorno prima), il tag `wcag22aa` e la vista a 320 px oltre a quella a 1280: 34 misure, nessuna violazione, e una violazione nuova fa fallire i test di sistema, obbligatori sulle PR verso develop.
+
+DA FARE: la prova sul sito di test vero (dopo il prossimo tag); i comandi su `div` cliccabili; il fuoco nelle finestre di dialogo; gli avvisi letti; i temi uno per uno (anche `--muted` a 4,5, con la regia); la prova a mano a ogni versione maggiore (tastiera, NVDA, zoom 200%); infine la pagina «Accessibilità» collegata dal piè di pagina comune (src/App.jsx, accanto a Privacy), col testo approvato da Daniele.
+
+**Dove**: `tests/sistema/accessibilita.spec.js (axe-core), index.html (viewport), src/index.css (contrasto), componenti con comandi su div, src/App.jsx (piè di pagina)` · **Serve**: [UR-021](#ur-021--chi-ha-una-disabilità-usa-il-menù-la-home-del-locale-e-il-gestionale-come-tutti)
+
 ### Come si lavora al progetto
 
 #### REQ-DEV-005 — Alzare il cricchetto della coverage, e standard di complessità nel lint
@@ -4853,7 +4928,7 @@ Il cancello ora misura TUTTO il codice di prodotto, con una soglia per area tara
 
 Dalla regia, contratto delle interfacce del 14/11/2026: alcuni valori stanno in tutti e due i repository e vanno tenuti allineati a mano — LIMITI_FREE con piani.json della regia, MODULI_PREMIUM con l'elenco della regia, il vocabolario di temi e stili con temi.js e stili.js, lib-titolare.js con titolare.js, l'ora del taglio (5). Cambiarne una senza l'altra è un cambio d'interfaccia (CLAUDE.md, «Le interfacce con la regia»). Da decidere: un controllo automatico (un test che confronta con una copia del contratto) o una fonte sola che la regia pubblica e l'app legge.
 
-**Dove**: `src/lib/licenzaInVigore.js (LIMITI_FREE), src/lib/licenza.js (MODULI_PREMIUM), src/lib/themes.js, src/lib/stileMenu.js, src/lib/stiliRicetta.js, src/lib/marketplaceTemi.js, scripts/lib-titolare.js, l'ora del taglio` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera)
+**Dove**: `src/lib/licenzaInVigore.js (LIMITI_FREE), src/lib/licenza.js (MODULI_PREMIUM), src/lib/themes.js, src/lib/stileMenu.js, src/lib/stiliRicetta.js, src/lib/marketplaceTemi.js, scripts/lib-titolare.js, l'ora del taglio, src/components/MarchioLime.jsx e clienti/demo/public/favicon.svg (il logo), src/lib/prodotto.js (NOME_PRODOTTO, QUALIFICA_PRODOTTO)` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera)
 
 ### LIC
 
@@ -4898,6 +4973,44 @@ Daniele, 16/11/2026: «la vista dei tavoli è un'opzione per la versione per ris
 INTERFACCIA CON LA REGIA: l'elenco dei moduli è una copia tenuta allineata a mano (REQ-DEV-025). Va detto alla regia prima di rilasciarlo: id del modulo, la scelta «ristorante» che lo porta con sé, e da quali moduli dipende (la Sala richiede l'anagrafica dei tavoli, quindi probabilmente `menu_tavoli`). Da decidere con la regia se «ristorante» è un piano, un tipo di locale o un pacchetto di moduli.
 
 **Dove**: `src/lib/licenza.js (MODULI_PREMIUM), firestore.rules (modulo()), la regia (piani.json, elenco dei moduli)` · **Serve**: [UR-020](#ur-020--un-ristorante-lavora-coi-suoi-tavoli-e-coi-suoi-prodotti-freschi)
+
+### SITO
+
+#### REQ-SITO-001 — Le sezioni del sito del locale, sempre raggiungibili dal menu laterale della vista cliente
+
+Daniele, 17/11/2026: «Nella vista cliente, nel menu laterale ci devono essere le sezioni del sito raggiungibili sempre (Chi siamo, contatti, menu e altre sezioni da decidere). Il gestionale vede queste pagine solo nella vista cliente». Oggi «chi siamo» e i contatti stanno dentro la pagina iniziale, e il menu laterale del cliente ha solo Menù e I miei ordini. Diventano sezioni con un indirizzo ciascuna, e il menu laterale del cliente elenca sempre quelle mostrate (REQ-SITO-005): Home, Chi siamo, Contatti, Menù (quando è visibile ai clienti). Il personale le vede passando alla vista cliente, non dal menu del gestionale. I dati vengono da Identità del locale (`venue_*`, REQ-VENUE-002). Altre sezioni (orari, eventi) da decidere: docs/tema-del-sito.md.
+
+**Dove**: `src/components/ClientDrawer.jsx, src/pages/LandingPage.jsx, pagine nuove (Chi siamo, Contatti), src/App.jsx (rotte)` · **Serve**: [UR-018](#ur-018--il-locale-si-presenta-al-cliente-col-suo-stile-dalla-prima-pagina-al-menù)
+
+#### REQ-SITO-002 — Il tema del menù veste anche le pagine del sito: la Tana ha «Carte» anche in Chi siamo e Contatti
+
+Daniele, 17/11/2026: «Dobbiamo iniziare a propagare il tema del menu cliente anche alle altre pagine della home del locale … Nel caso della tana, io estenderei il tema carte anche alle pagine chi siamo e contatti». È il primo passo di REQ-MENU-044: il tema del menù veste Home, Chi siamo e Contatti nei colori, nei caratteri e nelle frasi; «Carte» in più nella forma (i contenuti scritti su una carta), come «Meraviglie» fa già con `pagine: true`. Un tema che non porta le pagine del sito le lascia al disegno di base. Il tema del sito come scelta separata dal tema del menù resta per dopo (docs/tema-del-sito.md, punto 2).
+
+**Dove**: `src/lib/stileMenu.js (pagine, vestePagine), src/lib/testiStile.js, src/pages/LandingPage.jsx, pagine del sito, src/index.css` · **Serve**: [UR-018](#ur-018--il-locale-si-presenta-al-cliente-col-suo-stile-dalla-prima-pagina-al-menù)
+
+#### REQ-SITO-003 — La foto del banner della pagina iniziale la sceglie il locale
+
+Daniele, 17/11/2026: «Anche la foto nel banner del tema attuale della home del locale dovrebbe poter essere customizzata». Oggi la foto in apertura della pagina iniziale è quella del tema. Il gestore ne carica una sua da Identità del locale; senza, resta quella del tema. Va su Storage (sul profilo leggero resta quella del tema) e la carica chi gestisce il locale, come le foto dei prodotti (BUG-160).
+
+**Dove**: `src/pages/LandingPage.jsx, src/components/IdentitaLocale.jsx, src/lib/storage.js, storage.rules` · **Serve**: [UR-018](#ur-018--il-locale-si-presenta-al-cliente-col-suo-stile-dalla-prima-pagina-al-menù)
+
+#### REQ-SITO-004 — La home del locale è un modulo: senza, l'indirizzo del locale apre il menù o una pagina di cortesia
+
+Daniele, 17/11/2026: «la home del locale è un modulo a parte … Disabilitando il modulo home la home diventa il menu se il locale sceglie così, altrimenti una pagina di cortesia con il nome e le info base del canale. In pratica se non c'è home allora menu altrimenti pagina di cortesia».
+
+CON IL MODULO: la home con le sue sezioni (REQ-SITO-001, REQ-SITO-005).
+
+SENZA: all'indirizzo del locale si apre il menù dei clienti, se il locale lo sceglie e il menù è visibile; altrimenti una pagina di cortesia col nome del locale e le informazioni di base (indirizzo, telefono, orari), vestita dal tema.
+
+INTERFACCIA CON LA REGIA: un modulo nuovo cambia l'elenco dei moduli tenuto allineato a mano (REQ-DEV-025): va detto alla regia prima di rilasciarlo, con l'id (proposta: `home`), cosa resta senza modulo e in quale piano sta. Da decidere con Daniele: il piano, e se la Tana lo ha (oggi la home ce l'ha: senza modulo nella licenza la perderebbe).
+
+**Dove**: `src/lib/licenza.js (MODULI_PREMIUM), src/App.jsx (la rotta /), pagina di cortesia nuova, la regia (piani.json, elenco dei moduli)` · **Serve**: [UR-018](#ur-018--il-locale-si-presenta-al-cliente-col-suo-stile-dalla-prima-pagina-al-menù)
+
+#### REQ-SITO-005 — L'editor della home: le sezioni fisse si mostrano o si nascondono
+
+Daniele, 17/11/2026: «l'editor della home abbiamo detto consente di cambiare invece le sezioni visualizzate. Avremo delle sezioni fisse che possono essere mostrate o meno». Le sezioni le diamo noi (Chi siamo, Contatti, Menù, poi quelle da decidere); il gestore sceglie quali mostrare. Una sezione nascosta sparisce dalla home e dal menu laterale, e il suo indirizzo rimanda alla home. Niente pagine libere. La scelta sta in `settings/bar`, come proposto in docs/tema-del-sito.md (punto 1).
+
+**Dove**: `Impostazioni (sito del locale), settings/bar (sezioni del sito), src/pages/LandingPage.jsx, src/components/ClientDrawer.jsx` · **Serve**: [UR-018](#ur-018--il-locale-si-presenta-al-cliente-col-suo-stile-dalla-prima-pagina-al-menù)
 
 ## L'architettura e le sue prove
 
@@ -4992,7 +5105,6 @@ della correzione è il test citato nel requisito della sua area.
 | 🔴 | [BUG-157](#bug-157--la-licenza-della-tana-scritta-dal-deploy-è-più-povera-di-quella-che-scrive-la-regia) — La licenza della Tana scritta dal deploy è più povera di quella che scrive la regia | bassa | P3 |
 | 🔴 | [BUG-158](#bug-158--genera-clientemjs-non-conosce-il-tipo-di-locale-che-il-workflow-della-regia-gli-passa) — genera-cliente.mjs non conosce il tipo di locale che il workflow della regia gli passa | bassa | P3 |
 | 🔴 | [BUG-163](#bug-163--un-rifiuto-del-pagamento-online-che-sumup-rimanda-in-ritardo-segna-fallito-un-conto-passato-nel-frattempo-al-lettore) — Un rifiuto del pagamento online che SumUp rimanda in ritardo segna «fallito» un conto passato nel frattempo al lettore | media | P2 |
-| 🔴 | [BUG-164](#bug-164--il-tempo-di-lavorazione-in-ricetta-non-entra-nel-costo-del-drink-57-righe-lo-dosano-in-grammi) — Il tempo di lavorazione in ricetta non entra nel costo del drink: 57 righe lo dosano in grammi | media | P2 |
 
 🔴 succede **in produzione**, cioè al banco. `·` no. `?` non si sa ancora.
 
@@ -5153,16 +5265,6 @@ Dalla regia, contratto del 14/11/2026: lo script della 1.10.x non conosce `--sa 
 Trovato dal revisore il 16/11/2026, correggendo BUG-162: è lo stesso difetto, sul checkout online. Il cliente paga online e la carta viene rifiutata; il conto passa al lettore del banco (`in_attesa`, metodo `lettore`). Se SumUp rimanda il rifiuto online (ritenta dopo 1, 5, 20 minuti e 2 ore), `verifyCheckoutStatus` vede uno stato diverso da quello del conto, scrive «fallito» e azzera l'importo in volo del lettore: il pagamento al banco, se poi riesce, arriva su un conto che non lo aspetta più. Da correggere come BUG-162: l'esito online si applica solo a un conto che aspetta ancora quel checkout.
 
 **Dove**: `functions/lib/payment-service.js (verifyCheckoutStatus, handleOnlineWebhook)` · **Tradisce**: [REQ-PAG-005](#req-pag-005--pagamento-online-con-link-o-qr), [REQ-DEV-026](#req-dev-026--la-spesa-dei-servizi-google-ha-un-tetto-istanze-limitate-e-indirizzi-pubblici-che-non-lavorano-a-vuoto)
-
-#### BUG-164 — Il tempo di lavorazione in ricetta non entra nel costo del drink: 57 righe lo dosano in grammi
-
-Daniele, 16/11/2026: «tempo di lavorazione quando è presente in ricetta va calcolato come un normale ingrediente quindi deve comparire nei costi, ricordando che il tempo di lavorazione si calcola in U ovvero 1 pz corrisponde a 60 U ed 1 pz costa 10€». L'articolo è già così, in produzione e sul test (pezzo da 60 U, 10 €, IVA 0), e il costo per U lo sa fare costPerUnit. Ma 57 righe di ricetta su 59 lo dosano in GRAMMI («0,5 g», «1,5 g»…), scritte quando il grammo era l'unica unità possibile: un grammo di un articolo che si conta a U non ha un costo, la riga finisce fra quelle senza costo e il costo del drink resta parziale. Le altre due sono già in U.
-
-CORREZIONE: uno script riscrive in U quelle righe, con la stessa quantità («1,5 g» → 1,5 U, 0,25 €). Prima sul test, poi in produzione col via libera e dopo il backup. Da quel momento quelle righe scaricano anche il magazzino (U/60 di pezzo per drink), come tutto quello che sta in magazzino dal 12/09/2026.
-
-SUL TEST (16/11/2026): riscritte 57 ricette, tutte del «Tempo di Lavorazione»; rilanciato, lo script non trova più niente. In produzione: da fare, col via libera.
-
-**Dove**: `dati: drinks.recipe_items del «Tempo di Lavorazione»; scripts/lavorazione-in-u.js, scripts/lib-lavorazione.js` · **Tradisce**: [REQ-MENU-034](#req-menu-034--ogni-riga-della-ricetta-mostra-quanto-costa)
 
 ## Non più valido
 

@@ -44,6 +44,16 @@ describe('leggiCliente', () => {
     }
   })
 
+  // Daniele, 17/11/2026, sul bicchiere neutro della demo: «c'è già il logo
+  // di Lime SmartOrders per questa cosa. Al posto del bicchiere». Il segno
+  // della demo è la fetta di lime della regia (public/favicon.svg lì), da
+  // cui nascono anche le icone PNG (REQ-FLOTTA-033).
+  it('il logo della demo è la fetta di lime di Lime - SmartOrders', () => {
+    const svg = readFileSync(join(leggiCliente('demo').pubblica, 'favicon.svg'), 'utf8')
+    for (const verde of ['#5aa21f', '#dff0a5', '#8cc63f']) expect(svg, verde).toContain(verde)
+    expect(svg).toMatch(/viewBox="0 0 32 32"/)
+  })
+
   it('uno slug sbagliato o una cartella che non c’è fermano la build', () => {
     expect(() => leggiCliente('Tana Due')).toThrow(/non valido/)
     expect(() => leggiCliente('nessuno')).toThrow(/manca/)
@@ -128,7 +138,7 @@ describe('index.html e manifest per il cliente', () => {
     const html = readFileSync('index.html', 'utf8')
     expect(html).toMatch(/<title>%VENUE_NAME%<\/title>/)
     const pieno = htmlPerCliente(html, demo)
-    expect(pieno).toMatch(/<title>Bar Demo<\/title>/)
+    expect(pieno).toMatch(/<title>Bancone 21<\/title>/)
     expect(pieno).not.toMatch(/%VENUE_/)
     // Il testo non rompe l'HTML.
     expect(htmlPerCliente('<title>%VENUE_NAME%</title>', { venue_name: 'A & "B"' })).toBe('<title>A &amp; &quot;B&quot;</title>')
@@ -136,9 +146,9 @@ describe('index.html e manifest per il cliente', () => {
 
   it('il manifest prende nome, nome corto, descrizione e colori', () => {
     const m = manifestPerCliente(modello, demo)
-    expect(m.name).toBe('Bar Demo')
-    expect(m.short_name).toBe('Demo')
-    expect(m.description).toBe('Ordina i tuoi drink al Bar Demo')
+    expect(m.name).toBe('Bancone 21')
+    expect(m.short_name).toBe('Bancone 21')
+    expect(m.description).toBe('Ordina i tuoi drink al Bancone 21')
     expect(m.icons).toEqual(modello.icons)
     expect(JSON.stringify(m)).not.toMatch(/%VENUE_/)
   })

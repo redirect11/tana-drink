@@ -7369,6 +7369,15 @@ requirements:
       minimale già pubblicato, che può essere un modulo a parte. Il
       concetto, con le domande aperte e il primo passo proposto, è in
       docs/tema-del-sito.md.
+      DANIELE, 17/11/2026, decide e scende nei requisiti: le sezioni del
+      sito (Chi siamo, Contatti, Menù, altre da decidere) sempre
+      raggiungibili dal menu laterale della vista cliente (REQ-SITO-001);
+      il tema del menù si propaga alle pagine del sito, e per la Tana
+      «Carte» veste Chi siamo e Contatti (REQ-SITO-002); la foto del banner
+      della Home si sceglie (REQ-SITO-003); la home è un modulo a parte,
+      e senza il modulo l'indirizzo del locale apre il menù o una pagina
+      di cortesia (REQ-SITO-004); l'editor della home mostra o nasconde le
+      sezioni fisse (REQ-SITO-005). Niente pagine libere.
     status: todo
     generate_issue: true
     labels: [menu, temi, cliente]
@@ -15855,6 +15864,35 @@ requirements:
     test_cases:
       - tests/unit/temaLime.test.js
 
+  - id: REQ-FLOTTA-033
+    title: "Il locale della demo ha un nome credibile: «Bancone 21»"
+    area: "clienti/demo/venue.json"
+    description: >
+      Daniele, 15/11/2026, sulle schermate della demo da mettere nella
+      prima pagina della regia: «servirebbe un nome più credibile», e poi
+      «usa bancone 21 per ora». «Bar Demo» si legge come un segnaposto,
+      e nelle foto del prodotto fa sembrare finta l'app intera. Il nome
+      resta inventato: non è un locale vero, e la demo continua a dire
+      nella sua fascia che i dati sono di prova (REQ-FLOTTA-019).
+      CRITERIO: la build della demo si chiama «Bancone 21» nel titolo
+      della pagina e nel manifest (nome corto «Bancone 21»), e le frasi
+      che nominano il locale dicono «al Bancone 21».
+      COME È FATTO (17/11/2026): clienti/demo/venue.json (nome, nome corto,
+      «al Bancone 21», la descrizione del manifest).
+      IL LOGO (Daniele, 17/11/2026: «c'è già il logo di Lime SmartOrders per
+      questa cosa. Al posto del bicchiere»): il bicchiere neutro lascia il
+      posto alla fetta di lime della regia (drink-regia public/favicon.svg).
+      favicon.svg è quel disegno; logo.png, icon-192/512 trasparenti;
+      apple-touch-icon e icon-maskable-512 sul fondo di Lime scuro
+      (#0c0f0a), la maskable col logo al 60% per il margine di Android.
+      Se il logo della regia cambia, questi file si rifanno da lì.
+    status: implemented
+    generate_issue: true
+    labels: [flotta]
+    priority: P2
+    test_cases:
+      - tests/unit/clienteBuild.test.js
+
   - id: REQ-PAG-013
     title: "Lo sconto cade sui prodotti che si stanno riscuotendo, e gli sconti si accumulano"
     area: "src/lib/pagamento.js, src/components/PaymentScreen.jsx, src/lib/api.js, src/lib/printer.js, functions/lib/payment-core.js"
@@ -17281,7 +17319,7 @@ requirements:
 
   - id: REQ-DEV-025
     title: "I valori che stanno anche nella regia restano uguali nei due repository"
-    area: "src/lib/licenzaInVigore.js (LIMITI_FREE), src/lib/licenza.js (MODULI_PREMIUM), src/lib/themes.js, src/lib/stileMenu.js, src/lib/stiliRicetta.js, src/lib/marketplaceTemi.js, scripts/lib-titolare.js, l'ora del taglio"
+    area: "src/lib/licenzaInVigore.js (LIMITI_FREE), src/lib/licenza.js (MODULI_PREMIUM), src/lib/themes.js, src/lib/stileMenu.js, src/lib/stiliRicetta.js, src/lib/marketplaceTemi.js, scripts/lib-titolare.js, l'ora del taglio, src/components/MarchioLime.jsx e clienti/demo/public/favicon.svg (il logo), src/lib/prodotto.js (NOME_PRODOTTO, QUALIFICA_PRODOTTO)"
     description: >
       Dalla regia, contratto delle interfacce del 14/11/2026: alcuni valori
       stanno in tutti e due i repository e vanno tenuti allineati a mano —
@@ -17467,3 +17505,277 @@ requirements:
     labels: [licenza, ristorante, regia]
     priority: P2
     test_cases: []
+
+  - id: REQ-SITO-001
+    title: "Le sezioni del sito del locale, sempre raggiungibili dal menu laterale della vista cliente"
+    area: "src/components/ClientDrawer.jsx, src/pages/LandingPage.jsx, pagine nuove (Chi siamo, Contatti), src/App.jsx (rotte)"
+    description: >
+      Daniele, 17/11/2026: «Nella vista cliente, nel menu laterale ci
+      devono essere le sezioni del sito raggiungibili sempre (Chi siamo,
+      contatti, menu e altre sezioni da decidere). Il gestionale vede
+      queste pagine solo nella vista cliente».
+      Oggi «chi siamo» e i contatti stanno dentro la pagina iniziale, e il
+      menu laterale del cliente ha solo Menù e I miei ordini. Diventano
+      sezioni con un indirizzo ciascuna, e il menu laterale del cliente
+      elenca sempre quelle mostrate (REQ-SITO-005): Home, Chi siamo,
+      Contatti, Menù (quando è visibile ai clienti). Il personale le vede
+      passando alla vista cliente, non dal menu del gestionale. I dati
+      vengono da Identità del locale (`venue_*`, REQ-VENUE-002). Altre
+      sezioni (orari, eventi) da decidere: docs/tema-del-sito.md.
+    status: todo
+    generate_issue: true
+    labels: [sito, cliente, navigazione]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-SITO-002
+    title: "Il tema del menù veste anche le pagine del sito: la Tana ha «Carte» anche in Chi siamo e Contatti"
+    area: "src/lib/stileMenu.js (pagine, vestePagine), src/lib/testiStile.js, src/pages/LandingPage.jsx, pagine del sito, src/index.css"
+    description: >
+      Daniele, 17/11/2026: «Dobbiamo iniziare a propagare il tema del menu
+      cliente anche alle altre pagine della home del locale … Nel caso
+      della tana, io estenderei il tema carte anche alle pagine chi siamo e
+      contatti». È il primo passo di REQ-MENU-044: il tema del menù veste
+      Home, Chi siamo e Contatti nei colori, nei caratteri e nelle frasi;
+      «Carte» in più nella forma (i contenuti scritti su una carta), come
+      «Meraviglie» fa già con `pagine: true`. Un tema che non porta le
+      pagine del sito le lascia al disegno di base. Il tema del sito come
+      scelta separata dal tema del menù resta per dopo
+      (docs/tema-del-sito.md, punto 2).
+    status: todo
+    generate_issue: true
+    labels: [sito, temi, cliente]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-SITO-003
+    title: "La foto del banner della pagina iniziale la sceglie il locale"
+    area: "src/pages/LandingPage.jsx, src/components/IdentitaLocale.jsx, src/lib/storage.js, storage.rules"
+    description: >
+      Daniele, 17/11/2026: «Anche la foto nel banner del tema attuale della
+      home del locale dovrebbe poter essere customizzata». Oggi la foto in
+      apertura della pagina iniziale è quella del tema. Il gestore ne
+      carica una sua da Identità del locale; senza, resta quella del tema.
+      Va su Storage (sul profilo leggero resta quella del tema) e la carica
+      chi gestisce il locale, come le foto dei prodotti (BUG-160).
+    status: todo
+    generate_issue: true
+    labels: [sito, cliente, temi]
+    priority: P3
+    test_cases: []
+
+  - id: REQ-SITO-004
+    title: "La home del locale è un modulo: senza, l'indirizzo del locale apre il menù o una pagina di cortesia"
+    area: "src/lib/licenza.js (MODULI_PREMIUM), src/App.jsx (la rotta /), pagina di cortesia nuova, la regia (piani.json, elenco dei moduli)"
+    description: >
+      Daniele, 17/11/2026: «la home del locale è un modulo a parte … Disabilitando
+      il modulo home la home diventa il menu se il locale sceglie così,
+      altrimenti una pagina di cortesia con il nome e le info base del
+      canale. In pratica se non c'è home allora menu altrimenti pagina di
+      cortesia».
+      CON IL MODULO: la home con le sue sezioni (REQ-SITO-001, REQ-SITO-005).
+      SENZA: all'indirizzo del locale si apre il menù dei clienti, se il
+      locale lo sceglie e il menù è visibile; altrimenti una pagina di
+      cortesia col nome del locale e le informazioni di base (indirizzo,
+      telefono, orari), vestita dal tema.
+      INTERFACCIA CON LA REGIA: un modulo nuovo cambia l'elenco dei moduli
+      tenuto allineato a mano (REQ-DEV-025): va detto alla regia prima di
+      rilasciarlo, con l'id (proposta: `home`), cosa resta senza modulo e
+      in quale piano sta. Da decidere con Daniele: il piano, e se la Tana
+      lo ha (oggi la home ce l'ha: senza modulo nella licenza la
+      perderebbe).
+    status: todo
+    generate_issue: true
+    labels: [sito, licenza, regia]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-SITO-005
+    title: "L'editor della home: le sezioni fisse si mostrano o si nascondono"
+    area: "Impostazioni (sito del locale), settings/bar (sezioni del sito), src/pages/LandingPage.jsx, src/components/ClientDrawer.jsx"
+    description: >
+      Daniele, 17/11/2026: «l'editor della home abbiamo detto consente di
+      cambiare invece le sezioni visualizzate. Avremo delle sezioni fisse
+      che possono essere mostrate o meno». Le sezioni le diamo noi (Chi
+      siamo, Contatti, Menù, poi quelle da decidere); il gestore sceglie
+      quali mostrare. Una sezione nascosta sparisce dalla home e dal menu
+      laterale, e il suo indirizzo rimanda alla home. Niente pagine libere.
+      La scelta sta in `settings/bar`, come proposto in
+      docs/tema-del-sito.md (punto 1).
+    status: todo
+    generate_issue: true
+    labels: [sito, cliente, impostazioni]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-UI-034
+    title: "Gli avvisi del menù dei clienti si vedono, e vestono il tema"
+    area: "src/pages/MenuPage.jsx (avvisi: sola consultazione, posizione, errori), src/index.css, src/lib/stileMenu.js"
+    description: >
+      Daniele, 17/11/2026: «Gli avvisi che escono nel menu dovrebbero
+      essere più visibili e più integrati con il tema». Sono le strisce del
+      menù dei clienti — «Solo consultazione», «Verifico che sei al
+      locale», «Devi essere al locale per ordinare», gli errori — che oggi
+      usano il `.banner` generico, uguale in ogni tema e poco visibile sul
+      fondo del menù. Diventano un avviso del menù: colori e caratteri del
+      tema, un contrasto che si legge su ogni fondo, e in «Carte» la forma
+      del tema. Il testo non cambia.
+      FATTO (1.10.53-beta): `.avviso-menu` in index.css (fondo del tema
+      tinto d'accento, filo d'accento, testo del tema; in «Carte» la carta
+      del mazzo); le strisce del menù lo usano, con `role="status"` (e
+      `role="alert"` per gli errori), che le fa annunciare ai lettori di
+      schermo (REQ-UI-036).
+    status: implemented
+    generate_issue: true
+    labels: [menu, temi, cliente]
+    priority: P2
+    test_cases:
+      - tests/component/MenuPage.test.jsx
+
+  - id: REQ-UI-035
+    title: "Nel gestionale, in alto, il marchio «LIME - SmartOrders» col suo logo"
+    area: "src/App.jsx (topbar), un componente del marchio nuovo, src/index.css"
+    description: >
+      Daniele, 17/11/2026: nel gestionale il titolo in alto diventa il logo
+      LIME - SmartOrders, «lo trovi nella regia». Il logo è quello della
+      regia (drink-regia, src/components/Logo.jsx e public/favicon.svg: una
+      fetta di lime che sembra un grafico a torta, decisione del
+      09/11/2026), copiato com'è: è un'altra copia tenuta allineata a mano
+      con la regia (REQ-DEV-025). Solo nel gestionale: le pagine dei
+      clienti restano col logo e il nome del locale.
+      FATTO (1.10.53-beta): `MarchioLime.jsx` (logo, «Lime» e la qualifica
+      «SmartOrders» piccola in maiuscolo, come nella barra della regia);
+      il gestionale è /bar, /pos e /profilo-staff (`nelGestionale` in
+      lib/prodotto.js). Il menu laterale tiene il nome del locale.
+    status: implemented
+    generate_issue: true
+    labels: [ui, marchio, gestionale]
+    priority: P2
+    test_cases:
+      - tests/component/MarchioLime.test.jsx
+      - tests/component/AppHeader.test.jsx
+
+  - id: REQ-SIC-006
+    title: "Lo Storage segue la licenza: le foto dove il piano le comprende, gli allegati delle fatture col loro modulo"
+    area: "storage.rules, tests/regole/storage.test.js, .github/workflows/test.yml (job delle regole), IAM dei progetti (service agent dello Storage)"
+    description: >
+      Daniele, 17/11/2026, alla domanda della regia «Le regole di Storage
+      leggono la licenza?»: sì. Col Free col profilo completo
+      (REQ-FLOTTA-122 della regia) lo Storage c'è anche dove il piano non
+      lo comprende: l'app nasconde le foto sul Free (limiti.js,
+      `fotoConsentite`), ma le regole di Storage non leggevano la licenza,
+      e un admin di un Free poteva caricare foto chiamando lo Storage a
+      mano, a spese di Stonebit.
+      ORA le regole di Storage leggono `licenza/attuale` da Firestore, con
+      la stessa domanda delle regole di Firestore (licenza valida, scaduta,
+      al Free, moduli): le foto dei prodotti si caricano solo con una
+      licenza valida e non Free; gli allegati delle fatture solo col modulo
+      `scadenzario` o `magazzino`, come la loro collezione. Cancellare e
+      leggere non chiedono la licenza: un locale fermo deve poter fare
+      pulizia e vedere i suoi documenti.
+      IL PREZZO, INFRASTRUTTURA: le regole che leggono Firestore dallo
+      Storage vogliono il ruolo `roles/firebaserules.firestoreServiceAgent`
+      al service agent dello Storage del progetto
+      (service-<numero>@gcp-sa-firebasestorage.iam.gserviceaccount.com).
+      Senza, la lettura fallisce e nessuno carica più foto. Va dato prima
+      del deploy su tana-drink-test, tana-drink (col via libera di Daniele)
+      e nei locali della flotta (il Terraform della regia).
+      FATTO SULLA TANA (17/11/2026, comando lanciato su richiesta di
+      Daniele): il ruolo c'è su tana-drink-test e su tana-drink, riletto
+      dalla policy. Per la flotta lo fa la regia.
+      L'ORDINE DEI RILASCI (dal revisore, 17/11/2026): il deploy non
+      interattivo di firebase-tools salta la concessione del ruolo senza
+      dirlo, e la regia lo dà nel Terraform (REQ-FLOTTA-124) solo su
+      develop. Un tag di produzione con queste regole non deve arrivare a
+      un locale della flotta prima che la REQ-FLOTTA-124 sia su main della
+      regia e applicata ai locali esistenti. scripts/setup-firebase-env.sh
+      lo concede agli ambienti nuovi. Le funzioni sulla licenza delle due
+      regole sono le stesse, e una prova lo controlla.
+      LE PROVE IN CI (17/11/2026, su richiesta di Daniele): il job delle
+      regole accende anche lo Storage (`--only firestore,storage` in
+      .github/workflows/test.yml), e le prove di storage.rules girano.
+      FATTO (1.10.53-beta): storage.rules legge la licenza
+      (licenzaValida, alFree, modulo, fotoConsentite);
+      tests/regole/storage.test.js la prova con gli emulatori di Storage e
+      Firestore insieme, nel progetto degli emulatori.
+    status: implemented
+    generate_issue: true
+    labels: [sicurezza, licenza, costi]
+    priority: P1
+    test_cases:
+      - tests/regole/storage.test.js
+      - tests/unit/regoleStorageLicenza.test.js
+
+  - id: REQ-MAG-058
+    title: "Il modulo «Product Tracking»: il prodotto entra in magazzino dal telefono, scansionando etichetta o codice a barre"
+    area: "magazzino (carico, scheda prodotto), src/lib/licenza.js (MODULI_PREMIUM), la regia (elenco dei moduli)"
+    description: >
+      Daniele, 17/11/2026: «altro modulo da aggiungere è Product Tracking
+      che in pratica ti consente di aggiungere all'inventario da
+      smartphone direttamente scansionando l'etichetta del prodotto o il
+      codice a barre per recuperare informazioni sulla scadenza, fornitore
+      etc. Cerca KitchenTracker, dobbiamo fare quello che fa questa app».
+      Un'app con quel nome esatto non si trova; la più vicina è
+      KitchenTrace, HACCP per cucine professionali: si inquadra
+      l'etichetta, l'app legge codice a barre e testo stampato (prodotto,
+      fornitore, lotto, scadenza, allergeni) e chiede conferma dei valori
+      incerti; i lotti si legano alle preparazioni, così un lotto richiamato
+      si ritrova in pochi secondi.
+      PER NOI: dal telefono, nel carico del magazzino, si inquadra
+      l'etichetta o il codice a barre; l'app riconosce il prodotto già a
+      listino (dal codice) o propone di crearlo, e compila quantità,
+      fornitore, lotto e scadenza da confermare. Si appoggia alle scadenze
+      di REQ-MAG-057 (avviso ed elenco). È un modulo a parte: va concordato
+      con la regia (REQ-DEV-025).
+      DA DECIDERE con Daniele: il nome del modulo (proposta
+      `tracciabilita`); se legge anche il testo dell'etichetta (con l'AI,
+      che costa credito, o sul telefono) o solo il codice a barre; da dove
+      vengono i dati di un codice sconosciuto (anagrafiche pubbliche come
+      Open Food Facts, o niente); se tiene i lotti legati alle preparazioni
+      e ai drink venduti (tracciabilità HACCP e richiami) o solo il carico;
+      il prezzo; per chi (ristoranti, o anche i bar).
+    status: todo
+    generate_issue: true
+    labels: [magazzino, modulo, ristorante]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-UI-036
+    title: "L'app è accessibile: WCAG 2.1 AA su menù, home e gestionale, provata con axe nel collaudo, con la pagina «Accessibilità»"
+    area: "tests/sistema/accessibilita.spec.js (axe-core), index.html (viewport), src/index.css (contrasto), componenti con comandi su div, src/App.jsx (piè di pagina)"
+    description: >
+      Daniele, 17/11/2026, portata dalla regia: «sia per il menu che per la
+      home … dobbiamo aggiungere la dichiarazione di accessibilità e mettere
+      in atto quello che richiede la legge per l'accessibilità di tutto».
+      Regola di Stonebit per ogni prodotto. Lo standard è WCAG 2.1 AA (EN
+      301 549) sul menù del cliente e gli ordini dal tavolo, sulla home del
+      locale e la pagina di cortesia, sul gestionale.
+      LA PRIMA MISURA (17/11/2026, prima di correggere): axe-core su 17
+      pagine dell'app compilata. Tre regole violate: lo zoom bloccato
+      (`meta-viewport`, tutte le pagine, index.html), il contrasto
+      (tastierino del pagamento, categoria «Tutti» del conto, fatture,
+      accessi), un menu a tendina senza nome nelle impostazioni. Oltre axe,
+      circa 70 comandi fatti con `div` cliccabili, le finestre di dialogo,
+      i temi uno per uno. Stima mandata alla regia: 10-14 giorni.
+      L'ORDINE (regia e Daniele, 17/11/2026): prima la conformità piena,
+      la pagina «Accessibilità» per ultima.
+      FATTO (17/11/2026): le violazioni di axe corrette (BUG-167); la prova
+      è un CANCELLO, con la serie della regia (@axe-core/playwright
+      4.14.0, axe-core 4.14.0: la 4.14.1 era uscita il giorno prima), il
+      tag `wcag22aa` e la vista a 320 px oltre a quella a 1280: 34 misure,
+      nessuna violazione, e una violazione nuova fa fallire i test di
+      sistema, obbligatori sulle PR verso develop.
+      DA FARE: la prova sul sito di test vero (dopo il prossimo tag); i
+      comandi su `div` cliccabili; il fuoco nelle finestre di dialogo; gli
+      avvisi letti; i temi uno per uno (anche `--muted` a 4,5, con la
+      regia); la prova a mano a ogni versione maggiore (tastiera, NVDA,
+      zoom 200%); infine la pagina «Accessibilità» collegata dal piè di
+      pagina comune (src/App.jsx, accanto a Privacy), col testo approvato
+      da Daniele.
+    status: todo
+    generate_issue: true
+    labels: [accessibilita, ui, cliente, gestionale]
+    priority: P2
+    test_cases:
+      - tests/sistema/accessibilita.spec.js
+      - tests/unit/contrastoAccento.test.js

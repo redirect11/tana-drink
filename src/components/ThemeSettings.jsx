@@ -347,6 +347,7 @@ function ThemeEditor({ title, hint, value, onSave, livePreview = false }) {
       {/* A TENDINA, non a chip: con otto preset (e cresceranno) la fila
           di bottoni si mangiava la pagina due volte, gestionale e cliente. */}
       <select
+        aria-label={`Tavolozza: ${title}`}
         value={current.preset || TEMA_DI_PARTENZA}
         onChange={(e) => pickPreset(e.target.value)}
         style={{ width: '100%', margin: '2px 0 8px', padding: '10px 12px', fontSize: '1rem' }}

@@ -299,6 +299,21 @@ describe('il menù è uno solo, quello del cliente', () => {
     expect(screen.getByText(/Rivolgersi allo staff per ordinare/)).toBeInTheDocument()
   })
 
+  // REQ-UI-034 (Daniele, 17/11/2026: «gli avvisi che escono nel menu
+  // dovrebbero essere più visibili e più integrati con il tema»): non più
+  // la striscia gialla del gestionale, ma un avviso del menù, vestito dal
+  // tema, che un lettore di schermo annuncia.
+  it('l’avviso del menù è suo, non la striscia del gestionale, e si annuncia', async () => {
+    ruoloClaim = null
+    mockSettings = { menu_only: true }
+    mostra()
+    await screen.findByText('Mojito')
+    const avviso = screen.getByRole('status')
+    expect(avviso).toHaveTextContent(/Rivolgersi allo staff per ordinare/)
+    expect(avviso).toHaveClass('avviso-menu')
+    expect(avviso).not.toHaveClass('banner')
+  })
+
   // REQ-LIC-002: un locale senza il modulo «ordini dal telefono» ha il menù
   // che si legge e basta, anche se non ha mai toccato «solo menù».
   it('senza il modulo degli ordini dal telefono il menù si legge e basta', async () => {

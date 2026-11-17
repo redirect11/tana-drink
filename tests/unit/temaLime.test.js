@@ -10,6 +10,7 @@ import {
   temaDiPartenza,
   TEMA_DI_PARTENZA,
   DEFAULT_THEME,
+  contrasto,
 } from '../../src/lib/themes.js'
 
 const leggi = (k) => document.documentElement.style.getPropertyValue(k)
@@ -25,17 +26,8 @@ beforeEach(() => {
 // nuovi: la demo che si mostrava a un locale nuovo aveva il rosa e l'oro
 // della Tana (UR-014). La Tana resta col suo.
 describe('il tema Lime', () => {
-  // Il rapporto di contrasto WCAG, come lo misura DESIGN.md.
-  const luce = (hex) => {
-    const n = parseInt(hex.slice(1), 16)
-    return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
-      .map((v) => (v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)
-      .reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0)
-  }
-  const contrasto = (a, b) => {
-    const [x, y] = [luce(a), luce(b)].sort((p, q) => q - p)
-    return (x + 0.05) / (y + 0.05)
-  }
+  // Il contrasto è quello dell'app (themes.js, REQ-UI-036): lo stesso numero
+  // che misura la prova di accessibilità.
 
   it('ha le sue forme: tasti piatti, angoli tondi, il pallino sulle card', () => {
     for (const id of ['lime-scuro', 'lime-chiaro']) {
@@ -151,14 +143,49 @@ describe('l\'inchiostro sopra l\'accento', () => {
     expect(leggi('--accent-ink')).toBe('#ffffff')
   })
 
-  it('nel foglio nessun testo bianco fisso sull\'accento pieno', async () => {
+  // LA REGOLA ROVESCIATA (REQ-UI-036): un fondo d'accento pieno con del
+  // testo sopra sta su `--accent-pieno` e scrive in `--accent-ink`. Prima si
+  // cercava solo il bianco fisso su `var(--accent`, e i fondi passati a
+  // `--accent-pieno` sfuggivano: rimettendo il bianco nessuno se ne accorgeva.
+  it('nel foglio un fondo d\'accento con del testo sta su --accent-pieno e scrive in --accent-ink', async () => {
     const { readFileSync } = await import('node:fs')
     const regole = readFileSync('src/index.css', 'utf8')
       .replace(/\/\*[\s\S]*?\*\//g, '')
       .split('}')
-    const bianche = regole.filter(
-      (r) => /background:\s*var\(--accent[,)]/.test(r) && /(^|[;{\s])color:\s*(#fff\b|#ffffff\b|white\b)/i.test(r)
-    )
-    expect(bianche.map((r) => r.split('{')[0].trim())).toEqual([])
+    const nome = (r) => r.split('{')[0].trim()
+    const conTesto = (r) => /(^|[;{\s])color:/.test(r)
+    const accentoNudo = regole.filter((r) => /background:\s*var\(--accent[,)]/.test(r) && conTesto(r))
+    expect(accentoNudo.map(nome)).toEqual([])
+    const pieni = regole.filter((r) => /background:\s*var\(--accent-pieno/.test(r))
+    expect(pieni.length).toBeGreaterThanOrEqual(4)
+    expect(pieni.filter((r) => !/color:\s*var\(--accent-ink/.test(r)).map(nome)).toEqual([])
+  })
+
+  // BUG-166 (Daniele, 17/11/2026: «il bianco sul verde lime che abbiamo
+  // scelto non è il massimo»): il foglio era a posto, ma due stili scritti
+  // nei componenti avevano ancora il bianco fisso sull'accento — la
+  // categoria scelta nel conto e il numero sulle card, 1,4:1 sul lime.
+  it('anche negli stili dei componenti l\'accento pieno prende l\'inchiostro del tema', async () => {
+    const { catBtnStyle } = await import('../../src/lib/posStyles.js')
+    expect(catBtnStyle(true).color).toBe('var(--accent-ink)')
+    expect(catBtnStyle(true).background).toBe('var(--accent-pieno)')
+    expect(catBtnStyle(false).color).toBe('inherit')
+
+    const { readFileSync, readdirSync, statSync } = await import('node:fs')
+    const { join } = await import('node:path')
+    const file = []
+    const giro = (d) => {
+      for (const n of readdirSync(d)) {
+        const p = join(d, n)
+        if (statSync(p).isDirectory()) giro(p)
+        else if (/\.(jsx?|tsx?)$/.test(n)) file.push(p)
+      }
+    }
+    giro('src')
+    // Uno sfondo d'accento (anche pieno) seguito, entro un paio di righe, da
+    // un colore bianco scritto a mano (anche dentro un ternario).
+    const schema = /background:\s*'var\(--accent(-2|-pieno)?[,)][^']*'[^\n]*\n?[^\n]*\n?[^\n]*color:\s*[^,\n]*'(#fff|#ffffff|white)'/
+    const colpevoli = file.filter((f) => schema.test(readFileSync(f, 'utf8')))
+    expect(colpevoli).toEqual([])
   })
 })

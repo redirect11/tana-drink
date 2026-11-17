@@ -17,3 +17,8 @@ export const NOME_PRODOTTO = 'Lime - SmartOrders'
 // Il nome sotto l'icona dell'app installata, dove il nome intero non ci
 // sta: è il nome corto di ripiego di un locale che non ne ha uno suo.
 export const NOME_CORTO_PRODOTTO = 'Lime'
+
+// La qualifica accanto al nome nel marchio, come nella barra della regia
+// (drink-regia `src/lib/prodotto.js`, QUALIFICA): «Lime» e, piccolo,
+// «SmartOrders» (REQ-UI-035).
+export const QUALIFICA_PRODOTTO = 'SmartOrders'

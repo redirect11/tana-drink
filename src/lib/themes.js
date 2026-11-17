@@ -319,11 +319,18 @@ export const DEFAULT_THEME = 'tana-scuro'
 export const temaDiPartenza = (cliente = CLIENTE) => (!cliente || cliente === 'tana' ? DEFAULT_THEME : 'lime-scuro')
 export const TEMA_DI_PARTENZA = temaDiPartenza()
 
-function hexToRgba(hex, alpha) {
+// Un colore #rrggbb nei suoi tre canali, o null se non si legge: l'unico
+// posto dove si legge un esadecimale.
+function rgb(hex) {
   const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim())
-  if (!m) return `rgba(245,185,74,${alpha})`
+  if (!m) return null
   const n = parseInt(m[1], 16)
-  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+}
+
+function hexToRgba(hex, alpha) {
+  const c = rgb(hex)
+  return c ? `rgba(${c.join(',')},${alpha})` : `rgba(245,185,74,${alpha})`
 }
 
 // Risolve un'impostazione tema { preset, custom } nelle variabili CSS finali:
@@ -372,11 +379,16 @@ export function applyTheme(vars) {
   // l'oro): su un tema con l'azione scura sarebbe nero su nero. Si decide
   // dal colore del tasto, non dal tema.
   // Un preset può dichiarare il suo (Lime: il verde scurissimo della regia).
-  root.style.setProperty('--btn-ink', vars['--btn-ink'] || (isLightColor(btn) ? '#1c1305' : '#ffffff'))
+  root.style.setProperty('--btn-ink', vars['--btn-ink'] || inchiostroSopra(btn))
   // Lo stesso sopra l'accento pieno (il segno «staff», il numero sulla
   // campanella): era bianco fisso, e sul lime stava a 1,5:1 (dal revisore,
   // REQ-UI-033). Sul rosa della Tana resta bianco.
-  root.style.setProperty('--accent-ink', vars['--accent-ink'] || (isLightColor(vars['--accent']) ? '#1c1305' : '#ffffff'))
+  const inchiostroAccento = vars['--accent-ink'] || inchiostroSopra(vars['--accent'])
+  root.style.setProperty('--accent-ink', inchiostroAccento)
+  // E IL FONDO SOTTO QUELL'INCHIOSTRO, quando l'accento da solo non regge
+  // 4,5:1 (REQ-UI-036): accentoPieno lo scurisce, o lo schiarisce, quanto
+  // basta. Sul lime non cambia niente.
+  root.style.setProperty('--accent-pieno', accentoPieno(vars['--accent'], inchiostroAccento))
   const a2 = vars['--accent-2']
   if (a2) {
     root.style.setProperty(
@@ -396,13 +408,51 @@ export function applyTheme(vars) {
   root.dataset.luma = light ? 'light' : 'dark'
 }
 
+// ── IL CONTRASTO, COME LO MISURA WCAG (REQ-UI-036) ────────────────────
+// La luminanza relativa e il rapporto fra due colori (1:1 – 21:1), con la
+// formula di WCAG 2.x: è quella che usa axe, quindi un numero qui è lo
+// stesso che la prova di accessibilità misura sulla pagina.
+const lineare = (c) => {
+  const v = c / 255
+  return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
+}
+export function luminanza(hex) {
+  const c = rgb(hex)
+  return c ? 0.2126 * lineare(c[0]) + 0.7152 * lineare(c[1]) + 0.0722 * lineare(c[2]) : null
+}
+export function contrasto(a, b) {
+  const la = luminanza(a)
+  const lb = luminanza(b)
+  if (la == null || lb == null) return null
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05)
+}
+const mescola = (hex, verso, quanto) =>
+  `#${rgb(hex)
+    .map((c) => Math.round(c + (verso - c) * quanto).toString(16).padStart(2, '0'))
+    .join('')}`
+
+// L'ACCENTO PIENO SOTTO UN TESTO (REQ-UI-036, WCAG 1.4.3). Il rosa della
+// Tana (#e52e71) col bianco sopra sta a 4,2:1, e col bruno a 4,35:1: la
+// categoria scelta nel conto e il segno «staff» non arrivavano a 4,5. Qui
+// l'accento si scurisce (sotto un inchiostro chiaro) o si schiarisce (sotto
+// uno scuro) a piccoli passi, finché il testo si legge. Un accento che regge
+// già, come il lime col suo inchiostro, resta com'è.
+export function accentoPieno(accento, inchiostro, soglia = 4.5) {
+  const li = luminanza(inchiostro)
+  if (luminanza(accento) == null || li == null) return accento
+  const verso = li > 0.5 ? 0 : 255
+  let c = accento.startsWith('#') ? accento : `#${accento}`
+  for (let i = 0; i < 40 && contrasto(c, inchiostro) < soglia; i++) c = mescola(c, verso, 0.04)
+  return c
+}
+
 // Un colore esadecimale è "chiaro"? (luminanza percepita > 0.6)
 export function isLightColor(hex) {
-  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim())
-  if (!m) return false
-  const n = parseInt(m[1], 16)
-  const r = (n >> 16) & 255
-  const g = (n >> 8) & 255
-  const b = n & 255
-  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6
+  const c = rgb(hex)
+  return c ? (0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2]) / 255 > 0.6 : false
 }
+
+// L'inchiostro di partenza sopra un colore pieno: scuro su uno chiaro,
+// bianco su uno scuro. Una regola sola per i tasti (`--btn-ink`) e per
+// l'accento (`--accent-ink`); un preset può dichiarare il suo.
+export const inchiostroSopra = (colore) => (isLightColor(colore) ? '#1c1305' : '#ffffff')

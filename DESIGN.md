@@ -619,6 +619,13 @@ dei clienti stanno in cima, in un riquadro richiudibile col filo sinistro in
   `tests/unit/css.test.js`.
   Il colore non informa mai da solo: il numero del conto è sulla stessa
   card. Le regole in `src/lib/coloriConto.js`.
+- **Gli avvisi del menù dei clienti** (`.avviso-menu`, REQ-UI-034) non
+  sono la striscia gialla del gestionale (`.banner`): il fondo del tema
+  tinto d'accento al 14% (opaco), un filo d'accento a sinistra di 5px, il
+  testo del tema a 1rem, un'ombra che lo stacca dal fondo; l'errore ha il
+  filo rosso. In «Carte» è un biglietto del mazzo: `--k-carta`,
+  `--k-inchiostro`, il filo `--k-rosso`, la scrittura IM Fell. Si
+  annunciano: `role="status"`, `role="alert"` per gli errori.
 - **Il riquadro di una sezione** (`.card`, e in impostazioni e menù
   `card settings-section`) non dà per scontato il tema scuro: bordo
   `--line` e rilievo `--velo-superficie`. Sullo scuro quel velo è la luce
@@ -711,6 +718,13 @@ dei clienti stanno in cima, in un riquadro richiudibile col filo sinistro in
   restava appesa da sola sotto il resto.
 - La topbar è sticky, traslucida sul tema (`color-mix` su `--bg-2`),
   e rispetta le safe-area dei tablet.
+- **In alto, nel gestionale, il marchio del prodotto**: il logo della
+  regia (la fetta di lime), «Lime» nei titoli e «SmartOrders» piccolo in
+  maiuscolo in `--muted`, come nella barra della regia (REQ-UI-035,
+  `MarchioLime.jsx`). Il gestionale è la coda e le sezioni (`/bar`), il
+  conto (`/pos`) e il profilo di chi lavora (`nelGestionale` in
+  `lib/prodotto.js`). Le pagine dei clienti tengono il logo e il nome del
+  locale, anche quando le apre il personale. Sul telefono resta il logo.
 
 ## Profondità
 
@@ -736,7 +750,7 @@ superfici delle sezioni.
 |---|---|
 | normale (< 24px, o < 19px se in grassetto) | **4,5:1** |
 | grande (≥ 24px, o ≥ 19px in grassetto) | **3:1** |
-| `--muted`, che è testo **secondario** | **3:1**, e mai da solo su un'informazione che conta |
+| `--muted`, che è testo **secondario** | **4,5:1** su `--bg`, `--bg-2` e `--card` (col velo sui temi scuri): è testo piccolo, e il 3:1 vale solo per il testo grande. Deciso con la regia il 17/11/2026 (REQ-UI-036; nella regia REQ-FLOTTA-126). Pico scuro e Catppuccin chiaro, temi base dell'app, sulla card stanno ancora a 3,5:1: da sistemare |
 
 **Un inchiostro chiaro cablato non sta su un fondo tinto.** Un pastello —
 `#c8f7da`, `#9ff5c0`, `#ffd54f` — nasce per il fondo scuro, dove si stacca
@@ -757,6 +771,20 @@ Le due vie ammesse:
   tratta le pill degli stati da sempre. Se il selettore è un elenco, di
   sotto vanno elencati **tutti**: è accodandone uno a un elenco già
   coperto che si dimentica la variante.
+
+**Il testo sopra l'accento pieno sta su `--accent-pieno`**, non su
+`--accent` (REQ-UI-036, BUG-167): `applyTheme` lo calcola con
+`accentoPieno` — l'accento scurito sotto un inchiostro chiaro, o
+schiarito sotto uno scuro, quanto basta per 4,5:1. Il rosa della Tana col
+bianco stava a 4,2:1; il lime col suo inchiostro passa già e non cambia.
+Un fondo d'accento **senza testo** (un pallino, una striscia) resta
+`--accent`.
+
+**Lo zoom non si blocca**: il viewport non ha `user-scalable=no` né
+`maximum-scale` (WCAG 1.4.4). A non ingrandire la cassa per sbaglio ci
+pensa `touch-action: manipulation`, che toglie il doppio tocco e lascia il
+pizzico. I campi restano a 1rem: sotto i 16 px Safari ingrandisce da solo
+toccandoli.
 
 Un fondo **opaco** — il blu pieno del tasto «Riscuotere», la campitura del
 riquadro Ceres — non c'entra: lì il tema non traspare e un bianco fisso è
