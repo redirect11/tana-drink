@@ -17647,6 +17647,14 @@ requirements:
       «SmartOrders» piccola in maiuscolo, come nella barra della regia);
       il gestionale è /bar, /pos e /profilo-staff (`nelGestionale` in
       lib/prodotto.js). Il menu laterale tiene il nome del locale.
+      CORRETTO IL 17/11/2026, sulla 1.10.53-beta (Daniele): «deve apparire
+      solo nel menu, non nelle pagine. Dove sta scritto Gestionale in alto
+      nel menu. Nelle pagine logo e nome locale. Solo demo avrà quelle
+      scritte e il free al posto del nome del locale e del logo del
+      locale». Quindi: il marchio LIME sta nella testata del menu laterale
+      del gestionale, al posto di «Gestionale»; nella barra in alto delle
+      pagine tornano logo e nome del locale; solo la demo e i locali Free
+      (`pianoFree`) mostrano lì il marchio LIME al posto del locale.
     status: implemented
     generate_issue: true
     labels: [ui, marchio, gestionale]
