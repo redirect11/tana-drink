@@ -3264,6 +3264,8 @@ Daniele, 17/11/2026, alla domanda della regia «Le regole di Storage leggono la 
 
 IL PREZZO, INFRASTRUTTURA: le regole che leggono Firestore dallo Storage vogliono il ruolo `roles/firebaserules.firestoreServiceAgent` al service agent dello Storage del progetto (service-<numero>@gcp-sa-firebasestorage.iam.gserviceaccount.com). Senza, la lettura fallisce e nessuno carica più foto. Va dato prima del deploy su tana-drink-test, tana-drink (col via libera di Daniele) e nei locali della flotta (il Terraform della regia).
 
+FATTO SULLA TANA (17/11/2026, comando lanciato su richiesta di Daniele): il ruolo c'è su tana-drink-test e su tana-drink, riletto dalla policy. Per la flotta lo fa la regia.
+
 LE PROVE IN CI: Daniele ha detto sì ad accendere lo Storage nel job delle regole (17/11/2026); la riga del workflow, `--only firestore,storage` in .github/workflows/test.yml, la cambia lui (a me è negato). Finché manca, in CI le prove di storage.rules si saltano dicendolo; in locale girano.
 
 FATTO (1.10.53-beta): storage.rules legge la licenza (licenzaValida, alFree, modulo, fotoConsentite); tests/regole/storage.test.js la prova con gli emulatori di Storage e Firestore insieme, nel progetto degli emulatori.

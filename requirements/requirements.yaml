@@ -17674,6 +17674,9 @@ requirements:
       Senza, la lettura fallisce e nessuno carica più foto. Va dato prima
       del deploy su tana-drink-test, tana-drink (col via libera di Daniele)
       e nei locali della flotta (il Terraform della regia).
+      FATTO SULLA TANA (17/11/2026, comando lanciato su richiesta di
+      Daniele): il ruolo c'è su tana-drink-test e su tana-drink, riletto
+      dalla policy. Per la flotta lo fa la regia.
       LE PROVE IN CI: Daniele ha detto sì ad accendere lo Storage nel job
       delle regole (17/11/2026); la riga del workflow, `--only
       firestore,storage` in .github/workflows/test.yml, la cambia lui (a me
