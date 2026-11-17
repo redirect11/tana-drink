@@ -619,6 +619,13 @@ dei clienti stanno in cima, in un riquadro richiudibile col filo sinistro in
   `tests/unit/css.test.js`.
   Il colore non informa mai da solo: il numero del conto è sulla stessa
   card. Le regole in `src/lib/coloriConto.js`.
+- **Gli avvisi del menù dei clienti** (`.avviso-menu`, REQ-UI-034) non
+  sono la striscia gialla del gestionale (`.banner`): il fondo del tema
+  tinto d'accento al 14% (opaco), un filo d'accento a sinistra di 5px, il
+  testo del tema a 1rem, un'ombra che lo stacca dal fondo; l'errore ha il
+  filo rosso. In «Carte» è un biglietto del mazzo: `--k-carta`,
+  `--k-inchiostro`, il filo `--k-rosso`, la scrittura IM Fell. Si
+  annunciano: `role="status"`, `role="alert"` per gli errori.
 - **Il riquadro di una sezione** (`.card`, e in impostazioni e menù
   `card settings-section`) non dà per scontato il tema scuro: bordo
   `--line` e rilievo `--velo-superficie`. Sullo scuro quel velo è la luce

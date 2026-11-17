@@ -17614,11 +17614,17 @@ requirements:
       fondo del menù. Diventano un avviso del menù: colori e caratteri del
       tema, un contrasto che si legge su ogni fondo, e in «Carte» la forma
       del tema. Il testo non cambia.
-    status: todo
+      FATTO (1.10.53-beta): `.avviso-menu` in index.css (fondo del tema
+      tinto d'accento, filo d'accento, testo del tema; in «Carte» la carta
+      del mazzo); le strisce del menù lo usano, con `role="status"` (e
+      `role="alert"` per gli errori), che le fa annunciare ai lettori di
+      schermo (REQ-UI-036).
+    status: implemented
     generate_issue: true
     labels: [menu, temi, cliente]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/component/MenuPage.test.jsx
 
   - id: REQ-UI-035
     title: "Nel gestionale, in alto, il marchio «LIME - SmartOrders» col suo logo"

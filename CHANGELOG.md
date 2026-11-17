@@ -7,6 +7,10 @@
 - **Nel gestionale, in alto, il marchio LIME - SmartOrders** col logo
   della fetta di lime, al posto del nome del locale. Le pagine dei clienti
   restano col logo e il nome del locale (REQ-UI-035).
+- **Gli avvisi del menù dei clienti** («Solo consultazione», «Devi essere
+  al locale per ordinare», gli errori) prendono i colori del tema invece
+  della striscia gialla, sono più grandi e si staccano dal fondo; con
+  «Carte» sono una carta del mazzo (REQ-UI-034).
 - Col tema «Lime» la categoria scelta nella colonna del conto e il numero
   degli ordinati sulle card hanno il testo scuro: prima erano bianchi sul
   lime e non si leggevano. Con la Tana non cambia niente (BUG-166).

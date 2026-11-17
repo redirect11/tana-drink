@@ -679,7 +679,7 @@ export default function MenuPage({ speciali = false }) {
           locale ha spento le ordinazioni; dove il piano non le ha, dal
           telefono non si ordina proprio. */}
       {menuOnly && !staff && (
-        <div className="banner">
+        <div className="avviso-menu" role="status">
           {settings.menu_only
             ? '📖 Solo consultazione: le ordinazioni sono momentaneamente sospese. Rivolgersi allo staff per ordinare.'
             : '📖 Il menù si consulta da qui: per ordinare rivolgersi allo staff.'}
@@ -771,10 +771,10 @@ export default function MenuPage({ speciali = false }) {
 
       {/* Gate geolocalizzazione: stato della verifica al caricamento */}
       {geoActive && geoGate === 'checking' && (
-        <div className="banner">📍 Verifico che sei al locale…</div>
+        <div className="avviso-menu" role="status">📍 Verifico che sei al locale…</div>
       )}
       {geoActive && geoGate === 'denied' && (
-        <div className="banner row between" style={{ alignItems: 'center', gap: 10 }}>
+        <div className="avviso-menu row between" role="status">
           <span>
             📍 Per ordinare serve la tua posizione: attiva la localizzazione e
             consenti l’accesso (verifichiamo solo che sei al locale).
@@ -785,7 +785,7 @@ export default function MenuPage({ speciali = false }) {
         </div>
       )}
       {geoActive && geoGate === 'out_of_range' && (
-        <div className="banner row between" style={{ alignItems: 'center', gap: 10 }}>
+        <div className="avviso-menu row between" role="status">
           <span>
             📍 Devi essere al locale per ordinare
             {geoInfo ? ` (sei a ~${geoInfo.distance} m, massimo ${geoInfo.radius} m)` : ''}.
@@ -796,7 +796,7 @@ export default function MenuPage({ speciali = false }) {
         </div>
       )}
 
-      {error && <div className="banner">Errore: {error}</div>}
+      {error && <div className="avviso-menu errore" role="alert">Errore: {error}</div>}
 
       {/* GLI ORDINI QUI NON CI STANNO, per nessuno (l'utente, 11/11/2026:
           «gli ordini non dovrebbero apparire nel menù. Dovrebbero stare in
