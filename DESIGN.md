@@ -750,7 +750,7 @@ superfici delle sezioni.
 |---|---|
 | normale (< 24px, o < 19px se in grassetto) | **4,5:1** |
 | grande (≥ 24px, o ≥ 19px in grassetto) | **3:1** |
-| `--muted`, che è testo **secondario** | **3:1**, e mai da solo su un'informazione che conta — **da rivedere** (REQ-UI-036): per WCAG AA il testo attenuato piccolo vuole 4,5:1; la soglia nuova si decide con la regia, che controlla i temi |
+| `--muted`, che è testo **secondario** | **4,5:1** su `--bg`, `--bg-2` e `--card` (col velo sui temi scuri): è testo piccolo, e il 3:1 vale solo per il testo grande. Deciso con la regia il 17/11/2026 (REQ-UI-036; nella regia REQ-FLOTTA-126). Pico scuro e Catppuccin chiaro, temi base dell'app, sulla card stanno ancora a 3,5:1: da sistemare |
 
 **Un inchiostro chiaro cablato non sta su un fondo tinto.** Un pastello —
 `#c8f7da`, `#9ff5c0`, `#ffd54f` — nasce per il fondo scuro, dove si stacca
