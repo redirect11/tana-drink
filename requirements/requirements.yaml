@@ -17506,6 +17506,11 @@ requirements:
       tavoli, quindi probabilmente `menu_tavoli`). Da decidere con la regia
       se «ristorante» è un piano, un tipo di locale o un pacchetto di
       moduli.
+      I TIPI DI LOCALE (Daniele, 17/11/2026, alla domanda della regia):
+      contano come ristorante sia «ristorante» sia «pizzeria». Il modulo
+      `ristorante` si vende ai locali registrati con uno dei due tipi; la
+      regia passa il tipo vero scelto alla registrazione (fino a oggi
+      mandava `bar` a tutti).
     status: todo
     generate_issue: true
     labels: [licenza, ristorante, regia]
