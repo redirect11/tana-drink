@@ -54,24 +54,23 @@ export default function StampaAutomatica({ settings, save }) {
     <div className="card settings-section">
       <h3>Stampa automatica</h3>
       <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
-        Quando la carta esce <strong>da sola</strong>, senza che nessuno prema
-        niente. Indirizzo della stampante, prova di stampa e dati sulla carta
-        stanno in <strong>Impostazioni → Stampante</strong>.
+        Le stampe che escono <strong>da sole</strong>, senza premere un tasto.
+        Indirizzo della stampante, prova di stampa e dati sulla carta stanno in{' '}
+        <strong>Impostazioni → Stampante</strong>.
       </p>
 
       {/* ── Quello che decide questo tablet ── */}
       <h4 style={{ margin: '18px 0 2px' }}>Su questo terminale</h4>
       <p className="muted" style={{ margin: '0 0 8px', fontSize: '0.8rem' }}>
         Valgono per <strong>questo</strong> dispositivo e per chi ci è
-        collegato: la comanda la vuole stampare il banco, non il telefono che
-        passa a battere due conti.
+        collegato.
       </p>
 
       {comandeOn && (
         <>
           <ToggleRow
             label="Stampa la comanda all’arrivo dell’ordine"
-            desc="Appena un ordine entra in coda il ticket esce al banco, senza premere «Comanda»."
+            desc="La comanda si stampa appena l'ordine entra in coda, senza premere «Comanda»."
             checked={prn.autoPrintComanda === true}
             onChange={(v) => cambia({ autoPrintComanda: v })}
           />
@@ -95,7 +94,7 @@ export default function StampaAutomatica({ settings, save }) {
           CHIUSURA: l'etichetta descriveva il comportamento di due versioni fa. */}
       <ToggleRow
         label="Stampa lo scontrino alla riscossione del conto"
-        desc="Quando un conto viene incassato e chiuso, lo scontrino esce da sé."
+        desc="Lo scontrino si stampa quando il conto è incassato e chiuso."
         checked={prn.autoPrintScontrino === true}
         onChange={(v) => cambia({ autoPrintScontrino: v })}
       />
@@ -153,7 +152,7 @@ export default function StampaAutomatica({ settings, save }) {
           {prn.stampaSala === 'rimbalzo' && !prn.autoPrintComanda && (
             <div className="banner" style={{ marginTop: 8 }}>
               <Icona nome="avviso" gruppo="segnali" /> La stampa automatica della comanda è <strong>spenta</strong>: così
-              le comande della sala non le stampa nessuno. Accendila qui sopra.
+              le comande della sala non le stampa nessuno. Si accende qui sopra.
             </div>
           )}
           {/* Lo stesso buco per un'altra strada: la stampa è accesa, ma solo
@@ -170,8 +169,7 @@ export default function StampaAutomatica({ settings, save }) {
       {/* ── Quello che vale per tutti ── */}
       <h4 style={{ margin: '22px 0 2px' }}>Per tutto il locale</h4>
       <p className="muted" style={{ margin: '0 0 8px', fontSize: '0.8rem' }}>
-        Stanno sulle impostazioni del bar: si accendono una volta e valgono su
-        ogni terminale.
+        Valgono su ogni terminale del locale.
       </p>
 
       {/* ── LO SCONTRINO D'ACCONTO (REQ-STAMPA-015) ──────────────────────
@@ -181,7 +179,7 @@ export default function StampaAutomatica({ settings, save }) {
           interruttori legati così si guardano insieme o non si capiscono. */}
       <ToggleRow
         label="Lo scontrino d’acconto a ogni riscossione"
-        desc="Chi versa una parte e se ne va si porta via la sua ricevuta, senza premere niente: esce da sola a ogni incasso che non chiude il conto. Segue la stampa automatica dello scontrino di questo terminale, qui sopra."
+        desc="A ogni incasso che non chiude il conto si stampa la ricevuta d’acconto. Segue la stampa automatica dello scontrino di questo terminale, qui sopra."
         checked={accontoSempre(settings)}
         onChange={(v) => save({ [CHIAVE_ACCONTO_SEMPRE]: v })}
       />
@@ -196,8 +194,8 @@ export default function StampaAutomatica({ settings, save }) {
         label="Un tasto per l’acconto con lo scontrino"
         desc={
           accontoSempre(settings)
-            ? 'Non serve: la ricevuta d’acconto esce già da sola a ogni riscossione, qui sopra. Spegni quella e il tasto torna disponibile.'
-            : 'Nella schermata di pagamento compare anche «Acconto con scontrino»: incassa una parte e stampa la ricevuta di chi se ne va, quando serve.'
+            ? 'Non disponibile: la ricevuta d’acconto si stampa già a ogni riscossione, qui sopra. Spenta quella, il tasto torna disponibile.'
+            : 'Aggiunge alla schermata di pagamento «Acconto con scontrino», che incassa una parte del conto e ne stampa la ricevuta.'
         }
         checked={tastoAcconto(settings)}
         disabled={accontoSempre(settings)}

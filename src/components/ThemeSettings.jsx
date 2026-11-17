@@ -35,7 +35,7 @@ export default function ThemeSettings({ settings, onSave }) {
     <div className="card settings-section">
       <h3><Icona nome="temi" /> Aspetto</h3>
       <ThemeEditor
-        title="Gestionale — quello che vedi ora"
+        title="Gestionale"
         hint="I colori di chi lavora: coda, cassa, impostazioni, profilo."
         value={settings.theme_staff}
         // Anteprima immediata: il gestionale è la vista in cui ci troviamo.

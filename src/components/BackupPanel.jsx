@@ -92,7 +92,7 @@ export default function BackupPanel({ role = null, soloEsporta = false }) {
       <p className="muted small" style={{ margin: '0 0 10px' }}>
         {soloEsporta
           ? 'Scarica in un file tutto quello che c’è nel database: ordini, incassi, fatture, clienti, magazzino, menù.'
-          : 'Scarica in un file tutto quello che c’è nel database: ordini, incassi, magazzino, menù, ore del personale. Fallo prima di ogni operazione grossa — e ogni tanto anche senza motivo.'}
+          : 'Scarica in un file tutto quello che c’è nel database: ordini, incassi, magazzino, menù, ore del personale.'}
       </p>
 
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>

@@ -10,6 +10,10 @@
   hanno lì il marchio LIME (REQ-UI-035).
 - In Impostazioni → Coda ordini, «La vista del banco» dice cosa fa e se è
   attiva, senza più un selettore con una scelta sola (BUG-168).
+- **Le descrizioni delle impostazioni dicono cosa fa ogni opzione**, in
+  una frase e in forma impersonale: via le spiegazioni lunghe, gli esempi
+  e il «tu». Riguarda anche Stampa automatica, i campi delle stampe, la
+  stampante, il backup e le informazioni (REQ-UI-037).
 
 ### Demo
 

@@ -17808,7 +17808,7 @@ requirements:
 
   - id: REQ-UI-037
     title: "Le descrizioni delle impostazioni dicono cosa fa l'opzione, in una frase"
-    area: "src/components/SettingsTab.jsx e i pannelli delle impostazioni (ThemeSettings, StampaAutomatica, CampiStampa, AvvisiPanel, IdentitaLocale, BackupPanel, LicenzaPanel)"
+    area: "src/components/SettingsTab.jsx e i pannelli delle impostazioni (ThemeSettings, StampaAutomatica, CampiStampa, PrinterSetup, BackupPanel, InfoTab, src/lib/campiStampa.js)"
     description: >
       Daniele, 17/11/2026, dopo «La vista del banco» (BUG-168): «nelle
       opzioni delle impostazioni, puoi semplicemente spiegare che cosa fa
@@ -17819,8 +17819,14 @@ requirements:
       perché, niente aneddoti, niente «adesso non c'è perché…»: il perché
       sta nei commenti del codice. Una scelta con una voce sola non è una
       scelta e non si mostra.
-    status: todo
+      ORA ripassate tutte, in SettingsTab e nei pannelli (stampa
+      automatica, campi delle stampe e logo, stampante, backup,
+      informazioni, aspetto): una frase su cosa fa l'opzione, impersonale.
+      Una prova legge i sorgenti dei pannelli senza i commenti e boccia le
+      forme del tu e del voi.
+    status: implemented
     generate_issue: true
     labels: [ui, impostazioni, testi]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/testiImpostazioni.test.js

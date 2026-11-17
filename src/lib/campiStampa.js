@@ -82,7 +82,7 @@ export const CAMPI_SCONTRINO = [
   {
     id: 'codice_conto',
     label: 'Codice del conto',
-    desc: 'La riga lunga in fondo: serve a noi per ritrovarlo, al cliente non dice niente.',
+    desc: 'L’identificativo del conto, in fondo: serve a risalire al conto.',
     acceso: true,
   },
   {
@@ -94,7 +94,7 @@ export const CAMPI_SCONTRINO = [
   {
     id: 'riga_cortesia',
     label: 'Riga di saluto',
-    desc: 'Una riga tua, in fondo allo scontrino.',
+    desc: 'Una riga di testo libero, in fondo allo scontrino.',
     acceso: false,
     testo: { valore: '', label: 'Cosa c’è scritto', placeholder: 'Grazie e a presto!' },
   },
@@ -164,7 +164,7 @@ export const CAMPI_COMANDA = [
   { id: 'nota_conto', label: 'Nota del conto', desc: 'In fondo, quando c’è.', acceso: true },
   {
     id: 'riga_cortesia',
-    label: 'Riga tua in fondo',
+    label: 'Riga libera in fondo',
     acceso: false,
     testo: { valore: '', label: 'Cosa c’è scritto', placeholder: 'Turno di sala' },
   },
@@ -205,7 +205,7 @@ export const CAMPI_ACCONTO = [
   {
     id: 'operatore',
     label: 'Chi stampa la ricevuta',
-    desc: 'Il nome di chi è collegato a questo terminale: al banco è chi ha appena preso i soldi.',
+    desc: 'Il nome di chi è collegato a questo terminale.',
     acceso: true,
   },
   {
@@ -235,13 +235,13 @@ export const CAMPI_ACCONTO = [
   {
     id: 'riepilogo_conto',
     label: 'Come sta il conto',
-    desc: 'Totale, quanto è stato versato in tutto e quanto resta da pagare. È la domanda che fa chi resta al tavolo.',
+    desc: 'Totale, quanto è stato versato in tutto e quanto resta da pagare.',
     acceso: true,
   },
   {
     id: 'codice_conto',
     label: 'Codice del conto',
-    desc: 'La riga lunga in fondo: serve a noi per ritrovarlo.',
+    desc: 'L’identificativo del conto, in fondo: serve a risalire al conto.',
     acceso: true,
   },
   {
@@ -252,7 +252,7 @@ export const CAMPI_ACCONTO = [
   {
     id: 'riga_cortesia',
     label: 'Riga di saluto',
-    desc: 'Una riga tua, in fondo.',
+    desc: 'Una riga di testo libero, in fondo.',
     acceso: false,
     testo: { valore: '', label: 'Cosa c’è scritto', placeholder: 'A dopo!' },
   },
@@ -366,7 +366,7 @@ export const TIPI_LOGO = [
   {
     id: 'acconto',
     label: 'Scontrino d’acconto',
-    desc: 'La carta di chi versa una parte e se ne va: resta in mano al cliente come il preconto.',
+    desc: 'La ricevuta di un pagamento parziale, che resta al cliente.',
     acceso: true,
   },
   {
@@ -447,7 +447,7 @@ export function problemiLogo({ larghezza, altezza, quotaScura: scura = 0, peso =
   if (!larghezza || !altezza) {
     return {
       grave: true,
-      testo: 'Questa immagine non si riesce ad aprire. Prova con un PNG o un JPG.',
+      testo: 'Questa immagine non si riesce ad aprire. Servono un PNG o un JPG.',
     }
   }
   if (peso > PESO_MASSIMO_LOGO) {
@@ -481,7 +481,7 @@ export function problemiLogo({ larghezza, altezza, quotaScura: scura = 0, peso =
     return {
       grave: false,
       testo:
-        'L’immagine è piccola: sulla carta uscirà un po’ sgranata. Se ne hai una più grande, meglio quella.',
+        'L’immagine è piccola: sulla carta uscirà un po’ sgranata. Un’immagine più grande stampa più nitida.',
     }
   }
   return null

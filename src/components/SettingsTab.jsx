@@ -155,10 +155,9 @@ export default function SettingsTab({ role = null }) {
             <div className="card settings-section">
               <h3>Vista ordine (bartender)</h3>
               <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-                Toccando un prodotto nella griglia si aggiunge sempre una <strong>riga
-                nuova</strong> (così si può personalizzarla e annotarla); per
-                aumentare la quantità si usa il <strong>+ sulla riga</strong> del
-                conto. Dal riepilogo si possono comunque unire o separare al volo.
+                Un prodotto toccato nella griglia aggiunge sempre una <strong>riga
+                nuova</strong> al conto; la quantità si aumenta col <strong>+ sulla
+                riga</strong>.
               </p>
 
               <p className="muted" style={{ margin: '12px 0 6px', fontSize: '0.85rem' }}>
@@ -179,15 +178,14 @@ export default function SettingsTab({ role = null }) {
                   differenza fra saper fare un drink e doverlo chiedere. */}
               <ToggleRow
                 label="La ⓘ con la ricetta sulle card"
-                desc="Apre ingredienti, quantità e come si prepara. Spenta, le card restano pulite."
+                desc="Sulle card della griglia, una ⓘ che apre ingredienti, quantità e preparazione del drink."
                 checked={settings.pos_ricetta_info !== false}
                 onChange={(v) => save({ pos_ricetta_info: v })}
               />
 
               <p className="muted" style={{ margin: '12px 0 6px', fontSize: '0.85rem' }}>
-                Quanto è grande, come minimo, il testo delle righe del conto.
-                Il testo segue la larghezza del pannello, ma sotto questa
-                soglia non scende.
+                Dimensione minima del testo delle righe del conto; sopra questa
+                soglia il testo segue la larghezza del pannello.
               </p>
               <SceltaModo
                 colonne="1fr 1fr 1fr 1fr"
@@ -202,9 +200,9 @@ export default function SettingsTab({ role = null }) {
               />
 
               <p className="muted" style={{ margin: '12px 0 6px', fontSize: '0.85rem' }}>
-                Come mostrare le categorie nel POS. L’icona e il colore di ogni
-                categoria si impostano nel <strong>Menù → Categorie</strong>: se una
-                categoria non ha un’icona, al suo posto compare il pallino colore.
+                Come compaiono le categorie nella barra laterale del POS. Icona e colore si
+                impostano in <strong>Menù → Categorie</strong>; una categoria senza
+                icona mostra il pallino colore.
               </p>
               <SceltaModo
                 colonne="1fr 1fr 1fr"
@@ -219,20 +217,16 @@ export default function SettingsTab({ role = null }) {
 
               <h4>La ricerca nella griglia dei prodotti</h4>
               <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-                Cercando un prodotto nella griglia: si può <strong>filtrare</strong>,
-                lasciando le sole card che rispondono, oppure lasciare la griglia
-                com&apos;è e <strong>accendere</strong> la prima card trovata,
-                portandocisi sopra. Il secondo modo serve a chi la griglia la conosce
-                a memoria e non vuole vederla cambiare sotto le dita; mostra tutti i
-                prodotti mentre si cerca, perché quello giusto può stare in
-                un&apos;altra categoria. In tutti e due i modi, toccando una card la
-                ricerca si azzera da sé.
+                La ricerca <strong>filtra</strong> la griglia, lasciando le sole card
+                trovate, oppure la lascia intera e <strong>accende</strong> la prima
+                card trovata, cercando in tutte le categorie. Toccando una card la
+                ricerca si azzera.
               </p>
               <SceltaModo
                 valore={settings.pos_search || 'filtra'}
                 opzioni={[
                   ['filtra', conEmoji('cerca', 'Filtra la griglia')],
-                  ['evidenzia', conEmoji('evidenzia', 'Accendi il prodotto e portami lì')],
+                  ['evidenzia', conEmoji('evidenzia', 'Evidenzia il primo prodotto trovato')],
                 ]}
                 onScegli={(v) => save({ pos_search: v })}
               />
@@ -278,10 +272,8 @@ export default function SettingsTab({ role = null }) {
             <div className="card settings-section">
               <h3>Consegna ordine</h3>
               <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-                Come lavora il locale. NON è un vincolo: qualunque cosa si
-                scelga qui, il banco e la sala possono sempre mettere
-                servizio o ritiro sul singolo conto, da «Dati conto». Qui si
-                decide come NASCONO i conti.
+                Come si consegnano gli ordini nel locale. Sul singolo conto
+                servizio o ritiro si cambiano comunque da «Dati conto».
               </p>
               <SceltaModo
                 valore={mondoConsegna(settings)}
@@ -290,7 +282,7 @@ export default function SettingsTab({ role = null }) {
                   [
                     'entrambi',
                     conEmoji('in-coppia', 'Ritiro e servizio'),
-                    'Chi si siede si fa servire, chi ha fretta ritira al banco.',
+                    'Servizio al tavolo o ritiro al banco, conto per conto.',
                   ],
                 ]}
                 onScegli={(v) => save({ service_mode: v })}
@@ -302,9 +294,8 @@ export default function SettingsTab({ role = null }) {
                 <>
                   <h4>Come nascono i conti</h4>
                   <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-                    Il valore di partenza di un conto battuto al banco o in
-                    sala. Si cambia conto per conto in un tocco: il ritiro
-                    azzera coperto e costo di servizio.
+                    Il modo di consegna con cui nasce un conto battuto al banco
+                    o in sala. Il ritiro azzera coperto e costo di servizio.
                   </p>
                   <SceltaModo
                     valore={modoAllaNascita(settings)}
@@ -320,9 +311,8 @@ export default function SettingsTab({ role = null }) {
                     desc={
                       settings.menu_only ? (
                         <>
-                          Adesso non si può: i clienti vedono il menù ma non
-                          ordinano, e senza ordinazioni non c’è nessuno a cui
-                          chiederlo.{' '}
+                          Non disponibile con «Solo menù»: i clienti non
+                          ordinano.{' '}
                           <button
                             type="button"
                             className="link-inline"
@@ -332,7 +322,7 @@ export default function SettingsTab({ role = null }) {
                           </button>
                         </>
                       ) : (
-                        'Ordinando dal telefono il cliente sceglie se farsi servire al tavolo o ritirare al banco. Spenta: decide il locale, e lo staff può cambiarlo sul conto.'
+                        'Ordinando dal telefono, il cliente sceglie fra servizio al tavolo e ritiro al banco. Spenta, decide il locale.'
                       )
                     }
                     checked={clienteSceglie(settings)}
@@ -359,14 +349,14 @@ export default function SettingsTab({ role = null }) {
                   dell'incasso, perché compare dove si incassa. */}
               <ToggleRow
                 label="Calcolo del resto in contanti"
-                desc="Nella schermata di pagamento, con «Contante», si indica quanto ha dato il cliente e compare il resto da dare. L'importo incassato non cambia."
+                desc="Pagando in contanti, si indica quanto ha dato il cliente e compare il resto da dare."
                 checked={settings.resto_contanti === true}
                 onChange={(v) => save({ resto_contanti: v })}
               />
               {stampaOn && (
                 <ToggleRow
                   label="Un tasto per incassare senza stampare"
-                  desc="Nella schermata di pagamento compare anche «Riscuoti (senza stampa)»: incassa e chiude senza far uscire lo scontrino, per chi non lo vuole."
+                  desc="Aggiunge alla schermata di pagamento «Riscuoti (senza stampa)», che incassa e chiude il conto senza stampare lo scontrino."
                   checked={settings.riscuoti_senza_stampa === true}
                   onChange={(v) => save({ riscuoti_senza_stampa: v })}
                 />
@@ -384,7 +374,7 @@ export default function SettingsTab({ role = null }) {
               {servizioOn && (
                 <ToggleRow
                   label="Un tasto per incassare e servire insieme"
-                  desc="Nella schermata di pagamento compare anche «Riscuoti e servi»: chiude il conto in un colpo, per quando si consegna e si incassa nello stesso gesto."
+                  desc="Aggiunge alla schermata di pagamento «Riscuoti e servi», che incassa, segna il conto come servito e lo chiude."
                   checked={settings.riscuoti_e_servi === true}
                   onChange={(v) => save({ riscuoti_e_servi: v })}
                 />
@@ -427,7 +417,7 @@ export default function SettingsTab({ role = null }) {
                           desc={
                             settings.service_mode === 'tavolo'
                               ? 'Con servizio solo al tavolo non si applica: chi non paga online paga allo staff alla consegna.'
-                              : 'Chi sceglie di pagare al bancone deve ritirare al banco (niente servizio al tavolo).'
+                              : 'Chi non paga online ritira al banco, senza servizio al tavolo.'
                           }
                           checked={settings.banco_required_if_unpaid}
                           onChange={(v) => save({ banco_required_if_unpaid: v })}
@@ -437,7 +427,7 @@ export default function SettingsTab({ role = null }) {
                   )}
                   <ToggleRow
                     label="Lettore SumUp Solo"
-                    desc="Incasso col lettore di carte direttamente dalla coda ordini (Cloud API, lettore in Wi-Fi)."
+                    desc="Incasso con carta dal lettore SumUp Solo, collegato in Wi-Fi, direttamente dalla coda ordini."
                     checked={settings.payments_reader_enabled}
                     onChange={(v) => save({ payments_reader_enabled: v })}
                   />
@@ -461,15 +451,14 @@ export default function SettingsTab({ role = null }) {
             <div className="card settings-section">
               <h3>Gruppi di ordini</h3>
               <p className="muted small" style={{ margin: '0 0 8px' }}>
-                Servono quando <strong>più conti separati devono pagare insieme</strong>:
-                una tavolata in cui ognuno ha il suo conto, o un evento con più
-                tavoli che si saldano in blocco. Se da voi un tavolo = un conto
-                NON servono: la schermata di pagamento sa già dividere un conto
-                per articoli o incassare acconti.
+                Riuniscono <strong>più conti separati che si pagano insieme</strong>,
+                come una tavolata con un conto a testa o un evento su più tavoli.
+                Un conto solo si divide per articoli o si incassa in acconti dalla
+                schermata di pagamento, senza gruppi.
               </p>
               <ToggleRow
                 label="Abilita i gruppi"
-                desc="Se spenti, spariscono ovunque e nulla cambia nel resto del lavoro."
+                desc="Spenti, i gruppi non compaiono in nessuna schermata."
                 checked={settings.groups_enabled}
                 onChange={(v) => save({ groups_enabled: v })}
               />
@@ -478,34 +467,33 @@ export default function SettingsTab({ role = null }) {
                   <div className="muted small" style={{ margin: '8px 0' }}>
                     <strong>Come funzionano</strong>
                     <ol style={{ margin: '4px 0 0', paddingLeft: 18 }}>
-                      <li>Crei il gruppo dal pannello nella coda o dal menu laterale.</li>
+                      <li>Il gruppo si crea dal pannello nella coda o dal menu laterale.</li>
                       <li>
-                        Toccandolo vedi <strong>gli ordini di quel gruppo</strong>, il totale
+                        Toccandolo si vedono <strong>gli ordini del gruppo</strong>, il totale
                         e quanto resta da pagare.
                       </li>
                       <li>
-                        Da lì aggiungi un ordine col tasto <Icona nome="nuovo-ordine" gruppo="tasti" />: si apre il POS e l’ordine
-                        nasce già dentro il gruppo.
+                        Il tasto <Icona nome="nuovo-ordine" gruppo="tasti" /> apre il POS su un
+                        ordine che nasce già nel gruppo.
                       </li>
                       <li>
-                        Alla fine incassi tutto insieme, oppure dividi in quote uguali.
+                        Si incassa tutto insieme, oppure in quote uguali.
                       </li>
                     </ol>
                     Gli ordini di un gruppo restano <strong>visibili nella coda</strong> come
                     tutti gli altri, con l’etichetta <Icona nome="staff" gruppo="tasti" /> del gruppo.
-                    Un gruppo può contenere altri gruppi (es. “Compleanno” con
-                    “Tavolo A” e “Tavolo B”): chi contiene sottogruppi non ha ordini
-                    diretti, si ordina nei figli.
+                    Un gruppo può contenere altri gruppi; un gruppo con sottogruppi
+                    non ha ordini propri.
                   </div>
                   <ToggleRow
                     label="Mostra nel menu laterale"
-                    desc="Quadratini dei gruppi nel drawer: toccarne uno apre i suoi ordini."
+                    desc="Nel menu laterale, un riquadro per gruppo che ne apre gli ordini."
                     checked={settings.groups_in_drawer}
                     onChange={(v) => save({ groups_in_drawer: v })}
                   />
                   <ToggleRow
                     label="Pannello gruppi nella coda"
-                    desc="Pannello a scomparsa nella coda ordini con i gruppi e i loro conti."
+                    desc="Nella coda ordini, un pannello a scomparsa con i gruppi e i loro conti."
                     checked={settings.groups_in_queue}
                     onChange={(v) => save({ groups_in_queue: v })}
                   />
@@ -524,13 +512,12 @@ export default function SettingsTab({ role = null }) {
             <div className="card settings-section">
               <h3>Gestione preparazione</h3>
               <p className="muted small" style={{ margin: '0 0 8px' }}>
-                Serve se al bancone seguite la lavorazione dei drink: ricevuto →
-                in preparazione → pronto → servito. Se il locale lavora “a vista”
-                (si prepara e si consegna subito) è solo lavoro in più.
+                Con la gestione accesa, ogni comanda passa per da fare → in
+                preparazione → pronto → servito.
               </p>
               <ToggleRow
                 label="Segui la preparazione degli ordini"
-                desc="Spenta: si tiene traccia solo degli ordini (ricevuto e pagato). Spariscono avanzamenti di stato, tempi di servizio, stima ai clienti e avvisi di “pronto”."
+                desc="Spenta, un ordine è solo ricevuto o pagato: niente passi di preparazione, tempi di servizio, stima ai clienti e avvisi di «pronto»."
                 checked={settings.workflow_enabled !== false}
                 onChange={(v) => (v ? save({ workflow_enabled: true }) : setConfermaSpegni(true))}
               />
@@ -541,7 +528,7 @@ export default function SettingsTab({ role = null }) {
               {servizioOn && (
                 <ToggleRow
                   label="Le comande nascono già in preparazione"
-                  desc="Spenta: una comanda nuova sta in «Da fare» finché qualcuno non tocca «Lo preparo io» — che dice anche chi. Accesa: nasce già al banco, per chi versa nell'istante in cui batte e non vuole un tocco in più a ogni comanda."
+                  desc="Una comanda nuova nasce già «In preparazione» invece che in «Da fare»."
                   checked={settings.comande_in_preparazione === true}
                   onChange={(v) => save({ comande_in_preparazione: v })}
                 />
@@ -591,11 +578,10 @@ export default function SettingsTab({ role = null }) {
               </div>
               <p className="muted small" style={{ margin: '12px 0 8px' }}>
                 Il <strong>cambio di giornata</strong> è l’ora in cui una
-                giornata finisce e comincia la successiva: da quell’ora la
-                numerazione dei conti riparte da 1 e statistiche e chiusure
-                contano il giorno nuovo. Va dopo la chiusura, così i conti
-                battuti a fine serata restano nella stessa giornata. I conti
-                restano aperti finché non vengono chiusi.
+                giornata finisce e comincia la successiva: la numerazione dei
+                conti riparte da 1, statistiche e chiusure passano al giorno
+                nuovo. Va dopo l’orario di chiusura. I conti aperti restano
+                aperti.
               </p>
               <div className="toggle-row">
                 <span>Cambio di giornata (ora)</span>
@@ -624,14 +610,12 @@ export default function SettingsTab({ role = null }) {
             <div className="card settings-section">
               <h3>Prezzo consigliato</h3>
               <p className="muted small" style={{ margin: '0 0 8px' }}>
-                Creando un prodotto libero o modificando un drink, il sistema
-                calcola il <strong>prezzo reale</strong> sommando il costo al
-                dettaglio degli ingredienti (dal listino di magazzino) e propone un{' '}
-                <strong>prezzo consigliato</strong> moltiplicandolo per il ricarico.
-                È solo un suggerimento: il prezzo resta sempre modificabile.
-                Il ricarico si imposta come moltiplicatore o come drink cost,
-                l’incidenza del costo sul prezzo di vendita: ×3 corrisponde al
-                33,3%, ×5 al 20%.
+                Il <strong>prezzo reale</strong> di un drink è il costo al dettaglio
+                dei suoi ingredienti, dal listino di magazzino; il{' '}
+                <strong>prezzo consigliato</strong> è il prezzo reale per il
+                ricarico, e resta modificabile. Il ricarico si imposta come
+                moltiplicatore o come drink cost, l’incidenza del costo sul prezzo
+                di vendita: ×3 corrisponde al 33,3%, ×5 al 20%.
               </p>
               <div className="toggle-row">
                 <span>Ricarico sul costo (×)</span>
@@ -676,11 +660,9 @@ export default function SettingsTab({ role = null }) {
                 />
               </div>
               <p className="muted small" style={{ margin: '4px 0 0' }}>
-                IVA di rivendita (somministrazione: <strong>10%</strong>) usata per
-                scorporare il fatturato al netto. Vale per tutto il menù, ma ogni
-                voce può indicarne una diversa (campo <strong>IVA vendita</strong>
-                nella sua scheda): una bottiglia intera non si rivende come un
-                drink servito al banco.
+                Aliquota con cui si scorpora il fatturato al netto
+                (somministrazione: <strong>10%</strong>). Ogni voce del menù può
+                indicarne una diversa nel campo <strong>IVA vendita</strong>.
               </p>
               <div className="toggle-row">
                 <span>IVA di acquisto predefinita (%)</span>
@@ -693,9 +675,9 @@ export default function SettingsTab({ role = null }) {
                 />
               </div>
               <p className="muted small" style={{ margin: '4px 0 0' }}>
-                IVA delle fatture fornitore (ordinaria: <strong>22%</strong>): è il
-                valore predefinito dei nuovi prodotti in Magazzino. Ogni prodotto può
-                comunque indicarne una diversa (campo IVA).
+                Aliquota predefinita dei nuovi prodotti di magazzino (ordinaria:{' '}
+                <strong>22%</strong>). Ogni prodotto può indicarne una diversa nel
+                campo IVA.
               </p>
             </div>
       ),
@@ -709,7 +691,7 @@ export default function SettingsTab({ role = null }) {
               <h3>Tempi di servizio</h3>
               <ToggleRow
                 label="Mostra tempo stimato ai clienti"
-                desc="Parte dal tempo base e si raffina con i tempi reali del servizio. Per il ritiro al banco conta solo attesa + preparazione."
+                desc="La stima dell'attesa mostrata ai clienti, nel menù e nella pagina dell'ordine: parte dal tempo base e si corregge coi tempi reali del servizio. Per il ritiro al banco conta solo attesa e preparazione."
                 checked={settings.eta_enabled}
                 onChange={(v) => save({ eta_enabled: v })}
               />
@@ -736,29 +718,25 @@ export default function SettingsTab({ role = null }) {
             <div className="card settings-section">
               <h3>Sconto e righe del conto</h3>
               <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-                Uno sconto in euro è deciso su un certo conto. Se poi si tolgono o si aggiungono
-                righe, quell&apos;importo va riletto: 5&nbsp;€ di sconto su un conto sceso a 3&nbsp;€
-                vorrebbero dire incassare −2&nbsp;€. Scegli come deve comportarsi.
-                <br />
-                Lo sconto in <strong>percentuale</strong> segue sempre il conto, con qualsiasi scelta:
-                è la sua definizione.
+                Cosa succede a uno sconto in euro quando il totale del conto cambia.
+                Lo sconto in <strong>percentuale</strong> segue sempre il conto.
               </p>
               <div className="sconto-scelte">
                 {[
                   [
                     'tetto',
                     conEmoji('licenza', 'Tetto al totale'),
-                    'Lo sconto resta quello che hai scelto finché ci sta dentro. Se togliendo righe il conto scende sotto lo sconto, lo sconto si accorcia fino al totale e il conto diventa offerto: non va mai in negativo. Esempio: conto 20 €, sconto 5 € → togli 8 € di roba → conto 12 €, sconto ancora 5 €, da pagare 7 €. Togli altri 10 € → conto 2 €, lo sconto si accorcia a 2 € e non si paga nulla.',
+                    'Lo sconto resta invariato finché non supera il totale; oltre, scende fino al totale e il conto va a zero, mai in negativo.',
                   ],
                   [
                     'proporzione',
                     conEmoji('bilancio', 'Mantieni la proporzione'),
-                    'Lo sconto vale sempre la stessa quota del conto: togliendo righe cala insieme al conto, aggiungendone cresce. Esempio: conto 20 €, sconto 5 € (il 25%) → togli 8 € di roba → conto 12 €, sconto 3 €, da pagare 9 €. Da preferire se lo sconto è un "quanto gli faccio di sconto in percentuale" più che una cifra promessa.',
+                    'Lo sconto resta la stessa quota del conto e cresce o cala col totale.',
                   ],
                   [
                     'avviso',
                     conEmoji('avviso', 'Avvisa e basta'),
-                    'L’app non tocca lo sconto che hai messo. Se supera il totale del conto lo segnala in rosso e blocca l’incasso finché non lo correggi a mano. Da scegliere se lo sconto è una cifra concordata col cliente e nessuno, a parte te, deve poterla cambiare.',
+                    'Lo sconto non cambia; se supera il totale viene segnalato e l’incasso resta bloccato fino alla correzione a mano.',
                   ],
                 ].map(([value, titolo, testo]) => (
                   <button
@@ -784,7 +762,7 @@ export default function SettingsTab({ role = null }) {
               <h3>Coperto</h3>
               <ToggleRow
                 label="Coperto a persona"
-                desc="Il cliente indica quante persone sono al tavolo."
+                desc="Un importo per persona sui conti serviti al tavolo; il cliente indica quante persone sono al tavolo."
                 checked={settings.coperto_enabled}
                 onChange={(v) => save({ coperto_enabled: v })}
               />
@@ -814,7 +792,7 @@ export default function SettingsTab({ role = null }) {
               </p>
               <ToggleRow
                 label="Costo di servizio (%)"
-                desc="Percentuale calcolata automaticamente sul totale."
+                desc="Una percentuale di drink e coperto, aggiunta ai conti serviti al tavolo."
                 checked={settings.service_charge_enabled}
                 onChange={(v) =>
                   save({ service_charge_enabled: v, ...(v ? { tip_enabled: false } : {}) })
@@ -834,7 +812,7 @@ export default function SettingsTab({ role = null }) {
               )}
               <ToggleRow
                 label="Mancia libera"
-                desc="Il cliente sceglie liberamente un importo al momento dell'ordine."
+                desc="Ordinando, il cliente aggiunge una mancia dell'importo che sceglie."
                 checked={settings.tip_enabled}
                 onChange={(v) =>
                   save({ tip_enabled: v, ...(v ? { service_charge_enabled: false } : {}) })
@@ -868,7 +846,7 @@ export default function SettingsTab({ role = null }) {
           {moduloAttivo(settings, 'menu_tavoli') && (
             <ToggleRow
               label="Menù visibile ai clienti"
-              desc="Spento, i clienti non arrivano al menù: nessun tasto nella pagina iniziale, nessuna voce «Menù», la pagina del menù è chiusa e gli ordini dal telefono non vengono accettati. Il personale continua a usarlo."
+              desc="Spento, il menù non compare ai clienti e gli ordini dal telefono non sono accettati; lo staff continua a usarlo."
               checked={settings.menu_clienti_visibile !== false}
               onChange={(v) => save({ menu_clienti_visibile: v })}
             />
@@ -881,13 +859,13 @@ export default function SettingsTab({ role = null }) {
           />
           <ToggleRow
             label="Mostra quantità ingredienti"
-            desc="Es. «Gin 50 ml» invece di solo «Gin» nelle voci del menù."
+            desc="Nelle voci del menù, la quantità di ogni ingrediente: «Gin 50 ml» invece di «Gin»."
             checked={settings.show_ingredient_quantities}
             onChange={(v) => save({ show_ingredient_quantities: v })}
           />
           <ToggleRow
             label="Tabellone «stiamo servendo»"
-            desc="Mostra nel menù i numeri degli ordini pronti al servizio/ritiro. Nascosto in modalità solo menù."
+            desc="Nel menù, i numeri degli ordini pronti per il servizio o il ritiro. Non compare con «Solo menù»."
             checked={settings.show_serving_board}
             onChange={(v) => save({ show_serving_board: v })}
           />
@@ -1025,12 +1003,10 @@ export default function SettingsTab({ role = null }) {
             <div className="card settings-section">
               <h3>Coda ordini</h3>
               <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-                Come visualizzare gli ordini nel gestionale: <strong>griglia</strong> a
-                tutto schermo (card affiancate, ideale su tablet), <strong>corsie</strong>
-                di stato (una colonna per passo del lavoro, un tasto per card che manda
-                l&apos;ordine al passo dopo), schede separate per stato, oppure
-                un&apos;unica lista (in corso + evasi). Lo stato è sempre indicato dal
-                colore e dall&apos;etichetta sulla card.
+                Come si dispongono gli ordini: <strong>griglia</strong> a tutto
+                schermo, <strong>corsie</strong> con una colonna per stato e un tasto
+                che porta l&apos;ordine al passo successivo, schede separate per
+                stato, oppure una lista unica di ordini in corso ed evasi.
               </p>
               <SceltaModo
                 valore={settings.queue_view}
@@ -1067,7 +1043,7 @@ export default function SettingsTab({ role = null }) {
               <h4>Il colore del conto</h4>
               <ToggleRow
                 label="Ogni conto nuovo nasce col suo colore"
-                desc="Un pallino colorato accanto al numero, sulla card del conto e su tutte le card delle sue comande: due comande dello stesso conto si riconoscono anche da colonne diverse. Il colore si cambia o si toglie sempre dal «⋯ Azioni» della card, anche sui conti già aperti e anche con questo spento."
+                desc="Un pallino colorato accanto al numero, sulla card del conto e su quelle delle sue comande. Il colore si cambia o si toglie da «⋯ Azioni» sulla card, anche con questa opzione spenta."
                 checked={settings.conti_colorati === true}
                 onChange={(v) => save({ conti_colorati: v })}
               />
@@ -1082,25 +1058,23 @@ export default function SettingsTab({ role = null }) {
               <h4>Chi ha caricato la riga</h4>
               <ToggleRow
                 label="Iniziale di chi ha caricato ogni riga"
-                desc="Accanto a ogni riga del conto, l'iniziale di chi l'ha caricata, nel suo colore. Con l'iniziale accesa la quantità di una riga la cambia solo chi l'ha caricata: gli altri aggiungono dal prodotto, su una riga propria. Le righe senza iniziale (quelle dei clienti dal menù) restano modificabili da tutti."
+                desc="Accanto a ogni riga del conto, l'iniziale di chi l'ha caricata. Accesa, la quantità di una riga la cambia solo chi l'ha caricata; le righe dei clienti dal menù restano modificabili da tutti."
                 checked={settings.firma_righe !== false}
                 onChange={(v) => save({ firma_righe: v })}
               />
 
               <h4>La ricerca</h4>
               <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-                Cercando un numero, un nome, un tavolo o un drink: si può{' '}
-                <strong>filtrare</strong> la coda, lasciando in pagina solo i conti che
-                rispondono, oppure lasciarla com&apos;è e{' '}
-                <strong>accendere</strong> il primo conto trovato, portandolo sotto gli
-                occhi. Nel secondo modo la ricerca si azzera da sé appena si tocca un
-                conto.
+                La ricerca per numero, nome, tavolo o drink{' '}
+                <strong>filtra</strong> la coda, lasciando i soli conti trovati,
+                oppure la lascia intera e <strong>accende</strong> il primo conto
+                trovato; in questo caso toccando un conto la ricerca si azzera.
               </p>
               <SceltaModo
                 valore={settings.queue_search || 'filtra'}
                 opzioni={[
                   ['filtra', conEmoji('cerca', 'Filtra la coda')],
-                  ['evidenzia', conEmoji('evidenzia', 'Accendi il conto e portami lì')],
+                  ['evidenzia', conEmoji('evidenzia', 'Evidenzia il primo conto trovato')],
                 ]}
                 onScegli={(v) => save({ queue_search: v })}
               />
@@ -1117,7 +1091,7 @@ export default function SettingsTab({ role = null }) {
               <h3>Account clienti</h3>
               <ToggleRow
                 label="Login e registrazione clienti"
-                desc="Se disattivato, il link «Accedi» e la registrazione spariscono dal lato cliente; lo staff continua ad accedere da /bar."
+                desc="Spento, dalle pagine dei clienti spariscono «Accedi» e la registrazione; lo staff accede comunque da /bar."
                 checked={settings.customer_accounts_enabled}
                 onChange={(v) => save({ customer_accounts_enabled: v })}
               />
@@ -1133,7 +1107,7 @@ export default function SettingsTab({ role = null }) {
               <h3>Posizione locale</h3>
               <ToggleRow
                 label="Posizione obbligatoria per ordinare"
-                desc="Il cliente deve trovarsi nei pressi del locale: senza localizzazione attiva non può ordinare. Lo staff è esente."
+                desc="Si ordina solo nei pressi del locale, con la localizzazione attiva. Non vale per lo staff."
                 checked={settings.geofence_enabled}
                 onChange={(v) => save({ geofence_enabled: v })}
               />
@@ -1217,10 +1191,8 @@ export default function SettingsTab({ role = null }) {
         <div className="card settings-section">
           <h3><Icona nome="notifiche" gruppo="tasti" /> Notifiche</h3>
           <p className="muted" style={{ margin: '0 0 12px', fontSize: '0.9rem' }}>
-            Gli avvisi sono una scelta <strong>tua e di questo dispositivo</strong> —
-            il tablet della cassa e il telefono in sala vogliono cose diverse,
-            anche con lo stesso accesso — quindi stanno nel tuo profilo,
-            insieme allo storico di quelli arrivati qui.
+            Gli avvisi si impostano <strong>per persona e per dispositivo</strong>,
+            nel profilo, dove c’è anche lo storico di quelli ricevuti.
           </p>
           <Link className="btn small" to="/profilo-staff">
             <Icona nome="profilo" gruppo="tasti" /> Vai al mio profilo
@@ -1292,8 +1264,8 @@ export default function SettingsTab({ role = null }) {
             <div className="card settings-section">
               <h3>Annullamenti</h3>
               <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-                Frase proposta di default quando annulli un ordine (modificabile di
-                volta in volta nel dialog di annullamento).
+                La frase proposta quando si annulla un ordine; nella finestra di
+                annullamento si può cambiare ogni volta.
               </p>
               {/* LA FRASE SEGUE IL MONDO DELLA CONSEGNA. «Prego recarsi al
                   bancone» ha senso solo dove il RITIRO esiste: in un locale a
@@ -1310,7 +1282,7 @@ export default function SettingsTab({ role = null }) {
                   text,
                   fraseAnnulloPossibile(key, settings)
                     ? undefined
-                    : 'Qui non si ritira al banco: la frase manderebbe il cliente dove nessuno lo aspetta.',
+                    : 'Il locale è a solo servizio: non c’è un banco a cui mandare il cliente.',
                   !fraseAnnulloPossibile(key, settings),
                 ])}
                 onScegli={(v) => save({ cancel_phrase_default: v })}
@@ -1441,10 +1413,9 @@ export default function SettingsTab({ role = null }) {
         <ConfirmDialog
           title="Spegnere la gestione della preparazione?"
           message={
-            'I conti ancora aperti tornano tutti a “ricevuto”: senza la gestione ' +
-            'non ci sarebbero più i tasti per farli avanzare. Le scorte già ' +
-            'scalate restano scalate (il drink è stato fatto davvero) e non ' +
-            'verranno scalate di nuovo se riaccendi la gestione.'
+            'I conti ancora aperti tornano tutti a “ricevuto”. Le scorte già ' +
+            'scalate restano scalate e non si scalano di nuovo quando la ' +
+            'gestione si riaccende.'
           }
           confirmLabel="Spegni e riporta a ricevuto"
           cancelLabel="Annulla"
@@ -1618,8 +1589,8 @@ function ReaderPairing({ settings }) {
       ) : (
         <>
           <p className="muted small" style={{ margin: '0 0 8px' }}>
-            Sul lettore: Menu → Connessioni → API → genera il codice di
-            pairing e inseriscilo qui (vale 5 minuti).
+            Il codice di associazione si genera sul lettore, in Menu →
+            Connessioni → API, e vale 5 minuti.
           </p>
           {devToolsEnabled && (
             <button
@@ -1774,9 +1745,8 @@ function FunzioniPremium({ settings, onSave }) {
     <div className="card settings-section">
       <h3>Funzioni premium</h3>
       <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-        Funzioni che fanno parte della licenza dell’installazione. Quelle
-        incluse si accendono e si spengono da qui; le altre sono elencate per
-        sapere che esistono e cosa fanno.
+        Le funzioni della licenza. Quelle incluse si accendono e si spengono
+        da qui; le altre sono elencate con la loro descrizione.
       </p>
       {moduliPremium().map((m) => {
         const incluso = moduloIncluso(settings, m.id)
@@ -1812,7 +1782,7 @@ function FunzioniPremium({ settings, onSave }) {
       {moduloAttivo(settings, 'conta') && (
         <ToggleRow
           label="Chiuso un inventario, ne apre subito un altro"
-          desc="Acceso: alla chiusura, l’inventario successivo parte da sé dalle giacenze appena allineate, e il consumo si legge fra una chiusura e l’altra. Spento: dopo la chiusura non c’è nessun inventario in corso, e il prossimo lo apri tu quando vuoi."
+          desc="Alla chiusura di un inventario il successivo si apre dalle giacenze appena rettificate, e il consumo si legge fra due chiusure. Spento, il successivo si apre a mano."
           checked={settings.inventario_riapre_da_solo !== false}
           onChange={(v) => onSave({ inventario_riapre_da_solo: v })}
         />
@@ -1823,7 +1793,7 @@ function FunzioniPremium({ settings, onSave }) {
       {devToolsEnabled && (
         <ToggleRow
           label="Controllo del magazzino (prova)"
-          desc="Mostra in Magazzino una pagina di prova: si conta un prodotto alla volta e il conteggio corregge subito la giacenza; il rapporto mostra acquisti, venduto, differenza e giorni di scorta per periodo. Disponibile solo nell’ambiente di test."
+          desc="In Magazzino, una pagina di prova per il conteggio prodotto per prodotto, con rettifica immediata della giacenza e rapporto di acquisti, venduto, differenze e giorni di scorta. Solo nell’ambiente di test."
           checked={settings.controllo_magazzino_prova === true}
           onChange={(v) => onSave({ controllo_magazzino_prova: v })}
         />

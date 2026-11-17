@@ -30,11 +30,11 @@ const TITOLI = {
 
 const SPIEGAZIONI = {
   scontrino:
-    'La lista dei prodotti e il totale ci sono sempre: sono lo scontrino, e per questo non stanno qui. Tutto il resto lo scegli tu.',
+    'Prodotti e totale si stampano sempre; gli altri campi si scelgono qui.',
   comanda:
-    'La lista dei prodotti c’è sempre: è la comanda. Il resto è quello che aiuta il banco a leggerla in mezzo secondo — o carta sprecata, se non serve.',
+    'I prodotti si stampano sempre; gli altri campi si scelgono qui.',
   acconto:
-    'La scritta ACCONTO, quello che è stato pagato, l’importo versato e la riga che dice che il conto resta aperto ci sono sempre: sono quello che impedisce di scambiarlo per lo scontrino finale. Tutto il resto lo scegli tu.',
+    'La scritta ACCONTO, le righe pagate quando ci sono, l’importo versato e l’indicazione del conto ancora aperto si stampano sempre; gli altri campi si scelgono qui.',
 }
 
 export default function CampiStampa({ quale, settings, onSave }) {
@@ -124,7 +124,7 @@ export default function CampiStampa({ quale, settings, onSave }) {
         {stampando ? 'Stampo…' : <><Icona nome="stampa" gruppo="tasti" /> Prova di stampa</>}
       </button>
       <p className="muted" style={{ fontSize: '0.8rem', margin: '6px 0 0' }}>
-        Stampa un {quale === 'comanda' ? 'ticket' : 'conto'} finto con i campi che hai scelto.
+        Stampa un {quale === 'comanda' ? 'ticket' : 'conto'} di prova con i campi scelti.
       </p>
       {esito && (
         <div className={esito.ok ? 'muted' : 'banner'} style={{ marginTop: 8, fontSize: '0.9rem' }}>
@@ -192,7 +192,7 @@ export function LogoStampe({ settings, onSave, role = null }) {
     } catch {
       setProblema({
         grave: true,
-        testo: 'Questa immagine non si riesce ad aprire. Prova con un PNG o un JPG.',
+        testo: 'Questa immagine non si riesce ad aprire. Servono un PNG o un JPG.',
       })
     } finally {
       setLavorando(false)
@@ -203,9 +203,8 @@ export function LogoStampe({ settings, onSave, role = null }) {
     <div className="card settings-section">
       <h3>Logo sulle stampe</h3>
       <p className="muted" style={{ margin: '0 0 12px', fontSize: '0.9rem' }}>
-        Il logo si stampa in bianco e nero, largo poco meno di metà carta.
-        Scegli su quali stampe farlo uscire: di solito su quelle che restano
-        al cliente.
+        Il logo si stampa in bianco e nero, largo poco meno di metà carta,
+        sulle stampe scelte qui.
       </p>
 
       {TIPI_LOGO.map((tipo) => (

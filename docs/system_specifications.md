@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 310 | fatto e coperto dai test |
+| ✅ | 311 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 9 | fatto a metà |
-| ⬜ | 38 | da fare |
+| ⬜ | 37 | da fare |
 | 🗑 | 8 | non più valido |
 
-**380 voci** in tutto. **334** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **38** sono lavori
+**380 voci** in tutto. **335** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **37** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **17** difetti noti sono ancora aperti.
 
@@ -59,7 +59,7 @@ come «vero oggi», non come «garantito».
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | 6 | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
-| [Interfaccia](#interfaccia) | 31 | 5 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
+| [Interfaccia](#interfaccia) | 32 | 4 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 24 | 2 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 15 | 4 |  |
@@ -77,7 +77,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 12 |
 | Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 188 |
-| Unità | il progetto di dettaglio: un modulo da solo | 190 |
+| Unità | il progetto di dettaglio: un modulo da solo | 191 |
 
 **21** bisogni del locale, **0** con un test di accettazione.
 **132** requisiti su 372 sono collegati a un bisogno;
@@ -3776,6 +3776,12 @@ CORRETTO IL 17/11/2026, sulla 1.10.53-beta (Daniele): «deve apparire solo nel m
 
 **Dove**: `src/components/MarchioLime.jsx, src/components/StaffDrawer.jsx (testata del menu), src/App.jsx (topbar), src/lib/limiti.js (marchioDelProdottoInAlto), src/lib/sezioni.js (nelGestionale), src/index.css` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/component/MarchioLime.test.jsx`, `tests/component/AppHeader.test.jsx`
 
+#### REQ-UI-037 — Le descrizioni delle impostazioni dicono cosa fa l'opzione, in una frase
+
+Daniele, 17/11/2026, dopo «La vista del banco» (BUG-168): «nelle opzioni delle impostazioni, puoi semplicemente spiegare che cosa fa un'opzione invece di scrivere cose inutili», e poi «sì, ripassale tutte». Ogni descrizione dice cosa fa l'opzione e, se serve, cosa succede accesa e spenta, in una frase piana nel registro del gestionale (CLAUDE.md, DESIGN.md guardrail 3). Niente storie del perché, niente aneddoti, niente «adesso non c'è perché…»: il perché sta nei commenti del codice. Una scelta con una voce sola non è una scelta e non si mostra. ORA ripassate tutte, in SettingsTab e nei pannelli (stampa automatica, campi delle stampe e logo, stampante, backup, informazioni, aspetto): una frase su cosa fa l'opzione, impersonale. Una prova legge i sorgenti dei pannelli senza i commenti e boccia le forme del tu e del voi.
+
+**Dove**: `src/components/SettingsTab.jsx e i pannelli delle impostazioni (ThemeSettings, StampaAutomatica, CampiStampa, PrinterSetup, BackupPanel, InfoTab, src/lib/campiStampa.js)` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/unit/testiImpostazioni.test.js`
+
 ### Come si lavora al progetto
 
 Non è comportamento dell’app: è il metodo con cui la si costruisce.
@@ -4921,12 +4927,6 @@ FATTO (17/11/2026): le violazioni di axe corrette (BUG-167); la prova è un CANC
 DA FARE: la prova sul sito di test vero (dopo il prossimo tag); i comandi su `div` cliccabili; il fuoco nelle finestre di dialogo; gli avvisi letti; i temi uno per uno (anche `--muted` a 4,5, con la regia); la prova a mano a ogni versione maggiore (tastiera, NVDA, zoom 200%); infine la pagina «Accessibilità» collegata dal piè di pagina comune (src/App.jsx, accanto a Privacy), col testo approvato da Daniele.
 
 **Dove**: `tests/sistema/accessibilita.spec.js (axe-core), index.html (viewport), src/index.css (contrasto), componenti con comandi su div, src/App.jsx (piè di pagina)` · **Serve**: [UR-021](#ur-021--chi-ha-una-disabilità-usa-il-menù-la-home-del-locale-e-il-gestionale-come-tutti)
-
-#### REQ-UI-037 — Le descrizioni delle impostazioni dicono cosa fa l'opzione, in una frase
-
-Daniele, 17/11/2026, dopo «La vista del banco» (BUG-168): «nelle opzioni delle impostazioni, puoi semplicemente spiegare che cosa fa un'opzione invece di scrivere cose inutili», e poi «sì, ripassale tutte». Ogni descrizione dice cosa fa l'opzione e, se serve, cosa succede accesa e spenta, in una frase piana nel registro del gestionale (CLAUDE.md, DESIGN.md guardrail 3). Niente storie del perché, niente aneddoti, niente «adesso non c'è perché…»: il perché sta nei commenti del codice. Una scelta con una voce sola non è una scelta e non si mostra.
-
-**Dove**: `src/components/SettingsTab.jsx e i pannelli delle impostazioni (ThemeSettings, StampaAutomatica, CampiStampa, AvvisiPanel, IdentitaLocale, BackupPanel, LicenzaPanel)` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica)
 
 ### Come si lavora al progetto
 

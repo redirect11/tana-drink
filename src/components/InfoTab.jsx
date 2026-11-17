@@ -71,7 +71,7 @@ export default function InfoTab({ settings = null, role = null }) {
           ))}
         </div>
         <p className="muted small" style={{ margin: '8px 0 0' }}>
-          Servono quando qualcosa non va: copiali e allegali alla segnalazione.
+          Da allegare alle segnalazioni di malfunzionamento.
         </p>
         <button className="btn ghost small" style={{ marginTop: 8 }} onClick={copia}>
           Copia i dati tecnici
