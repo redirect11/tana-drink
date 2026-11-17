@@ -509,3 +509,22 @@ bisogni:
       - REQ-MAG-058
       - REQ-LIC-019
     test_cases: []
+
+  - id: UR-021
+    title: "Chi ha una disabilità usa il menù, la home del locale e il gestionale come tutti"
+    area: "Cliente, Banco, Sala, Gestore"
+    description: >
+      Daniele, 17/11/2026: la dichiarazione di accessibilità e quello che
+      la legge chiede per l'accessibilità di tutto. Il menù e la home sono
+      servizi ai consumatori (European Accessibility Act, D.Lgs. 82/2022):
+      il prodotto deve essere conforme di serie, così nessun locale deve
+      rifare niente.
+    accettazione: >
+      Da sola tastiera si ordina dal menù e si batte e si incassa un conto;
+      con un lettore di schermo ogni comando dice cosa fa; con lo zoom al
+      200% non si perde niente; la prova axe sulle pagine principali non
+      trova violazioni WCAG 2.1 A e AA; dal piè di pagina si arriva alla
+      pagina «Accessibilità».
+    requisiti:
+      - REQ-UI-036
+    test_cases: []

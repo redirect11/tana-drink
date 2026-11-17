@@ -25,11 +25,11 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 | ✅ | 308 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 9 | fatto a metà |
-| ⬜ | 38 | da fare |
+| ⬜ | 39 | da fare |
 | 🗑 | 8 | non più valido |
 
-**378 voci** in tutto. **332** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **38** sono lavori
+**379 voci** in tutto. **332** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **39** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **17** difetti noti sono ancora aperti.
 
@@ -59,7 +59,7 @@ come «vero oggi», non come «garantito».
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | 6 | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
-| [Interfaccia](#interfaccia) | 29 | 5 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
+| [Interfaccia](#interfaccia) | 29 | 6 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 24 | 2 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 15 | 4 |  |
@@ -75,12 +75,12 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Livello | Cosa verifica | File di test |
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
-| Sistema | la specifica (REQ-*), sull'app intera | 11 |
+| Sistema | la specifica (REQ-*), sull'app intera | 12 |
 | Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 187 |
 | Unità | il progetto di dettaglio: un modulo da solo | 188 |
 
-**20** bisogni del locale, **0** con un test di accettazione.
-**130** requisiti su 370 sono collegati a un bisogno;
+**21** bisogni del locale, **0** con un test di accettazione.
+**131** requisiti su 371 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -249,6 +249,14 @@ Daniele, 16/11/2026: l'app va integrata per i ristoranti. In sala si lavora per 
 **Come si accetta**: Con il modulo «ristorante», accanto agli ordini c'è la Sala: la pianta coi tavoli al loro posto (disposti dal gestore nell'editor della sala), ogni tavolo libero o occupato, e toccandolo i suoi conti e i suoi ordini. Nella scheda di un prodotto si scrivono scadenza, apertura e decadimento, e il gestionale dice quando il prodotto va consumato.
 
 **Chi**: Sala, Gestore · **Lo realizzano**: [REQ-TAVOLI-003](#req-tavoli-003--la-sala-in-pianta-una-schermata-coi-tavoli-al-loro-posto-i-loro-conti-e-i-loro-ordini-e-un-editor-per-disporli), [REQ-MAG-057](#req-mag-057--nella-scheda-del-prodotto-scadenza-apertura-e-decadimento), [REQ-MAG-058](#req-mag-058--il-modulo-product-tracking-il-prodotto-entra-in-magazzino-dal-telefono-scansionando-etichetta-o-codice-a-barre), [REQ-LIC-019](#req-lic-019--il-modulo-ristorante-le-personalizzazioni-per-i-ristoranti-vendute-insieme-quando-nella-regia-si-sceglie-ristorante) · ⚠️ **Nessun test di accettazione, ancora.**
+
+#### UR-021 — Chi ha una disabilità usa il menù, la home del locale e il gestionale come tutti
+
+Daniele, 17/11/2026: la dichiarazione di accessibilità e quello che la legge chiede per l'accessibilità di tutto. Il menù e la home sono servizi ai consumatori (European Accessibility Act, D.Lgs. 82/2022): il prodotto deve essere conforme di serie, così nessun locale deve rifare niente.
+
+**Come si accetta**: Da sola tastiera si ordina dal menù e si batte e si incassa un conto; con un lettore di schermo ogni comando dice cosa fa; con lo zoom al 200% non si perde niente; la prova axe sulle pagine principali non trova violazioni WCAG 2.1 A e AA; dal piè di pagina si arriva alla pagina «Accessibilità».
+
+**Chi**: Cliente, Banco, Sala, Gestore · **Lo realizzano**: [REQ-UI-036](#req-ui-036--lapp-è-accessibile-wcag-21-aa-su-menù-home-e-gestionale-provata-con-axe-nel-collaudo-con-la-pagina-accessibilità) · ⚠️ **Nessun test di accettazione, ancora.**
 
 ## Cosa fa il sistema
 
@@ -4887,6 +4895,16 @@ Daniele, 17/11/2026: «Gli avvisi che escono nel menu dovrebbero essere più vis
 Daniele, 17/11/2026: nel gestionale il titolo in alto diventa il logo LIME - SmartOrders, «lo trovi nella regia». Il logo è quello della regia (drink-regia, src/components/Logo.jsx e public/favicon.svg: una fetta di lime che sembra un grafico a torta, decisione del 09/11/2026), copiato com'è: è un'altra copia tenuta allineata a mano con la regia (REQ-DEV-025). Solo nel gestionale: le pagine dei clienti restano col logo e il nome del locale.
 
 **Dove**: `src/App.jsx (topbar), un componente del marchio nuovo, src/index.css` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica)
+
+#### REQ-UI-036 — L'app è accessibile: WCAG 2.1 AA su menù, home e gestionale, provata con axe nel collaudo, con la pagina «Accessibilità»
+
+Daniele, 17/11/2026, portata dalla regia: «sia per il menu che per la home … dobbiamo aggiungere la dichiarazione di accessibilità e mettere in atto quello che richiede la legge per l'accessibilità di tutto». Regola di Stonebit per ogni prodotto. Lo standard è WCAG 2.1 AA (EN 301 549) sul menù del cliente e gli ordini dal tavolo, sulla home del locale e la pagina di cortesia, sul gestionale.
+
+LA PRIMA MISURA (17/11/2026, prima di correggere): axe-core su 17 pagine dell'app compilata. Tre regole violate: lo zoom bloccato (`meta-viewport`, tutte le pagine, index.html), il contrasto (tastierino del pagamento, categoria «Tutti» del conto, fatture, accessi), un menu a tendina senza nome nelle impostazioni. Oltre axe, circa 70 comandi fatti con `div` cliccabili, le finestre di dialogo, i temi uno per uno. Stima mandata alla regia: 10-14 giorni.
+
+DA FARE: le correzioni; la prova da misura a cancello (una violazione nuova fa fallire), su più temi; la prova a mano a ogni versione maggiore (tastiera, NVDA, zoom 200%); la pagina «Accessibilità» collegata dal piè di pagina comune (src/App.jsx, accanto a Privacy), col testo approvato da Daniele.
+
+**Dove**: `tests/sistema/accessibilita.spec.js (axe-core), index.html (viewport), src/index.css (contrasto), componenti con comandi su div, src/App.jsx (piè di pagina)` · **Serve**: [UR-021](#ur-021--chi-ha-una-disabilità-usa-il-menù-la-home-del-locale-e-il-gestionale-come-tutti)
 
 ### Come si lavora al progetto
 

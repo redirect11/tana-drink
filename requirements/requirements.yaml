@@ -17711,3 +17711,32 @@ requirements:
     labels: [magazzino, modulo, ristorante]
     priority: P2
     test_cases: []
+
+  - id: REQ-UI-036
+    title: "L'app è accessibile: WCAG 2.1 AA su menù, home e gestionale, provata con axe nel collaudo, con la pagina «Accessibilità»"
+    area: "tests/sistema/accessibilita.spec.js (axe-core), index.html (viewport), src/index.css (contrasto), componenti con comandi su div, src/App.jsx (piè di pagina)"
+    description: >
+      Daniele, 17/11/2026, portata dalla regia: «sia per il menu che per la
+      home … dobbiamo aggiungere la dichiarazione di accessibilità e mettere
+      in atto quello che richiede la legge per l'accessibilità di tutto».
+      Regola di Stonebit per ogni prodotto. Lo standard è WCAG 2.1 AA (EN
+      301 549) sul menù del cliente e gli ordini dal tavolo, sulla home del
+      locale e la pagina di cortesia, sul gestionale.
+      LA PRIMA MISURA (17/11/2026, prima di correggere): axe-core su 17
+      pagine dell'app compilata. Tre regole violate: lo zoom bloccato
+      (`meta-viewport`, tutte le pagine, index.html), il contrasto
+      (tastierino del pagamento, categoria «Tutti» del conto, fatture,
+      accessi), un menu a tendina senza nome nelle impostazioni. Oltre axe,
+      circa 70 comandi fatti con `div` cliccabili, le finestre di dialogo,
+      i temi uno per uno. Stima mandata alla regia: 10-14 giorni.
+      DA FARE: le correzioni; la prova da misura a cancello (una violazione
+      nuova fa fallire), su più temi; la prova a mano a ogni versione
+      maggiore (tastiera, NVDA, zoom 200%); la pagina «Accessibilità»
+      collegata dal piè di pagina comune (src/App.jsx, accanto a Privacy),
+      col testo approvato da Daniele.
+    status: todo
+    generate_issue: true
+    labels: [accessibilita, ui, cliente, gestionale]
+    priority: P2
+    test_cases:
+      - tests/sistema/accessibilita.spec.js
