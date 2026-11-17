@@ -293,7 +293,8 @@ export default function OrderSummary({ cart, settings, serviceStats = {}, tableL
 
         {etaMinutes != null && (
           <p className="muted" style={{ margin: '10px 0 0', fontSize: '0.85rem', textAlign: 'center' }}>
-            ⏱ {atTable ? 'Tempo di servizio stimato' : 'Pronto per il ritiro in'} ~{etaMinutes} min
+            {/* Un testo solo: la stima cambia con la coda (REQ-CLI-010). */}
+            {`⏱ ${atTable ? 'Tempo di servizio stimato' : 'Pronto per il ritiro in'} ~${etaMinutes} min`}
           </p>
         )}
 

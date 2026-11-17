@@ -107,6 +107,7 @@ import { TemaIcone } from './lib/temaIcone.js'
 import { AiutiCampi, aiutiCampiAccesi } from './lib/aiutiCampi.js'
 import { temiIconeDi, TUTTE_EMOJI, conEmoji } from './lib/icone.js'
 import { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react'
+import { useLingua, LINGUA_DI_PARTENZA } from './lib/lingua.js'
 
 /* global __APP_VERSION__, __BUILD_ID__ */
 const VERSIONE = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : ''
@@ -120,6 +121,17 @@ export default function App() {
   // Il gestionale intero (coda, conto, profilo di chi lavora): lì il logo in
   // alto riporta alla coda.
   const gestionale = nelGestionale(location.pathname)
+  // LA LINGUA DELLA PAGINA (REQ-UI-038, REQ-CLI-010). L'attributo lang dice
+  // al browser in che lingua è il testo: lo leggono i lettori di schermo per
+  // la pronuncia, e il traduttore del browser per decidere se proporsi. Nel
+  // gestionale segue la lingua scelta; le pagine dei clienti restano «it»,
+  // la lingua in cui sono scritte: con «en» il browser le crederebbe già
+  // inglesi e non proporrebbe di tradurle — anche su un tablet dello staff
+  // in inglese girato verso il cliente.
+  const lingua = useLingua()
+  useEffect(() => {
+    document.documentElement.lang = gestionale ? lingua : LINGUA_DI_PARTENZA
+  }, [gestionale, lingua])
   const { user, profile } = useCustomer()
   const hasOrders = useHasOrders()
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
@@ -562,7 +574,12 @@ export default function App() {
     // il menu laterale, le pagine. Chi non è dello staff (il cliente, anche
     // sulla barra di «I miei ordini») resta con le emoji di sempre: le sue
     // pagine hanno lo stile del loro menù (decisione dell'utente, 07/11/2026).
-    <TemaIcone.Provider value={temaIcone}>
+    // LA CHIAVE È LA LINGUA (REQ-UI-038): cambiandola si ridisegna tutto da
+    // capo. `tr` non è reattivo da solo, e un componente che si fosse
+    // dimenticato di ascoltare la lingua — o un testo tenuto in un useMemo —
+    // resterebbe nella lingua di prima. Cambiare lingua è raro; la bozza del
+    // POS è già salvata in modo sincrono e sopravvive al ridisegno.
+    <TemaIcone.Provider key={lingua} value={temaIcone}>
     {/* Gli aiuti sotto i campi delle schede: di partenza nascosti (REQ-UI-032). */}
     <AiutiCampi.Provider value={aiutiCampiAccesi(settings)}>
     <div className="app">

@@ -735,9 +735,11 @@ export default function MenuPage({ speciali = false }) {
       )}
 
       {etaMinutes != null && !menuOnly && (
+        // Un testo solo, tutto intero: la stima cambia con la coda, e a
+        // pezzi accostati col traduttore del browser restava ferma
+        // (REQ-CLI-010, lib/traduttoreBrowser.js).
         <p className="eta-line">
-          ⏱ {settings.service_mode === 'tavolo' ? 'Tempo di servizio' : 'Tempo di preparazione'}:
-          {' '}~{etaMinutes} min
+          {`⏱ ${settings.service_mode === 'tavolo' ? 'Tempo di servizio' : 'Tempo di preparazione'}: ~${etaMinutes} min`}
         </p>
       )}
 
@@ -786,9 +788,9 @@ export default function MenuPage({ speciali = false }) {
       )}
       {geoActive && geoGate === 'out_of_range' && (
         <div className="avviso-menu" role="status">
+          {/* Un testo solo: la distanza cambia a ogni «Riprova» (REQ-CLI-010). */}
           <span>
-            📍 Devi essere al locale per ordinare
-            {geoInfo ? ` (sei a ~${geoInfo.distance} m, massimo ${geoInfo.radius} m)` : ''}.
+            {`📍 Devi essere al locale per ordinare${geoInfo ? ` (sei a ~${geoInfo.distance} m, massimo ${geoInfo.radius} m)` : ''}.`}
           </span>
           <button className="btn small" onClick={runGeoCheck}>
             Riprova
@@ -1081,7 +1083,10 @@ export default function MenuPage({ speciali = false }) {
 function ServingBox({ icon, label, orders }) {
   return (
     <div className="card serving-box">
-      <div className="muted">{icon} {label}</div>
+      {/* Un testo solo: l'etichetta passa dal singolare al plurale a pagina
+          aperta, e a pezzi accostati col traduttore del browser restava
+          ferma (REQ-CLI-010). */}
+      <div className="muted">{`${icon} ${label}`}</div>
       <div className="serving-nums">
         {orders.map((o) => (
           <span key={o.daily_number} className="serving-num">#{o.daily_number}</span>

@@ -3,6 +3,7 @@
 // vecchio si copiano su quello nuovo prima che un altro modulo le legga
 // (lib/migrazioneAvvio.js spiega perché non basta chiamarla qui sotto).
 import './lib/migrazioneAvvio.js'
+import { proteggiDalTraduttore } from './lib/traduttoreBrowser.js'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
@@ -114,6 +115,10 @@ function parti() {
   // regia l'ha cambiata, vale da subito solo nei primi secondi (si ricarica
   // una volta), altrimenti dall'apertura dopo. La demo non la legge.
   if (!__DEMO__) aggiornaConfigurazione().catch((e) => console.error('[configurazione]', e))
+
+  // Prima del primo disegno: il traduttore del browser non deve poter far
+  // cadere la pagina (REQ-CLI-010, lib/traduttoreBrowser.js).
+  proteggiDalTraduttore()
 
   ReactDOM.createRoot(document.getElementById('root')).render(
     <React.StrictMode>
