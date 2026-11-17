@@ -1014,7 +1014,7 @@ function FullscreenButton() {
   if (!disponibile) return null
   return (
     <button
-      className="btn ghost small"
+      className="btn ghost small topbar-schermo"
       onClick={alterna}
       title={attivo ? 'Esci da schermo intero' : 'Schermo intero'}
       aria-label={attivo ? 'Esci da schermo intero' : 'Schermo intero'}

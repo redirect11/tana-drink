@@ -2,6 +2,11 @@
 
 ## 1.10.56-beta — in lavorazione
 
+### Aspetto
+
+- In alto nel gestionale l'icona dell'assistente AI, e quella dello schermo
+  intero, hanno la stessa misura della campanella accanto (BUG-170).
+
 ### Lingue
 
 - **Le pagine dei clienti funzionano tradotte dal browser.** Col menù

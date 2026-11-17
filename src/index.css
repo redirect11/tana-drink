@@ -11937,6 +11937,17 @@ body.pagina-piena .inv-scheda {
 .topbar-chat {
   position: relative;
 }
+/* LE ICONE DELLA ZONA DESTRA, UNA MISURA SOLA (BUG-170). Assistente AI,
+   campanella e schermo intero stanno in fila (docs/navigazione.md), ma i
+   due tasti erano «piccoli» (testo a 0,9rem) e la campanella a 1,15rem:
+   l'icona, grande 1,1 volte il testo, usciva più piccola di un quinto
+   proprio accanto alla campanella. Il tasto resta piccolo; si allinea il
+   disegno. Due classi come .btn.small, e più in basso nel foglio: vince
+   questa. */
+.btn.topbar-chat,
+.btn.topbar-schermo {
+  font-size: 1.15rem;
+}
 .topbar-chat.senza-credito,
 .tasto-ai.senza-credito {
   opacity: 0.55;

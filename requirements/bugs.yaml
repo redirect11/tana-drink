@@ -6757,3 +6757,25 @@ bugs:
       - tests/sistema/contoSvuotato.spec.js
       - tests/unit/ordiniNascosti.test.js
       - tests/unit/codaCache.test.js
+
+  - id: BUG-170
+    title: "In alto nel gestionale, l'icona dell'assistente AI è più piccola della campanella accanto"
+    area: "src/index.css (.btn.topbar-chat, .btn.topbar-schermo), src/components/TastoAssistente.jsx, src/App.jsx (FullscreenButton)"
+    description: >
+      Daniele, 17/11/2026: «quando siamo in coda ordini, la chat AI appare
+      un po' più piccola vicino all'icona delle notifiche». I tasti
+      dell'assistente e dello schermo intero sono tasti «piccoli» (.btn.small,
+      testo a 0,9rem), la campanella ha il testo a 1,15rem, e l'icona è
+      grande 1,1 volte il testo del suo tasto: quella dell'assistente usciva
+      più piccola di un quinto, in fila con la campanella (la zona destra
+      della barra, docs/navigazione.md).
+      ORA i due tasti di sole icone hanno il testo della campanella; il tasto
+      resta piccolo, si allinea il disegno.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, ui, barra]
+    severity: lieve
+    priority: P3
+    requisiti: [REQ-AI-006]
+    test_cases: [tests/unit/css.test.js]
