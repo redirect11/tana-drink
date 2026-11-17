@@ -105,8 +105,17 @@ computer e conosce solo quello che arriva nei rapporti.
 
 ## La lingua
 
-**Tutto in italiano**: interfaccia, commenti, messaggi di commit, titoli
-delle PR, risposte nelle issue. Chi legge questo codice parla italiano.
+**Tutto in italiano**: commenti, messaggi di commit, titoli delle PR,
+risposte nelle issue. Chi legge questo codice parla italiano.
+
+**L'interfaccia invece è in italiano E in inglese** (Daniele, 17/11/2026:
+«da oggi tutte le funzioni dovranno avere testi in italiano ed inglese»).
+Ogni testo a schermo di una funzione nuova o toccata si scrive in
+italiano, che resta la lingua di partenza, e porta la sua traduzione
+inglese nello stesso commit; una prova boccia i testi senza traduzione.
+Il meccanismo e il piano (prima le pagine dei clienti, poi il gestionale)
+stanno in UR-022 e nei suoi requisiti. L'inglese segue le stesse regole di
+tono dell'italiano.
 
 ## Come si lavora: GitFlow
 

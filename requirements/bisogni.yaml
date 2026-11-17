@@ -529,3 +529,27 @@ bisogni:
     requisiti:
       - REQ-UI-036
     test_cases: []
+
+  - id: UR-022
+    title: "Chi non parla italiano usa il menù e il gestionale nella sua lingua"
+    area: "Cliente, Banco, Sala, Gestore"
+    description: >
+      Daniele, 17/11/2026: «l'app andrebbe tradotta in inglese», e poi «da
+      oggi tutte le funzioni dovranno avere testi in italiano ed inglese».
+      I clienti stranieri leggono il menù nella loro lingua; il personale
+      che non parla italiano lavora col gestionale in inglese; i locali
+      fuori dall'Italia possono usare il prodotto.
+    accettazione: >
+      Ogni testo a schermo dell'app ha la sua traduzione inglese, e una
+      prova boccia quelli che non ce l'hanno. Un cliente col telefono in
+      inglese ordina dal menù tradotto dal browser senza che la pagina si
+      blocchi o mostri importi vecchi, e legge titoli e descrizioni nelle
+      lingue che il gestore ha scelto e compilato. Chi lavora sceglie
+      l'inglese e batte, incassa e chiude la serata senza incontrare
+      testi italiani.
+    requisiti:
+      - REQ-UI-038
+      - REQ-CLI-010
+      - REQ-MENU-046
+      - REQ-UI-039
+    test_cases: []

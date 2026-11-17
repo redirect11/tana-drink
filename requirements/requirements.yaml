@@ -17831,3 +17831,80 @@ requirements:
     priority: P2
     test_cases:
       - tests/unit/testiImpostazioni.test.js
+
+  - id: REQ-UI-038
+    title: "I testi a schermo hanno l'italiano e l'inglese, e una prova boccia quelli senza traduzione"
+    area: "src/lib (testi in due lingue), tutti i componenti con testi a schermo"
+    description: >
+      Daniele, 17/11/2026: «da oggi tutte le funzioni dovranno avere testi
+      in italiano ed inglese». Il meccanismo su cui poggia tutto il resto
+      (UR-022): un testo si scrive in italiano, che resta la lingua di
+      partenza, e accanto ha la sua traduzione inglese; la lingua attiva
+      decide quale si mostra. Una prova legge i testi passati dal
+      meccanismo e fallisce se ne manca la traduzione inglese. Da oggi ogni
+      funzione nuova o toccata porta i suoi testi in tutte e due le lingue,
+      nello stesso commit. L'attributo lang della pagina segue la lingua
+      attiva. Codice, commenti, commit e PR restano in italiano.
+    status: todo
+    generate_issue: true
+    labels: [ui, lingue]
+    priority: P1
+    test_cases: []
+
+  - id: REQ-CLI-010
+    title: "Le pagine dei clienti funzionano tradotte dal browser"
+    area: "src/pages/MenuPage.jsx, OrderStatusPage.jsx, MyOrdersPage.jsx, AccountPages.jsx, LandingPage.jsx e i loro componenti"
+    description: >
+      Daniele, 17/11/2026: «le pagine dei clienti potrebbero essere
+      tradotte dal browser direttamente». Chrome propone da sé la
+      traduzione a chi ha il telefono in un'altra lingua (la pagina è
+      lang="it" e non la vieta), Safari dal menu «aA». Il traduttore però
+      sostituisce i nodi di testo della pagina, e React, aggiornandoli,
+      può trovarli spariti: la pagina si blocca, oppure un importo o un
+      contatore restano fermi al valore di prima. Il menù, il carrello e lo
+      stato dell'ordine reggono la traduzione: niente blocchi, importi e
+      quantità sempre aggiornati. Il bottone «Traduci con Google» non si
+      mette: il widget non è più disponibile per i siti nuovi, carica uno
+      script di terzi nella pagina dei clienti (consenso GDPR) e riscrive
+      la pagina allo stesso modo.
+    status: todo
+    generate_issue: true
+    labels: [clienti, menu, lingue]
+    priority: P1
+    test_cases: []
+
+  - id: REQ-MENU-046
+    title: "Le lingue del menù le sceglie il gestore, e titoli e descrizioni si scrivono in ognuna"
+    area: "Impostazioni (Menù clienti), schede di voci, categorie e Special, src/pages/MenuPage.jsx"
+    description: >
+      Daniele, 17/11/2026: «più lingue per titoli e descrizioni non è male
+      ma deve essere il gestore a poter decidere e definire quali lingue in
+      front page». Nelle impostazioni il gestore sceglie le lingue del
+      menù oltre all'italiano; nelle schede di voci, categorie e Special
+      compare un campo per ogni lingua scelta, per il titolo e per la
+      descrizione. Il cliente vede la lingua del suo telefono se il testo
+      c'è, altrimenti l'italiano. Un testo scritto dal gestore in un'altra
+      lingua è segnato con la sua lingua, così il traduttore del browser
+      non lo ritraduce.
+    status: todo
+    generate_issue: true
+    labels: [menu, clienti, lingue]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-UI-039
+    title: "Il gestionale in inglese"
+    area: "src/pages/BartenderPage.jsx, src/components (gestionale), Il mio profilo"
+    description: >
+      Daniele, 17/11/2026: dopo le pagine dei clienti, il gestionale va
+      tradotto. Tutti i testi del banco, della cassa, delle impostazioni,
+      del magazzino e delle altre sezioni passano dal meccanismo dei testi
+      in due lingue (REQ-UI-038), una sezione alla volta: prima banco e
+      cassa, poi il resto. Proposta da confermare con Daniele: la lingua la
+      sceglie ognuno nel suo profilo, con una lingua di partenza decisa dal
+      locale.
+    status: todo
+    generate_issue: true
+    labels: [ui, lingue]
+    priority: P2
+    test_cases: []
