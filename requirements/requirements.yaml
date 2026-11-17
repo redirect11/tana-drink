@@ -17677,11 +17677,9 @@ requirements:
       FATTO SULLA TANA (17/11/2026, comando lanciato su richiesta di
       Daniele): il ruolo c'è su tana-drink-test e su tana-drink, riletto
       dalla policy. Per la flotta lo fa la regia.
-      LE PROVE IN CI: Daniele ha detto sì ad accendere lo Storage nel job
-      delle regole (17/11/2026); la riga del workflow, `--only
-      firestore,storage` in .github/workflows/test.yml, la cambia lui (a me
-      è negato). Finché manca, in CI le prove di storage.rules si saltano
-      dicendolo; in locale girano.
+      LE PROVE IN CI (17/11/2026, su richiesta di Daniele): il job delle
+      regole accende anche lo Storage (`--only firestore,storage` in
+      .github/workflows/test.yml), e le prove di storage.rules girano.
       FATTO (1.10.53-beta): storage.rules legge la licenza
       (licenzaValida, alFree, modulo, fotoConsentite);
       tests/regole/storage.test.js la prova con gli emulatori di Storage e

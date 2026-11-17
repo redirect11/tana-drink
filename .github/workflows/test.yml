@@ -132,10 +132,14 @@ jobs:
       # La stessa versione di firebase-tools che si usa in locale, fissata:
       # un emulatore nuovo che cambia comportamento non deve far diventare
       # rossa una PR che non c'entra.
+      # Anche lo STORAGE (REQ-SIC-006, Daniele 17/11/2026): le sue regole
+      # leggono la licenza da Firestore, e senza il suo emulatore le prove di
+      # storage.rules si saltavano: la protezione delle foto del menù
+      # (BUG-160) non la controllava nessuno.
       - name: Prove delle regole
         run: >
           npx --yes firebase-tools@15.26.0 emulators:exec
-          --project demo-tana-drink --only firestore --config firebase.collaudo.json
+          --project demo-tana-drink --only firestore,storage --config firebase.collaudo.json
           "npm run test:regole"
 
   # I TEST DI SISTEMA (REQ-DEV-018, fase 2 del modello a V): l'app

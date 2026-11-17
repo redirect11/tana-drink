@@ -33,11 +33,10 @@ const FOTO = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4])
 const JPEG = { contentType: 'image/jpeg' }
 
 // L'EMULATORE STORAGE C'È? In locale si accende con gli altri (vedi
-// tests/regole/ambiente.js). Il job delle regole della CI accende ancora
-// solo Firestore: Daniele ha detto sì ad accendere anche lo Storage
-// (17/11/2026), la modifica al workflow la fa lui (REQ-SIC-006). Finché
-// manca, lì le prove si saltano dicendolo, invece di far cadere tutto il
-// giro.
+// tests/regole/ambiente.js), e dal 17/11/2026 anche nel job delle regole
+// della CI (`--only firestore,storage`, REQ-SIC-006). Chi le lancia senza
+// lo Storage vede le prove saltate, dette a voce alta, invece di far cadere
+// tutto il giro.
 const STORAGE_ACCESO = await fetch(`http://${HOST}:${PORT}/`, { signal: AbortSignal.timeout(2000) }).then(
   () => true,
   () => false
