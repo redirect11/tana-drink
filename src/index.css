@@ -2949,7 +2949,9 @@ body.fullbleed .bar-content {
   .topbar-pagina:not(.topbar-pagina-tasto) {
     display: none;
   }
-  .brand-nome {
+  /* Solo in barra: lo stesso nome nel menu laterale (il marchio LIME,
+     REQ-UI-035) sul telefono deve restare. */
+  .topbar .brand-nome {
     display: none;
   }
   .topbar-back {
@@ -8712,10 +8714,12 @@ body.pagina-piena .pagina-inventario .inv-scroll {
     border-right: 1px solid var(--line);
     background: var(--bg-2);
   }
-  /* Il marchio ce l'ha già la barra qui sopra: ripeterlo dentro il menu
-     costava 60px di altezza per dire una cosa che si vede. */
+  /* Il marchio LIME sta nel menu laterale anche agganciato (REQ-UI-035):
+     la barra qui sopra, per un locale che paga, mostra il locale. Prima qui
+     si nascondeva perché ripeteva il logo della barra; ora dice un'altra
+     cosa, e si tiene, più compatto. */
   body.drawer-agganciato .bar-sidebar.agganciata .brand-mini {
-    display: none;
+    padding-bottom: 10px;
   }
   /* MENO INGOMBRO. Le voci sono parole corte: righe alte 52px e un
      rientro da 18 lasciavano mezza colonna vuota a destra. */

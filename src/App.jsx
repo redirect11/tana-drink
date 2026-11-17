@@ -410,6 +410,7 @@ export default function App() {
   // disegno.
   const venue = useMemo(() => venueDi(settings), [settings])
   const marchioInAlto = marchioDelProdottoInAlto(settings)
+  const chiInAlto = marchioInAlto ? `${NOME_CORTO_PRODOTTO} ${QUALIFICA_PRODOTTO}` : venue.venue_name
   const social = useMemo(() => socialDelLocale(venue), [venue])
   // Il tema delle icone, ricalcolato solo quando cambia davvero: è il
   // valore del contesto che leggono centinaia di <Icona> (memo), e un
@@ -672,7 +673,7 @@ export default function App() {
         <Link
           to={gestionale ? '/bar' : '/'}
           className="brand"
-          aria-label={`${marchioInAlto ? `${NOME_CORTO_PRODOTTO} ${QUALIFICA_PRODOTTO}` : venue.venue_name}, ${gestionale ? 'coda ordini' : 'pagina iniziale'}`}
+          aria-label={`${chiInAlto}, ${gestionale ? 'coda ordini' : 'pagina iniziale'}`}
           style={{ textDecoration: 'none', color: 'inherit' }}
         >
           {marchioInAlto ? (

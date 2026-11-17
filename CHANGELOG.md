@@ -1,6 +1,6 @@
 # Cosa è cambiato
 
-## 1.10.54-beta — in lavorazione
+## 1.10.54-beta — 17/11/2026 (test)
 
 ### Aspetto
 
@@ -8,6 +8,8 @@
   cima, al posto della scritta «Gestionale». In alto nelle pagine tornano
   il logo e il nome del locale; solo la demo e i locali col piano Free
   hanno lì il marchio LIME (REQ-UI-035).
+- In Impostazioni → Coda ordini, «La vista del banco» dice cosa fa e se è
+  attiva, senza più un selettore con una scelta sola (BUG-168).
 
 ### Demo
 

@@ -1043,35 +1043,21 @@ export default function SettingsTab({ role = null }) {
                 onScegli={(v) => save({ queue_view: v })}
               />
 
-              {/* LA VISTA DEL BANCO. Non è un'altra vista della coda: è
-                  un'altra coda, quella di chi prepara. Ad accenderla sono
-                  gli STATI DEL SERVIZIO — senza quei passi non c'è niente
-                  da mostrare — e qui si sceglie solo come disegnarla. Per
-                  ora la scelta è una sola: si tiene lo stesso una fila di
-                  voci, così quando se ne aggiunge un'altra non cambia
-                  niente né qui né sui dati già salvati. */}
+              {/* LA VISTA DEL BANCO. Non si sceglie: la accendono gli stati
+                  del servizio, e di modi per disegnarla ce n'è uno solo (le
+                  corsie, `bartender_view` resta nei dati per quando ce ne
+                  saranno altri). Qui c'era un selettore con una voce sola,
+                  e un testo che raccontava il perché invece di dire cosa fa
+                  (Daniele, 17/11/2026: «spiegare che cosa fa un'opzione»,
+                  BUG-168). */}
               <h4>La vista del banco</h4>
               <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-                Chi sta al banco non guarda i conti, guarda il lavoro: le{' '}
-                <strong>comande</strong>, una card per ticket, nel passo in cui stanno.
-                {servizioOn ? (
-                  <> Si apre da sé a chi ha il ruolo bartender.</>
-                ) : (
-                  <>
-                    {' '}
-                    Adesso non c’è: la accendono <strong>gli stati del servizio</strong>,
-                    che sono spenti — senza quei passi non ci sarebbe niente da mostrare,
-                    e al banco si vede la coda come la vedono tutti.
-                  </>
-                )}
+                A chi ha il ruolo bartender la coda mostra le comande, una card per
+                ticket, divise per stato di preparazione.
+                {servizioOn
+                  ? ' Attiva.'
+                  : ' Non attiva: richiede «Segui la preparazione degli ordini», in Gestione preparazione.'}
               </p>
-              <SceltaModo
-                valore={settings.bartender_view || 'corsie'}
-                opzioni={[
-                  ['corsie', conEmoji('corsie', 'Corsie di stato'), undefined, !servizioOn],
-                ]}
-                onScegli={(v) => save({ bartender_view: v })}
-              />
 
               {/* IL COLORE DEL CONTO. Serve quando un conto si spezza in
                   più comande che finiscono in colonne diverse: da lontano

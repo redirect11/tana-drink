@@ -68,6 +68,8 @@ export const profiloLeggero = (stato) => BUILD_LEGGERA || Boolean(__DEMO__) || p
 // e i locali Free (Daniele, 17/11/2026: «Solo demo avrà quelle scritte e il
 // free al posto del nome del locale e del logo del locale»). Chi paga ha in
 // alto il suo logo e il suo nome; il marchio LIME sta nel menu laterale.
+// Non è profiloLeggero: una build leggera di un locale che paga non si
+// firma LIME.
 export const marchioDelProdottoInAlto = (stato) => Boolean(__DEMO__) || pianoFree(stato)
 
 // La stessa domanda per chi non ha le impostazioni in mano (i wrapper delle

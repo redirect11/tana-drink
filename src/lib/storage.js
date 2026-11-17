@@ -71,9 +71,6 @@ async function downscaleImage(file, { lato = MAX_DIM, qualita = QUALITY } = {}) 
 export const fotoDiFatturaLeggibile = (file) =>
   tipoAllegato(file?.type) === 'immagine' ? downscaleImage(file, { lato: LATO_MASSIMO, qualita: QUALITA }) : Promise.resolve(file)
 
-// Carica la foto di un drink su Firebase Storage e restituisce l'URL pubblico.
-// Le immagini sono salvate sotto `drinks/`: lette pubblicamente, scritte e
-// cancellate solo da banco e admin (storage.rules, BUG-160).
 // UN CARICAMENTO RIFIUTATO DALLE REGOLE SI DICE IN CHIARO (REQ-SIC-006).
 // Dal 17/11/2026 lo Storage legge la licenza, col ruolo IAM che la regia dà
 // a ogni locale: appena dato, il ruolo impiega qualche minuto a valere, e in
@@ -81,7 +78,7 @@ export const fotoDiFatturaLeggibile = (file) =>
 // («User does not have permission… storage/unauthorized») non dice cosa
 // fare; questo sì, e la scheda resta aperta per riprovare.
 export const CARICAMENTO_NON_CONSENTITO =
-  'Caricamento non consentito in questo momento. Se il piano comprende le foto e gli allegati, il permesso può richiedere qualche minuto dopo un aggiornamento: riprovare più tardi.'
+  'Caricamento non consentito in questo momento. Se il piano comprende le foto e gli allegati, il permesso può richiedere qualche minuto dopo un cambio di piano o un aggiornamento del servizio: riprovare più tardi.'
 async function carica(storageRef, file, metadati) {
   try {
     await uploadBytes(storageRef, file, metadati)
@@ -91,6 +88,9 @@ async function carica(storageRef, file, metadati) {
   }
 }
 
+// Carica la foto di un drink su Firebase Storage e restituisce l'URL pubblico.
+// Le immagini sono salvate sotto `drinks/`: lette pubblicamente, scritte e
+// cancellate solo da banco e admin (storage.rules, BUG-160).
 export async function uploadDrinkImage(file) {
   if (senzaStorage()) throw new Error(MESSAGGI_PIANO.foto)
   const processed = await downscaleImage(file)

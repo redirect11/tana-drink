@@ -17644,8 +17644,8 @@ requirements:
       - tests/component/MenuPage.test.jsx
 
   - id: REQ-UI-035
-    title: "Nel gestionale, in alto, il marchio «LIME - SmartOrders» col suo logo"
-    area: "src/App.jsx (topbar), un componente del marchio nuovo, src/index.css"
+    title: "Il marchio «LIME - SmartOrders» col suo logo: in cima al menu laterale del gestionale, e in alto solo per demo e Free"
+    area: "src/components/MarchioLime.jsx, src/components/StaffDrawer.jsx (testata del menu), src/App.jsx (topbar), src/lib/limiti.js (marchioDelProdottoInAlto), src/lib/sezioni.js (nelGestionale), src/index.css"
     description: >
       Daniele, 17/11/2026: nel gestionale il titolo in alto diventa il logo
       LIME - SmartOrders, «lo trovi nella regia». Il logo è quello della
