@@ -17666,6 +17666,8 @@ requirements:
       del gestionale, al posto di «Gestionale»; nella barra in alto delle
       pagine tornano logo e nome del locale; solo la demo e i locali Free
       (`pianoFree`) mostrano lì il marchio LIME al posto del locale.
+      Sul Free anche nelle pagine dei clienti, home e menù compresi
+      (Daniele, 17/11/2026, alla domanda del revisore).
     status: implemented
     generate_issue: true
     labels: [ui, marchio, gestionale]
