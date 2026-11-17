@@ -25,11 +25,11 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 | ✅ | 313 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 9 | fatto a metà |
-| ⬜ | 45 | da fare |
+| ⬜ | 49 | da fare |
 | 🗑 | 8 | non più valido |
 
-**390 voci** in tutto. **337** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **45** sono lavori
+**394 voci** in tutto. **337** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **49** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **17** difetti noti sono ancora aperti.
 
@@ -55,7 +55,7 @@ come «vero oggi», non come «garantito».
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
 | [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 14 | 2 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
-| [Sicurezza](#sicurezza) | 4 | 8 | Regole di accesso, App Check, e cosa protegge cosa. |
+| [Sicurezza](#sicurezza) | 4 | 12 | Regole di accesso, App Check, e cosa protegge cosa. |
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | 6 | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
@@ -80,7 +80,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Unità | il progetto di dettaglio: un modulo da solo | 193 |
 
 **23** bisogni del locale, **0** con un test di accettazione.
-**142** requisiti su 382 sono collegati a un bisogno;
+**146** requisiti su 386 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -272,7 +272,7 @@ Daniele, 17/11/2026 (messaggio della regia, REQ-FLOTTA-134 per la sua parte): «
 
 **Come si accetta**: Un cliente registrato, una persona dello staff e un admin scaricano dal proprio profilo un file JSON con tutti i propri dati e nessun dato di altri; l'admin esporta quelli di una persona del locale e l'esportazione resta registrata; ogni download chiede un accesso recente e lo dice alla persona. L'informativa del locale nasce dallo stesso elenco dei dati personali da cui nasce il file, e una prova fallisce se una raccolta con dati di persone non è nell'elenco.
 
-**Chi**: Cliente, Banco, Sala, Gestore · **Lo realizzano**: [REQ-SIC-007](#req-sic-007--un-elenco-unico-nel-codice-dei-dati-personali-che-lapp-tiene), [REQ-SIC-008](#req-sic-008--scarica-i-miei-dati-per-ogni-persona-dal-suo-profilo), [REQ-SIC-009](#req-sic-009--ladmin-esporta-i-dati-di-una-persona-del-locale-e-resta-registrato), [REQ-SIC-010](#req-sic-010--il-download-dei-dati-chiede-un-accesso-recente-e-lo-si-dice-alla-persona), [REQ-SIC-011](#req-sic-011--le-categorie-particolari-di-dati-art-9-se-lapp-ne-tratta-dichiarate-e-protette), [REQ-SIC-012](#req-sic-012--uninformativa-tipo-per-il-locale-generata-dallelenco-dei-dati-personali) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Cliente, Banco, Sala, Gestore · **Lo realizzano**: [REQ-SIC-007](#req-sic-007--un-elenco-unico-nel-codice-dei-dati-personali-che-lapp-tiene), [REQ-SIC-008](#req-sic-008--scarica-i-miei-dati-per-ogni-persona-dal-suo-profilo), [REQ-SIC-009](#req-sic-009--ladmin-esporta-i-dati-di-una-persona-del-locale-e-resta-registrato), [REQ-SIC-010](#req-sic-010--il-download-dei-dati-chiede-un-accesso-recente-e-lo-si-dice-alla-persona), [REQ-SIC-011](#req-sic-011--le-categorie-particolari-di-dati-art-9-se-lapp-ne-tratta-dichiarate-e-protette), [REQ-SIC-012](#req-sic-012--uninformativa-tipo-per-il-locale-generata-dallelenco-dei-dati-personali), [REQ-SIC-013](#req-sic-013--la-cancellazione-dellaccount-fatta-da-sé-con-30-giorni-per-ripensarci), [REQ-SIC-014](#req-sic-014--il-titolare-esporta-tutti-i-dati-del-locale-in-ogni-momento), [REQ-SIC-015](#req-sic-015--i-dati-da-cui-può-derivare-un-controllo-a-distanza-del-personale-dichiarati-allo-staff), [REQ-SIC-016](#req-sic-016--lelenco-dei-servizi-esterni-a-cui-lapp-manda-dati-di-persone) · ⚠️ **Nessun test di accettazione, ancora.**
 
 ## Cosa fa il sistema
 
@@ -4943,6 +4943,30 @@ La regia chiede se l'app tratta dati di categorie particolari (salute, opinioni,
 Dall'elenco di REQ-SIC-007 nasce un'informativa tipo che il locale mostra ai suoi clienti e al suo staff, coi suoi dati di titolare. Non omette niente, soprattutto i dati sensibili. Il testo è una bozza che approva Daniele.
 
 **Dove**: `docs/ (bozza), la pagina «Privacy» del locale` · **Serve**: [UR-023](#ur-023--ogni-persona-sa-quali-dati-lapp-tiene-su-di-lei-e-li-può-scaricare)
+
+#### REQ-SIC-013 — La cancellazione dell'account fatta da sé, con 30 giorni per ripensarci
+
+Daniele, 17/11/2026 (messaggio della regia, punto 7): «ok» ai 30 giorni e alla cancellazione fatta da sé, come nella regia (REQ-FLOTTA-134). La schermata propone prima «Scarica i miei dati» (REQ-SIC-008); l'account resta disattivato per 30 giorni, in cui si può annullare e scaricare ancora; poi si cancella da solo. Restano solo i dati che il locale deve tenere per legge (fiscali: ordini, incassi, chiusure), dichiarati nell'informativa. Per lo staff vanno chiariti i vincoli (presenze e turni che il locale deve tenere).
+
+**Dove**: `Il mio profilo, il profilo del cliente, una Function` · **Serve**: [UR-023](#ur-023--ogni-persona-sa-quali-dati-lapp-tiene-su-di-lei-e-li-può-scaricare)
+
+#### REQ-SIC-014 — Il titolare esporta tutti i dati del locale in ogni momento
+
+Messaggio della regia, punto 8: il locale è titolare dei dati dei suoi clienti e del suo personale e deve poterli avere tutti, durante il contratto e alla fine come restituzione (alla chiusura c'è già l'archivio della regia, 180 giorni). In parte esiste già: «Esporta tutto» del backup. Da verificare che comprenda tutti i dati personali dell'elenco REQ-SIC-007 (oggi alcune raccolte sono fuori dal backup apposta: presenze, profili_staff…) e che il formato sia leggibile da una macchina.
+
+**Dove**: `Backup e ripristino (src/components/BackupPanel.jsx, src/lib/backup.js)` · **Serve**: [UR-023](#ur-023--ogni-persona-sa-quali-dati-lapp-tiene-su-di-lei-e-li-può-scaricare)
+
+#### REQ-SIC-015 — I dati da cui può derivare un controllo a distanza del personale, dichiarati allo staff
+
+Messaggio della regia, punto 9: lo Statuto dei lavoratori (art. 4) chiede, per gli strumenti da cui può derivare un controllo a distanza, un accordo o un'autorizzazione, o almeno un'informativa chiara al dipendente [da verificare col legale]. L'elenco di questi dati (presenza ogni 3 minuti, chi ha battuto/incassato/annullato cosa e quando, tempi di preparazione, iniziali sulle righe, storia del conto, ore e turni) entra nell'informativa per lo staff. La valutazione legale la fa Daniele col legale.
+
+**Dove**: `informativa per lo staff (REQ-SIC-012), presenze, chi ha battuto/incassato, tempi di preparazione` · **Serve**: [UR-023](#ur-023--ogni-persona-sa-quali-dati-lapp-tiene-su-di-lei-e-li-può-scaricare)
+
+#### REQ-SIC-016 — L'elenco dei servizi esterni a cui l'app manda dati di persone
+
+Messaggio della regia: per l'accordo di trattamento fra Stonebit e il locale, che elenca i sub-responsabili, serve l'elenco dei servizi esterni a cui l'app manda dati di persone (Google/Firebase e i suoi servizi, FCM, SumUp, la regia e il fornitore dell'AI, altri), verificato nel codice e tenuto insieme all'elenco dei dati personali.
+
+**Dove**: `REQ-SIC-007, l'accordo di trattamento della regia (REQ-FLOTTA-135)` · **Serve**: [UR-023](#ur-023--ogni-persona-sa-quali-dati-lapp-tiene-su-di-lei-e-li-può-scaricare)
 
 ### Intelligenza artificiale
 
