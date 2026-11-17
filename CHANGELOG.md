@@ -4,6 +4,9 @@
 
 ### Aspetto
 
+- La schermata «Ti sto facendo entrare», dopo il login, e il modulo di
+  accesso del gestionale hanno subito i colori del gestionale, invece di
+  quelli del menù dei clienti (BUG-171).
 - In alto nel gestionale l'icona dell'assistente AI, e quella dello schermo
   intero, hanno la stessa misura della campanella accanto (BUG-170).
 

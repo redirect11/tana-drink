@@ -6779,3 +6779,26 @@ bugs:
     priority: P3
     requisiti: [REQ-AI-006]
     test_cases: [tests/unit/css.test.js]
+
+  - id: BUG-171
+    title: "«Ti sto facendo entrare», dopo il login, ha i colori dei clienti invece del tema del gestionale"
+    area: "src/App.jsx (il tema: vesteGestionale, ruoloInLettura)"
+    description: >
+      Daniele, 17/11/2026: la schermata dopo il login, «Ti sto facendo
+      entrare» coi tre pallini, non applicava il tema. Il tema segue chi
+      guarda (REQ-STAFF-017): il gestionale a chi lavora, il menù a tutti
+      gli altri. Ma il ruolo si legge dal token, e finché il token non torna
+      lo staff non è ancora «staff»: la schermata d'attesa — e prima il
+      modulo di accesso su /bar — prendeva i colori dei clienti, e quelli
+      del gestionale arrivavano un attimo dopo.
+      ORA sulle pagine del gestionale (/bar, /pos, Il mio profilo) vale il
+      suo tema finché non si sa che chi è entrato è un cliente: durante la
+      lettura del ruolo, e sul modulo di accesso.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, ui, temi]
+    severity: lieve
+    priority: P3
+    requisiti: [REQ-STAFF-017]
+    test_cases: [tests/component/AppHeader.test.jsx]
