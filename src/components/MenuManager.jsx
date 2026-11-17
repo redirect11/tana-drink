@@ -36,6 +36,7 @@ import AvvisoPiano from './AvvisoPiano.jsx'
 import { puoCreareProdotto, maxProdotti, MESSAGGI_PIANO, fotoConsentite } from '../lib/limiti.js'
 import { disegniDelLocale } from '../lib/stileMenu.js'
 import Icona from './Icona.jsx'
+import { tr, useLingua } from '../lib/lingua.js'
 import { useTestoConIcona } from '../lib/temaIcone.js'
 import { prendiProdottoInArrivo, ascoltaProdottoInArrivo } from '../lib/prodottoDaMagazzino.js'
 import {
@@ -61,6 +62,9 @@ const EMPTY = {
 
 export default function MenuManager() {
   const testoConIcona = useTestoConIcona()
+  // Le etichette calcolate nei useMemo (barra delle categorie, gruppi) si
+  // rifanno quando cambia la lingua.
+  const lingua = useLingua()
   // Cosa dice la striscia delle schede: lo sceglie il locale, in
   // Impostazioni → Vista ordine (vedi lib/strisce.js).
   const [settings, setSettings] = useState(settingsIniziali)
@@ -219,7 +223,7 @@ export default function MenuManager() {
     setCopiaDa({
       ...d,
       id: undefined,
-      name: `${d.name} (copia)`,
+      name: tr('{nome} (copia)', { nome: d.name }),
       // La foto resta all'originale: il file è agganciato al drink che
       // l'ha caricata e cancellandolo sparirebbe anche dalla copia
       // (handleDelete cancella l'immagine insieme al drink).
@@ -244,7 +248,7 @@ export default function MenuManager() {
   }
 
   async function handleDelete(d) {
-    if (!confirm(`Eliminare “${d.name}” dal menù?`)) return
+    if (!confirm(tr('Eliminare “{nome}” dal menù?', { nome: d.name }))) return
     try {
       await deleteDrink(d.id)
       if (d.image_url) deleteDrinkImageByUrl(d.image_url)
@@ -285,7 +289,7 @@ export default function MenuManager() {
   // Voci per la barra categorie a sinistra (come nel POS).
   const catItems = useMemo(
     () => [
-      { key: 'all', label: 'Tutte', count: counts.all },
+      { key: 'all', label: tr('Tutte'), count: counts.all },
       // Colore e icona della categoria, come nel POS: la stessa categoria si
       // riconosce allo stesso modo in tutte le schermate.
       ...categories
@@ -297,9 +301,10 @@ export default function MenuManager() {
           color: catColor(c),
           icon: c.icon || null,
         })),
-      ...(counts.none ? [{ key: 'none', label: 'Senza categoria', count: counts.none }] : []),
+      ...(counts.none ? [{ key: 'none', label: tr('Senza categoria'), count: counts.none }] : []),
     ],
-    [categories, counts]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [categories, counts, lingua]
   )
 
   // STATO DI UN PRODOTTO DEL MENÙ, con i colori dell'inventario.
@@ -317,17 +322,17 @@ export default function MenuManager() {
   // si riaccende, la seconda si compra. Ora chi è fuori menu è GRIGIO:
   // spento, non rotto.
   const statoMenu = (d) => {
-    if (!d.available) return { dot: 'nascosto', testo: 'Non in menu' }
+    if (!d.available) return { dot: 'nascosto', testo: tr('Non in menu') }
     const ingredienti = (d.recipe_items || [])
       .map((r) => scorteById[r.inventory_item_id])
       .filter(Boolean)
     if (ingredienti.some((i) => stockStatus(i) === 'empty')) {
-      return { dot: 'empty', testo: 'Ingrediente esaurito' }
+      return { dot: 'empty', testo: tr('Ingrediente esaurito') }
     }
     if (ingredienti.some((i) => stockStatus(i) === 'low')) {
-      return { dot: 'low', testo: 'Ingrediente in esaurimento' }
+      return { dot: 'low', testo: tr('Ingrediente in esaurimento') }
     }
-    return { dot: 'ok', testo: 'Disponibile' }
+    return { dot: 'ok', testo: tr('Disponibile') }
   }
 
   // Applica il filtro categoria e raggruppa per categoria (ordine categorie).
@@ -340,7 +345,7 @@ export default function MenuManager() {
     const byCat = new Map()
     for (const d of inCat) {
       const cat = categories.find((c) => c.id === d.category_id)
-      const name = cat?.name || d.category || 'Senza categoria'
+      const name = cat?.name || d.category || tr('Senza categoria')
       const sort = cat ? cat.sort_order : 9998
       const id = d.category_id || 'none'
       if (!byCat.has(id)) byCat.set(id, { id, name, sort, list: [] })
@@ -349,7 +354,8 @@ export default function MenuManager() {
     return [...byCat.values()].sort(
       (a, b) => (a.sort - b.sort) || a.name.localeCompare(b.name)
     )
-  }, [searched, categories, catFilter])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searched, categories, catFilter, lingua])
 
   function toggleCollapse(id) {
     setCollapsed((prev) => {
@@ -386,11 +392,11 @@ export default function MenuManager() {
   // aprivano spingendo giù la griglia, e chi voleva solo guardare i
   // margini si portava dietro tutto il listino sotto.
   const sezioni = [
-    { id: 'catalogo', icona: 'menu', label: 'Modifica menù' },
-    { id: 'categorie', icona: 'categorie', label: `Categorie (${categories.length})` },
-    { id: 'margini', icona: 'andamento', label: 'Marginalità listino' },
-    { id: 'special', icona: 'special', label: `Special (${drinkSpeciali(drinks).length})` },
-    { id: 'carta', icona: 'ordina-dal-menu', label: 'Menù dei clienti' },
+    { id: 'catalogo', icona: 'menu', label: tr('Modifica menù') },
+    { id: 'categorie', icona: 'categorie', label: tr('Categorie ({n})', { n: categories.length }) },
+    { id: 'margini', icona: 'andamento', label: tr('Marginalità listino') },
+    { id: 'special', icona: 'special', label: tr('Special ({n})', { n: drinkSpeciali(drinks).length }) },
+    { id: 'carta', icona: 'ordina-dal-menu', label: tr('Menù dei clienti') },
   ]
 
   if (sezione === 'carta') {
@@ -445,7 +451,7 @@ export default function MenuManager() {
       <div>
         <Sottosezioni voci={sezioni} attiva={sezione} scegli={setSezione} />
         <p className="muted small" style={{ margin: '0 0 8px' }}>
-          Quali drink rendono meno di quanto dovrebbero.
+          {tr('Quali drink rendono meno di quanto dovrebbero.')}
         </p>
         <MarginList
           drinks={drinks}
@@ -477,21 +483,21 @@ export default function MenuManager() {
           setEditing('new')
         }}
       >
-        + Aggiungi prodotto
+        + {tr('Aggiungi prodotto')}
       </button>
       {/* IL MENÙ PIENO DEL PIANO FREE (REQ-LIC-003): i prodotti che ci sono
           restano, se ne modificano quanti se ne vuole; non se ne aggiungono. */}
       {!puoAggiungere && <AvvisoPiano messaggio={MESSAGGI_PIANO.prodotti(maxProdotti(settings))} impostazioni={settings} />}
 
-      {error && <div className="banner">Errore: {error}</div>}
-      {loading && <div className="empty">Carico il menù…</div>}
+      {error && <div className="banner">{tr('Errore: {errore}', { errore: error })}</div>}
+      {loading && <div className="empty">{tr('Carico il menù…')}</div>}
 
       {!loading && drinks.length > 0 && (
         <>
           <input
             type="search"
             className="menu-search"
-            placeholder={testoConIcona('cerca', 'Cerca drink, ingrediente, categoria…')}
+            placeholder={testoConIcona('cerca', tr('Cerca drink, ingrediente, categoria…'))}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             style={{ marginTop: 10 }}
@@ -500,9 +506,9 @@ export default function MenuManager() {
           {/* Filtro disponibilità */}
           <div className="mode-choice" style={{ marginBottom: 8 }}>
             {[
-              ['all', `Tutti (${drinks.length})`],
-              ['yes', `Disponibili (${availCount})`],
-              ['no', `Non disp. (${drinks.length - availCount})`],
+              ['all', tr('Tutti ({n})', { n: drinks.length })],
+              ['yes', tr('Disponibili ({n})', { n: availCount })],
+              ['no', tr('Non disp. ({n})', { n: drinks.length - availCount })],
             ].map(([v, label]) => (
               <button
                 key={v}
@@ -522,7 +528,7 @@ export default function MenuManager() {
       <CategoryRail items={catItems} selected={catFilter} onSelect={setCatFilter}>
 
       {groups.length === 0 && (
-        <div className="empty">Nessun drink per «{search}».</div>
+        <div className="empty">{tr('Nessun drink per «{testo}».', { testo: search })}</div>
       )}
 
       {groups.map((g) => {
@@ -576,8 +582,8 @@ export default function MenuManager() {
                       <button
                         type="button"
                         className="menu-colore-spia"
-                        title="Colore al banco: tocca per cambiarlo"
-                        aria-label={`Colore di ${d.name}`}
+                        title={tr('Colore al banco: tocca per cambiarlo')}
+                        aria-label={tr('Colore di {nome}', { nome: d.name })}
                         aria-expanded={coloreId === d.id}
                         onClick={() => setColoreId(coloreId === d.id ? null : d.id)}
                       />
@@ -586,7 +592,7 @@ export default function MenuManager() {
                           <button
                             type="button"
                             className={`menu-colore auto${tileColors[d.id] ? '' : ' active'}`}
-                            title="Colore della categoria"
+                            title={tr('Colore della categoria')}
                             onClick={() => setTileColor(d.id, null)}
                             style={{ background: drinkCategoryColor(d, categories) }}
                           >
@@ -596,7 +602,7 @@ export default function MenuManager() {
                             <button
                               key={c}
                               type="button"
-                              aria-label={`Colore ${c}`}
+                              aria-label={tr('Colore {c}', { c })}
                               className={`menu-colore${
                                 (tileColors[d.id] || '').toLowerCase() === c.toLowerCase() ? ' active' : ''
                               }`}
@@ -626,7 +632,7 @@ export default function MenuManager() {
                         onClick={() => setOpenId(open ? null : d.id)}
                         aria-expanded={open}
                       >
-                        {open ? '▴ Chiudi' : '⋯ Azioni'}
+                        {open ? `▴ ${tr('Chiudi')}` : `⋯ ${tr('Azioni')}`}
                       </button>
                       {open && (
                         <div className="grid-card-actions">
@@ -637,7 +643,7 @@ export default function MenuManager() {
                           )}
                           <InStruttura drink={d} carta={carta} />
                           <button className="btn secondary small block" onClick={() => setEditing(d)}>
-                            <Icona nome="modifica" gruppo="tasti" /> Modifica
+                            <Icona nome="modifica" gruppo="tasti" /> {tr('Modifica')}
                           </button>
                           <button
                             className="btn ghost small block"
@@ -645,21 +651,21 @@ export default function MenuManager() {
                             disabled={!puoAggiungere}
                             onClick={() => duplica(d)}
                           >
-                            <Icona nome="elenco" gruppo="tasti" /> Duplica
+                            <Icona nome="elenco" gruppo="tasti" /> {tr('Duplica')}
                           </button>
                           <button
                             className="btn ghost small block"
                             style={{ marginTop: 6 }}
                             onClick={() => toggleAvailable(d)}
                           >
-                            {d.available ? 'Rendi non disp.' : 'Rendi disponibile'}
+                            {d.available ? tr('Rendi non disp.') : tr('Rendi disponibile')}
                           </button>
                           <button
                             className="btn ghost small block"
                             style={{ marginTop: 6 }}
                             onClick={() => handleDelete(d)}
                           >
-                            <Icona nome="elimina" gruppo="tasti" /> Elimina
+                            <Icona nome="elimina" gruppo="tasti" /> {tr('Elimina')}
                           </button>
                         </div>
                       )}
@@ -676,7 +682,7 @@ export default function MenuManager() {
       )}
 
       {!loading && drinks.length === 0 && (
-        <div className="empty">Nessun drink nel menù. Aggiungine uno!</div>
+        <div className="empty">{tr('Nessun drink nel menù. Aggiungine uno!')}</div>
       )}
     </div>
   )
@@ -703,13 +709,13 @@ function CategoryManager({ categories }) {
   }
 
   async function rename(cat) {
-    const n = prompt('Nuovo nome categoria:', cat.name)
+    const n = prompt(tr('Nuovo nome categoria:'), cat.name)
     if (n == null || !n.trim()) return
     await updateCategory(cat.id, { name: n.trim() })
   }
 
   async function remove(cat) {
-    if (!confirm(`Eliminare la categoria “${cat.name}”? I drink resteranno, ma senza categoria.`)) return
+    if (!confirm(tr('Eliminare la categoria “{nome}”? I drink resteranno, ma senza categoria.', { nome: cat.name }))) return
     await deleteCategory(cat.id)
   }
 
@@ -731,15 +737,15 @@ function CategoryManager({ categories }) {
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Nuova categoria"
+          placeholder={tr('Nuova categoria')}
         />
         <button className="btn small" onClick={add} disabled={busy}>
-          Aggiungi
+          {tr('Aggiungi')}
         </button>
       </div>
       {categories.length === 0 && (
         <div className="muted" style={{ marginTop: 8, fontSize: '0.85rem' }}>
-          Nessuna categoria.
+          {tr('Nessuna categoria.')}
         </div>
       )}
       {categories.map((c, idx) => (
@@ -754,15 +760,15 @@ function CategoryManager({ categories }) {
             <span className="row" style={{ gap: 4 }}>
               <button className="btn ghost small" onClick={() => move(idx, -1)} disabled={idx === 0}>↑</button>
               <button className="btn ghost small" onClick={() => move(idx, 1)} disabled={idx === categories.length - 1}>↓</button>
-              <button className="btn ghost small" onClick={() => rename(c)} aria-label="Rinomina" title="Rinomina"><Icona nome="modifica" gruppo="tasti" /></button>
-              <button className="btn ghost small" onClick={() => remove(c)} aria-label="Elimina" title="Elimina"><Icona nome="elimina" gruppo="tasti" /></button>
+              <button className="btn ghost small" onClick={() => rename(c)} aria-label={tr('Rinomina')} title={tr('Rinomina')}><Icona nome="modifica" gruppo="tasti" /></button>
+              <button className="btn ghost small" onClick={() => remove(c)} aria-label={tr('Elimina')} title={tr('Elimina')}><Icona nome="elimina" gruppo="tasti" /></button>
             </span>
           </div>
           {/* Icona (set di emoji) + colore per la categoria */}
           <div className="chips-row" style={{ marginTop: 6 }}>
             <button
               className={`chip ${!c.icon ? 'active' : ''}`}
-              title="Nessuna icona"
+              title={tr('Nessuna icona')}
               onClick={() => updateCategory(c.id, { icon: null })}
             >
               ∅
@@ -778,7 +784,7 @@ function CategoryManager({ categories }) {
             ))}
           </div>
           <div className="row" style={{ gap: 8, marginTop: 6, alignItems: 'center' }}>
-            <span className="muted small">Colore</span>
+            <span className="muted small">{tr('Colore')}</span>
             <input
               type="color"
               value={c.color || catColor(c)}
@@ -787,7 +793,7 @@ function CategoryManager({ categories }) {
             />
             {c.color && (
               <button className="btn ghost small" onClick={() => updateCategory(c.id, { color: null })}>
-                Auto
+                {tr('Auto')}
               </button>
             )}
           </div>

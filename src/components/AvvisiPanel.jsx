@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { auth } from '../lib/firebaseClient.js'
 import ToggleRow from './ToggleRow.jsx'
 import Icona from './Icona.jsx'
+import { tr, trSegnato } from '../lib/lingua.js'
 import {
   avvisiPerRuolo,
   avvisoAttivo,
@@ -33,18 +34,17 @@ export default function AvvisiPanel({ gestore }) {
 
   return (
     <div className="card settings-section">
-      <h3><Icona nome="notifiche" gruppo="tasti" /> Notifiche</h3>
+      <h3><Icona nome="notifiche" gruppo="tasti" /> {tr('Notifiche')}</h3>
       <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-        Valgono <strong>su questo dispositivo</strong> e per te: il tablet della
-        cassa e il telefono in sala possono volere avvisi diversi, anche con lo
-        stesso accesso. Chi manda un ordine non riceve l&apos;avviso di
-        quell&apos;ordine: sa già di averlo mandato.
+        {tr(
+          "Valgono su questo dispositivo e per te: il tablet della cassa e il telefono in sala possono volere avvisi diversi, anche con lo stesso accesso. Chi manda un ordine non riceve l'avviso di quell'ordine: sa già di averlo mandato."
+        )}
       </p>
       {elenco.map((a) => (
         <ToggleRow
           key={a.id}
-          label={a.label}
-          desc={a.desc}
+          label={trSegnato(a.label)}
+          desc={trSegnato(a.desc)}
           checked={avvisoAttivo(avvisi, a.id)}
           onChange={(v) => setAvvisi(scriviAvviso(uid, a.id, v))}
         />
@@ -53,11 +53,11 @@ export default function AvvisiPanel({ gestore }) {
           interrompe: arriva mentre stai battendo un conto o contando la
           cassa. Il fumetto sta solo nella coda ordini — che è il posto dove
           gli ordini si aspettano — e toccandolo apre gli avvisi. */}
-      <h4>Dove compaiono, ad app aperta</h4>
+      <h4>{tr('Dove compaiono, ad app aperta')}</h4>
       <div className="mode-choice">
         {[
-          ['toast', 'notifiche', 'In alto, ovunque'],
-          ['fumetto', 'fumetto', 'Dalla campanella, solo in coda'],
+          ['toast', 'notifiche', tr('In alto, ovunque')],
+          ['fumetto', 'fumetto', tr('Dalla campanella, solo in coda')],
         ].map(([value, icona, label]) => (
           <button
             key={value}
@@ -70,15 +70,20 @@ export default function AvvisiPanel({ gestore }) {
       </div>
       <p className="muted small" style={{ margin: '8px 0 0' }}>
         {stile === 'fumetto'
-          ? 'Fuori dalla coda non compare niente: gli avvisi restano nella campanella, col loro numero.'
-          : 'La strisciolina compare su qualunque schermata, anche in cassa o in magazzino.'}
+          ? tr('Fuori dalla coda non compare niente: gli avvisi restano nella campanella, col loro numero.')
+          : tr('La strisciolina compare su qualunque schermata, anche in cassa o in magazzino.')}
       </p>
 
       {spenti > 0 && (
         <p className="muted small" style={{ margin: '10px 0 0' }}>
-          {spenti === 1 ? 'Un avviso è spento' : `${spenti} avvisi sono spenti`} su
-          questo dispositivo: quello che succede lo vedi comunque nella coda,
-          ma nessuno te lo verrà a dire.
+          {spenti === 1
+            ? tr(
+                'Un avviso è spento su questo dispositivo: quello che succede lo vedi comunque nella coda, ma nessuno te lo verrà a dire.'
+              )
+            : tr(
+                '{n} avvisi sono spenti su questo dispositivo: quello che succede lo vedi comunque nella coda, ma nessuno te lo verrà a dire.',
+                { n: spenti }
+              )}
         </p>
       )}
     </div>

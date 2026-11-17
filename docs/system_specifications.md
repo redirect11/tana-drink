@@ -76,7 +76,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 14 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 194 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 197 |
 | Unità | il progetto di dettaglio: un modulo da solo | 193 |
 
 **23** bisogni del locale, **0** con un test di accettazione.
@@ -5038,9 +5038,9 @@ FATTO: la lingua sul profilo — profili_staff/{uid} (regole: ognuno solo il suo
 
 LE PAGINE DEI CLIENTI RESTANO ITALIANE anche su un tablet dello staff in inglese (dalla revisione del 17/11): App.jsx dice a lib/lingua.js se la schermata è del cliente (non personale, «Vista cliente», «Mostra al cliente» ?cliente=1) e lì tr risponde in italiano, con lang=it.
 
-CHI NON HA MAI SCELTO ha l'italiano: leggiLinguaDelProfilo risponde it per un profilo senza lingua, e un collega non eredita la lingua di chi ha usato il tablet prima. Lo scontrino resta italiano (prova cartaInItaliano).
+CHI NON HA MAI SCELTO ha l'italiano: leggiLinguaDelProfilo risponde it per un profilo senza lingua, e un collega non eredita la lingua di chi ha usato il tablet prima. Lo scontrino resta italiano (prova cartaInItaliano). Secondo giro (17/11): impostazioni (SettingsTab e pannelli), magazzino e comanda al banco, gestione del menù (aree impostazioni, magazzino, menu).
 
-DA FARE: impostazioni, magazzino, menù, fornitori, statistiche e bilancio, staff e utenti, il resto; in src/lib i modi di consegna, gli altri messaggi del piano Free, le descrizioni dei ruoli, i motivi d'errore della stampante.
+DA FARE: fornitori, statistiche e bilancio, staff e utenti, il resto; in src/lib i modi di consegna, gli altri messaggi del piano Free, le descrizioni dei ruoli, i motivi d'errore della stampante.
 
 **Dove**: `src/pages/BartenderPage.jsx, src/components (gestionale), Il mio profilo (src/pages/StaffProfilePage.jsx), src/lib/lingua.js, firestore.rules (profili_staff)` · **Serve**: [UR-022](#ur-022--chi-non-parla-italiano-usa-il-menù-e-il-gestionale-nella-sua-lingua)
 

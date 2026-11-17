@@ -3,6 +3,7 @@ import { db, collection, getDocs, doc, writeBatch } from '../porte/dati.js'
 import { configurazione } from '../porte/configurazione.js'
 import { scritturaConsentita, conLicenzaAttuale, COLLEZIONE_LICENZA } from './licenza.js'
 import { licenzaRicordata } from './impostazioniLocali.js'
+import { tr } from './lingua.js'
 
 // ── BACKUP E RIPRISTINO DEL DATABASE, dal gestionale ──────────────────
 //
@@ -155,14 +156,17 @@ export function totaleRighe(backup) {
 
 // Un file va bene? Meglio dirlo prima di scrivere sul database.
 export function validaBackup(backup) {
-  if (!backup || typeof backup !== 'object') return 'Il file non contiene un backup.'
+  if (!backup || typeof backup !== 'object') return tr('Il file non contiene un backup.')
   if (!backup.collezioni || typeof backup.collezioni !== 'object') {
-    return 'Manca l’elenco delle collezioni: non è un backup di questa app.'
+    return tr('Manca l’elenco delle collezioni: non è un backup di questa app.')
   }
   if (backup.formato && backup.formato > FORMATO) {
-    return `Il file è in formato ${backup.formato}, questa versione arriva a ${FORMATO}: aggiorna l’app.`
+    return tr('Il file è in formato {formato}, questa versione arriva a {massimo}: aggiorna l’app.', {
+      formato: backup.formato,
+      massimo: FORMATO,
+    })
   }
-  if (!totaleRighe(backup)) return 'Il backup è vuoto.'
+  if (!totaleRighe(backup)) return tr('Il backup è vuoto.')
   return null
 }
 

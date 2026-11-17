@@ -28,6 +28,7 @@ import { licenzaDi } from './licenzaInVigore.js'
 import { leggi, scrivi } from './impostazioniLocali.js'
 // Solo dentro una funzione: funzioniRegia.js legge PROGETTI_REGIA da qui.
 import { erroreDellaRegia } from './funzioniRegia.js'
+import { tr } from './lingua.js'
 
 const MODALITA = Object.freeze({ OBBLIGATORI: 'obbligatori', A_SCELTA: 'a_scelta' })
 export const SCELTE = Object.freeze({ AGGIORNA: 'aggiorna', SALTA: 'salta' })
@@ -156,19 +157,43 @@ export function nonInclusi(stato) {
   return ['non_pagato', 'free'].includes(a.motivo) ? a.motivo : 'piano'
 }
 
+// GETTER, non testi fissi: ogni lettura parla la lingua di chi guarda
+// (REQ-UI-039), anche quella di api.js che li mette in un esito. Un `tr`
+// al caricamento del modulo fisserebbe la lingua.
 export const MESSAGGI_AGGIORNAMENTI = {
-  piano:
-    'Il piano di questo locale non comprende gli aggiornamenti: arrivano solo le correzioni di sicurezza e di compatibilità.',
-  free:
-    'Il piano Free non comprende gli aggiornamenti: arrivano solo le correzioni di sicurezza e di compatibilità.',
-  non_pagato:
-    'L’abbonamento non risulta pagato: il locale lavora con il piano Free e riceve solo le correzioni di sicurezza e di compatibilità.',
-  partito: 'Aggiornamento partito: arriva in pochi minuti.',
-  del_titolare: 'È disponibile una versione nuova: l’aggiornamento lo decide il titolare.',
-  in_corso: 'Invio della scelta…',
-  non_riuscita: 'La scelta non è stata registrata. Riprovare tra qualche minuto.',
-  senza_rete: 'Il servizio degli aggiornamenti non risponde: la scelta non è partita. Riprovare quando la connessione è stabile.',
-  dall_area_clienti: 'La scelta su questa versione si fa dall’area clienti.',
+  get piano() {
+    return tr(
+      'Il piano di questo locale non comprende gli aggiornamenti: arrivano solo le correzioni di sicurezza e di compatibilità.'
+    )
+  },
+  get free() {
+    return tr('Il piano Free non comprende gli aggiornamenti: arrivano solo le correzioni di sicurezza e di compatibilità.')
+  },
+  get non_pagato() {
+    return tr(
+      'L’abbonamento non risulta pagato: il locale lavora con il piano Free e riceve solo le correzioni di sicurezza e di compatibilità.'
+    )
+  },
+  get partito() {
+    return tr('Aggiornamento partito: arriva in pochi minuti.')
+  },
+  get del_titolare() {
+    return tr('È disponibile una versione nuova: l’aggiornamento lo decide il titolare.')
+  },
+  get in_corso() {
+    return tr('Invio della scelta…')
+  },
+  get non_riuscita() {
+    return tr('La scelta non è stata registrata. Riprovare tra qualche minuto.')
+  },
+  get senza_rete() {
+    return tr(
+      'Il servizio degli aggiornamenti non risponde: la scelta non è partita. Riprovare quando la connessione è stabile.'
+    )
+  },
+  get dall_area_clienti() {
+    return tr('La scelta su questa versione si fa dall’area clienti.')
+  },
 }
 
 // ── L'AVVISO DELLE CONDIZIONI ─────────────────────────────────────────

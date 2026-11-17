@@ -12,33 +12,36 @@
 // Serve la rete: è un attrezzo del gestionale, non del banco.
 import { chiamaFunzione } from '../porte/funzioni.js'
 import { senzaFunctions, aiNelPiano, MESSAGGI_PIANO } from './limiti.js'
+import { daTradurre, tr, trSegnato } from './lingua.js'
 
 // C'è una strada per l'AI? Sul profilo leggero le Functions non ci sono, e
 // nella demo non si parla con nessun server.
 export const aiRaggiungibile = () => !__DEMO__ && !senzaFunctions() && aiNelPiano()
 
 // Cosa dire per ogni `codice` della Function. Registro del gestionale:
-// piano, senza dare la colpa a chi legge.
+// piano, senza dare la colpa a chi legge. Testi segnati, tradotti da
+// `messaggioAI` quando si mostrano (REQ-UI-039).
 export const MESSAGGI_AI = {
-  credito: 'Il credito AI del locale è finito. Si ricarica dal sito, nell’area del locale.',
-  tetto: 'È stato raggiunto il tetto di spesa AI del mese.',
-  spento: "L'AI non è attiva per questo locale.",
-  'senza-cassetto': "L'AI non è attiva per questo locale.",
-  'non-riconosciuto': "Il servizio AI non riconosce questo locale. Va segnalato all'assistenza.",
-  permesso: "L'AI la usa lo staff di gestione.",
-  'senza-rete': "Per l'AI serve la rete.",
-  'non-usabile': "L'AI non ha dato una risposta utilizzabile. Si può riprovare.",
-  richiesta: "La richiesta all'AI non è andata a buon fine.",
-  riprova: "L'AI non risponde in questo momento. Si può riprovare.",
-  // Il Free, se mai ci si arriva: i tasti lì non ci sono (REQ-LIC-017).
-  piano: MESSAGGI_PIANO.ai,
+  credito: daTradurre('Il credito AI del locale è finito. Si ricarica dal sito, nell’area del locale.'),
+  tetto: daTradurre('È stato raggiunto il tetto di spesa AI del mese.'),
+  spento: daTradurre("L'AI non è attiva per questo locale."),
+  'senza-cassetto': daTradurre("L'AI non è attiva per questo locale."),
+  'non-riconosciuto': daTradurre("Il servizio AI non riconosce questo locale. Va segnalato all'assistenza."),
+  permesso: daTradurre("L'AI la usa lo staff di gestione."),
+  'senza-rete': daTradurre("Per l'AI serve la rete."),
+  'non-usabile': daTradurre("L'AI non ha dato una risposta utilizzabile. Si può riprovare."),
+  richiesta: daTradurre("La richiesta all'AI non è andata a buon fine."),
+  riprova: daTradurre("L'AI non risponde in questo momento. Si può riprovare."),
   // La chat (REQ-AI-006).
-  versione: 'Questa conversazione non si può continuare: apri una conversazione nuova.',
-  'troppo-lunga': 'La conversazione è troppo lunga: apri una conversazione nuova.',
-  occupato: 'Il servizio AI è occupato in questo momento. Si può riprovare fra poco.',
+  versione: daTradurre('Questa conversazione non si può continuare: apri una conversazione nuova.'),
+  'troppo-lunga': daTradurre('La conversazione è troppo lunga: apri una conversazione nuova.'),
+  occupato: daTradurre('Il servizio AI è occupato in questo momento. Si può riprovare fra poco.'),
 }
 
-export const messaggioAI = (codice) => MESSAGGI_AI[codice] || MESSAGGI_AI.riprova
+// Il Free, se mai ci si arriva (i tasti lì non ci sono, REQ-LIC-017), dice
+// il messaggio del piano: già nella lingua di chi guarda.
+export const messaggioAI = (codice) =>
+  codice === 'piano' ? MESSAGGI_PIANO.ai : trSegnato(MESSAGGI_AI[codice] || MESSAGGI_AI.riprova)
 
 // I costi dell'AI sono di frazioni di centesimo: fino a quattro decimali.
 export const costoAI = (v) => `${Number(v).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} €`
@@ -94,8 +97,8 @@ export const FORMATI_FATTURA = { 'application/pdf': 20, 'image/jpeg': 5, 'image/
 
 export function problemaFileFattura(file) {
   const mb = FORMATI_FATTURA[file?.type]
-  if (!mb) return 'Il documento deve essere una foto (JPEG, PNG, WEBP o GIF) o un PDF.'
-  if (file.size > mb * 1024 * 1024) return `Il documento supera i ${mb} MB accettati per la lettura.`
+  if (!mb) return tr('Il documento deve essere una foto (JPEG, PNG, WEBP o GIF) o un PDF.')
+  if (file.size > mb * 1024 * 1024) return tr('Il documento supera i {mb} MB accettati per la lettura.', { mb })
   return null
 }
 
@@ -105,7 +108,7 @@ export function fileInBase64(blob) {
   return new Promise((resolve, reject) => {
     const lettore = new FileReader()
     lettore.onload = () => resolve(String(lettore.result).replace(/^data:[^,]*,/, ''))
-    lettore.onerror = () => reject(lettore.error || new Error('Il documento non si legge.'))
+    lettore.onerror = () => reject(lettore.error || new Error(tr('Il documento non si legge.')))
     lettore.readAsDataURL(blob)
   })
 }

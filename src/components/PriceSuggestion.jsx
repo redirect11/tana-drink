@@ -3,6 +3,7 @@ import { subscribeSettings, DEFAULT_SETTINGS } from '../lib/api.js'
 import { recipeCost, suggestedPrice, markupOf, marginOf } from '../lib/pricing.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import Icona from './Icona.jsx'
+import { tr } from '../lib/lingua.js'
 
 // «Quanto mi costa, a quanto lo vendo»: riquadro condiviso dal PRODOTTO
 // LIBERO del POS e dall'EDITOR DEL DRINK a menù, così il conto è lo stesso
@@ -40,13 +41,13 @@ export default function PriceSuggestion({ rows, itemsById, price, onUse }) {
   return (
     <div className="card" style={{ margin: '8px 0 0', padding: '8px 10px' }}>
       <div className="row between" style={{ alignItems: 'baseline' }}>
-        <span className="muted small">Prezzo reale (costo ingredienti)</span>
+        <span className="muted small">{tr('Prezzo reale (costo ingredienti)')}</span>
         <strong>{formatPrice(cost)}</strong>
       </div>
 
       {consigliato != null && (
         <div className="row between" style={{ alignItems: 'center', marginTop: 6 }}>
-          <span className="muted small">Consigliato (×{settings.price_markup})</span>
+          <span className="muted small">{tr('Consigliato (×{ricarico})', { ricarico: settings.price_markup })}</span>
           <span className="row" style={{ gap: 8, alignItems: 'center' }}>
             <strong className="price">{formatPrice(consigliato)}</strong>
             <button
@@ -55,7 +56,7 @@ export default function PriceSuggestion({ rows, itemsById, price, onUse }) {
               disabled={priceNum === consigliato}
               onClick={() => onUse(consigliato)}
             >
-              Usa prezzo consigliato
+              {tr('Usa prezzo consigliato')}
             </button>
           </span>
         </div>
@@ -66,7 +67,11 @@ export default function PriceSuggestion({ rows, itemsById, price, onUse }) {
           className="row between small"
           style={{ marginTop: 6, borderTop: '1px dashed var(--line)', paddingTop: 6 }}
         >
-          <span className="muted">Con {formatPrice(priceNum)} {inPerdita ? 'perdi' : 'guadagni'}</span>
+          <span className="muted">
+            {inPerdita
+              ? tr('Con {prezzo} perdi', { prezzo: formatPrice(priceNum) })
+              : tr('Con {prezzo} guadagni', { prezzo: formatPrice(priceNum) })}
+          </span>
           <span>
             <strong className={inPerdita ? 'neg' : ''}>{formatPrice(Math.abs(guadagno))}</strong>
             {ricarico != null && <span className="muted"> · ×{ricarico}</span>}
@@ -76,8 +81,10 @@ export default function PriceSuggestion({ rows, itemsById, price, onUse }) {
 
       {missing.length > 0 && (
         <div className="muted small" style={{ marginTop: 6 }}>
-          <Icona nome="avviso" gruppo="segnali" />{' '}Stima parziale: manca il costo al dettaglio di {missing.join(', ')}.
-          Impostalo in Magazzino per avere il prezzo reale.
+          <Icona nome="avviso" gruppo="segnali" />{' '}
+          {tr('Stima parziale: manca il costo al dettaglio di {ingredienti}. Impostalo in Magazzino per avere il prezzo reale.', {
+            ingredienti: missing.join(', '),
+          })}
         </div>
       )}
     </div>

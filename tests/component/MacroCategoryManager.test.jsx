@@ -116,8 +116,10 @@ const pesiScritti = () => stato.scritture.filter((s) => s.tipo === 'set' && s.op
 describe('l’elenco delle macro', () => {
   it('dice quanti prodotti e quante voci ha dentro ognuna, senza aprirla', () => {
     monta()
-    expect(screen.getByRole('button', { name: /Distillati/ })).toHaveTextContent('1 prodotti · 1 voci')
-    expect(screen.getByRole('button', { name: /Bibite/ })).toHaveTextContent('1 prodotti · 0 voci')
+    // Il singolare (REQ-UI-039): coi testi passati in due lingue «1 prodotti
+    // · 1 voci» è diventato «1 prodotto · 1 voce», come vuole l'italiano.
+    expect(screen.getByRole('button', { name: /Distillati/ })).toHaveTextContent('1 prodotto · 1 voce')
+    expect(screen.getByRole('button', { name: /Bibite/ })).toHaveTextContent('1 prodotto · 0 voci')
     expect(screen.queryByRole('textbox', { name: 'Cerca fra i prodotti' })).toBeNull()
   })
 
@@ -198,7 +200,7 @@ describe('dentro una macro', () => {
     expect(casella).toHaveValue(80)
     // E il riassunto nell'elenco si aggiorna senza rileggere niente: la
     // scrittura è ancora appesa.
-    expect(screen.getByRole('button', { name: /Distillati/ })).toHaveTextContent('1 prodotti · 2 voci')
+    expect(screen.getByRole('button', { name: /Distillati/ })).toHaveTextContent('1 prodotto · 2 voci')
   })
 
   it('con Invio si salva come uscendo', async () => {
@@ -232,7 +234,7 @@ describe('dentro una macro', () => {
     await user.clear(screen.getByRole('spinbutton', { name: 'Gin: quota in Distillati' }))
     await user.tab()
     expect(pesiScritti()[0].data).toEqual({ pesi_prodotti: { gin: { __delete: true } } })
-    expect(screen.getByRole('button', { name: /Distillati/ })).toHaveTextContent('0 prodotti · 1 voci')
+    expect(screen.getByRole('button', { name: /Distillati/ })).toHaveTextContent('0 prodotti · 1 voce')
   })
 
   it('la ricerca restringe la colonna, e «solo senza macro» toglie chi è già a posto', async () => {

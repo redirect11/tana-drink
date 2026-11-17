@@ -27,6 +27,7 @@ import { stampaComandeConsentita, servizioAttivo } from '../lib/limiti.js'
 import Caricamento from '../components/Caricamento.jsx'
 import ComandaDetail from '../components/ComandaDetail.jsx'
 import { fermoPerIlCliente } from '../lib/attesaCliente.js'
+import { tr } from '../lib/lingua.js'
 
 // ── LA SCHERMATA DI UNA COMANDA ──────────────────────────────────────
 //
@@ -126,28 +127,28 @@ export default function ComandaPage() {
     navigate(`/ordine/${id}/comanda/${nata.id}`, { replace: true })
   }, [order, divisa, id, navigate])
 
-  if (error) return <div className="banner">Errore: {error}</div>
+  if (error) return <div className="banner">{tr('Errore: {errore}', { errore: error })}</div>
   // Chi non gestisce va sul CONTO: quella pagina sa già cosa far vedere a
   // ognuno, e mandarci chi capita qui per sbaglio è meglio di un «non
   // puoi» davanti a un ordine che magari è il suo.
   if (gestore === false) return <Navigate to={`/ordine/${id}`} replace />
-  if (order === undefined || gestore === undefined) return <Caricamento testo="Apro la comanda…" />
-  if (!order) return <div className="empty">Questo conto non c’è più.</div>
+  if (order === undefined || gestore === undefined) return <Caricamento testo={tr('Apro la comanda…')} />
+  if (!order) return <div className="empty">{tr('Questo conto non c’è più.')}</div>
 
   // DIVISIONE APPENA PARTITA: la comanda di prima c'è ancora (annullata)
   // finché non arriva lo snapshot, ma se sparisse del tutto non si sbatte
   // in faccia «non c'è più» a chi ha appena premuto — si aspetta il
   // pezzo nuovo, che sta arrivando.
-  if (!comanda && divisa) return <Caricamento testo="Divido la comanda…" />
+  if (!comanda && divisa) return <Caricamento testo={tr('Divido la comanda…')} />
 
   if (!comanda) {
     // Comanda sparita (conto rifatto, divisione): non si lascia una pagina
     // vuota, si manda dove la risposta c'è di sicuro.
     return (
       <div className="empty">
-        Questa comanda non c’è più.{' '}
+        {tr('Questa comanda non c’è più.')}{' '}
         <button className="btn small" onClick={() => navigate(`/ordine/${id}`)}>
-          Apri il conto
+          {tr('Apri il conto')}
         </button>
       </div>
     )
@@ -172,7 +173,7 @@ export default function ComandaPage() {
     segna(stato)
     advanceComanda(order.id, comanda.id, stato).catch((e) => {
       comandeLocali.scarta(order.id)
-      showToast(`Avanzamento non riuscito: ${e.message}`, { kind: 'error' })
+      showToast(tr('Avanzamento non riuscito: {errore}', { errore: e.message }), { kind: 'error' })
     })
   }
 
@@ -197,7 +198,7 @@ export default function ComandaPage() {
     preparazioneParziale(order.id, comanda.id, scelte).catch((e) => {
       comandeLocali.scarta(order.id)
       setDivisa(null)
-      showToast(`Divisione non riuscita: ${e.message}`, { kind: 'error' })
+      showToast(tr('Divisione non riuscita: {errore}', { errore: e.message }), { kind: 'error' })
     })
   }
 
@@ -211,7 +212,7 @@ export default function ComandaPage() {
       senzaSupplementi={!settings.coperto_enabled && !settings.service_charge_enabled}
       onCambiaConsegna={(modo) =>
         setOrderServiceMode(order.id, modo).catch((e) =>
-          showToast(`Modo non cambiato: ${e.message}`, { kind: 'error' })
+          showToast(tr('Modo non cambiato: {errore}', { errore: e.message }), { kind: 'error' })
         )
       }
       onAvanza={porta}
@@ -225,7 +226,7 @@ export default function ComandaPage() {
         stampaComandeConsentita(settings)
           ? () =>
               printComanda(order, comanda).catch((e) =>
-                showToast(`Stampa non riuscita: ${e.message}`, { kind: 'error' })
+                showToast(tr('Stampa non riuscita: {errore}', { errore: e.message }), { kind: 'error' })
               )
           : undefined
       }

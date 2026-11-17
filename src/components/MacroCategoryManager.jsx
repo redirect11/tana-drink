@@ -2,6 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { conteggioPesi, ordinaMacro, perNome, pesiAltrove, pesoAmmesso, pesoDi } from '../lib/macros.js'
 import Icona, { ConIcona } from './Icona.jsx'
 import { conEmoji } from '../lib/icone.js'
+import { tr } from '../lib/lingua.js'
 import {
   createMacroCategory,
   updateMacroCategory,
@@ -47,12 +48,13 @@ export default function MacroCategoryManager({ macros, prodotti, voci }) {
     setName('')
   }
   function renameMacro(m) {
-    const n = prompt('Nuovo nome macro-categoria:', m.name)
+    const n = prompt(tr('Nuovo nome macro-categoria:'), m.name)
     if (n == null || !n.trim()) return
     sostituisci(updateMacroCategory(m, { name: n.trim() }))
   }
   function removeMacro(m) {
-    if (!confirm(`Eliminare la macro “${m.name}”? Prodotti e voci restano, senza la quota che avevano qui.`)) return
+    if (!confirm(tr('Eliminare la macro “{nome}”? Prodotti e voci restano, senza la quota che avevano qui.', { nome: m.name })))
+      return
     deleteMacroCategory(m.id)
     setElenco((prev) => prev.filter((x) => x.id !== m.id))
   }
@@ -71,23 +73,19 @@ export default function MacroCategoryManager({ macros, prodotti, voci }) {
   return (
     <div className="card" style={{ marginTop: 8 }}>
       <p className="muted small" style={{ margin: '0 0 8px' }}>
-        Ogni macro-categoria raccoglie i singoli prodotti del magazzino (quello
-        che si spende) e le singole voci del menù (quello che si incassa),
-        ciascuno con la percentuale con cui ci entra. Un prodotto può stare
-        per una parte in una macro e per il resto in un'altra; la quota che
-        nessuna macro reclama resta «non attribuita».
+        {tr("Ogni macro-categoria raccoglie i singoli prodotti del magazzino (quello che si spende) e le singole voci del menù (quello che si incassa), ciascuno con la percentuale con cui ci entra. Un prodotto può stare per una parte in una macro e per il resto in un'altra; la quota che nessuna macro reclama resta «non attribuita».")}
       </p>
       <div className="row" style={{ gap: 8 }}>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Nuova macro (es. Distillati)"
+          placeholder={tr('Nuova macro (es. Distillati)')}
         />
-        <button className="btn small" onClick={addMacro}>Aggiungi</button>
+        <button className="btn small" onClick={addMacro}>{tr('Aggiungi')}</button>
       </div>
 
       {elenco.length === 0 && (
-        <div className="muted small" style={{ marginTop: 8 }}>Nessuna macro-categoria.</div>
+        <div className="muted small" style={{ marginTop: 8 }}>{tr('Nessuna macro-categoria.')}</div>
       )}
 
       {elenco.map((m, idx) => {
@@ -104,21 +102,22 @@ export default function MacroCategoryManager({ macros, prodotti, voci }) {
               >
                 <strong><Icona nome="raggruppa" gruppo="tasti" /> {m.name}</strong>
                 <span className="muted small">
-                  {conta.prodotti} prodotti · {conta.voci} voci
+                  {conta.prodotti === 1 ? tr('1 prodotto') : tr('{n} prodotti', { n: conta.prodotti })} ·{' '}
+                  {conta.voci === 1 ? tr('1 voce') : tr('{n} voci', { n: conta.voci })}
                 </span>
               </button>
               <span className="row" style={{ gap: 4 }}>
                 <button className="btn ghost small" onClick={() => moveMacro(idx, -1)} disabled={idx === 0}>↑</button>
                 <button className="btn ghost small" onClick={() => moveMacro(idx, 1)} disabled={idx === elenco.length - 1}>↓</button>
-                <button className="btn ghost small" onClick={() => renameMacro(m)} aria-label="Rinomina" title="Rinomina"><Icona nome="modifica" gruppo="tasti" /></button>
-                <button className="btn ghost small" onClick={() => removeMacro(m)} aria-label="Elimina" title="Elimina"><Icona nome="elimina" gruppo="tasti" /></button>
+                <button className="btn ghost small" onClick={() => renameMacro(m)} aria-label={tr('Rinomina')} title={tr('Rinomina')}><Icona nome="modifica" gruppo="tasti" /></button>
+                <button className="btn ghost small" onClick={() => removeMacro(m)} aria-label={tr('Elimina')} title={tr('Elimina')}><Icona nome="elimina" gruppo="tasti" /></button>
               </span>
             </div>
             {isAperta && (
               <div className="macro-pesi">
                 <ColonnaPesi
-                  titolo={conEmoji('magazzino', 'Prodotti del magazzino')}
-                  cerca="Cerca fra i prodotti"
+                  titolo={conEmoji('magazzino', tr('Prodotti del magazzino'))}
+                  cerca={tr('Cerca fra i prodotti')}
                   lato="prodotti"
                   elementi={prodotti}
                   macro={m}
@@ -126,8 +125,8 @@ export default function MacroCategoryManager({ macros, prodotti, voci }) {
                   onPeso={scriviPeso}
                 />
                 <ColonnaPesi
-                  titolo={conEmoji('menu', 'Voci del menù')}
-                  cerca="Cerca fra le voci"
+                  titolo={conEmoji('menu', tr('Voci del menù'))}
+                  cerca={tr('Cerca fra le voci')}
                   lato="voci"
                   elementi={voci}
                   macro={m}
@@ -172,7 +171,7 @@ function ColonnaPesi({ titolo, cerca, lato, elementi, macro, macros, onPeso }) {
         <strong className="small"><ConIcona testo={titolo} /></strong>
         <label className="row small muted" style={{ gap: 4, alignItems: 'center' }}>
           <input type="checkbox" checked={soloLiberi} onChange={(e) => setSoloLiberi(e.target.checked)} />
-          Solo senza macro
+          {tr('Solo senza macro')}
         </label>
       </div>
       <input
@@ -182,7 +181,7 @@ function ColonnaPesi({ titolo, cerca, lato, elementi, macro, macros, onPeso }) {
         placeholder={cerca}
         aria-label={cerca}
       />
-      {righe.length === 0 && <div className="muted small">Niente da mostrare.</div>}
+      {righe.length === 0 && <div className="muted small">{tr('Niente da mostrare.')}</div>}
       {righe.map((r) => (
         <RigaPeso key={r.id} {...r} nomeMacro={macro.name} onPeso={conferma} />
       ))}
@@ -211,7 +210,7 @@ const RigaPeso = memo(function RigaPeso({ id, nome, qui, altrove, nomeMacro, onP
   return (
     <label className={`macro-peso-riga${qui > 0 ? ' con-quota' : ''}`}>
       <span className="macro-peso-nome">{nome}</span>
-      {altrove > 0 && <span className="muted small">{altrove}% altrove</span>}
+      {altrove > 0 && <span className="muted small">{tr('{n}% altrove', { n: altrove })}</span>}
       <input
         type="number"
         min={0}
@@ -220,7 +219,7 @@ const RigaPeso = memo(function RigaPeso({ id, nome, qui, altrove, nomeMacro, onP
         inputMode="numeric"
         value={valore}
         placeholder="0"
-        aria-label={`${nome}: quota in ${nomeMacro}`}
+        aria-label={tr('{nome}: quota in {macro}', { nome, macro: nomeMacro })}
         onChange={(e) => setBozza(e.target.value)}
         onBlur={conferma}
         onKeyDown={(e) => {

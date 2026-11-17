@@ -20,6 +20,7 @@
 
 import { nomeInCarta, rigaDiServizio, ingredientiDalCampo } from './ingredientiCarta.js'
 import { normName as normale } from './nameMatch.js'
+import { daTradurre } from './lingua.js'
 
 const TIPI_ETICHETTA = ['prodotto', 'categoria', 'categoria_cassa', 'testo']
 
@@ -27,11 +28,11 @@ const TIPI_ETICHETTA = ['prodotto', 'categoria', 'categoria_cassa', 'testo']
 // dalla ricetta del prodotto collegato, poi il resto del magazzino, poi la
 // cassa. Il nome si legge accanto al suggerimento: il colore non basta.
 export const GRUPPI_SUGGERIMENTO = [
-  { id: 'ricetta', nome: 'dalla ricetta' },
-  { id: 'ricetta-categoria', nome: 'categoria della ricetta' },
-  { id: 'prodotto', nome: 'magazzino' },
-  { id: 'categoria', nome: 'categoria di magazzino' },
-  { id: 'cassa', nome: 'categoria della cassa' },
+  { id: 'ricetta', nome: daTradurre('dalla ricetta') },
+  { id: 'ricetta-categoria', nome: daTradurre('categoria della ricetta') },
+  { id: 'prodotto', nome: daTradurre('magazzino') },
+  { id: 'categoria', nome: daTradurre('categoria di magazzino') },
+  { id: 'cassa', nome: daTradurre('categoria della cassa') },
 ]
 
 const MAX_SUGGERIMENTI = 8

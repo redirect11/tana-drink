@@ -48,10 +48,11 @@
 import { perNome } from './macros.js'
 import { normName } from './nameMatch.js'
 import { ingredientiDellaVoce, etichettaPulita, etichetteConScelta } from './etichetteIngredienti.js'
+import { daTradurre } from './lingua.js'
 
 export const VISTE_SEZIONE = [
-  { id: 'dettagliata', label: 'Dettagliata' },
-  { id: 'snella', label: 'Snella' },
+  { id: 'dettagliata', label: daTradurre('Dettagliata') },
+  { id: 'snella', label: daTradurre('Snella') },
 ]
 export const vistaSezione = (v) => (v === 'snella' ? 'snella' : 'dettagliata')
 
@@ -63,7 +64,11 @@ export const testo = (v) => (typeof v === 'string' ? v.trim() : '')
 // tendina dei prodotti: una sezione col suo nome, in fondo, da smistare
 // (l'utente, 10/11/2026: «quelli fuori categoria li mettiamo in una
 // categoria non categorizzati»).
-export const NON_CATEGORIZZATI = 'Non categorizzati'
+// È un DATO, non solo un'etichetta: è il nome scritto nella sezione della
+// copia di partenza, che i clienti leggono in italiano. `daTradurre` non lo
+// cambia; lo traduce con `trSegnato` solo chi lo mostra al gestore come
+// etichetta (la tendina dei prodotti), mai chi lo salva (REQ-UI-039).
+export const NON_CATEGORIZZATI = daTradurre('Non categorizzati')
 
 // Sezioni e voci si mettono in fila allo stesso modo: l'ordine scelto, poi
 // il nome, così due voci con lo stesso numero non si scambiano di posto a
