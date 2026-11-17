@@ -25,11 +25,11 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 | ✅ | 313 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 9 | fatto a metà |
-| ⬜ | 39 | da fare |
+| ⬜ | 45 | da fare |
 | 🗑 | 8 | non più valido |
 
-**384 voci** in tutto. **337** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **39** sono lavori
+**390 voci** in tutto. **337** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **45** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **17** difetti noti sono ancora aperti.
 
@@ -55,7 +55,7 @@ come «vero oggi», non come «garantito».
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
 | [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 14 | 2 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
-| [Sicurezza](#sicurezza) | 4 | 2 | Regole di accesso, App Check, e cosa protegge cosa. |
+| [Sicurezza](#sicurezza) | 4 | 8 | Regole di accesso, App Check, e cosa protegge cosa. |
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | 6 | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
@@ -79,8 +79,8 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 194 |
 | Unità | il progetto di dettaglio: un modulo da solo | 193 |
 
-**22** bisogni del locale, **0** con un test di accettazione.
-**136** requisiti su 376 sono collegati a un bisogno;
+**23** bisogni del locale, **0** con un test di accettazione.
+**142** requisiti su 382 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -265,6 +265,14 @@ Daniele, 17/11/2026: «l'app andrebbe tradotta in inglese», e poi «da oggi tut
 **Come si accetta**: Ogni testo a schermo dell'app ha la sua traduzione inglese, e una prova boccia quelli che non ce l'hanno. Un cliente col telefono in inglese ordina dal menù tradotto dal browser senza che la pagina si blocchi o mostri importi vecchi, e legge titoli e descrizioni nelle lingue che il gestore ha scelto e compilato. Chi lavora sceglie l'inglese e batte, incassa e chiude la serata senza incontrare testi italiani.
 
 **Chi**: Cliente, Banco, Sala, Gestore · **Lo realizzano**: [REQ-UI-038](#req-ui-038--i-testi-a-schermo-hanno-litaliano-e-linglese-e-una-prova-boccia-quelli-senza-traduzione), [REQ-CLI-010](#req-cli-010--le-pagine-dei-clienti-funzionano-tradotte-dal-browser), [REQ-MENU-046](#req-menu-046--le-lingue-del-menù-le-sceglie-il-gestore-e-titoli-e-descrizioni-si-scrivono-in-ognuna), [REQ-UI-039](#req-ui-039--il-gestionale-in-inglese) · ⚠️ **Nessun test di accettazione, ancora.**
+
+#### UR-023 — Ogni persona sa quali dati l'app tiene su di lei, e li può scaricare
+
+Daniele, 17/11/2026 (messaggio della regia, REQ-FLOTTA-134 per la sua parte): «bisognerebbe mettere anche il download dei dati dell'utente e le policy di questa cosa […] sia per i clienti registrati che per l'admin, lo staff e tutti i ruoli», e «nella policy dobbiamo dire tutti i dati che memorizziamo e tutti i dati che gli torniamo indietro e non dobbiamo omettere nulla, soprattutto i dati sensibili». GDPR, artt. 12, 15 e 20: copia dei propri dati, portabilità, risposta entro un mese. Nell'app il titolare del trattamento è il locale, Stonebit è responsabile (art. 28) e gli dà gli strumenti per rispondere.
+
+**Come si accetta**: Un cliente registrato, una persona dello staff e un admin scaricano dal proprio profilo un file JSON con tutti i propri dati e nessun dato di altri; l'admin esporta quelli di una persona del locale e l'esportazione resta registrata; ogni download chiede un accesso recente e lo dice alla persona. L'informativa del locale nasce dallo stesso elenco dei dati personali da cui nasce il file, e una prova fallisce se una raccolta con dati di persone non è nell'elenco.
+
+**Chi**: Cliente, Banco, Sala, Gestore · **Lo realizzano**: [REQ-SIC-007](#req-sic-007--un-elenco-unico-nel-codice-dei-dati-personali-che-lapp-tiene), [REQ-SIC-008](#req-sic-008--scarica-i-miei-dati-per-ogni-persona-dal-suo-profilo), [REQ-SIC-009](#req-sic-009--ladmin-esporta-i-dati-di-una-persona-del-locale-e-resta-registrato), [REQ-SIC-010](#req-sic-010--il-download-dei-dati-chiede-un-accesso-recente-e-lo-si-dice-alla-persona), [REQ-SIC-011](#req-sic-011--le-categorie-particolari-di-dati-art-9-se-lapp-ne-tratta-dichiarate-e-protette), [REQ-SIC-012](#req-sic-012--uninformativa-tipo-per-il-locale-generata-dallelenco-dei-dati-personali) · ⚠️ **Nessun test di accettazione, ancora.**
 
 ## Cosa fa il sistema
 
@@ -4899,6 +4907,42 @@ Oggi test gira senza App Check e con la chiave reCAPTCHA della produzione, che p
 Richiesta della regia (drink-regia REQ-FLOTTA-019), 02/11/2026. L'utente: «incarica un agente di verificare la sicurezza della demo», e letti i risultati, «dobbiamo risolvere anche tutte queste cose». Il disegno della modalità demo regge (nessuna demo nel pacchetto della Tana, nessuna richiesta verso Firebase, nessun dato personale nei dati di prova), ma: genera-cliente.mjs rifiuta la cartella «demo» prima di vedere che esiste, e la demo vecchia (un'app vera) restava online; la demo chiama la regia di produzione (presentazione, catalogo) a ogni apertura; con la configurazione vera e disableNetwork che fallisce in silenzio la rete resterebbe accesa; l'informativa privacy della Tana finisce in ogni build, demo e locali della flotta; nel pacchetto della demo restano nomi, foto e un fornitore della Tana; i link dei social accettano javascript:; la stampante finta non scapa il logo. Il dettaglio, coi file e le righe, in docs/sicurezza-demo.md. La regia ha già messo la sua difesa (PR #69): configurazione finta, niente indirizzo della regia, CSP con connect-src 'self', Storage chiuso.
 
 **Dove**: `scripts/genera-cliente.mjs, src/lib/funzioniRegia.js, src/lib/presentazione.js, src/App.jsx, src/porte/configurazione.js, src/lib/firebaseClient.js, public/privacy-policy.html, public/cookie-policy.html, clienti/pluginCliente.js, src/demo/, src/lib/venue.js, src/lib/stampanteFinta.js, docs/sicurezza-demo.md` · **Serve**: [UR-014](#ur-014--la-demo-che-si-mostra-a-un-locale-nuovo-non-espone-niente-di-un-locale-vero)
+
+#### REQ-SIC-007 — Un elenco unico, nel codice, dei dati personali che l'app tiene
+
+Per ogni dato di una persona: dove sta (raccolta e campo di Firestore, Storage, log, FCM, SumUp, l'AI), perché, la base giuridica, per quanto tempo, a chi va, e se è DELICATO (pagamenti e riferimenti SumUp, telefono, indirizzo, posizione, testi o file mandati all'AI con dati di terzi, tracce di accesso, IP). Dallo stesso elenco nascono l'informativa (REQ-SIC-012) e il file scaricato (REQ-SIC-008): l'informativa non dice meno di quello che si tiene, il file non dà meno di quello che l'informativa dice. Una prova fallisce se una raccolta con dati di persone di firestore.rules, o un campo scritto dalle Functions, non è nell'elenco. È la prima misura, prima di ogni altro codice: la regia la chiede come risposta.
+
+**Dove**: `src/lib (elenco dei dati personali), firestore.rules, functions/` · **Serve**: [UR-023](#ur-023--ogni-persona-sa-quali-dati-lapp-tiene-su-di-lei-e-li-può-scaricare)
+
+#### REQ-SIC-008 — «Scarica i miei dati» per ogni persona, dal suo profilo
+
+Cliente registrato, staff e admin scaricano dal proprio profilo un file JSON con TUTTO quello che l'app tiene su di loro (account, ruoli, ordini e conti in cui compaiono, presenze e turni, chiamate allo staff, preferenze, token delle notifiche, consensi, contatti, e ogni altro dato dell'elenco REQ-SIC-007), e mai dati di altri: in un conto con più persone ognuno vede le sue righe. GDPR artt. 15 e 20.
+
+**Dove**: `Il mio profilo (staff, admin), il profilo del cliente registrato` · **Serve**: [UR-023](#ur-023--ogni-persona-sa-quali-dati-lapp-tiene-su-di-lei-e-li-può-scaricare)
+
+#### REQ-SIC-009 — L'admin esporta i dati di una persona del locale, e resta registrato
+
+Per rispondere a una richiesta che arriva al locale, l'admin — solo lui — esporta i dati di una persona del locale, cliente o staff, nello stesso formato di REQ-SIC-008. Ogni esportazione resta registrata: chi, di chi, quando.
+
+**Dove**: `Impostazioni (Utenti e ruoli, Clienti), una Function` · **Serve**: [UR-023](#ur-023--ogni-persona-sa-quali-dati-lapp-tiene-su-di-lei-e-li-può-scaricare)
+
+#### REQ-SIC-010 — Il download dei dati chiede un accesso recente, e lo si dice alla persona
+
+Si scarica solo con un accesso recente, altrimenti si rientra; ogni download — fatto dalla persona o dall'admin — lo si dice alla persona interessata, con un avviso nell'app.
+
+**Dove**: `REQ-SIC-008, REQ-SIC-009` · **Serve**: [UR-023](#ur-023--ogni-persona-sa-quali-dati-lapp-tiene-su-di-lei-e-li-può-scaricare)
+
+#### REQ-SIC-011 — Le categorie particolari di dati (art. 9): se l'app ne tratta, dichiarate e protette
+
+La regia chiede se l'app tratta dati di categorie particolari (salute, opinioni, biometria…): per esempio allergie nelle preferenze o nelle note dei clienti, note libere sulle righe di un conto. Se sì vanno dichiarate nell'elenco (REQ-SIC-007), protette e chieste col consenso esplicito; se no, va detto perché.
+
+**Dove**: `note dei clienti, preferenze, note delle righe e dei conti` · **Serve**: [UR-023](#ur-023--ogni-persona-sa-quali-dati-lapp-tiene-su-di-lei-e-li-può-scaricare)
+
+#### REQ-SIC-012 — Un'informativa tipo per il locale, generata dall'elenco dei dati personali
+
+Dall'elenco di REQ-SIC-007 nasce un'informativa tipo che il locale mostra ai suoi clienti e al suo staff, coi suoi dati di titolare. Non omette niente, soprattutto i dati sensibili. Il testo è una bozza che approva Daniele.
+
+**Dove**: `docs/ (bozza), la pagina «Privacy» del locale` · **Serve**: [UR-023](#ur-023--ogni-persona-sa-quali-dati-lapp-tiene-su-di-lei-e-li-può-scaricare)
 
 ### Intelligenza artificiale
 

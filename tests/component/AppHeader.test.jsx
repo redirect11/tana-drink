@@ -26,6 +26,8 @@ let ruoloClaim = null
 let clienteLoggato = null
 // Il token che non torna: il ruolo resta «in lettura» (BUG-171).
 let tokenAppeso = false
+// L'ascolto dell'accesso, per far entrare qualcuno DOPO il montaggio.
+let ascoltoAccesso = null
 
 // Le impostazioni che una prova aggiunge a quelle di sempre (vedi il mock).
 const inPiu = vi.hoisted(() => ({ impostazioni: {} }))
@@ -36,6 +38,7 @@ vi.mock('../../src/lib/firebaseClient.js', () => ({
 }))
 vi.mock('firebase/auth', () => ({
   onAuthStateChanged: (_auth, cb) => {
+    ascoltoAccesso = cb
     cb(
       ruoloClaim
         ? {
@@ -355,11 +358,25 @@ describe('il tema segue chi guarda, non l’indirizzo', () => {
   // d'attesa dopo il login, non aveva il tema. Il ruolo si legge dal token,
   // e finché non torna la porta del gestionale prendeva i colori dei
   // clienti; quelli giusti arrivavano un attimo dopo.
+  // Il giro vero: il modulo di accesso su /bar (l'accesso ha già risposto
+  // «nessuno»), poi il login, col ruolo ancora in lettura.
   it('sulla porta del gestionale, mentre si legge il ruolo, il tema è già il suo', async () => {
-    ruoloClaim = 'admin'
-    tokenAppeso = true
     apri('/bar')
     await waitFor(() => expect(accento()).toBe(THEME_PRESETS[TEMA_STAFF.preset].vars['--accent']))
+    tokenAppeso = true
+    // La callback dell'accesso non finisce mai (il token è appeso): si
+    // aspetta il giro di React, non lei.
+    await act(async () => {
+      ascoltoAccesso({
+        uid: 'u1',
+        email: 'capo@bar.it',
+        displayName: 'Capo Bar',
+        getIdTokenResult: () => new Promise(() => {}),
+      })
+    })
+    // Un giro di disegno dopo: il tema non è passato a quello dei clienti.
+    await new Promise((r) => setTimeout(r, 50))
+    expect(accento()).toBe(THEME_PRESETS[TEMA_STAFF.preset].vars['--accent'])
   })
 
   it('e anche il modulo di accesso su /bar, prima che entri qualcuno', async () => {

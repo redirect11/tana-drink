@@ -553,3 +553,33 @@ bisogni:
       - REQ-MENU-046
       - REQ-UI-039
     test_cases: []
+
+  - id: UR-023
+    title: "Ogni persona sa quali dati l'app tiene su di lei, e li può scaricare"
+    area: "Cliente, Banco, Sala, Gestore"
+    description: >
+      Daniele, 17/11/2026 (messaggio della regia, REQ-FLOTTA-134 per la sua
+      parte): «bisognerebbe mettere anche il download dei dati dell'utente e
+      le policy di questa cosa […] sia per i clienti registrati che per
+      l'admin, lo staff e tutti i ruoli», e «nella policy dobbiamo dire
+      tutti i dati che memorizziamo e tutti i dati che gli torniamo indietro
+      e non dobbiamo omettere nulla, soprattutto i dati sensibili». GDPR,
+      artt. 12, 15 e 20: copia dei propri dati, portabilità, risposta entro
+      un mese. Nell'app il titolare del trattamento è il locale, Stonebit è
+      responsabile (art. 28) e gli dà gli strumenti per rispondere.
+    accettazione: >
+      Un cliente registrato, una persona dello staff e un admin scaricano dal
+      proprio profilo un file JSON con tutti i propri dati e nessun dato di
+      altri; l'admin esporta quelli di una persona del locale e l'esportazione
+      resta registrata; ogni download chiede un accesso recente e lo dice
+      alla persona. L'informativa del locale nasce dallo stesso elenco dei
+      dati personali da cui nasce il file, e una prova fallisce se una
+      raccolta con dati di persone non è nell'elenco.
+    requisiti:
+      - REQ-SIC-007
+      - REQ-SIC-008
+      - REQ-SIC-009
+      - REQ-SIC-010
+      - REQ-SIC-011
+      - REQ-SIC-012
+    test_cases: []
