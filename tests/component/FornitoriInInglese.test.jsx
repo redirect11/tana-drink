@@ -198,6 +198,7 @@ import AltreSpesePanel from '../../src/components/AltreSpesePanel.jsx'
 import RiepilogoFornitoriPanel from '../../src/components/RiepilogoFornitoriPanel.jsx'
 import InvoicesTab from '../../src/components/InvoicesTab.jsx'
 import { subscribeSottosezioni } from '../../src/lib/sottosezioni.js'
+import { createSupplierInvoice, salvaModelloOrdine } from '../../src/lib/api.js'
 
 beforeEach(() => {
   impostaLingua('en')
@@ -336,5 +337,73 @@ describe('Fornitori in inglese (REQ-UI-039)', () => {
     )
     expect(screen.getByText('Invoice no. 2/2026')).toBeInTheDocument()
     expect(italianoRimasto(container)).toEqual([])
+  })
+})
+
+// ── IN INGLESE A SCHERMO, IN ITALIANO NEI DATI ───────────────────────
+//
+// La lingua cambia quello che si LEGGE, non quello che si SALVA né quello
+// che si manda fuori. Tre posti dove la parola tradotta poteva finire nei
+// dati (revisione del 17/11): il tipo di documento (`doc_type` è italiano,
+// e `eNotaDiCredito` lo riconosce solo così), il nome di partenza di un
+// modello ricavato da un ordine senza fornitore, e la mail o il testo
+// copiato per il fornitore, che li legge lui.
+describe('in inglese a schermo, in italiano nei dati (REQ-UI-039)', () => {
+  it('scegliendo «Credit note» il documento si salva come «Nota di credito»', async () => {
+    const user = userEvent.setup()
+    render(<SupplierInvoicesPanel />)
+    await screen.findAllByText('#1556')
+    await user.click(screen.getByRole('button', { name: /New document/ }))
+    await user.selectOptions(screen.getByLabelText('Supplier *'), 'nova')
+    // Si sceglie per il testo che si vede, non per il valore.
+    await user.selectOptions(screen.getByLabelText('Type'), 'Credit note')
+    await user.type(screen.getByLabelText('Amount € *'), '120')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    expect(createSupplierInvoice).toHaveBeenCalledWith(
+      expect.objectContaining({ supplier_id: 'nova', doc_type: 'Nota di credito', amount: 120 })
+    )
+  })
+
+  it('il modello di un ordine senza fornitore non parte da «No supplier»', async () => {
+    const user = userEvent.setup()
+    const senza = { supplier_id: null, supplier_name: null }
+    stato.ordini = [ordine({ id: 'po-s', ...senza, lines: [riga(senza)] })]
+    render(<PurchaseOrdersPanel vista="lista" />)
+    await user.click(await screen.findByRole('button', { name: /The order from No supplier/ }))
+    await user.click(screen.getByRole('button', { name: 'Save as template' }))
+    // Il campo parte vuoto: «No supplier» è come si legge a schermo, e
+    // salvato com'era finiva in archivio come nome del modello.
+    const campo = screen.getByLabelText('Template name')
+    expect(campo).toHaveValue('')
+    await user.type(campo, 'Weekly 2')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    expect(salvaModelloOrdine).toHaveBeenCalledWith(expect.objectContaining({ nome: 'Weekly 2' }))
+    expect(salvaModelloOrdine).not.toHaveBeenCalledWith(expect.objectContaining({ nome: 'No supplier' }))
+  })
+
+  it('la mail e il testo copiato per il fornitore restano in italiano', async () => {
+    const user = userEvent.setup()
+    // `window.location.href` non si assegna in happy-dom: si guarda cosa
+    // la schermata avrebbe aperto, e alla fine si rimette com'era.
+    const vero = window.location
+    const aperto = []
+    Object.defineProperty(window, 'location', { configurable: true, value: { set href(v) { aperto.push(v) } } })
+    try {
+      stato.ordini = [IN_ARRIVO]
+      render(<PurchaseOrdersPanel vista="lista" />)
+      await user.click(await screen.findByRole('button', { name: 'Send to Nova' }))
+      expect(aperto).toHaveLength(1)
+      const mail = new URL(aperto[0])
+      expect(mail.searchParams.get('subject')).toBe('Ordine Nova — 2026-08-27')
+      const testo = mail.searchParams.get('body')
+      expect(testo).toMatch(/^Ordine del 2026-08-27\nFornitore: Nova\n/)
+      expect(testo).toMatch(/Totale netto: /)
+      expect(testo).not.toMatch(/\b(Order|Supplier|Total)\b/)
+
+      await user.click(screen.getByRole('button', { name: 'Copy the order of Nova' }))
+      expect(await navigator.clipboard.readText()).toBe(testo)
+    } finally {
+      Object.defineProperty(window, 'location', { configurable: true, value: vero })
+    }
   })
 })

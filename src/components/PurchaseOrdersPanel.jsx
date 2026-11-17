@@ -336,7 +336,7 @@ export default function PurchaseOrdersPanel({ vista = 'nuovo' }) {
   }
 
   async function remove(order) {
-    if (!confirm(tr('Eliminare l’ordine del {data}?', { data: order.created_at?.slice(0, 10) }))) return
+    if (!confirm(tr("Eliminare l'ordine del {data}?", { data: order.created_at?.slice(0, 10) }))) return
     try {
       await deletePurchaseOrder(order.id)
       setOrders((prev) => prev.filter((o) => o.id !== order.id))

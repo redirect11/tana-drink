@@ -131,6 +131,18 @@ export const daTradurre = (testo) => testo
 // chiavi dove nascono, nei `daTradurre`.
 export const trSegnato = (chiave, valori) => (chiave == null ? chiave : traduci(chiave, valori))
 
+// Un valore che può essere un'etichetta di casa (un tema o uno stile del
+// catalogo, segnati con `daTradurre`) oppure un DATO (il tema su misura che
+// manda la regia, lo stile a ricetta del locale, un nome scelto dal locale):
+// si traduce solo se è una chiave del dizionario, se no si mostra com'è.
+// `trSegnato` su un dato lo passerebbe da `italianoDi`, e un nome con la
+// barra («Nero | oro») si leggerebbe tagliato — anche in italiano.
+export function trDato(valore) {
+  if (typeof valore !== 'string') return valore
+  const conosciuto = Object.values(DIZIONARI).some((d) => Object.hasOwn(d, valore))
+  return conosciuto ? traduci(valore) : valore
+}
+
 // Chi deve sapere che la lingua è cambiata (i componenti, via useLingua).
 export function ascoltaLingua(f) {
   ascoltatori.add(f)

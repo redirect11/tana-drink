@@ -2,8 +2,6 @@
 export default {
   '«{modulo}» aggiunto: il modulo compare fra pochi istanti.':
     '“{modulo}” added: the module will appear in a few moments.',
-  '{frase} dal {data}.': '{frase} since {data}.',
-  '{frase}.': '{frase}.',
   '{importo} al mese + IVA': '{importo} a month + VAT',
   'Aggiornamento del catalogo in corso…': 'Updating the catalogue…',
   'Aggiornamento del listino in corso…': 'Updating the price list…',
@@ -75,11 +73,17 @@ export default {
   'Installazione chiusa': 'App closed',
   'Installazione non attivata': 'App not activated',
   'Installazione sospesa': 'App suspended',
-  'L’app di {nome} è chiusa': 'The app of {nome} is closed',
-  'L’app di {nome} è ferma per la scadenza della licenza':
-    'The app of {nome} is stopped because the licence has expired',
-  'L’app di {nome} è non ancora attivata': 'The app of {nome} is not yet activated',
-  'L’app di {nome} è sospesa': 'The app of {nome} is suspended',
+  'L’app di {nome} è chiusa.': 'The app for {nome} has been closed.',
+  'L’app di {nome} è chiusa dal {data}.': 'The app for {nome} has been closed since {data}.',
+  'L’app di {nome} è ferma per la scadenza della licenza.':
+    'The app for {nome} has been stopped: the licence has expired.',
+  'L’app di {nome} è ferma per la scadenza della licenza dal {data}.':
+    'The app for {nome} has been stopped: the licence expired on {data}.',
+  'L’app di {nome} è non ancora attivata.': 'The app for {nome} has not been activated yet.',
+  'L’app di {nome} è non ancora attivata dal {data}.':
+    'The app for {nome} has been awaiting activation since {data}.',
+  'L’app di {nome} è sospesa.': 'The app for {nome} has been suspended.',
+  'L’app di {nome} è sospesa dal {data}.': 'The app for {nome} has been suspended since {data}.',
   "L'app è stata aggiornata. Ecco cosa è cambiato:": 'The app has been updated. This is what has changed:',
   'L’assistente non è arrivato a una risposta: si può riformulare la domanda.':
     'The assistant did not reach an answer: the question can be rephrased.',

@@ -359,9 +359,17 @@ describe('gli avvisi sopra a tutto, in inglese', () => {
     const licenza = { stato: 'sospesa', dal: '2026-10-22T10:00:00Z', motivo: 'payment not received', regia_url: 'https://regia.example' }
     const sospesa = render(<InstallazioneSospesa ruolo="admin" licenza={licenza} venue={{ venue_name: 'Bar Mario' }} />)
     expect(screen.getByText('App suspended')).toBeInTheDocument()
-    expect(screen.getByRole('alert')).toHaveTextContent('The app of Bar Mario is suspended since 22/10/2026. Reason: payment not received.')
+    expect(screen.getByRole('alert')).toHaveTextContent('The app for Bar Mario has been suspended since 22/10/2026. Reason: payment not received.')
     expect(italianoRimasto(sospesa.container)).toEqual([])
     sospesa.unmount()
+
+    // La scadenza è un giorno preciso: «expired on», non «since».
+    const scaduta = render(
+      <InstallazioneSospesa ruolo="admin" licenza={{ stato: 'scaduta', scaduta_il: '2026-11-30T04:00:00Z' }} venue={{ venue_name: 'Bar Mario' }} />
+    )
+    expect(screen.getByRole('alert')).toHaveTextContent('The app for Bar Mario has been stopped: the licence expired on 30/11/2026.')
+    expect(italianoRimasto(scaduta.container)).toEqual([])
+    scaduta.unmount()
 
     const ferma = render(<InstallazioneSospesa ruolo="staff" licenza={licenza} venue={{ venue_name: 'Bar Mario' }} />)
     expect(screen.getByText('Venue suspended')).toBeInTheDocument()

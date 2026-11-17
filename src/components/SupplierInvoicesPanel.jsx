@@ -763,7 +763,8 @@ function LeCorrezioni({ fattura }) {
       <ul className="ordine-storia">
         {[...voci].reverse().map((v, k) => (
           <li key={`${v.at}-${k}`}>
-            <span className="muted small">{giornoEOra(v.at)}</span> {descriviMovimento(v)}
+            <span className="muted small">{giornoEOra(v.at)}</span>{' '}
+            {descriviMovimento(v, { etichettaTipo: etichettaTipoDocumento })}
           </li>
         ))}
       </ul>

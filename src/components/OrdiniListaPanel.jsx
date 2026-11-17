@@ -241,7 +241,12 @@ function RigaOrdine({
   // il colore si prendono dalla prima fetta quando l'ordine non li porta.
   const fette = useMemo(() => fetteFornitore(ordine, { suppliers }), [ordine, suppliers])
   const capo = fette[0] || {}
-  const nome = ordine.supplier_name || capo.supplier_name || tr('Senza fornitore')
+  // Il nome del fornitore è un DATO; «Senza fornitore» è solo come lo si
+  // legge a schermo. Il modello ne riceve il dato: la parola tradotta, come
+  // testo di partenza del campo, finirebbe in Firestore come nome del modello
+  // («No supplier» in archivio, scelto da un dispositivo in inglese).
+  const fornitore = ordine.supplier_name || capo.supplier_name || ''
+  const nome = fornitore || tr('Senza fornitore')
   const stato = statoOrdineDi(ordine)
   const chiuso = ordineChiuso(ordine)
   const pagato = ordinePagato(ordine, fattura)
@@ -384,7 +389,7 @@ function RigaOrdine({
           <IlProspetto ordine={ordine} fattura={fattura} onAllinea={onAllinea} />
           <LeRigheAperte ordine={ordine} fette={fette} onTogliRiga={onTogliRiga} />
           <LaStoria ordine={ordine} />
-          <SalvaComeModello ordine={ordine} nome={nome} onSalva={onSalvaModello} />
+          <SalvaComeModello ordine={ordine} nome={fornitore} onSalva={onSalvaModello} />
         </div>
       )}
     </div>
@@ -639,7 +644,8 @@ function LaStoria({ ordine }) {
       <ul className="ordine-storia">
         {[...voci].reverse().map((v, k) => (
           <li key={`${v.at}-${k}`}>
-            <span className="muted small">{giornoEOra(v.at)}</span> {descriviMovimento(v)}
+            <span className="muted small">{giornoEOra(v.at)}</span>{' '}
+            {descriviMovimento(v, { etichettaTipo: etichettaTipoDocumento })}
           </li>
         ))}
       </ul>

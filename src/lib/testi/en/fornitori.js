@@ -139,7 +139,7 @@ export default {
   'Eliminare «{nome}»?': 'Delete «{nome}»?',
   'Eliminare il documento {numero} di {nome}?': 'Delete document {numero} of {nome}?',
   'Eliminare il modello?': 'Delete the template?',
-  'Eliminare l’ordine del {data}?': 'Delete the order of {data}?',
+  "Eliminare l'ordine del {data}?": 'Delete the order of {data}?',
   'Es. 1556': 'e.g. 1556',
   'Es. differenza di prezzo sulla fattura 1556': 'e.g. price difference on invoice 1556',
   'Es. Giro della settimana': 'e.g. Weekly round',
@@ -304,6 +304,8 @@ export default {
   'Quello che manca': 'Missing items',
   'Questa immagine pesa {peso} ed è troppo grande da lavorare. Rifai la foto con la fotocamera del telefono.':
     'This image weighs {peso} and is too large to process. Retake the photo with the phone camera.',
+  'Questa parte dell’ordine è di {fornitore}: il documento è di {documento}.':
+    'This portion of the order is from {fornitore}: the document is from {documento}.',
   'questa voce': 'this item',
   'Queste righe vengono da un ordine già consegnato: la merce è entrata in magazzino alla consegna.':
     'These lines come from an order already delivered: the goods entered stock on delivery.',
@@ -404,6 +406,7 @@ export default {
   'ultimo acquisto {nome}': 'last purchase {nome}',
   'Un modello con questo nome c’è già: viene aggiornato.':
     'A template with this name already exists: it will be updated.',
+  'un altro fornitore': 'another supplier',
   'Un prezzo è cambiato rispetto all’ordine.': 'One price has changed compared with the order.',
   'un prezzo|Listino allineato al documento · {n} prezzi': 'Price list aligned with the document · {n} price',
   'un prodotto': 'a product',

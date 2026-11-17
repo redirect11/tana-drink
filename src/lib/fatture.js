@@ -316,7 +316,10 @@ export function fetteDellaFattura(fattura, ordini, { suppliers = [] } = {}) {
 export function aggancioAmmesso(fattura, fetta, { fatture = [] } = {}) {
   if (!fattura?.id || !fetta?.order_id) return tr('Manca il documento o la parte di ordine.')
   if (!fetta.supplier_id || fetta.supplier_id !== fattura.supplier_id) {
-    return `Questa parte dell’ordine è di ${fetta.supplier_name || 'un altro fornitore'}: il documento è di ${fattura.supplier_name || '—'}.`
+    return tr('Questa parte dell’ordine è di {fornitore}: il documento è di {documento}.', {
+      fornitore: fetta.supplier_name || tr('un altro fornitore'),
+      documento: fattura.supplier_name || '—',
+    })
   }
   const altra = fatturaDellaFetta(fatture, fetta)
   if (altra && altra.id !== fattura.id) return tr('Quella parte dell’ordine ha già un documento collegato.')
@@ -405,6 +408,8 @@ export const CAMPI_MODIFICABILI = [
 const ETICHETTA_CAMPO = {
   supplier_name: daTradurre('Fornitore'),
   number: daTradurre('Numero'),
+  // «Tipo» è anche come `descriviMovimento` (statiOrdine.js) riconosce la
+  // correzione del tipo di documento, per tradurne i valori: non si rinomina.
   doc_type: daTradurre('Tipo'),
   date: daTradurre('Data'),
   amount: daTradurre('Importo'),

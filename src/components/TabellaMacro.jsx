@@ -8,7 +8,9 @@ import { UNASSIGNED } from '../lib/macroStats.js'
 // solo le parole delle righe e il loro ordine, che ognuna passa in `righe`.
 //
 //   colonne: [{ key, label, sotto? }]  — `sotto` è la seconda riga
-//            dell'intestazione (i giorni di una settimana del mese)
+//            dell'intestazione (i giorni di una settimana del mese);
+//            `label` già nella lingua in uso (colonneDelBilancio la
+//            traduce: «MAR» è marzo o martedì, e lo sa solo lei)
 //   righe:   [{ campo, label, cls }]   — campo fra incasso, costo, margine,
 //            rapporto; `cls` dà il colore della riga (index.css, .macro-tab);
 //            `label` segnata con `daTradurre` da chi passa le righe
@@ -91,7 +93,7 @@ function TabellaColonne({ colonne, perColonna, tot, righe, incidenza }) {
             <th className="rowhead"></th>
             {colonne.map((c) => (
               <th key={c.key}>
-                {trSegnato(c.label)}
+                {c.label}
                 {c.sotto && <div className="muted">{c.sotto}</div>}
               </th>
             ))}

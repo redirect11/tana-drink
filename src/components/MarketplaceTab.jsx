@@ -11,7 +11,7 @@ import { formatPrice } from '../lib/orderStatus.js'
 import { strutturaDi } from './stiliStrutturati.js'
 import Caricamento from './Caricamento.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
-import { tr, daTradurre, trSegnato, useLingua } from '../lib/lingua.js'
+import { tr, daTradurre, trSegnato, trDato, useLingua } from '../lib/lingua.js'
 import {
   STILI_MENU,
   nomeStile,
@@ -477,7 +477,7 @@ export default function MarketplaceTab({ role = null }) {
   // Un tema su misura ritirato dalla licenza non si reinstalla: disinstallarlo
   // è definitivo, e la scheda lo dice prima.
   const ritirato = (t) => ritirati.some((r) => r.id === t.id)
-  const stileDi = (t) => tr('Stile «{nome}»', { nome: trSegnato(nomeStile(t.stile, settings)) })
+  const stileDi = (t) => tr('Stile «{nome}»', { nome: trDato(nomeStile(t.stile, settings)) })
   const sottotitoloTema = (t) =>
     t.su_misura
       ? [
@@ -492,14 +492,14 @@ export default function MarketplaceTab({ role = null }) {
   const schedaTema = (t) => (
     <Scheda
       key={t.id}
-      titolo={trSegnato(t.nome)}
-      descrizione={trSegnato(t.descrizione)}
+      titolo={trDato(t.nome)}
+      descrizione={trDato(t.descrizione)}
       sottotitolo={sottotitoloTema(t)}
       vetrina={<Vetrina colori={temaComeColori(t)} stile={stileDelTema(t)} settings={settings} />}
     >
       <AzioniCatalogo
         provaHref={urlProvaMenu('tema', t.id)}
-        etichetta={trSegnato(t.nome)}
+        etichetta={trDato(t.nome)}
         inUso={inUso === t.id}
         installato={installati.some((i) => i.id === t.id)}
         disinstallabile={disinstallabile}
@@ -513,14 +513,14 @@ export default function MarketplaceTab({ role = null }) {
   const schedaStile = (s) => (
     <Scheda
       key={s.id}
-      titolo={trSegnato(s.nome)}
-      descrizione={trSegnato(s.desc)}
+      titolo={trDato(s.nome)}
+      descrizione={trDato(s.desc)}
       sottotitolo={`${tr('Sui colori del menù del locale')} · ${tr('Gratis')}`}
       vetrina={<Vetrina colori={coloriDelLocale} stile={s.id} settings={settings} />}
     >
       <AzioniCatalogo
         provaHref={urlProvaMenu('stile', s.id)}
-        etichetta={tr('lo stile {nome}', { nome: trSegnato(s.nome) })}
+        etichetta={tr('lo stile {nome}', { nome: trDato(s.nome) })}
         inUso={stileInUso === s.id}
         installato={s.aRicetta ? ricettaInstallati.some((r) => r.id === s.id) : stiliDelLocale.includes(s.id)}
         disinstallabile={disinstallabile}

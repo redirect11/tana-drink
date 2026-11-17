@@ -31,26 +31,32 @@ import { tr, daTradurre, trSegnato, formatoAttivo, useLingua } from '../lib/ling
 // Quello che legge il TITOLARE, stato per stato: il motivo e le parole
 // sull'abbonamento sono fatti suoi. Lo stato è una frase intera e non un
 // pezzo da incastrare («è {stato}»): in inglese il verbo e l'ordine delle
-// parole cambiano da uno stato all'altro.
+// parole cambiano da uno stato all'altro. E la frase con la data è un'altra
+// frase intera, non quella senza data con «dal {data}» attaccato: in inglese
+// «is suspended since…» è sbagliato, e la scadenza vuole «expired on…».
 const TESTI = {
   [STATI_LICENZA.CHIUSA]: {
     titolo: daTradurre('Installazione chiusa'),
-    frase: daTradurre('L’app di {nome} è chiusa'),
+    frase: daTradurre('L’app di {nome} è chiusa.'),
+    fraseDal: daTradurre('L’app di {nome} è chiusa dal {data}.'),
     seguito: daTradurre('I dati restano consultabili fino alla loro cancellazione.'),
   },
   [STATI_LICENZA.NON_ATTIVATA]: {
     titolo: daTradurre('Installazione non attivata'),
-    frase: daTradurre('L’app di {nome} è non ancora attivata'),
+    frase: daTradurre('L’app di {nome} è non ancora attivata.'),
+    fraseDal: daTradurre('L’app di {nome} è non ancora attivata dal {data}.'),
     seguito: daTradurre('L’attivazione si completa dalla pagina del prodotto; appena è attiva, l’app si apre da sola.'),
   },
   [STATI_LICENZA.SCADUTA]: {
     titolo: daTradurre('Licenza scaduta'),
-    frase: daTradurre('L’app di {nome} è ferma per la scadenza della licenza'),
+    frase: daTradurre('L’app di {nome} è ferma per la scadenza della licenza.'),
+    fraseDal: daTradurre('L’app di {nome} è ferma per la scadenza della licenza dal {data}.'),
     seguito: daTradurre('Il titolare può rinnovarla dalla sua pagina del prodotto; appena è rinnovata, l’app si apre da sola.'),
   },
   [STATI_LICENZA.SOSPESA]: {
     titolo: daTradurre('Installazione sospesa'),
-    frase: daTradurre('L’app di {nome} è sospesa'),
+    frase: daTradurre('L’app di {nome} è sospesa.'),
+    fraseDal: daTradurre('L’app di {nome} è sospesa dal {data}.'),
     seguito: daTradurre('Il titolare può riattivarla dalla sua pagina del prodotto, mettendo in regola l’abbonamento.'),
   },
 }
@@ -97,15 +103,14 @@ export default function InstallazioneSospesa({ licenza, venue, ruolo = null }) {
     licenza?.stato === STATI_LICENZA.SCADUTA && licenza.scaduta_il
       ? licenza.scaduta_il
       : licenza?.dal || null
-  const frase = trSegnato(testo.frase, { nome })
   return (
     <main className="installazione-sospesa" role="alert">
       <div className="card">
         <h2>{trSegnato(testo.titolo)}</h2>
         <p>
           {dal
-            ? tr('{frase} dal {data}.', { frase, data: new Date(dal).toLocaleDateString(formatoAttivo()) })
-            : tr('{frase}.', { frase })}
+            ? trSegnato(testo.fraseDal, { nome, data: new Date(dal).toLocaleDateString(formatoAttivo()) })
+            : trSegnato(testo.frase, { nome })}
           {licenza?.motivo && ` ${tr('Motivo: {motivo}.', { motivo: licenza.motivo })}`}
         </p>
         <p className="muted">

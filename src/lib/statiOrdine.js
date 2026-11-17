@@ -205,10 +205,18 @@ export function conMovimento(order, voce) {
 
 const euro = (v) => `${(Number(v) || 0).toFixed(2).replace('.', ',')} €`
 
+// Il nome con cui `cambiFattura` (fatture.js) scrive nella storia il campo
+// `doc_type`: è salvato in italiano, quindi è stabile, e riconosce la
+// correzione del tipo di documento anche nelle storie già scritte.
+const CAMPO_TIPO_DOCUMENTO = 'Tipo'
+
 // Come si legge un movimento. Frase piana, al passato, senza gergo: chi
 // guarda uno storico vuole sapere cosa è successo, non come si chiama il
 // campo.
-export function descriviMovimento(v) {
+// `etichettaTipo` è il nome a schermo di un tipo di documento
+// (`etichettaTipoDocumento` di fatture.js): lo passa chi mostra la storia,
+// perché importare fatture.js da qui chiuderebbe un anello di import.
+export function descriviMovimento(v, { etichettaTipo = (tipo) => tipo } = {}) {
   const d = v?.dettaglio || {}
   const nome = d.nome || tr('Un prodotto')
   // Il numero di righe: in italiano «1 righe» è com'è sempre stato scritto
@@ -262,11 +270,17 @@ export function descriviMovimento(v) {
     // quei soldi sono già usciti.
     // IN INGLESE (REQ-UI-039) si traducono le parole di legame e il nome del
     // campo, che è un'etichetta di ETICHETTA_CAMPO segnata con daTradurre; i
-    // valori restano come sono stati scritti nel momento della correzione.
+    // valori restano come sono stati scritti nel momento della correzione,
+    // tranne il TIPO di documento: «Fattura» e «Nota di credito» sono parole
+    // della tabella dei tipi, non importi né nomi, e si mostrano tradotte
+    // («Type from Invoice to Credit note», non «from Fattura to Nota di credito»).
     case 'documento_corretto': {
       const cambi = Array.isArray(d.cambi) ? d.cambi : []
       const cosa = cambi
-        .map((c) => tr('{campo} da {da} a {a}', { campo: trSegnato(c.campo), da: c.da, a: c.a }))
+        .map((c) => {
+          const valore = (x) => (c.campo === CAMPO_TIPO_DOCUMENTO ? etichettaTipo(x) : x)
+          return tr('{campo} da {da} a {a}', { campo: trSegnato(c.campo), da: valore(c.da), a: valore(c.a) })
+        })
         .join(' · ')
       const testa = d.pagato ? tr('Documento corretto (già pagato)') : tr('Documento corretto')
       return cosa ? `${testa} · ${cosa}` : testa
