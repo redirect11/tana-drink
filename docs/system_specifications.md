@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 311 | fatto e coperto dai test |
+| ✅ | 313 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 9 | fatto a metà |
-| ⬜ | 37 | da fare |
+| ⬜ | 39 | da fare |
 | 🗑 | 8 | non più valido |
 
-**380 voci** in tutto. **335** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **37** sono lavori
+**384 voci** in tutto. **337** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **39** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **17** difetti noti sono ancora aperti.
 
@@ -47,11 +47,11 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 3 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 40 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 40 | 2 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 51 | 7 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 16 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 20 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
-| [Vista cliente](#vista-cliente) | 9 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
+| [Vista cliente](#vista-cliente) | 10 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
 | [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 14 | 2 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
@@ -59,7 +59,7 @@ come «vero oggi», non come «garantito».
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | 6 | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
-| [Interfaccia](#interfaccia) | 32 | 4 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
+| [Interfaccia](#interfaccia) | 33 | 5 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 24 | 2 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 15 | 4 |  |
@@ -75,12 +75,12 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Livello | Cosa verifica | File di test |
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
-| Sistema | la specifica (REQ-*), sull'app intera | 13 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 188 |
-| Unità | il progetto di dettaglio: un modulo da solo | 191 |
+| Sistema | la specifica (REQ-*), sull'app intera | 14 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 190 |
+| Unità | il progetto di dettaglio: un modulo da solo | 192 |
 
-**21** bisogni del locale, **0** con un test di accettazione.
-**132** requisiti su 372 sono collegati a un bisogno;
+**22** bisogni del locale, **0** con un test di accettazione.
+**136** requisiti su 376 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -257,6 +257,14 @@ Daniele, 17/11/2026: la dichiarazione di accessibilità e quello che la legge ch
 **Come si accetta**: Da sola tastiera si ordina dal menù e si batte e si incassa un conto; con un lettore di schermo ogni comando dice cosa fa; con lo zoom al 200% non si perde niente; la prova axe sulle pagine principali non trova violazioni WCAG 2.1 A e AA; dal piè di pagina si arriva alla pagina «Accessibilità».
 
 **Chi**: Cliente, Banco, Sala, Gestore · **Lo realizzano**: [REQ-UI-036](#req-ui-036--lapp-è-accessibile-wcag-21-aa-su-menù-home-e-gestionale-provata-con-axe-nel-collaudo-con-la-pagina-accessibilità) · ⚠️ **Nessun test di accettazione, ancora.**
+
+#### UR-022 — Chi non parla italiano usa il menù e il gestionale nella sua lingua
+
+Daniele, 17/11/2026: «l'app andrebbe tradotta in inglese», e poi «da oggi tutte le funzioni dovranno avere testi in italiano ed inglese». I clienti stranieri leggono il menù nella loro lingua; il personale che non parla italiano lavora col gestionale in inglese; i locali fuori dall'Italia possono usare il prodotto.
+
+**Come si accetta**: Ogni testo a schermo dell'app ha la sua traduzione inglese, e una prova boccia quelli che non ce l'hanno. Un cliente col telefono in inglese ordina dal menù tradotto dal browser senza che la pagina si blocchi o mostri importi vecchi, e legge titoli e descrizioni nelle lingue che il gestore ha scelto e compilato. Chi lavora sceglie l'inglese e batte, incassa e chiude la serata senza incontrare testi italiani.
+
+**Chi**: Cliente, Banco, Sala, Gestore · **Lo realizzano**: [REQ-UI-038](#req-ui-038--i-testi-a-schermo-hanno-litaliano-e-linglese-e-una-prova-boccia-quelli-senza-traduzione), [REQ-CLI-010](#req-cli-010--le-pagine-dei-clienti-funzionano-tradotte-dal-browser), [REQ-MENU-046](#req-menu-046--le-lingue-del-menù-le-sceglie-il-gestore-e-titoli-e-descrizioni-si-scrivono-in-ognuna), [REQ-UI-039](#req-ui-039--il-gestionale-in-inglese) · ⚠️ **Nessun test di accettazione, ancora.**
 
 ## Cosa fa il sistema
 
@@ -3028,6 +3036,16 @@ DEPLOY DELLE CLOUD FUNCTIONS NON AUTORIZZATO. Il punto 1 vive in functions/ e re
 
 **Dove**: `src/lib/push-core.js, functions/index.js, src/pages/OrderStatusPage.jsx, src/pages/MenuPage.jsx` · **Serve**: [UR-008](#ur-008--il-cliente-ordina-dal-telefono-e-sa-quando-il-drink-è-pronto) · **Lo dimostrano**: `tests/unit/push-comande.test.js`, `tests/component/OrderStatusPage.test.jsx`
 
+#### REQ-CLI-010 — Le pagine dei clienti funzionano tradotte dal browser
+
+Daniele, 17/11/2026: «le pagine dei clienti potrebbero essere tradotte dal browser direttamente». Chrome propone da sé la traduzione a chi ha il telefono in un'altra lingua (la pagina è lang="it" e non la vieta), Safari dal menu «aA». Il traduttore però sostituisce i nodi di testo della pagina, e React, aggiornandoli, può trovarli spariti: la pagina si blocca, oppure un importo o un contatore restano fermi al valore di prima. Il menù, il carrello e lo stato dell'ordine reggono la traduzione: niente blocchi, importi e quantità sempre aggiornati. Il bottone «Traduci con Google» non si mette: il widget non è più disponibile per i siti nuovi, carica uno script di terzi nella pagina dei clienti (consenso GDPR) e riscrive la pagina allo stesso modo. ORA (17/11/2026) la prova di sistema imita il traduttore di Chrome (ogni testo con delle parole sostituito da un <font>, anche quelli che compaiono dopo; i soli numeri restano). La ricognizione ha trovato: nessun blocco; carrello, quantità e totali giusti (i numeri sono nodi a sé); MA la scritta dello stato dell'ordine restava «Ordine ricevuto» mentre il banco lo portava a pronto, perché era un testo aggiornato sul posto accanto all'icona.
+
+LA REGOLA: un testo che cambia davanti al cliente è l'UNICO FIGLIO del suo elemento, scritto tutto intero; React allora ne riscrive tutto il contenuto, traduzione compresa, e il traduttore ritraduce il testo nuovo (lib/traduttoreBrowser.js). Applicata a: stato dell'ordine (OrderStatusPage, MyOrdersPage), conto alla rovescia della modifica da confermare, stime dei tempi (menù, riepilogo, stato), tabellone dei numeri, distanza dal locale, prezzo della scelta degli ingredienti, tasto ed errore del pagamento, riga di nome/tavolo/consegna, righe e coperto dello stato. In più lib/traduttoreBrowser.js, chiamata da main.jsx prima del primo disegno: se React vuole togliere un testo, o inserire accanto a un testo, che il traduttore ha spostato, la rimozione si salta e l'inserimento va in fondo all'elemento invece di far cadere la pagina (facebook/react#11538); il prezzo, solo a pagina tradotta, è un testo che resta o un elemento fuori posto, e in sviluppo ogni salto lo dice in console.
+
+FUORI DALLA PORTATA del traduttore: le notifiche (push del «pronto», avvisi della pagina dell'ordine) arrivano sempre in italiano.
+
+**Dove**: `src/pages/MenuPage.jsx, OrderStatusPage.jsx, MyOrdersPage.jsx, AccountPages.jsx, LandingPage.jsx e i loro componenti` · **Serve**: [UR-022](#ur-022--chi-non-parla-italiano-usa-il-menù-e-il-gestionale-nella-sua-lingua) · **Lo dimostrano**: `tests/sistema/menuTradotto.spec.js`, `tests/unit/traduttoreBrowser.test.jsx`, `tests/component/testiTradottiDalBrowser.test.jsx`
+
 ### Notifiche
 
 Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare.
@@ -3781,6 +3799,12 @@ CORRETTO IL 17/11/2026, sulla 1.10.53-beta (Daniele): «deve apparire solo nel m
 Daniele, 17/11/2026, dopo «La vista del banco» (BUG-168): «nelle opzioni delle impostazioni, puoi semplicemente spiegare che cosa fa un'opzione invece di scrivere cose inutili», e poi «sì, ripassale tutte». Ogni descrizione dice cosa fa l'opzione e, se serve, cosa succede accesa e spenta, in una frase piana nel registro del gestionale (CLAUDE.md, DESIGN.md guardrail 3). Niente storie del perché, niente aneddoti, niente «adesso non c'è perché…»: il perché sta nei commenti del codice. Una scelta con una voce sola non è una scelta e non si mostra. ORA ripassate tutte, in SettingsTab e nei pannelli (stampa automatica, campi delle stampe e logo, stampante, backup, informazioni, aspetto): una frase su cosa fa l'opzione, impersonale. Una prova legge i sorgenti dei pannelli senza i commenti e boccia le forme del tu e del voi.
 
 **Dove**: `src/components/SettingsTab.jsx e i pannelli delle impostazioni (ThemeSettings, StampaAutomatica, CampiStampa, PrinterSetup, BackupPanel, InfoTab, src/lib/campiStampa.js)` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/unit/testiImpostazioni.test.js`
+
+#### REQ-UI-038 — I testi a schermo hanno l'italiano e l'inglese, e una prova boccia quelli senza traduzione
+
+Daniele, 17/11/2026: «da oggi tutte le funzioni dovranno avere testi in italiano ed inglese». Il meccanismo su cui poggia tutto il resto (UR-022): un testo si scrive in italiano, che resta la lingua di partenza, e accanto ha la sua traduzione inglese; la lingua attiva decide quale si mostra. Una prova legge i testi passati dal meccanismo e fallisce se ne manca la traduzione inglese. Da oggi ogni funzione nuova o toccata porta i suoi testi in tutte e due le lingue, nello stesso commit. L'attributo lang della pagina segue la lingua attiva. Codice, commenti, commit e PR restano in italiano. ORA in src/lib/lingua.js: `tr('testo italiano', { valori })` e il dizionario inglese src/lib/testi/en/, un file per area (conflitti di merge, e chi cerca i testi della cassa li cerca lì), con l'italiano esatto come chiave — il codice si legge come prima e i test che cercano l'italiano restano validi. Niente libreria esterna. Le regole: segnaposti coi nomi senza accenti; un CONTESTO per le parole ambigue (`tr('ordinamento|Ordine')`, in italiano si legge «Ordine»); i plurali scritti tutti e due; le tabelle di etichette segnano i testi con `daTradurre('…')` e li traducono dove li mostrano con `trSegnato`, perché un `tr` al caricamento del modulo fisserebbe la lingua. La lingua si ricorda sul dispositivo (chi la sceglie e dove è REQ-UI-039); l'attributo lang della pagina la segue solo nel gestionale — le pagine dei clienti restano «it», o il traduttore del browser non si proporrebbe (REQ-CLI-010) —, e al cambio di lingua l'app si ridisegna da capo (chiave sulla radice in App.jsx), così nessun componente resta nella lingua di prima. La prova legge i sorgenti e boccia: `tr`/`daTradurre` senza traduzione, con un testo calcolato o attaccato con un +, importati con un altro nome; le traduzioni inutilizzate, i doppioni fra aree, i segnaposti che non combaciano o con gli accenti. Dalla revisione (17/11): un testo JSX scritto senza `tr` la prova non lo vede — la regola di CLAUDE.md la fa rispettare chi scrive e chi rivede.
+
+**Dove**: `src/lib (testi in due lingue), tutti i componenti con testi a schermo` · **Serve**: [UR-022](#ur-022--chi-non-parla-italiano-usa-il-menù-e-il-gestionale-nella-sua-lingua) · **Lo dimostrano**: `tests/unit/lingua.test.js`
 
 ### Come si lavora al progetto
 
@@ -4620,6 +4644,12 @@ DANIELE, 17/11/2026, decide e scende nei requisiti: le sezioni del sito (Chi sia
 
 **Dove**: `docs/tema-del-sito.md (il concetto), src/pages/LandingPage.jsx, src/lib/stileMenu.js (pagine, vestePagine), src/lib/testiStile.js, src/lib/marketplaceTemi.js, src/index.css` · **Serve**: [UR-018](#ur-018--il-locale-si-presenta-al-cliente-col-suo-stile-dalla-prima-pagina-al-menù)
 
+#### REQ-MENU-046 — Le lingue del menù le sceglie il gestore, e titoli e descrizioni si scrivono in ognuna
+
+Daniele, 17/11/2026: «più lingue per titoli e descrizioni non è male ma deve essere il gestore a poter decidere e definire quali lingue in front page». Nelle impostazioni il gestore sceglie le lingue del menù oltre all'italiano; nelle schede di voci, categorie e Special compare un campo per ogni lingua scelta, per il titolo e per la descrizione. Il cliente vede la lingua del suo telefono se il testo c'è, altrimenti l'italiano. Un testo scritto dal gestore in un'altra lingua è segnato con la sua lingua, così il traduttore del browser non lo ritraduce.
+
+**Dove**: `Impostazioni (Menù clienti), schede di voci, categorie e Special, src/pages/MenuPage.jsx` · **Serve**: [UR-022](#ur-022--chi-non-parla-italiano-usa-il-menù-e-il-gestionale-nella-sua-lingua)
+
 ### Magazzino
 
 #### REQ-MAG-008 — Ricette da riagganciare agli articoli nuovi
@@ -4927,6 +4957,14 @@ FATTO (17/11/2026): le violazioni di axe corrette (BUG-167); la prova è un CANC
 DA FARE: la prova sul sito di test vero (dopo il prossimo tag); i comandi su `div` cliccabili; il fuoco nelle finestre di dialogo; gli avvisi letti; i temi uno per uno (anche `--muted` a 4,5, con la regia); la prova a mano a ogni versione maggiore (tastiera, NVDA, zoom 200%); infine la pagina «Accessibilità» collegata dal piè di pagina comune (src/App.jsx, accanto a Privacy), col testo approvato da Daniele.
 
 **Dove**: `tests/sistema/accessibilita.spec.js (axe-core), index.html (viewport), src/index.css (contrasto), componenti con comandi su div, src/App.jsx (piè di pagina)` · **Serve**: [UR-021](#ur-021--chi-ha-una-disabilità-usa-il-menù-la-home-del-locale-e-il-gestionale-come-tutti)
+
+#### REQ-UI-039 — Il gestionale in inglese
+
+Daniele, 17/11/2026: dopo le pagine dei clienti, il gestionale va tradotto. Tutti i testi del banco, della cassa, delle impostazioni, del magazzino e delle altre sezioni passano dal meccanismo dei testi in due lingue (REQ-UI-038), una sezione alla volta: prima banco e cassa, poi il resto.
+
+CHI SCEGLIE (Daniele, 17/11/2026): «Chiunque può scegliere la lingua nel gestionale, qualsiasi ruolo. La lingua è legata al profilo». Quindi in «Il mio profilo» ogni persona — admin, bartender, sala — sceglie italiano o inglese, e la scelta sta sul suo account (profili_staff/{uid}, che legge e scrive solo lei): la segue su ogni tablet e telefono. Sul dispositivo ne resta una copia, perché l'app parta subito nella lingua giusta anche senza rete; all'accesso vince quella dell'account. Niente lingua di partenza del locale: si parte in italiano. Si lavora su un ramo feature/, e il selettore arriva insieme alle prime sezioni tradotte (banco e cassa): una scelta che non cambia niente non si mostra. Da decidere quando si comincia (dalla revisione di REQ-UI-038, 17/11/2026): date e importi seguono la lingua (formatPrice e le date oggi sono fissi su it-IT, serve un punto unico); i testi personalizzabili dal gestore (testo('chiave', 'predefinito') di lib/testiStile.js) e le loro versioni inglesi, insieme a REQ-MENU-046; il dizionario inglese caricato solo quando serve, se pesa sul pacchetto.
+
+**Dove**: `src/pages/BartenderPage.jsx, src/components (gestionale), Il mio profilo (src/pages/StaffProfilePage.jsx), src/lib/lingua.js, firestore.rules (profili_staff)` · **Serve**: [UR-022](#ur-022--chi-non-parla-italiano-usa-il-menù-e-il-gestionale-nella-sua-lingua)
 
 ### Come si lavora al progetto
 

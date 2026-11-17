@@ -48,8 +48,11 @@ export default function SceltaIngredienti({ voce, scelte, onAggiungi, onClose })
           <button className="btn ghost grow" onClick={onClose}>
             Annulla
           </button>
+          {/* Un testo solo: il prezzo cambia scegliendo l'ingrediente, e a
+              pezzi accostati col traduttore del browser restava fermo
+              (REQ-CLI-010). */}
           <button className="btn grow" onClick={() => onAggiungi(fatte)}>
-            Aggiungi · {formatPrice(totale)}
+            {`Aggiungi · ${formatPrice(totale)}`}
           </button>
         </div>
       </div>

@@ -441,12 +441,20 @@ export default function OrderStatusPage() {
     )
   }
 
+  // LA SCRITTA È L'UNICO FIGLIO DEL SUO ELEMENTO (REQ-CLI-010). Col
+  // traduttore del browser acceso il testo accanto all'icona è stato
+  // sostituito dalla traduzione, e React, aggiornandolo sul posto,
+  // aggiornava un nodo che non è più a schermo: l'icona passava a 🔔 e la
+  // scritta restava «Order received». Da sola nel suo <span>, React la
+  // riscrive per intero e il traduttore traduce quella nuova
+  // (lib/traduttoreBrowser.js).
+  const etichettaStato =
+    order.workflow_status === ORDER_STATUSES.RITIRATO
+      ? ritiratoLabel(order.service_mode)
+      : STATUS_LABELS[order.workflow_status]
   const statoPill = (
     <span className={`pill ${order.workflow_status}`}>
-      {STATUS_EMOJI[order.workflow_status]}{' '}
-      {order.workflow_status === ORDER_STATUSES.RITIRATO
-        ? ritiratoLabel(order.service_mode)
-        : STATUS_LABELS[order.workflow_status]}
+      {STATUS_EMOJI[order.workflow_status]} <span>{etichettaStato}</span>
     </span>
   )
 
@@ -476,8 +484,11 @@ export default function OrderStatusPage() {
             <p className="frase-stile">{testo(`stato.frase.${order.workflow_status}`)}</p>
           )}
           {myEta != null && (
+            // Un testo solo, tutto intero: la stima cambia con la coda, e
+            // a pezzi accostati col traduttore del browser restava ferma
+            // (REQ-CLI-010, lib/traduttoreBrowser.js).
             <p className="muted" style={{ margin: '10px 0 0', fontSize: '0.9rem' }}>
-              ⏱ {order.service_mode === 'tavolo' ? 'Ti serviamo in' : 'Pronto in'} ~{myEta} min
+              {`⏱ ${order.service_mode === 'tavolo' ? 'Ti serviamo in' : 'Pronto in'} ~${myEta} min`}
             </p>
           )}
         </div>
@@ -549,16 +560,22 @@ export default function OrderStatusPage() {
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Riepilogo</h3>
         {(order.customer_name || order.table_label || order.service_mode) && (
+          // UNA RIGA SOLA, TUTTA INTERA: il tavolo lo assegna il banco anche
+          // a pagina aperta, e a pezzi accostati col traduttore del browser
+          // il pezzo nuovo finiva fuori posto e il resto restava vecchio
+          // (REQ-CLI-010, lib/traduttoreBrowser.js).
           <p className="muted" style={{ marginTop: 0 }}>
-            {order.customer_name ? `${order.customer_name}` : ''}
-            {order.customer_name && (order.table_label || order.service_mode) ? ' · ' : ''}
-            {order.table_label ? `Tavolo ${order.table_label}` : ''}
-            {order.table_label && order.service_mode ? ' · ' : ''}
-            {order.service_mode === 'banco'
-              ? '🚶 Ritiro al banco'
-              : order.service_mode === 'tavolo'
-                ? '🍸 Servito al tavolo'
-                : ''}
+            {[
+              order.customer_name || '',
+              order.table_label ? `Tavolo ${order.table_label}` : '',
+              order.service_mode === 'banco'
+                ? '🚶 Ritiro al banco'
+                : order.service_mode === 'tavolo'
+                  ? '🍸 Servito al tavolo'
+                  : '',
+            ]
+              .filter(Boolean)
+              .join(' · ')}
           </p>
         )}
         {editable && (
@@ -585,7 +602,9 @@ export default function OrderStatusPage() {
           : (order.order_items || []).map((i) => (
               <div className="row between" key={i.id}>
                 <span>
-                  {i.qty}× {i.name}
+                  {/* Quantità e nome in un testo solo: il banco può cambiarli
+                      a pagina aperta (REQ-CLI-010). */}
+                  <span>{`${i.qty}× ${i.name}`}</span>
                   {/* La nota della riga: la scelta dell'ingrediente
                       (REQ-CLI-008), o quella del banco. */}
                   {i.note && <span className="muted small"> · {i.note}</span>}
@@ -597,7 +616,7 @@ export default function OrderStatusPage() {
         {Number(order.coperto_amount) > 0 && (
           <div className="row between">
             <span className="muted">
-              Coperto{order.coperto_persons > 0 ? ` (${order.coperto_persons} pers.)` : ''}
+              {`Coperto${order.coperto_persons > 0 ? ` (${order.coperto_persons} pers.)` : ''}`}
             </span>
             <span className="muted">{formatPrice(order.coperto_amount)}</span>
           </div>

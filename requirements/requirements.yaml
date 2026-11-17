@@ -17831,3 +17831,144 @@ requirements:
     priority: P2
     test_cases:
       - tests/unit/testiImpostazioni.test.js
+
+  - id: REQ-UI-038
+    title: "I testi a schermo hanno l'italiano e l'inglese, e una prova boccia quelli senza traduzione"
+    area: "src/lib (testi in due lingue), tutti i componenti con testi a schermo"
+    description: >
+      Daniele, 17/11/2026: «da oggi tutte le funzioni dovranno avere testi
+      in italiano ed inglese». Il meccanismo su cui poggia tutto il resto
+      (UR-022): un testo si scrive in italiano, che resta la lingua di
+      partenza, e accanto ha la sua traduzione inglese; la lingua attiva
+      decide quale si mostra. Una prova legge i testi passati dal
+      meccanismo e fallisce se ne manca la traduzione inglese. Da oggi ogni
+      funzione nuova o toccata porta i suoi testi in tutte e due le lingue,
+      nello stesso commit. L'attributo lang della pagina segue la lingua
+      attiva. Codice, commenti, commit e PR restano in italiano.
+      ORA in src/lib/lingua.js: `tr('testo italiano', { valori })` e il
+      dizionario inglese src/lib/testi/en/, un file per area (conflitti di
+      merge, e chi cerca i testi della cassa li cerca lì), con l'italiano
+      esatto come chiave — il codice si legge come prima e i test che
+      cercano l'italiano restano validi. Niente libreria esterna. Le
+      regole: segnaposti coi nomi senza accenti; un CONTESTO per le parole
+      ambigue (`tr('ordinamento|Ordine')`, in italiano si legge «Ordine»);
+      i plurali scritti tutti e due; le tabelle di etichette segnano i testi
+      con `daTradurre('…')` e li traducono dove li mostrano con
+      `trSegnato`, perché un `tr` al caricamento del modulo fisserebbe la
+      lingua. La lingua si ricorda sul dispositivo (chi la sceglie e dove è
+      REQ-UI-039); l'attributo lang della pagina la segue solo nel
+      gestionale — le pagine dei clienti restano «it», o il traduttore del
+      browser non si proporrebbe (REQ-CLI-010) —, e al cambio di lingua
+      l'app si ridisegna da capo (chiave sulla radice in App.jsx), così
+      nessun componente resta nella lingua di prima. La prova legge i
+      sorgenti e boccia: `tr`/`daTradurre` senza traduzione, con un testo
+      calcolato o attaccato con un +, importati con un altro nome; le
+      traduzioni inutilizzate, i doppioni fra aree, i segnaposti che non
+      combaciano o con gli accenti. Dalla revisione (17/11): un testo JSX
+      scritto senza `tr` la prova non lo vede — la regola di CLAUDE.md la
+      fa rispettare chi scrive e chi rivede.
+    status: implemented
+    generate_issue: true
+    labels: [ui, lingue]
+    priority: P1
+    test_cases:
+      - tests/unit/lingua.test.js
+
+  - id: REQ-CLI-010
+    title: "Le pagine dei clienti funzionano tradotte dal browser"
+    area: "src/pages/MenuPage.jsx, OrderStatusPage.jsx, MyOrdersPage.jsx, AccountPages.jsx, LandingPage.jsx e i loro componenti"
+    description: >
+      Daniele, 17/11/2026: «le pagine dei clienti potrebbero essere
+      tradotte dal browser direttamente». Chrome propone da sé la
+      traduzione a chi ha il telefono in un'altra lingua (la pagina è
+      lang="it" e non la vieta), Safari dal menu «aA». Il traduttore però
+      sostituisce i nodi di testo della pagina, e React, aggiornandoli,
+      può trovarli spariti: la pagina si blocca, oppure un importo o un
+      contatore restano fermi al valore di prima. Il menù, il carrello e lo
+      stato dell'ordine reggono la traduzione: niente blocchi, importi e
+      quantità sempre aggiornati. Il bottone «Traduci con Google» non si
+      mette: il widget non è più disponibile per i siti nuovi, carica uno
+      script di terzi nella pagina dei clienti (consenso GDPR) e riscrive
+      la pagina allo stesso modo.
+      ORA (17/11/2026) la prova di sistema imita il traduttore di Chrome
+      (ogni testo con delle parole sostituito da un <font>, anche quelli
+      che compaiono dopo; i soli numeri restano). La ricognizione ha
+      trovato: nessun blocco; carrello, quantità e totali giusti (i numeri
+      sono nodi a sé); MA la scritta dello stato dell'ordine restava
+      «Ordine ricevuto» mentre il banco lo portava a pronto, perché era un
+      testo aggiornato sul posto accanto all'icona. LA REGOLA: un testo che
+      cambia davanti al cliente è l'UNICO FIGLIO del suo elemento, scritto
+      tutto intero; React allora ne riscrive tutto il contenuto, traduzione
+      compresa, e il traduttore ritraduce il testo nuovo
+      (lib/traduttoreBrowser.js). Applicata a: stato dell'ordine
+      (OrderStatusPage, MyOrdersPage), conto alla rovescia della modifica da
+      confermare, stime dei tempi (menù, riepilogo, stato), tabellone dei
+      numeri, distanza dal locale, prezzo della scelta degli ingredienti,
+      tasto ed errore del pagamento, riga di nome/tavolo/consegna, righe e
+      coperto dello stato. In più lib/traduttoreBrowser.js, chiamata da
+      main.jsx prima del primo disegno: se React vuole togliere un testo, o
+      inserire accanto a un testo, che il traduttore ha spostato, la
+      rimozione si salta e l'inserimento va in fondo all'elemento invece di
+      far cadere la pagina (facebook/react#11538); il prezzo, solo a pagina
+      tradotta, è un testo che resta o un elemento fuori posto, e in
+      sviluppo ogni salto lo dice in console. FUORI DALLA PORTATA del
+      traduttore: le notifiche (push del «pronto», avvisi della pagina
+      dell'ordine) arrivano sempre in italiano.
+    status: implemented
+    generate_issue: true
+    labels: [clienti, menu, lingue]
+    priority: P1
+    test_cases:
+      - tests/sistema/menuTradotto.spec.js
+      - tests/unit/traduttoreBrowser.test.jsx
+      - tests/component/testiTradottiDalBrowser.test.jsx
+
+  - id: REQ-MENU-046
+    title: "Le lingue del menù le sceglie il gestore, e titoli e descrizioni si scrivono in ognuna"
+    area: "Impostazioni (Menù clienti), schede di voci, categorie e Special, src/pages/MenuPage.jsx"
+    description: >
+      Daniele, 17/11/2026: «più lingue per titoli e descrizioni non è male
+      ma deve essere il gestore a poter decidere e definire quali lingue in
+      front page». Nelle impostazioni il gestore sceglie le lingue del
+      menù oltre all'italiano; nelle schede di voci, categorie e Special
+      compare un campo per ogni lingua scelta, per il titolo e per la
+      descrizione. Il cliente vede la lingua del suo telefono se il testo
+      c'è, altrimenti l'italiano. Un testo scritto dal gestore in un'altra
+      lingua è segnato con la sua lingua, così il traduttore del browser
+      non lo ritraduce.
+    status: todo
+    generate_issue: true
+    labels: [menu, clienti, lingue]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-UI-039
+    title: "Il gestionale in inglese"
+    area: "src/pages/BartenderPage.jsx, src/components (gestionale), Il mio profilo (src/pages/StaffProfilePage.jsx), src/lib/lingua.js, firestore.rules (profili_staff)"
+    description: >
+      Daniele, 17/11/2026: dopo le pagine dei clienti, il gestionale va
+      tradotto. Tutti i testi del banco, della cassa, delle impostazioni,
+      del magazzino e delle altre sezioni passano dal meccanismo dei testi
+      in due lingue (REQ-UI-038), una sezione alla volta: prima banco e
+      cassa, poi il resto.
+      CHI SCEGLIE (Daniele, 17/11/2026): «Chiunque può scegliere la lingua
+      nel gestionale, qualsiasi ruolo. La lingua è legata al profilo».
+      Quindi in «Il mio profilo» ogni persona — admin, bartender, sala —
+      sceglie italiano o inglese, e la scelta sta sul suo account
+      (profili_staff/{uid}, che legge e scrive solo lei): la segue su ogni
+      tablet e telefono. Sul dispositivo ne resta una copia, perché l'app
+      parta subito nella lingua giusta anche senza rete; all'accesso vince
+      quella dell'account. Niente lingua di partenza del locale: si parte
+      in italiano. Si lavora su un ramo feature/, e il selettore arriva
+      insieme alle prime sezioni tradotte (banco e cassa): una scelta che
+      non cambia niente non si mostra. Da decidere quando si comincia (dalla revisione di REQ-UI-038,
+      17/11/2026): date e importi seguono la lingua (formatPrice e le date
+      oggi sono fissi su it-IT, serve un punto unico); i testi
+      personalizzabili dal gestore (testo('chiave', 'predefinito') di
+      lib/testiStile.js) e le loro versioni inglesi, insieme a REQ-MENU-046;
+      il dizionario inglese caricato solo quando serve, se pesa sul pacchetto.
+    status: todo
+    generate_issue: true
+    labels: [ui, lingue]
+    priority: P2
+    test_cases: []

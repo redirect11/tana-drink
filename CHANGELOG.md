@@ -1,6 +1,25 @@
 # Cosa è cambiato
 
-## 1.10.55-beta — in lavorazione
+## 1.10.56-beta — in lavorazione
+
+### Aspetto
+
+- In alto nel gestionale l'icona dell'assistente AI, e quella dello schermo
+  intero, hanno la stessa misura della campanella accanto (BUG-170).
+
+### Lingue
+
+- **Le pagine dei clienti funzionano tradotte dal browser.** Col menù
+  tradotto da Chrome o da Safari, lo stato dell'ordine ora segue il banco
+  («In preparazione», «Pronto») invece di restare su «Ordine ricevuto»;
+  così anche i minuti per rispondere a una modifica, le stime dei tempi, i
+  prezzi della scelta degli ingredienti e il tasto del pagamento. La pagina
+  non può più cadere per colpa della traduzione (REQ-CLI-010).
+- Le basi per avere l'app in italiano e inglese: il meccanismo dei testi in
+  due lingue, con una prova che boccia i testi senza traduzione inglese
+  (REQ-UI-038). Le schermate lo useranno a partire dal gestionale.
+
+## 1.10.55-beta — 17/11/2026 (test)
 
 ### Coda ordini
 
