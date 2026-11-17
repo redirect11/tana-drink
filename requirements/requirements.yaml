@@ -17944,15 +17944,24 @@ requirements:
 
   - id: REQ-UI-039
     title: "Il gestionale in inglese"
-    area: "src/pages/BartenderPage.jsx, src/components (gestionale), Il mio profilo"
+    area: "src/pages/BartenderPage.jsx, src/components (gestionale), Il mio profilo (src/pages/StaffProfilePage.jsx), src/lib/lingua.js, firestore.rules (profili_staff)"
     description: >
       Daniele, 17/11/2026: dopo le pagine dei clienti, il gestionale va
       tradotto. Tutti i testi del banco, della cassa, delle impostazioni,
       del magazzino e delle altre sezioni passano dal meccanismo dei testi
       in due lingue (REQ-UI-038), una sezione alla volta: prima banco e
-      cassa, poi il resto. Proposta da confermare con Daniele: la lingua la
-      sceglie ognuno nel suo profilo, con una lingua di partenza decisa dal
-      locale. Da decidere quando si comincia (dalla revisione di REQ-UI-038,
+      cassa, poi il resto.
+      CHI SCEGLIE (Daniele, 17/11/2026): «Chiunque può scegliere la lingua
+      nel gestionale, qualsiasi ruolo. La lingua è legata al profilo».
+      Quindi in «Il mio profilo» ogni persona — admin, bartender, sala —
+      sceglie italiano o inglese, e la scelta sta sul suo account
+      (profili_staff/{uid}, che legge e scrive solo lei): la segue su ogni
+      tablet e telefono. Sul dispositivo ne resta una copia, perché l'app
+      parta subito nella lingua giusta anche senza rete; all'accesso vince
+      quella dell'account. Niente lingua di partenza del locale: si parte
+      in italiano. Si lavora su un ramo feature/, e il selettore arriva
+      insieme alle prime sezioni tradotte (banco e cassa): una scelta che
+      non cambia niente non si mostra. Da decidere quando si comincia (dalla revisione di REQ-UI-038,
       17/11/2026): date e importi seguono la lingua (formatPrice e le date
       oggi sono fissi su it-IT, serve un punto unico); i testi
       personalizzabili dal gestore (testo('chiave', 'predefinito') di
