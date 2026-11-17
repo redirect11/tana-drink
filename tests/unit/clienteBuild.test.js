@@ -44,6 +44,16 @@ describe('leggiCliente', () => {
     }
   })
 
+  // Daniele, 17/11/2026, sul bicchiere neutro della demo: «c'è già il logo
+  // di Lime SmartOrders per questa cosa. Al posto del bicchiere». Il segno
+  // della demo è la fetta di lime della regia (public/favicon.svg lì), da
+  // cui nascono anche le icone PNG (REQ-FLOTTA-033).
+  it('il logo della demo è la fetta di lime di Lime - SmartOrders', () => {
+    const svg = readFileSync(join(leggiCliente('demo').pubblica, 'favicon.svg'), 'utf8')
+    for (const verde of ['#5aa21f', '#dff0a5', '#8cc63f']) expect(svg, verde).toContain(verde)
+    expect(svg).toMatch(/viewBox="0 0 32 32"/)
+  })
+
   it('uno slug sbagliato o una cartella che non c’è fermano la build', () => {
     expect(() => leggiCliente('Tana Due')).toThrow(/non valido/)
     expect(() => leggiCliente('nessuno')).toThrow(/manca/)

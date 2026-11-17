@@ -15878,8 +15878,14 @@ requirements:
       della pagina e nel manifest (nome corto «Bancone 21»), e le frasi
       che nominano il locale dicono «al Bancone 21».
       COME È FATTO (17/11/2026): clienti/demo/venue.json (nome, nome corto,
-      «al Bancone 21», la descrizione del manifest); il logo della demo
-      resta quello neutro di prima.
+      «al Bancone 21», la descrizione del manifest).
+      IL LOGO (Daniele, 17/11/2026: «c'è già il logo di Lime SmartOrders per
+      questa cosa. Al posto del bicchiere»): il bicchiere neutro lascia il
+      posto alla fetta di lime della regia (drink-regia public/favicon.svg).
+      favicon.svg è quel disegno; logo.png, icon-192/512 trasparenti;
+      apple-touch-icon e icon-maskable-512 sul fondo di Lime scuro
+      (#0c0f0a), la maskable col logo al 60% per il margine di Android.
+      Se il logo della regia cambia, questi file si rifanno da lì.
     status: implemented
     generate_issue: true
     labels: [flotta]

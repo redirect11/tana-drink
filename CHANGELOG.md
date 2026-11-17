@@ -27,6 +27,9 @@
 - Il locale della demo si chiama «Bancone 21» invece di «Bar Demo»: un
   nome inventato ma credibile, per le schermate del prodotto
   (REQ-FLOTTA-033).
+- Il logo della demo è la fetta di lime di Lime - SmartOrders, al posto
+  del bicchiere: nella barra, nel menù del cliente e nelle icone da
+  installare sul telefono (REQ-FLOTTA-033).
 
 ## 1.10.52-beta — 17/11/2026 (test)
 
