@@ -16021,11 +16021,44 @@ requirements:
         Release di tana-drink, nessuna credenziale verso la regia;
       - `scripts/genera-cliente.mjs` resta, come ripiego della regia
         (interfaccia 12).
-    status: todo
+
+      COME È FATTO (18/11/2026): il comando rifiuta un `.env` nella radice
+      (la build lo leggerebbe), i file tracciati modificati (il manifesto
+      dice un commit) e un tag diverso da `v` + package.json; controlla la
+      build come la controllava la regia (nei locali i segni della demo di
+      controlla-build-senza-demo.mjs e i segnaposto, nella demo la demo e
+      niente `drinkpos-demo`); le dipendenze delle Functions con
+      `npm ci --omit=dev --no-bin-links` (un collegamento in node_modules
+      è un percorso che esce dal pacchetto, e la regia lo rifiuta);
+      personalizza.mjs unito da Vite in modalità server, senza public/.
+      Il workflow crea la Release in bozza e la pubblica dopo l'ultimo
+      file, perché con le «release immutabili» di GitHub dopo non si
+      aggiunge più niente; prima gli archivi e poi le impronte. Il test
+      che legge il workflow sta in tests/unit/flottaCi.test.js (che è di
+      REQ-FLOTTA-001). Provato in locale con le regole della regia
+      (scripts/lib-pacchetto.js di drink-regia): il pacchetto dei locali
+      passa i controlli prima e dopo personalizza.mjs lanciato dalla
+      radice del pacchetto con un ambiente vuoto, quello della demo
+      passa i suoi.
+
+      Dalla revisione (18/11/2026): docs/gitflow.md e CLAUDE.md dicevano di
+      taggare `vX.Y.Z` su develop e `vX.Y.Z-prod` su main, e con quella
+      regola un pacchetto non beta non sarebbe uscito mai, in silenzio.
+      Riallineati alla pratica dei rilasci dalla 1.10.43 (il tag pieno
+      solo sul commit di main), e un tag su main che non è v + package.json
+      ferma il workflow in rosso. problemiDelManifesto ora copia tutti i
+      controlli di lib-pacchetto.js della regia (beta, impronte, percorsi,
+      strumenti, profili), da tenere allineati a mano; APP_VERSION fuori
+      dalla build; --uscita dentro dist/ rifiutata. Restano aperte le
+      «release immutabili» di GitHub (impostazione del repository, la
+      decide Daniele) e la ripresa di un giro interrotto, che oggi è a
+      mano (docs/flotta.md).
+    status: implemented
     generate_issue: true
     labels: [flotta]
     priority: P1
-    test_cases: []
+    test_cases:
+      - tests/unit/creaPacchetto.test.js
   - id: REQ-PAG-013
     title: "Lo sconto cade sui prodotti che si stanno riscuotendo, e gli sconti si accumulano"
     area: "src/lib/pagamento.js, src/components/PaymentScreen.jsx, src/lib/api.js, src/lib/printer.js, functions/lib/payment-core.js"

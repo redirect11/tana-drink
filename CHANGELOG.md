@@ -60,6 +60,13 @@
   nessuno e si collega da solo appena può. La Tana continua a pubblicarsi
   con la sua build: per lei cambiano solo l'informativa e i link social
   descritti sopra (REQ-FLOTTA-034).
+- **Il pacchetto per versione nella Release di GitHub.** A ogni tag di
+  versione, oltre al deploy della Tana, si compilano due pacchetti, quello
+  per i locali e quello della demo, e si allegano alla Release del tag con
+  la loro impronta: la regia li scarica da lì per attivare e aggiornare i
+  locali senza ricompilare. Un pacchetto che non è una beta esce solo da
+  una versione già in `main`, e un file allegato non si sostituisce mai
+  (REQ-FLOTTA-035).
 
 ## 1.10.55-beta — 17/11/2026 (test)
 
