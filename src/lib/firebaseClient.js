@@ -17,7 +17,7 @@ import { getStorage, connectStorageEmulator } from 'firebase/storage'
 // loro. Un controllo della CI lo verifica sul pacchetto della Tana.
 import { nomeSessione } from '../demo/sessione.js'
 import { creaAuthDemo } from '../demo/accesso.js'
-import { configurazione, haBackend } from '../porte/configurazione.js'
+import { configurazione, senzaBackend } from '../porte/configurazione.js'
 
 // LA DEMO NON PARLA CON NESSUN SERVER (REQ-FLOTTA-019, docs/modalita-demo.md):
 // niente emulatori, niente App Check, rete del database spenta, accesso
@@ -36,7 +36,7 @@ const firebaseConfig = configurazione().firebase
 // non fallisce in modo silenzioso quando le variabili non sono impostate.
 // La demo non ha bisogno di nessuna configurazione: non parla con nessun
 // progetto, e i dati se li porta da sé (REQ-FLOTTA-019).
-export const isFirebaseConfigured = Boolean(__DEMO__) || haBackend(configurazione())
+export const isFirebaseConfigured = !senzaBackend()
 
 if (!isFirebaseConfigured) {
   console.warn(

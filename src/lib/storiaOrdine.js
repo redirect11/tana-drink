@@ -11,19 +11,8 @@
 //
 // Logica pura: niente Firebase, tutto testabile.
 
-import { ORDER_STATUSES, PAYMENT_METHOD_ICONA, paymentMethodNome, formatPrice } from './orderStatus.js'
-import { conEmoji, emojiDi } from './icone.js'
+import { ORDER_STATUSES, etichettaMetodo, formatPrice } from './orderStatus.js'
 import { formatoAttivo, tr } from './lingua.js'
-
-// Il metodo dell'incasso, con la sua icona, nella lingua di chi guarda:
-// PAYMENT_METHOD_LABELS resta in italiano, per chi scrive testo semplice.
-// «Misto» tiene le sue due icone, contanti e carta, come prima.
-const metodoConIcona = (m) =>
-  m === 'misto'
-    ? `${emojiDi('contanti')}+${emojiDi('carta')} ${paymentMethodNome(m)}`
-    : PAYMENT_METHOD_ICONA[m]
-      ? conEmoji(PAYMENT_METHOD_ICONA[m], paymentMethodNome(m))
-      : m
 
 const iso = (v) => {
   if (!v) return null
@@ -101,7 +90,7 @@ export function storiaOrdine(order) {
       at: chiusura,
       tipo: 'chiuso',
       titolo: tr('Conto chiuso'),
-      dettaglio: metodo ? metodoConIcona(metodo) : null,
+      dettaglio: metodo ? etichettaMetodo(metodo) : null,
       chi: null,
     })
   }

@@ -30,7 +30,7 @@ import { Sottosezioni } from '../lib/sottosezioni.js'
 import AvvisoPiano from './AvvisoPiano.jsx'
 import { staffConsentito, MESSAGGI_PIANO } from '../lib/limiti.js'
 import Icona, { ConIcona } from './Icona.jsx'
-import { tr, daTradurre, trSegnato, useLingua } from '../lib/lingua.js'
+import { tr, daTradurre, trSegnato, useLingua, conEtichetteTradotte } from '../lib/lingua.js'
 
 // GESTIONE UTENTI. Due elenchi in uno: il personale (admin/bartender/staff)
 // e i clienti registrati dal sito. La nomina dei ruoli è dell'admin: da qui
@@ -250,7 +250,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
     <div>
       {/* Il titolo sta nella barra in alto (vedi lib/sezioni.js). */}
       <Sottosezioni
-        voci={(admin ? SEZIONI_UTENTI : SEZIONI_UTENTI.slice(0, 1)).map((v) => ({ ...v, label: trSegnato(v.label) }))}
+        voci={conEtichetteTradotte(admin ? SEZIONI_UTENTI : SEZIONI_UTENTI.slice(0, 1))}
         attiva={sezione}
         scegli={setSezione}
       />

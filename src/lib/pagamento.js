@@ -40,7 +40,7 @@
 // che è esattamente il conto di ieri sera.
 
 import { aggregateItems } from './comande.js'
-import { daTradurre, trSegnato } from './lingua.js'
+import { daTradurre, inItaliano, trSegnato } from './lingua.js'
 
 export const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100
 
@@ -321,8 +321,6 @@ const PAROLE_SCONTO = {
   suUno: daTradurre('{tipo} su 1 prodotto'),
   suPiu: daTradurre('{tipo} su {n} prodotti'),
 }
-const inItaliano = (chiave, valori) =>
-  chiave.replace(/\{(\w+)\}/g, (segnaposto, nome) => (valori && nome in valori ? String(valori[nome]) : segnaposto))
 
 export function etichettaSconto(sconto, { aSchermo = false } = {}) {
   const t = aSchermo ? trSegnato : inItaliano

@@ -95,7 +95,7 @@ import SectionPanels from './SectionPanels.jsx'
 import { IconFornitore } from './Icons.jsx'
 import Tendina from './Tendina.jsx'
 import FiltroAssortimento from './FiltroAssortimento.jsx'
-import { toggleVoce } from '../lib/assortimento.js'
+import { ASSORTIMENTO_NOME, toggleVoce } from '../lib/assortimento.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import { useSottosezioni } from '../lib/sottosezioni.js'
 import { usePaginaPiena } from '../lib/paginaPiena.js'
@@ -1025,9 +1025,7 @@ function ProductsPanel({ onApriMenu = null }) {
     low: tr('In esaurimento'),
     empty: tr('Esauriti'),
   }
-  // I nomi dell'assortimento sono quelli della scheda (STATUS_ITEM), che
-  // dicono le stesse cose di ASSORTIMENTO_NOME ma nella lingua di chi guarda.
-  const nomeAssortimento = (k) => trSegnato(STATUS_ITEM.find((s) => s.value === k)?.label)
+  const nomeAssortimento = (k) => trSegnato(ASSORTIMENTO_NOME[k])
   const sceltiOra = [nomiStato[statusFilter], ...assortimenti.map(nomeAssortimento)]
     .filter(Boolean)
   const riassuntoFiltri =

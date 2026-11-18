@@ -229,7 +229,7 @@ export async function aggiornaConfigurazione({
 
 // Le attese fra un tentativo e l'altro, quando l'app non ha backend: poco
 // all'inizio (la rete del locale che torna), poi ogni cinque minuti.
-export const ATTESE_SENZA_BACKEND_MS = [5000, 15000, 30000, 60000, 120000, 300000]
+const ATTESE_SENZA_BACKEND_MS = [5000, 15000, 30000, 60000, 120000, 300000]
 
 // La configurazione si rilegge in sottofondo all'avvio. Con un backend in
 // uso basta una volta, come sempre. SENZA BACKEND (R2 nell'analisi del

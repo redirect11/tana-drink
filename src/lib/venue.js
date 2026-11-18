@@ -22,7 +22,7 @@ import { NOME_PRODOTTO, NOME_CORTO_PRODOTTO } from './prodotto.js'
 import { configurazione } from '../porte/configurazione.js'
 import { linkSicuro } from '../porte/configurazioneLocale.mjs'
 
-const DELLA_BUILD = typeof __CLIENTE__ !== 'undefined' ? __CLIENTE__ : { slug: 'tana', venue: {} }
+const VENUE_DELLA_BUILD = typeof __CLIENTE__ !== 'undefined' ? __CLIENTE__.venue || {} : {}
 
 // IL LOCALE DI QUESTA INSTALLAZIONE (REQ-FLOTTA-034). Nel sito uguale per
 // tutti i locali la build non ne ha nessuno: lo slug e i dati arrivano con
@@ -30,7 +30,7 @@ const DELLA_BUILD = typeof __CLIENTE__ !== 'undefined' ? __CLIENTE__ : { slug: '
 // e prendono il posto di quelli della build. La Tana non ha configurazione:
 // per lei vale la build, come prima.
 const config = configurazione()
-const BUILD = { slug: config.locale, venue: config.venue || DELLA_BUILD.venue || {} }
+const BUILD = { slug: config.locale, venue: config.venue || VENUE_DELLA_BUILD }
 
 // Lo slug del locale per cui lavora questa app.
 export const CLIENTE = BUILD.slug

@@ -37,7 +37,7 @@ import CampoDataOra from './CampoDataOra.jsx'
 import { fetchGiorniDiServizio } from '../lib/giorniDiServizio.js'
 import { nelPeriodo } from '../lib/magazzinoPeriodo.js'
 import Icona from './Icona.jsx'
-import { tr, daTradurre, trSegnato, formatoAttivo } from '../lib/lingua.js'
+import { tr, daTradurre, formatoAttivo, conEtichetteTradotte } from '../lib/lingua.js'
 
 const fmtMin = (m) => (m == null ? '—' : `${Math.round(m * 10) / 10} min`)
 // Prezzo compatto per le etichette dei grafici (niente centesimi). Resta
@@ -126,7 +126,7 @@ export default function StatsTab() {
   const [sezione, setSezione] = useState('serate')
   // Le etichette si traducono qui, a ogni disegno: un `tr` sulla tabella,
   // fuori dal componente, fisserebbe la lingua del primo caricamento.
-  const voci = SEZIONI.map((v) => ({ ...v, label: trSegnato(v.label) }))
+  const voci = conEtichetteTradotte(SEZIONI)
   return (
     <div>
       <Sottosezioni voci={voci} attiva={sezione} scegli={setSezione} />

@@ -3,7 +3,7 @@ import CashFlow from './CashFlow.jsx'
 import OrdersHistory from './OrdersHistory.jsx'
 import CashSessionsList from './CashSessionsList.jsx'
 import { Sottosezioni } from '../lib/sottosezioni.js'
-import { daTradurre, trSegnato, useLingua } from '../lib/lingua.js'
+import { daTradurre, useLingua, conEtichetteTradotte } from '../lib/lingua.js'
 
 // ── LA CASSA: il flusso, i conti, le chiusure ────────────────────────
 //
@@ -27,7 +27,7 @@ export default function CassaTab({ sezioneIniziale = 'flusso' }) {
   const [sezione, setSezione] = useState(sezioneIniziale)
   // Le etichette si traducono qui, a ogni disegno: la tabella sta fuori dal
   // componente, e un `tr` lassù fisserebbe la lingua del primo caricamento.
-  const voci = SEZIONI.map((v) => ({ ...v, label: trSegnato(v.label) }))
+  const voci = conEtichetteTradotte(SEZIONI)
   return (
     <div>
       <Sottosezioni voci={voci} attiva={sezione} scegli={setSezione} />

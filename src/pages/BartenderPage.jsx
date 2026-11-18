@@ -1521,9 +1521,10 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // ribattute nell'annuncio del ✂️ — rinominarne una lasciava lo screen
   // reader a dire il nome vecchio.
   const [meta1, meta2] = CORSIE_PRONTO_DIVISO.map((c) => c.titolo)
-  // I tre nomi nella lingua di chi guarda: arrivano da lib/coda.js così
-  // come sono scritti, e nelle frasi del taglio vanno tradotti uno per uno.
-  const nomiTaglio = { a: trSegnato(meta1), b: trSegnato(meta2), c: trSegnato(nomiServizio.daServire) }
+  // I nomi nella lingua di chi guarda: i titoli delle corsie sono segnati
+  // in lib/coda.js, e nelle frasi del taglio vanno tradotti uno per uno;
+  // quello del servizio arriva già tradotto.
+  const nomiTaglio = { a: trSegnato(meta1), b: trSegnato(meta2), c: nomiServizio.daServire }
   const divisioneP = corsieDelPronto({ divise: prontoSeparato, ritiroEsiste })
   const corsieDelBanco = corsieBanco
     ? corsieComande(contiInCorsia, {
@@ -1702,7 +1703,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     autori.length > 0 ? (
       <Tendina
         etichetta={tr('Chi ha aperto il conto')}
-        riassunto={conEmoji('nuovo-ordine', trSegnato(riassuntoStaff))}
+        riassunto={conEmoji('nuovo-ordine', riassuntoStaff)}
         attivo={staffFiltra}
         largo={240}
       >
@@ -1774,7 +1775,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
       // IL NOME NON CAMBIA MAI: chi lo cerca lo cerca come «Filtri». Quello
       // che cambia è il title, che dice il gesto — aprire o chiudere.
       aria-label={tr('Filtri')}
-      title={trSegnato(spiegaFiltri(filtriVisibili))}
+      title={spiegaFiltri(filtriVisibili)}
     >
       {filtriVisibili ? '▴' : '▾'} {tr('Filtri')}
     </button>
@@ -1804,8 +1805,8 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     <button
       className="coda-tastino solo-icona"
       onClick={cambiaOrdine}
-      title={trSegnato(verso.nome)}
-      aria-label={trSegnato(verso.nome)}
+      title={verso.nome}
+      aria-label={verso.nome}
     >
       <Icona nome={verso.icona} gruppo="tasti" />
     </button>
@@ -2858,19 +2859,19 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                     <button
                       className="btn ghost small board-cassa"
                       aria-disabled={v.disabled || undefined}
-                      title={trSegnato(v.hint)}
+                      title={v.hint}
                       onClick={() => {
-                        if (v.disabled) return showToast(trSegnato(v.hint), { kind: 'info' })
+                        if (v.disabled) return showToast(v.hint, { kind: 'info' })
                         return v.id === 'apri-cassa' ? setApriCassa(true) : setChiudiCassa(true)
                       }}
                     >
-                      <Icona nome={v.icon} gruppo="tasti" /> {trSegnato(v.label)}
+                      <Icona nome={v.icon} gruppo="tasti" /> {v.label}
                     </button>
                     {/* Solo quando è spento: a cassa chiudibile la riga
                         direbbe «conta il contante», che è quello che il
                         tasto fa già e non è un impedimento. */}
                     {v.disabled && v.hint && (
-                      <span className="board-cassa-perche muted small">{trSegnato(v.hint)}</span>
+                      <span className="board-cassa-perche muted small">{v.hint}</span>
                     )}
                   </span>
                 )
@@ -2988,8 +2989,6 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             if (!v) return null
             return {
               ...v,
-              label: trSegnato(v.label),
-              hint: trSegnato(v.hint),
               onClick: () => (v.id === 'apri-cassa' ? setApriCassa(true) : setChiudiCassa(true)),
             }
           })(),
@@ -3095,7 +3094,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               Erano tutti una riga a sé fra la testata e le card. */}
           {/* Griglia: ordini in invio (grigi) + ordini secondo i filtri */}
           {pend.pending.length === 0 && visibleBoard.length === 0 && (
-            <div className="empty">{trSegnato(frasePerCodaVuota(stato, soloOggi))}</div>
+            <div className="empty">{frasePerCodaVuota(stato, soloOggi)}</div>
           )}
           {/* I nuovi ordini vanno IN FONDO (numeri più alti): il placeholder
               in sync sta già lì, così alla conferma non cambia posizione. */}

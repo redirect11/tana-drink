@@ -4,7 +4,7 @@ import Didascalia from './Didascalia.jsx'
 import MacroMonthlyTab from './MacroMonthlyTab.jsx'
 import AcquistiFatturato from './AcquistiFatturato.jsx'
 import MesiBilancio from './MesiBilancio.jsx'
-import { daTradurre, trSegnato } from '../lib/lingua.js'
+import { daTradurre, conEtichetteTradotte } from '../lib/lingua.js'
 
 // ── BILANCIO: I CONTI DEL LOCALE ─────────────────────────────────────
 // Qui sta quello che Flavio teneva su ANALISI DATI.xlsx: incassi, stipendi,
@@ -29,7 +29,7 @@ export default function BilancioTab() {
   const [sub, setSub] = useState('mesi')
   // Le etichette si traducono a ogni disegno, non sulla tabella: lassù un
   // `tr` fisserebbe la lingua del primo caricamento.
-  const voci = SEZIONI_BILANCIO.map((v) => ({ ...v, label: trSegnato(v.label) }))
+  const voci = conEtichetteTradotte(SEZIONI_BILANCIO)
   return (
     <div>
       <Sottosezioni voci={voci} attiva={sub} scegli={setSub} />

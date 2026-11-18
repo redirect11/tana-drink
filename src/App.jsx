@@ -610,7 +610,12 @@ export default function App() {
     // dimenticato di ascoltare la lingua — o un testo tenuto in un useMemo —
     // resterebbe nella lingua di prima. Cambiare lingua è raro; la bozza del
     // POS è già salvata in modo sincrono e sopravvive al ridisegno.
-    <TemaIcone.Provider key={linguaDellaPagina} value={temaIcone}>
+    // È la lingua di CHI LAVORA, non quella della pagina: il passaggio a una
+    // pagina dei clienti («Mostra al cliente», «Vista cliente») ridisegna
+    // solo le pagine (la chiave sulle rotte, qui sotto). Con la lingua della
+    // pagina qui, ogni andata e ritorno rimontava anche barra, cassetto e
+    // chiamate, e chiudeva e riapriva le loro iscrizioni al database.
+    <TemaIcone.Provider key={lingua} value={temaIcone}>
     {/* Gli aiuti sotto i campi delle schede: di partenza nascosti (REQ-UI-032). */}
     <AiutiCampi.Provider value={aiutiCampiAccesi(settings)}>
     <div className="app">
@@ -931,7 +936,10 @@ export default function App() {
       <main hidden={bloccata}>
         <StileCliente.Provider value={stilePagine}>
         <ConDemo>
-        <Routes>
+        {/* Una pagina dei clienti è in italiano anche sul tablet in inglese:
+            quando la pagina cambia lingua si ridisegna da capo, perché un
+            testo tenuto in un useMemo resterebbe nell'altra. */}
+        <Routes key={linguaDellaPagina}>
           <Route path="/" element={<LandingPage />} />
           {/* IL MENÙ DIGITALE è un modulo (REQ-LIC-002): senza, al suo posto
               una pagina che lo dice. La Tana ha tutti i moduli. */}

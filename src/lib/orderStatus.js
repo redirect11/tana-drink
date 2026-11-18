@@ -148,15 +148,6 @@ export const PAYMENT_METHOD_PRINT = {
   buono: 'Buono VIP',
 }
 
-export const PAYMENT_METHOD_LABELS = {
-  online: conEmoji('carta', 'Online'),
-  lettore: conEmoji('lettore', 'SumUp (lettore)'),
-  banco: conEmoji('contanti', 'Contante'),
-  carta: conEmoji('carta', 'Carta di credito'),
-  buono: conEmoji('buono', 'Buono VIP'),
-  misto: `${emojiDi('contanti')}+${emojiDi('carta')} Misto`,
-}
-
 // Ordine in cui i metodi compaiono nei riepiloghi di cassa. Chi NON è in
 // questa lista viene comunque mostrato, in coda: il riepilogo si costruisce
 // da quello che è stato battuto davvero, non da un elenco fisso. Un metodo
@@ -166,8 +157,7 @@ export const CASH_METHOD_ORDER = ['banco', 'carta', 'lettore', 'online', 'buono'
 
 // IL METODO A SCHERMO, DIVISO IN ICONA E NOME (REQ-UI-031): l'icona la
 // disegna il tema del gestionale (components/MetodoPagamento.jsx), il nome
-// resta quello di sempre. Le etichette con l'emoji qui sopra restano per
-// chi scrive testo semplice (un messaggio, un'esportazione).
+// resta quello di sempre. Dove serve tutto in un testo, `etichettaMetodo`.
 export const PAYMENT_METHOD_ICONA = {
   online: 'carta',
   lettore: 'lettore',
@@ -178,8 +168,6 @@ export const PAYMENT_METHOD_ICONA = {
 }
 
 // IL NOME DEL METODO A SCHERMO, nella lingua di chi guarda (REQ-UI-039).
-// Le etichette con l'emoji qui sopra restano in italiano: servono a chi
-// scrive testo semplice (un messaggio, un'esportazione).
 const NOMI_METODO = {
   online: daTradurre('Online'),
   lettore: daTradurre('SumUp (lettore)'),
@@ -191,6 +179,13 @@ const NOMI_METODO = {
 
 export function paymentMethodNome(method) {
   return trSegnato(NOMI_METODO[method]) || method || tr('non indicato')
+}
+
+// Icona e nome in un testo solo, per chi scrive testo semplice (la storia
+// del conto, un messaggio). «Misto» tiene le sue due icone, contanti e carta.
+export function etichettaMetodo(method) {
+  if (method === 'misto') return `${emojiDi('contanti')}+${emojiDi('carta')} ${paymentMethodNome(method)}`
+  return PAYMENT_METHOD_ICONA[method] ? conEmoji(PAYMENT_METHOD_ICONA[method], paymentMethodNome(method)) : method
 }
 
 // Metodi da mostrare in un riepilogo: i noti sempre (anche a zero, così le

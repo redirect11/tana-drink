@@ -86,11 +86,13 @@ describe('il pacchetto per versione (REQ-FLOTTA-035)', () => {
 
   it('un pacchetto non beta esce solo da un commit di main, dopo lint e test', () => {
     const controllo = job('controllo')
-    expect(controllo).toMatch(/needs: test/)
     expect(controllo).toMatch(/git merge-base --is-ancestor "\$GITHUB_SHA" origin\/main/)
     expect(controllo).toMatch(/\*-beta\*\) BETA=true/)
+    // Prima il controllo (costa un checkout), poi lint e test, poi la
+    // compilazione: un pacchetto non nasce senza tutti e due.
+    expect(job('test')).toMatch(/needs: controllo\n\s+if: needs\.controllo\.outputs\.pubblica == 'true'/)
     expect(job('test')).toMatch(/npm run lint[\s\S]*npm test/)
-    expect(job('compila')).toMatch(/if: needs\.controllo\.outputs\.pubblica == 'true'/)
+    expect(job('compila')).toMatch(/needs: \[controllo, test\]\n\s+if: needs\.controllo\.outputs\.pubblica == 'true'/)
   })
 
   // Un tag che non è v + package.json non fa pacchetti; su main sarebbe un

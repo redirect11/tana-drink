@@ -1,6 +1,6 @@
 # Cosa è cambiato
 
-## 1.10.56-beta — in lavorazione
+## 1.10.56-beta — 18/11/2026 (test)
 
 ### Aspetto
 
@@ -36,6 +36,10 @@
 - Le basi per avere l'app in italiano e inglese: il meccanismo dei testi in
   due lingue, con una prova che boccia i testi senza traduzione inglese
   (REQ-UI-038). Le schermate lo useranno a partire dal gestionale.
+- Con il gestionale in inglese, «Mostra al cliente» e «Vista cliente»
+  mostrano la pagina del cliente in italiano senza ridisegnare il resto
+  dell'app: il menu laterale e gli avvisi a schermo restano dove sono
+  (REQ-CLI-010).
 
 ### Privacy e sicurezza
 

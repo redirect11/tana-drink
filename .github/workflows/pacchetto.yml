@@ -47,27 +47,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  test:
-    name: Lint e test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - name: Install dependencies
-        run: npm ci
-      - name: Lint
-        run: npm run lint
-      - name: Test
-        run: npm test
-
   # SI PUÒ PUBBLICARE? Lo dice il commit, non il nome del tag: un `vX.Y.Z`
   # può stare anche su develop, e lì non è ancora una versione per i locali.
   controllo:
     name: Si può pubblicare
-    needs: test
     runs-on: ubuntu-latest
     outputs:
       pubblica: ${{ steps.esito.outputs.pubblica }}
@@ -106,9 +89,30 @@ jobs:
           echo "pubblica=true" >> "$GITHUB_OUTPUT"
           echo "beta=$BETA" >> "$GITHUB_OUTPUT"
 
+  test:
+    name: Lint e test
+    # Dopo il controllo, che costa un checkout: un tag che non pubblica
+    # niente non paga la suite (sullo stesso commit la fa già girare
+    # firebase-hosting.yml).
+    needs: controllo
+    if: needs.controllo.outputs.pubblica == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Test
+        run: npm test
+
   compila:
     name: Compila (${{ matrix.tipo }})
-    needs: controllo
+    needs: [controllo, test]
     if: needs.controllo.outputs.pubblica == 'true'
     runs-on: ubuntu-latest
     strategy:

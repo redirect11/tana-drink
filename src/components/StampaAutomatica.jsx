@@ -11,11 +11,10 @@ import ToggleRow from './ToggleRow.jsx'
 import { comandeConsentite } from '../lib/limiti.js'
 import GruppoChip from './GruppoChip.jsx'
 import Icona from './Icona.jsx'
-import { tr, trSegnato } from '../lib/lingua.js'
+import { tr, conEtichetteTradotte } from '../lib/lingua.js'
 
 // Le provenienze di una stampa (Banco e sala, Solo dal banco…) nella lingua
 // di chi guarda: le etichette nascono in lib/printer.js.
-const origini = () => ORIGINI_STAMPA.map((o) => ({ ...o, label: trSegnato(o.label) }))
 
 // ── QUANDO PARTE LA CARTA DA SÉ (REQ-UI-025) ─────────────────────────
 //
@@ -85,7 +84,7 @@ export default function StampaAutomatica({ settings, save }) {
               <span className="muted small">{tr('Comande prese')}</span>
               <GruppoChip
                 etichetta={tr('Comande prese')}
-                opzioni={origini()}
+                opzioni={conEtichetteTradotte(ORIGINI_STAMPA)}
                 valore={prn.autoPrintComandaDa || 'tutti'}
                 scegli={(v) => cambia({ autoPrintComandaDa: v })}
               />
@@ -107,7 +106,7 @@ export default function StampaAutomatica({ settings, save }) {
           <span className="muted small">{tr('Riscossioni fatte')}</span>
           <GruppoChip
             etichetta={tr('Riscossioni fatte')}
-            opzioni={origini()}
+            opzioni={conEtichetteTradotte(ORIGINI_STAMPA)}
             valore={prn.autoPrintScontrinoDa || 'tutti'}
             scegli={(v) => cambia({ autoPrintScontrinoDa: v })}
           />

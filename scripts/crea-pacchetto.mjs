@@ -39,7 +39,7 @@ import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statS
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { FILE_DEL_SET, PAGINE_INFORMATIVA, SEGNAPOSTO } from '../clienti/personalizzazione.mjs'
-import { CAMPI_VENUE } from '../src/porte/configurazioneLocale.mjs'
+import { CAMPI_VENUE, PROFILI as PROFILI_DEL_LOCALE } from '../src/porte/configurazioneLocale.mjs'
 import { cercaSegni } from './controlla-build-senza-demo.mjs'
 
 export const FORMATO = 1
@@ -53,7 +53,7 @@ export const STRUMENTI = { node: '22', 'firebase-tools': '15.36.0' }
 
 // La demo è sempre leggera: niente Functions né Storage (la regia, in
 // aggiorna-istanza.yml). Un locale può essere l'uno o l'altro.
-export const PROFILI = { locali: ['completo', 'leggero'], demo: ['leggero'] }
+export const PROFILI = { locali: [...PROFILI_DEL_LOCALE], demo: ['leggero'] }
 
 export const FILE_DELLA_RADICE = ['firebase.json', 'firestore.rules', 'firestore.indexes.json', 'storage.rules']
 

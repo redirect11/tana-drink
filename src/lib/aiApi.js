@@ -21,7 +21,7 @@ export const aiRaggiungibile = () => !__DEMO__ && !senzaFunctions() && aiNelPian
 // Cosa dire per ogni `codice` della Function. Registro del gestionale:
 // piano, senza dare la colpa a chi legge. Testi segnati, tradotti da
 // `messaggioAI` quando si mostrano (REQ-UI-039).
-export const MESSAGGI_AI = {
+const MESSAGGI_AI = {
   credito: daTradurre('Il credito AI del locale è finito. Si ricarica dal sito, nell’area del locale.'),
   tetto: daTradurre('È stato raggiunto il tetto di spesa AI del mese.'),
   spento: daTradurre("L'AI non è attiva per questo locale."),

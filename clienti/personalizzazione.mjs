@@ -14,7 +14,6 @@
 
 import { ID_BLOCCO } from '../src/porte/configurazioneLocale.mjs'
 
-export { ID_BLOCCO }
 
 // I segnaposti nei file: tutti `%VENUE_…%`. Uno rimasto in un file
 // pubblicato è un locale senza nome (o col nome di un altro).

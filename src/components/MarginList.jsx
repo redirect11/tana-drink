@@ -7,7 +7,7 @@ import SortTh from './SortTh.jsx'
 import GruppoChip from './GruppoChip.jsx'
 import Icona from './Icona.jsx'
 import CategoryRail from './CategoryRail.jsx'
-import { tr, daTradurre, trSegnato, useLingua } from '../lib/lingua.js'
+import { tr, daTradurre, trSegnato, useLingua, conEtichetteTradotte } from '../lib/lingua.js'
 
 // MARGINALITÀ DEL LISTINO: per ogni drink con ricetta, quanto costa
 // davvero, a quanto è venduto e che ricarico ne esce. Serve a trovare le
@@ -161,7 +161,7 @@ export default function MarginList({ drinks, inventory, categories = [], onEdit 
         </div>
         <GruppoChip
           etichetta={tr('Vista')}
-          opzioni={VISTE.map((v) => ({ ...v, label: trSegnato(v.label) }))} valore={vista} scegli={setVista} style={{ marginBottom: 8 }} />
+          opzioni={conEtichetteTradotte(VISTE)} valore={vista} scegli={setVista} style={{ marginBottom: 8 }} />
 
         {righe.length === 0 ? (
           <div className="muted small">{tr('Nessun drink in questo gruppo.')}</div>

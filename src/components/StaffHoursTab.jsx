@@ -26,7 +26,7 @@ import ConfirmDialog from './ConfirmDialog.jsx'
 import StaffBadgePanel from './StaffBadgePanel.jsx'
 import { Sottosezioni } from '../lib/sottosezioni.js'
 import Icona from './Icona.jsx'
-import { tr, daTradurre, trSegnato, formatoAttivo, useLingua } from '../lib/lingua.js'
+import { tr, daTradurre, trSegnato, formatoAttivo, useLingua, conEtichetteTradotte } from '../lib/lingua.js'
 
 // RAPP ORE + BADGE VIRTUALE: registro ore dello staff con vista calendario
 // giornaliera, settimanale e mensile. Distingue le ore EFFETTIVE (badge:
@@ -181,7 +181,7 @@ export default function StaffHoursTab({ embedded = false, sezioneIniziale = 'cal
           </p>
         </>
       )}
-      {!embedded && <Sottosezioni voci={SEZIONI_STAFF.map((v) => ({ ...v, label: trSegnato(v.label) }))} attiva={sezione} scegli={setSezione} />}
+      {!embedded && <Sottosezioni voci={conEtichetteTradotte(SEZIONI_STAFF)} attiva={sezione} scegli={setSezione} />}
       {error && <div className="banner">{tr('Errore: {messaggio}', { messaggio: error })}</div>}
 
       {/* CHI TIMBRA ADESSO, in una sezione sua. Prima stava in fondo alla

@@ -7,15 +7,15 @@ import {
 } from '../lib/api.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { riepilogoMesi, totaleRiepilogo, nomeMese } from '../lib/riepilogoFornitori.js'
-import { tr, linguaInUso, formatoAttivo, LINGUA_DI_PARTENZA } from '../lib/lingua.js'
+import { tr } from '../lib/lingua.js'
+import { nomeMese as nomeDelMese } from '../lib/periodo.js'
 
-// Il nome del mese nella lingua di chi guarda (REQ-UI-039). In italiano
-// resta `nomeMese`, che è quello di sempre; nelle altre lingue lo scrive il
-// browser, che i nomi dei mesi li sa già («January 2026»).
+// Il nome del mese nella lingua di chi guarda (REQ-UI-039), come la testata
+// del calendario: «agosto 2026», «August 2026». Un mese che non si legge
+// resta com'è scritto (nomeMese di riepilogoFornitori).
 function meseLeggibile(mese) {
   const [anno, m] = String(mese || '').split('-').map(Number)
-  if (linguaInUso() === LINGUA_DI_PARTENZA || !anno || !m) return nomeMese(mese)
-  return new Date(anno, m - 1, 1).toLocaleDateString(formatoAttivo(), { month: 'long', year: 'numeric' })
+  return anno && m ? nomeDelMese(anno, m - 1) : nomeMese(mese)
 }
 
 // ── RIEPILOGO: I SOLDI CHE ESCONO, MESE PER MESE (REQ-MAG-034) ───────

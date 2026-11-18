@@ -18,7 +18,7 @@ import { BloccoMacro, BloccoTotale } from './TabellaMacro.jsx'
 import Didascalia from './Didascalia.jsx'
 import GruppoChip from './GruppoChip.jsx'
 import Soffietto from './Soffietto.jsx'
-import { tr, daTradurre, trSegnato } from '../lib/lingua.js'
+import { tr, daTradurre, trSegnato, conEtichetteTradotte } from '../lib/lingua.js'
 
 // BILANCIO → ACQUISTI × FATTURATO (REQ-MAG-022): il foglio «RAPPORTI
 // ACQUISTI» di Flavio, per anno, mese, settimana o giorno. Il conto sta in
@@ -39,7 +39,6 @@ const IVA = [
 // Le etichette delle scelte nella lingua in uso, a ogni disegno. Quelle di
 // VISTE vengono da lib/periodiBilancio.js: `trSegnato` le traduce quando
 // sono segnate lì, e intanto le lascia come sono.
-const tradotte = (opzioni) => opzioni.map((o) => ({ ...o, label: trSegnato(o.label) }))
 
 export default function AcquistiFatturato() {
   // Le impostazioni ricordate, non quelle di partenza: con un cambio di
@@ -127,8 +126,8 @@ export default function AcquistiFatturato() {
   return (
     <div>
       <div className="row between" style={{ alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
-        <GruppoChip etichetta={tr('Periodo della tabella')} opzioni={tradotte(VISTE)} valore={vista} scegli={setVista} />
-        <GruppoChip etichetta={tr('IVA')} opzioni={tradotte(IVA)} valore={lordo} scegli={setLordo} />
+        <GruppoChip etichetta={tr('Periodo della tabella')} opzioni={conEtichetteTradotte(VISTE)} valore={vista} scegli={setVista} />
+        <GruppoChip etichetta={tr('IVA')} opzioni={conEtichetteTradotte(IVA)} valore={lordo} scegli={setLordo} />
       </div>
 
       <div className="row between" style={{ alignItems: 'center', marginBottom: 10 }}>

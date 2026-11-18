@@ -110,13 +110,13 @@ export function modelloInformativa(cliente, nome, radice = process.cwd()) {
 
 // Le pagine dell'informativa come escono dalla build: riempite per un
 // cliente, coi segnaposto per il sito uguale per tutti.
+export function paginaInformativa(cliente, nome, radice = process.cwd(), { pacchetto = false } = {}) {
+  const modello = modelloInformativa(cliente, nome, radice)
+  return pacchetto ? modello : informativaPerCliente(modello, cliente.venue)
+}
+
 export function pagineInformativa(cliente, radice = process.cwd(), { pacchetto = false } = {}) {
-  return new Map(
-    PAGINE_INFORMATIVA.map((nome) => {
-      const modello = modelloInformativa(cliente, nome, radice)
-      return [nome, pacchetto ? modello : informativaPerCliente(modello, cliente.venue)]
-    })
-  )
+  return new Map(PAGINE_INFORMATIVA.map((nome) => [nome, paginaInformativa(cliente, nome, radice, { pacchetto })]))
 }
 
 export function pluginCliente({ slug, radice = process.cwd(), pacchetto = inModalitaPacchetto() } = {}) {
@@ -166,10 +166,12 @@ export function pluginCliente({ slug, radice = process.cwd(), pacchetto = inModa
           return
         }
         const nome = percorso.replace(/^\//, '')
-        const pagina = pagine().get(nome)
-        if (pagina) {
+        // Solo la pagina chiesta, e solo se è dell'informativa: il server di
+        // sviluppo passa di qui per ogni modulo che serve, centinaia a ogni
+        // ricarica, e rileggere i due modelli ogni volta era lavoro buttato.
+        if (PAGINE_INFORMATIVA.includes(nome)) {
           res.setHeader('Content-Type', 'text/html; charset=utf-8')
-          res.end(pagina)
+          res.end(paginaInformativa(cliente, nome, radice, { pacchetto }))
           return
         }
         const file = sovrascritti().get(nome)

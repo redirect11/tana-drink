@@ -11,7 +11,7 @@ import { formatPrice } from '../lib/orderStatus.js'
 import { strutturaDi } from './stiliStrutturati.js'
 import Caricamento from './Caricamento.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
-import { tr, daTradurre, trSegnato, trDato, useLingua } from '../lib/lingua.js'
+import { tr, daTradurre, trSegnato, trDato, useLingua, conEtichetteTradotte } from '../lib/lingua.js'
 import {
   STILI_MENU,
   nomeStile,
@@ -545,7 +545,7 @@ export default function MarketplaceTab({ role = null }) {
 
   return (
     <div className="pagina-marketplace">
-      <Sottosezioni voci={voci.map((v) => ({ ...v, label: trSegnato(v.label) }))} attiva={aperta} scegli={scegli} />
+      <Sottosezioni voci={conEtichetteTradotte(voci)} attiva={aperta} scegli={scegli} />
       {errore && <div className="banner">{tr('Errore: {messaggio}', { messaggio: errore })}</div>}
 
       {aperta === 'tuoi' && (

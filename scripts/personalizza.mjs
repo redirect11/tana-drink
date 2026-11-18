@@ -47,9 +47,8 @@ import {
   manifestPerCliente,
   informativaPerCliente,
   conConfigurazione,
-  ID_BLOCCO,
 } from '../clienti/personalizzazione.mjs'
-import { problemiConfigurazione } from '../src/porte/configurazioneLocale.mjs'
+import { ID_BLOCCO, problemiConfigurazione } from '../src/porte/configurazioneLocale.mjs'
 
 const FILE_CONFIGURAZIONE = 'configurazione.json'
 const MANIFEST = 'manifest.webmanifest'

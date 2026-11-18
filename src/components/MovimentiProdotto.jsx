@@ -7,7 +7,7 @@ import { MESI_CORTI } from '../lib/periodo.js'
 import { etichettaTipo, riepilogoMovimenti } from '../lib/movimentiProdotto.js'
 import GruppoChip from './GruppoChip.jsx'
 import Icona from './Icona.jsx'
-import { tr, daTradurre, trSegnato, formatoAttivo, linguaInUso, LINGUA_DI_PARTENZA } from '../lib/lingua.js'
+import { tr, daTradurre, trSegnato, formatoAttivo, conEtichetteTradotte } from '../lib/lingua.js'
 
 // LA MOVIMENTAZIONE DI UN PRODOTTO (REQ-MAG-048), dalla sua scheda in
 // Magazzino: i totali per tipo nel periodo, il venduto mese per mese (app e
@@ -19,14 +19,8 @@ const PERIODI = [
   { id: 365, label: daTradurre('1 anno') },
   { id: null, label: daTradurre('periodo|Tutto') },
 ]
-// Il mese in inglese lo scrive Intl («Nov 2026»); in italiano resta la
-// forma di sempre, coi mesi corti di lib/periodo.js.
-const nomeMese = (k) =>
-  linguaInUso() === LINGUA_DI_PARTENZA
-    ? `${MESI_CORTI[Number(k.slice(5)) - 1]} ${k.slice(0, 4)}`
-    : formatter(`mese-${formatoAttivo()}`, () => new Intl.DateTimeFormat(formatoAttivo(), { month: 'short', year: 'numeric' })).format(
-        new Date(Number(k.slice(0, 4)), Number(k.slice(5)) - 1, 1)
-      )
+// I mesi corti di lib/periodo.js sono segnati: «nov 2026», «Nov 2026».
+const nomeMese = (k) => `${trSegnato(MESI_CORTI[Number(k.slice(5)) - 1])} ${k.slice(0, 4)}`
 // Un formatter per lingua, fatto una volta: toLocaleString con le opzioni ne
 // costruisce uno nuovo a ogni riga, e un ingrediente di un anno ne ha
 // migliaia (BUG-117).
@@ -84,7 +78,7 @@ export default function MovimentiProdotto({ item, onClose }) {
         </div>
         <GruppoChip
           etichetta={tr('Periodo')}
-          opzioni={PERIODI.map((p) => ({ ...p, label: trSegnato(p.label) }))}
+          opzioni={conEtichetteTradotte(PERIODI)}
           valore={periodo}
           scegli={setPeriodo}
           style={{ margin: '10px 0' }}

@@ -110,11 +110,20 @@ function traduci(chiave, valori) {
   const lingua = linguaInUso()
   const dizionario = lingua !== LINGUA_DI_PARTENZA ? DIZIONARI[lingua] : null
   const tradotto = dizionario && Object.hasOwn(dizionario, chiave) ? dizionario[chiave] : italianoDi(chiave)
-  if (!valori) return tradotto
-  return tradotto.replace(SEGNAPOSTO, (segnaposto, nome) =>
+  return conValori(tradotto, valori)
+}
+
+function conValori(testo, valori) {
+  if (!valori) return testo
+  return testo.replace(SEGNAPOSTO, (segnaposto, nome) =>
     Object.hasOwn(valori, nome) ? String(valori[nome]) : segnaposto
   )
 }
+
+// Un testo segnato, SEMPRE in italiano, qualunque sia la lingua di chi
+// guarda: quello che va sulla carta (lo scontrino è un documento fiscale
+// italiano). Le stesse regole di `tr`, contesto compreso.
+export const inItaliano = (chiave, valori) => (chiave == null ? chiave : conValori(italianoDi(chiave), valori))
 
 // «contesto|testo»: in italiano si legge il testo, senza il contesto.
 function italianoDi(chiave) {
@@ -130,6 +139,11 @@ export const daTradurre = (testo) => testo
 // È l'unico `tr` che accetta un valore calcolato: la prova controlla le
 // chiavi dove nascono, nei `daTradurre`.
 export const trSegnato = (chiave, valori) => (chiave == null ? chiave : traduci(chiave, valori))
+
+// Una tabella di voci (sottosezioni, chip) con le etichette segnate, nella
+// lingua di chi guarda. Si chiama dove si disegna, non dove la tabella nasce:
+// al caricamento del modulo la lingua non è ancora quella giusta.
+export const conEtichetteTradotte = (voci) => voci.map((v) => ({ ...v, label: trSegnato(v.label) }))
 
 // Un valore che può essere un'etichetta di casa (un tema o uno stile del
 // catalogo, segnati con `daTradurre`) oppure un DATO (il tema su misura che

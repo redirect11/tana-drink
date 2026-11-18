@@ -23,7 +23,7 @@
 // chiama, così la prova non ha bisogno di Firebase.
 
 import { urlFunzioneRegia, erroreDellaRegia, postaAllaRegia } from './funzioniRegia.js'
-import { PROGETTI_REGIA } from './aggiornamenti.js'
+import { PROGETTI_REGIA } from '../porte/configurazioneLocale.mjs'
 import { urlRegia } from './limiti.js'
 import { regiaInUso } from '../porte/configurazione.js'
 
