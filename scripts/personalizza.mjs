@@ -3,13 +3,13 @@
 // La regia compila il sito una volta per versione (`PACCHETTO=1 npm run
 // build`) e, per ogni locale, lancia questo script su una COPIA del `dist/`
 // prima di pubblicarlo (interfaccia 16 di docs/contratto-regia-app.md della
-// regia). Oggi si lancia dal checkout del tag, dove trova i suoi moduli
-// (clienti/personalizzazione.mjs, src/porte/configurazioneLocale.mjs):
-// metterlo nel pacchetto come file solo, `personalizza.mjs` nella radice, è
-// il lavoro della fase 2 (scripts/crea-pacchetto.mjs), che lo impacchetterà
-// insieme ai moduli che importa.
+// regia). Nel pacchetto per versione arriva come file solo, nella radice,
+// coi suoi moduli dentro (scripts/crea-pacchetto.mjs, REQ-FLOTTA-035): la
+// regia lo lancia da lì, senza un checkout del repository. Qui si lancia
+// dal repository, per le prove.
 //
-//   node scripts/personalizza.mjs --dist <cartella> --configurazione <file.json> [--pubblica <cartella>]
+//   node personalizza.mjs --dist <cartella> --configurazione <file.json> [--pubblica <cartella>]     # nel pacchetto
+//   node scripts/personalizza.mjs --dist <cartella> --configurazione <file.json> [--pubblica <cartella>]   # dal repository
 //
 // Cosa fa:
 //   - riempie i segnaposto `%VENUE_*%` di index.html e dell'informativa

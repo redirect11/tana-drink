@@ -31,7 +31,10 @@ lasciando sul ramo `feature/flotta` tutto quello che era della regia.
    `cliente: tana`. I progetti `drinkpos-*` li pubblica la regia, con le
    sue credenziali: nei segreti di tana-drink c'è solo l'account di deploy
    della Tana, e da qui un'istanza non si può pubblicare nemmeno per
-   sbaglio. Un test legge i workflow (`tests/unit/flottaCi.test.js`).
+   sbaglio. Il pacchetto per versione (REQ-FLOTTA-035) non cambia la
+   regola: `pacchetto.yml` lo allega alla Release di GitHub del tag, in
+   questo repository, e la regia lo scarica da lì. Un test legge i
+   workflow (`tests/unit/flottaCi.test.js`).
 3. **Niente fork dell'app.** Un solo codice per tutti i locali; il locale
    è configurazione (`clienti/<slug>/` e le impostazioni nel suo
    database), la licenza è un dato, il marchio è un dato. Una richiesta
@@ -64,19 +67,58 @@ a `X.Y.Z`: i rilasci a ondate della regia confrontano le due cose.
 La strada nuova, per l'interfaccia 16 del contratto della regia
 (`docs/contratto-regia-app.md` in drink-regia). Il sito si compila **una
 volta per versione**, senza nessun locale dentro, e la regia ci scrive i
-dati di ogni locale al deploy, senza ricompilare. **A compilare è la
-regia**, dal nostro tag: la regola 2 qui sopra resta com'è (Daniele,
-18/11/2026), e nessun workflow di tana-drink carica nei bucket della regia.
-La Tana continua a pubblicarsi da GitHub con la sua build.
+dati di ogni locale al deploy, senza ricompilare. **A compilare siamo
+noi, al tag** (REQ-FLOTTA-035), e il pacchetto va nella **Release di GitHub
+del tag**: Daniele, 18/11/2026, «tana drink compila il pacchetto,
+provisiona istanza e aggiorna istanza aggiornano con il pacchetto di
+release di tana-drink». La regola 2 qui sopra resta: scriviamo solo nel
+nostro repository, e la regia scarica. La Tana continua a pubblicarsi da
+GitHub con la sua build, e la regia tiene la compilazione di oggi come
+ripiego (interfaccia 12, `scripts/genera-cliente.mjs`).
 
 ```sh
-# la compilazione, una volta per versione, SENZA .env
-npm ci && npm --prefix functions ci
-PACCHETTO=1 BASE_PATH=/ VITE_APP_ENV=production npm run build
+# il pacchetto, una volta per versione, SENZA .env nella radice
+npm ci
+node scripts/crea-pacchetto.mjs --tipo locali    # oppure --tipo demo
+#  -> pacchetti/pacchetto-locali-vX.Y.Z.tgz e pacchetti/pacchetto-locali-vX.Y.Z.tgz.sha256
 
-# per ogni locale, su una COPIA del dist/
-node scripts/personalizza.mjs --dist <copia> --configurazione <locale.json> [--pubblica <cartella>]
+# per ogni locale, dalla radice del pacchetto aperto, su una COPIA del dist/
+node personalizza.mjs --dist dist --configurazione <locale.json> [--pubblica <cartella>]
 ```
+
+- **`.github/workflows/pacchetto.yml`**, a ogni tag `v*`: lint e test,
+  poi i due pacchetti, poi la Release del tag (in bozza finché non ha tutti
+  i file, «pre-release» se è una beta). Un pacchetto **non beta** esce solo
+  se il commit del tag sta in `main`; un tag che non è `v` + la versione
+  di `package.json` non fa pacchetti (sul commit di `main` è un errore,
+  non un avviso: sarebbe un rilascio senza pacchetto). **Un file allegato
+  non si sostituisce**: una versione corretta è una versione nuova (la
+  regia ricorda l'impronta del primo pacchetto di ogni versione e rifiuta
+  un archivio diverso). Il workflow non sovrascrive mai; che non lo faccia
+  nemmeno una persona a mano lo garantiscono solo le «release immutabili»
+  di GitHub, un'impostazione del repository (spenta al 18/11/2026: la
+  decide Daniele). Nessun segreto: solo il permesso di scrivere nella
+  Release, nel job che allega.
+- **Se «Allega alla Release» si ferma a metà**, la Release resta in bozza
+  (la regia non la vede) con una parte dei file, e rilanciarlo si ferma sul
+  primo file già presente. Si cancella la bozza a mano (*Releases → la
+  bozza → Delete*: il tag resta) e si rilancia il workflow intero.
+- **`scripts/crea-pacchetto.mjs`** compila (i locali con `PACCHETTO=1`,
+  la demo con `CLIENTE=demo` e il progetto finto, come la compilava la
+  regia), controlla la build (nei locali niente demo, nella demo niente
+  progetto vero) e mette insieme `dist/`, `firebase.json`, le regole e
+  gli indici; per i locali anche `functions/` con le sole dipendenze di
+  produzione (senza i `.env.<progetto>` della Tana) e `personalizza.mjs`
+  in un file solo, che gira senza il repository. Scrive `pacchetto.json`
+  nel formato 1 (versione, `tag`, `beta`, commit, `strumenti` con
+  firebase-tools 15.36.0 e Node 22, `personalizzabili`, `campiVenue`
+  sempre presente e l'impronta di ogni file) e si ferma se la regia lo
+  rifiuterebbe: `problemiDelManifesto` è una copia dei controlli di
+  `scripts/lib-pacchetto.js` della regia, da tenere allineata a mano. Rifiuta anche un `.env` nella radice e i file tracciati
+  modificati (`--anche-modificato` per una prova in locale).
+- **Quando il repository diventerà privato** la regia non potrà più
+  scaricare senza un accesso: se ne parla allora (la regia propone una
+  GitHub App in sola lettura).
 
 - **`PACCHETTO=1`** (clienti/pluginCliente.js): nessun cliente nella build,
   i segnaposto `%VENUE_*%` restano in `index.html`, nel manifest e
@@ -108,7 +150,8 @@ node scripts/personalizza.mjs --dist <copia> --configurazione <locale.json> [--p
   l'app non parte, e non chiamano nessun servizio, Firebase compreso.
   Leggere `settings/bar` da lì vorrebbe dire caricare l'SDK in una pagina
   che parla proprio di quali dati partono verso chi.
-- **La demo** non passa da qui: si compila con `CLIENTE=demo`, come oggi.
+- **La demo** non si personalizza: il suo pacchetto (`--tipo demo`) è
+  la demo intera, sempre col profilo leggero, senza Functions.
 
 ## Il titolare (REQ-FLOTTA-029)
 
