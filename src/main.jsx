@@ -67,12 +67,17 @@ import '@fontsource/jost/latin-700.css'
 import './index.css'
 import { initCookieConsent } from './lib/cookieConsent.js'
 import { avviaProgressivi } from './lib/progressivi.js'
-import { aggiornaConfigurazione } from './porte/configurazione.js'
+import { seguiConfigurazione, senzaBackend } from './porte/configurazione.js'
+import NonCollegata from './components/NonCollegata.jsx'
 import { catturaCodiceRegia } from './lib/passaggioRegia.js'
 
 // IL CODICE DELLA REGIA (REQ-FLOTTA-030) si toglie dall'indirizzo prima di
 // tutto il resto: non deve restare in cronologia, né arrivare al router.
-catturaCodiceRegia()
+// Ma non senza backend (REQ-FLOTTA-034): lì l'app si ricarica appena arriva
+// la configurazione, e il codice, tenuto solo in memoria, si perdeva — il
+// titolare arrivato dall'area clienti finiva sul modulo email e password.
+// Lasciato nell'indirizzo, lo prende l'apertura dopo la ricarica.
+if (!senzaBackend()) catturaCodiceRegia()
 
 
 // basename per il router: ricavato dalla base di Vite (BASE_URL).
@@ -98,23 +103,33 @@ if ('serviceWorker' in navigator) {
   })
 }
 
+// SENZA BACKEND NON PARTE L'APP (REQ-FLOTTA-034): il sito uguale per tutti
+// prima del deploy, o un dispositivo che non ha ancora la configurazione del
+// suo locale. Al posto dell'app una schermata a parole comuni, e niente che
+// legga o scriva su un progetto finto: i progressivi si iscriverebbero a
+// contatori che non esistono, e con la cache vuota cancellerebbero la
+// memoria della cassa aperta di questo dispositivo (R7 dell'analisi). In
+// sviluppo resta l'app, col banner che dice quali variabili mancano.
+const nonCollegata = senzaBackend() && !import.meta.env.DEV
+
 function parti() {
   // I NUMERI DEGLI ORDINI SI PRECARICANO. Battere un conto non deve
   // aspettare la rete: quale cassa è aperta e a che punto sono i
   // progressivi si tengono aggiornati da qui in avanti, così alla creazione
   // non si chiede niente a nessuno (vedi lib/progressivi.js).
-  avviaProgressivi()
+  if (!nonCollegata) avviaProgressivi()
 
   // Banner informativo cookie (solo cookie tecnici, nessun consenso
   // richiesto). Non nella demo: non ha Analytics né altri servizi di terzi,
   // e quello che salva sta nel browser di chi prova.
-  if (!__DEMO__) initCookieConsent().catch((e) => console.error('[CookieConsent]', e))
+  if (!__DEMO__ && !nonCollegata) initCookieConsent().catch((e) => console.error('[CookieConsent]', e))
 
   // LA CONFIGURAZIONE SI RILEGGE IN SOTTOFONDO (REQ-FLOTTA-021): l'app è
   // già partita con l'ultima che conosce, e nessuno aspetta il file. Se la
   // regia l'ha cambiata, vale da subito solo nei primi secondi (si ricarica
-  // una volta), altrimenti dall'apertura dopo. La demo non la legge.
-  if (!__DEMO__) aggiornaConfigurazione().catch((e) => console.error('[configurazione]', e))
+  // una volta), altrimenti dall'apertura dopo; senza backend si ricarica
+  // sempre, e si riprova finché il file non arriva. La demo non la legge.
+  if (!__DEMO__) seguiConfigurazione()
 
   // Prima del primo disegno: il traduttore del browser non deve poter far
   // cadere la pagina (REQ-CLI-010, lib/traduttoreBrowser.js).
@@ -122,9 +137,13 @@ function parti() {
 
   ReactDOM.createRoot(document.getElementById('root')).render(
     <React.StrictMode>
-      <BrowserRouter basename={basename}>
-        <App />
-      </BrowserRouter>
+      {nonCollegata ? (
+        <NonCollegata />
+      ) : (
+        <BrowserRouter basename={basename}>
+          <App />
+        </BrowserRouter>
+      )}
     </React.StrictMode>
   )
 }

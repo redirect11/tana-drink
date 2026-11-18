@@ -181,9 +181,10 @@ export const CATALOGO_INIZIALE = [
   .filter(Boolean)
 
 // ── IL CATALOGO DELLA REGIA ──────────────────────────────────────────
-// Si legge all'apertura del marketplace, dalla regia scritta nella build
-// (VITE_REGIA_PROGETTO, solo i due progetti della regia, come la
-// presentazione), e si ricorda: senza rete si vede l'ultimo letto.
+// Si legge all'apertura del marketplace, dalla regia della configurazione
+// del locale o della build (VITE_REGIA_PROGETTO; solo i due progetti della
+// regia, come la presentazione), e si ricorda: senza rete si vede l'ultimo
+// letto.
 const CHIAVE_CATALOGO = 'drink:catalogo-temi'
 
 export const urlCatalogo = (progetto) => urlFunzioneRegia('catalogoTemi', progetto)

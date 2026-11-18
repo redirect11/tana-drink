@@ -37,6 +37,30 @@
   due lingue, con una prova che boccia i testi senza traduzione inglese
   (REQ-UI-038). Le schermate lo useranno a partire dal gestionale.
 
+### Privacy e sicurezza
+
+- **L'informativa privacy e cookie è quella del locale.** Il titolare del
+  trattamento, la sede, la partita IVA e l'email vengono dai dati del
+  locale, invece di essere scritti nella pagina; sulla demo e sugli altri
+  locali compariva la Tana. Per la Tana ragione sociale e sede si leggono
+  come sullo scontrino. La demo ha la sua: nessun dato raccolto
+  (REQ-SIC-017).
+- I collegamenti social del locale accettano solo indirizzi web, email e
+  telefono, sia quando si salvano in Impostazioni sia nel piede del menù;
+  un indirizzo scritto senza «https://» lo prende da sé (REQ-SIC-017).
+
+### Flotta
+
+- **Un sito uguale per tutti i locali.** La versione si può compilare una
+  volta sola, senza nessun locale dentro, e la regia ci scrive i dati di
+  ogni locale quando lo pubblica (`scripts/personalizza.mjs`). Il locale
+  arriva anche dentro la pagina: un tablet che passa a questo sito riparte
+  col suo locale anche senza rete. Un sito che non sa ancora di che locale
+  è mostra «L'app non è ancora collegata al locale», non lascia lavorare
+  nessuno e si collega da solo appena può. La Tana continua a pubblicarsi
+  con la sua build: per lei cambiano solo l'informativa e i link social
+  descritti sopra (REQ-FLOTTA-034).
+
 ## 1.10.55-beta — 17/11/2026 (test)
 
 ### Coda ordini

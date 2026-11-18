@@ -100,6 +100,13 @@ locale della flotta, il titolare del trattamento risulta «EFFEVI S.R.L.S.
 - Un controllo in CI: le build che non sono della Tana non contengono
   `EFFEVI` né `latanadelconiglio`.
 
+**Fatto il 18/11/2026 (REQ-SIC-017).** I modelli stanno in
+`clienti/pagine/`, riempiti coi dati del locale dalla build
+(`pluginCliente.js`) o, nel sito uguale per tutti, da
+`scripts/personalizza.mjs`; la demo ha i suoi in `clienti/demo/pagine/`.
+Il controllo è un test che gira a ogni push
+(`tests/unit/informativaDelLocale.test.js`), non un passo nuovo della CI.
+
 ### 5. Le tracce della Tana nel pacchetto della demo (bassa)
 
 Nella build della demo ci sono:
@@ -123,6 +130,11 @@ controllo sul `dist/` della demo (`Coniglio`, `Tana`, `enofel`, `EFFEVI`).
 vero `settings` è scrivibile dal bartender, quindi la vede chi apre il menù.
 Vanno accettati solo `https:`, `http:`, `mailto:` e `tel:`, sia al
 salvataggio sia nel disegno.
+
+**Fatto il 18/11/2026 (REQ-SIC-017).** `linkSicuro` in
+`src/porte/configurazioneLocale.mjs`, usato al salvataggio
+(`socialDaTesto`) e al disegno (`socialDelLocale`), e dalla configurazione
+del locale (`tests/unit/linkDelLocale.test.js`).
 
 ### 7. La stampante finta (bassa)
 

@@ -587,3 +587,30 @@ bisogni:
       - REQ-SIC-015
       - REQ-SIC-016
     test_cases: []
+
+  - id: UR-024
+    title: "Un locale nuovo si accende con la versione di tutti, e i suoi tablet restano collegati al locale"
+    area: "Gestore"
+    description: >
+      Daniele, 17/11/2026, sul pacchetto per versione della regia
+      (REQ-FLOTTA-137 della regia): «basta che sia una versione che io poi
+      posso distribuire e deployare senza far partire una nuova build su
+      github». La versione si compila una volta sola, uguale per tutti i
+      locali, e la regia ci scrive i dati di ogni locale al momento della
+      pubblicazione. Il locale non deve accorgersene: stessi dati, stesso
+      nome, stessa informativa sua, e i tablet già installati non devono
+      perdere il collegamento al locale passando alla versione nuova. Il
+      18/11/2026 Daniele: «si fallo entrare» per l'informativa privacy e
+      cookie di ogni locale, che oggi è quella della Tana in ogni build.
+    accettazione: >
+      Un sito compilato una volta e personalizzato per un locale di prova
+      si apre col nome, i colori, il logo e l'informativa di quel locale,
+      senza nessuna parola della Tana. Un tablet che aveva la versione
+      compilata per il locale passa a quella uguale per tutti e, anche
+      senza rete, si riapre sul suo locale con la coda e i conti di prima.
+      Un sito che non sa a che locale appartiene non lascia lavorare
+      nessuno, lo dice a parole comuni, e si collega da solo appena può.
+    requisiti:
+      - REQ-FLOTTA-034
+      - REQ-SIC-017
+    test_cases: []

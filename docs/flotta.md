@@ -59,6 +59,50 @@ e poi scrive la licenza nel Firestore dell'istanza, nel documento
 contratto: se cambiano qui, si dice là. Un tag `vX.Y.Z` ha `package.json`
 a `X.Y.Z`: i rilasci a ondate della regia confrontano le due cose.
 
+### Il sito uguale per tutti (REQ-FLOTTA-034, dal 18/11/2026)
+
+La strada nuova, per l'interfaccia 16 del contratto della regia
+(`docs/contratto-regia-app.md` in drink-regia). Il sito si compila **una
+volta per versione**, senza nessun locale dentro, e la regia ci scrive i
+dati di ogni locale al deploy, senza ricompilare. **A compilare è la
+regia**, dal nostro tag: la regola 2 qui sopra resta com'è (Daniele,
+18/11/2026), e nessun workflow di tana-drink carica nei bucket della regia.
+La Tana continua a pubblicarsi da GitHub con la sua build.
+
+```sh
+# la compilazione, una volta per versione, SENZA .env
+npm ci && npm --prefix functions ci
+PACCHETTO=1 BASE_PATH=/ VITE_APP_ENV=production npm run build
+
+# per ogni locale, su una COPIA del dist/
+node scripts/personalizza.mjs --dist <copia> --configurazione <locale.json> [--pubblica <cartella>]
+```
+
+- **`PACCHETTO=1`** (clienti/pluginCliente.js): nessun cliente nella build,
+  i segnaposto `%VENUE_*%` restano in `index.html`, nel manifest e
+  nell'informativa, e il set neutro di `clienti/demo/public` prende il
+  posto dei file della Tana. Si ferma se trova `VITE_FIREBASE_*`,
+  `VITE_RECAPTCHA_SITE_KEY`, `VITE_PROFILO`, `VITE_REGIA_PROGETTO` o gli
+  emulatori: un sito per tutti col backend di un locale manderebbe gli
+  ordini di tutti a quel locale. Non va insieme a `CLIENTE`.
+- **`personalizza.mjs`** riempie index.html, il manifest e l'informativa
+  privacy e cookie, scrive `configurazione.json` e lo stesso contenuto come
+  blocco in `index.html`, e con `--pubblica` mette sopra i file del locale
+  (solo `logo.png`, `favicon.svg`, le icone, `apple-touch-icon.png`,
+  `cocktail-hero.jpg`). Rifiuta una configurazione che l'app non
+  seguirebbe, un `dist/` già personalizzato e un file del locale con un
+  altro nome, ed esce con errore se resta un segnaposto: in quei casi non
+  scrive niente.
+- **La configurazione del locale**: la forma è in
+  [porte-e-adattatori.md](porte-e-adattatori.md#il-sito-uguale-per-tutti-i-locali-req-flotta-034-18112026).
+  Per pubblicare un locale servono `locale` (lo slug), `firebase` con
+  `apiKey`, `authDomain`, `projectId` e `appId`, e `venue` con almeno
+  `venue_name`. Per l'informativa servono anche `venue_legal_name`,
+  `venue_legal_address` (o `venue_address` e `venue_postal_city`),
+  `venue_vat_number` e `venue_email`: quelli che mancano si leggono «da
+  inserire» nella pagina.
+- **La demo** non passa da qui: si compila con `CLIENTE=demo`, come oggi.
+
 ## Il titolare (REQ-FLOTTA-029)
 
 Quando la regia attiva o aggiorna un locale della flotta, nel progetto del

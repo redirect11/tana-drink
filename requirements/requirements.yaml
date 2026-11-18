@@ -5747,6 +5747,9 @@ requirements:
       in docs/sicurezza-demo.md. La regia ha già messo la sua difesa (PR
       #69): configurazione finta, niente indirizzo della regia, CSP con
       connect-src 'self', Storage chiuso.
+      Il 18/11/2026 i punti 4 (l'informativa della Tana in ogni build) e 6
+      (i link dei social) sono passati a REQ-SIC-017, col sito uguale per
+      tutti: qui restano gli altri.
     status: todo
     generate_issue: true
     labels: [sicurezza, privacy, demo]
@@ -15900,6 +15903,91 @@ requirements:
     test_cases:
       - tests/unit/clienteBuild.test.js
 
+  - id: REQ-FLOTTA-034
+    title: "Un sito uguale per tutti i locali: il locale lo dice la configurazione, scritta nella pagina al momento della pubblicazione"
+    area: "src/porte/configurazione.js, src/porte/configurazioneLocale.mjs, src/lib/venue.js, src/lib/themes.js, src/lib/limiti.js, src/lib/funzioniRegia.js, src/lib/passaggioRegia.js, src/lib/aggiornamenti.js, src/main.jsx, src/App.jsx, clienti/pluginCliente.js, clienti/personalizzazione.mjs, scripts/personalizza.mjs, docs/flotta.md"
+    description: >
+      Fase 1 del pacchetto per versione (interfaccia 16 di
+      docs/contratto-regia-app.md della regia, REQ-FLOTTA-137 della regia;
+      Daniele, 18/11/2026: «si fallo entrare e procedi»). La regia compila il
+      sito una volta per versione dal nostro tag e lo personalizza per ogni
+      locale al deploy; la Tana continua a pubblicarsi da GitHub con la sua
+      build, che non cambia (la regola 2 di docs/flotta.md resta, Daniele
+      18/11/2026).
+      COSA SI CHIEDE. (1) La build in modalità pacchetto: nessun locale
+      dentro (`__CLIENTE__` neutro, `__DEMO__` falso), i segnaposto
+      `%VENUE_*%` lasciati in index.html, nel manifest e nelle pagine
+      dell'informativa, il set neutro al posto dei file della Tana, e
+      nessuna `VITE_FIREBASE_*` ammessa nella build. (2) La configurazione
+      porta anche il locale: `venue` (solo le chiavi `venue_*` dell'app,
+      solo testi, i link dei social solo http, https, mailto e tel),
+      `profilo` (completo o leggero) e `regia` (solo i due progetti della
+      regia); un valore fuori elenco vuol dire «vale la build». (3) La
+      configurazione viaggia anche dentro index.html, come blocco
+      `<script id="configurazione" type="application/json">`: arriva con
+      la pagina, anche dalla cache del service worker e al primo avvio. Si
+      legge in quest'ordine: il file ricordato nel dispositivo, il blocco
+      nella pagina, la build. (4) Chi oggi legge la build al caricamento
+      dei moduli (il locale, il tema di partenza, il profilo leggero, la
+      regia) legge la configurazione, che resta sincrona. (5) Senza
+      backend: si ricarica sempre appena il file arriva, non solo nei primi
+      10 secondi, perché nessuno può avere un conto in mano; si riprova
+      quando torna la rete e a intervalli crescenti; al posto dell'app e
+      del banner per lo sviluppatore una schermata a parole comuni, in
+      italiano e inglese, e nessuna scrittura. (6) `scripts/personalizza.mjs`
+      (nel pacchetto `personalizza.mjs`): dato il `dist/` neutro e la
+      configurazione di un locale riempie i segnaposto, scrive il
+      manifest, mette i file del locale sopra il set neutro, scrive
+      `configurazione.json` e il blocco nella pagina; rifiuta un `dist/`
+      già personalizzato e una configurazione che l'app non seguirebbe, ed
+      esce con errore se resta un segnaposto.
+      IL RISCHIO CHE SI CHIUDE (R3 nell'analisi del 18/11/2026): i tablet
+      già installati hanno il locale nella build e nessuna configurazione
+      ricordata; alla prima apertura del sito uguale per tutti, con la
+      pagina arrivata e il file no, partirebbero su un progetto finto e
+      vedrebbero la coda vuota. Col blocco nella pagina il locale arriva
+      insieme alla pagina.
+      CRITERIO: un `dist/` compilato in modalità pacchetto non contiene
+      nomi né file della Tana e non ha backend; personalizzato, si apre col
+      locale della configurazione; un dispositivo con la configurazione
+      nella pagina parte senza rete col progetto giusto; un sito senza
+      backend mostra la schermata e non scrive.
+      COME È FATTO (18/11/2026, ramo feature/pacchetto). La regola su cosa
+      ammette una configurazione sta in src/porte/configurazioneLocale.mjs,
+      un modulo senza dipendenze usato dall'app (che lascia cadere) e da
+      personalizza.mjs (che rifiuta). La porta (src/porte/configurazione.js)
+      legge il blocco della pagina, completa profilo e regia con quelli della
+      build, ricarica sempre senza backend e riprova (seguiConfigurazione:
+      all'evento online e dopo 5 s, 15 s, 30 s, 1, 2 e 5 minuti). venue.js,
+      themes.js, limiti.js, funzioniRegia.js e passaggioRegia.js leggono la
+      configurazione; PROGETTI_REGIA sta nel modulo comune. main.jsx, senza
+      backend e fuori dallo sviluppo, disegna NonCollegata al posto
+      dell'app e non avvia progressivi né banner dei cookie. La build in
+      modalità pacchetto è `PACCHETTO=1 npm run build` (clienti/pluginCliente.js),
+      e si ferma se trova una VITE_FIREBASE_*, VITE_PROFILO,
+      VITE_REGIA_PROGETTO o gli emulatori. Le funzioni che scrivono il
+      locale nei file stanno in clienti/personalizzazione.mjs, comuni alla
+      build e a scripts/personalizza.mjs. Il modulo è caricabile anche da
+      Node (le costanti della build lette con typeof): i test di sistema e
+      il seme arrivano fin lì da lib/limiti.js.
+      Dalla revisione: i sostituti di replace sono funzioni (un «$'» nei
+      testi del locale copiava pezzi di pagina nel blocco), e personalizza
+      rilegge il blocco scritto; un file rovinato non fa dimenticare quello
+      buono (prima, con una rete che alternava un JSON rotto e il file,
+      l'app si ricaricava a ogni giro); senza backend il codice della regia
+      resta nell'indirizzo, perché la ricarica lo perdeva; il pacchetto
+      rifiuta anche VITE_APP_ENV diverso da production. tests/unit/avvioApp.test.jsx
+      prova che senza backend non partono progressivi né cookie.
+    status: implemented
+    generate_issue: true
+    labels: [flotta]
+    priority: P1
+    test_cases:
+      - tests/unit/configurazioneLocale.test.js
+      - tests/unit/personalizza.test.js
+      - tests/component/NonCollegata.test.jsx
+      - tests/sistema/sitoPerTutti.spec.js
+
   - id: REQ-PAG-013
     title: "Lo sconto cade sui prodotti che si stanno riscuotendo, e gli sconti si accumulano"
     area: "src/lib/pagamento.js, src/components/PaymentScreen.jsx, src/lib/api.js, src/lib/printer.js, functions/lib/payment-core.js"
@@ -18128,3 +18216,47 @@ requirements:
     labels: [sicurezza, privacy]
     priority: P2
     test_cases: []
+
+  - id: REQ-SIC-017
+    title: "L'informativa privacy e cookie è quella del locale, e i suoi link sono solo link"
+    area: "clienti/pagine/privacy-policy.html, clienti/pagine/cookie-policy.html, clienti/demo/pagine/, clienti/personalizzazione.mjs, clienti/pluginCliente.js, scripts/personalizza.mjs, src/lib/venue.js, src/App.jsx"
+    description: >
+      Da REQ-SIC-005, punti 4 e 6 di docs/sicurezza-demo.md, portati qui il
+      18/11/2026 col pacchetto per versione (Daniele: «si fallo entrare»,
+      sulla proposta della regia di metterli nella fase 1: un secondo
+      locale non può partire con l'informativa della Tana).
+      `public/privacy-policy.html` e `public/cookie-policy.html` finivano
+      in ogni build così com'erano: sulla demo e sui locali della flotta il
+      titolare del trattamento era EFFEVI («La Tana del Coniglio»), con la
+      sua email. Ora sono modelli con i segnaposto del locale (nome,
+      ragione sociale, sede, partita IVA, email), riempiti dalla build per
+      il suo cliente e, nel sito uguale per tutti, da personalizza.mjs al
+      deploy. La demo ha una pagina sua: nessun dato raccolto, tutto resta
+      nel browser. I link dei social del locale passano solo se sono http,
+      https, mailto o tel, sia quando si salvano sia quando si disegnano:
+      un `javascript:` scritto in Impostazioni (che il bartender può
+      scrivere) diventava un link nel piede del menù di ogni cliente.
+      Il testo legale resta da far rivedere da un legale: qui cambia solo
+      di chi è.
+      CRITERIO: la build della Tana ha l'informativa con i dati della Tana;
+      la build di un altro locale, la demo e il sito personalizzato non
+      contengono «EFFEVI» né «latanadelconiglio»; un link social
+      `javascript:` non diventa mai un link.
+      COME È FATTO (18/11/2026). I modelli stanno in clienti/pagine/, con
+      %VENUE_NAME%, %VENUE_TITOLARE% e %VENUE_EMAIL_LINK%; la demo ha i suoi
+      in clienti/demo/pagine/. Il titolare si compone da venue_legal_name,
+      venue_legal_address (o indirizzo e città), partita IVA e codice
+      fiscale; quello che manca si legge «da inserire», come la partita IVA
+      della Tana prima, invece di un dato inventato. Per la Tana la ragione
+      sociale e la sede ora vengono da clienti/tana/venue.json, come sullo
+      scontrino («EFFEVI - SRLS», «80035 Nola - Italy»). I link: linkSicuro
+      in src/porte/configurazioneLocale.mjs, usato da socialDaTesto (al
+      salvataggio; un indirizzo senza schema diventa https) e da
+      socialDelLocale (al disegno).
+    status: implemented
+    generate_issue: true
+    labels: [sicurezza, privacy, flotta]
+    priority: P1
+    test_cases:
+      - tests/unit/informativaDelLocale.test.js
+      - tests/unit/linkDelLocale.test.js
