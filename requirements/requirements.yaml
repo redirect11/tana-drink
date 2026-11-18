@@ -15988,6 +15988,44 @@ requirements:
       - tests/component/NonCollegata.test.jsx
       - tests/sistema/sitoPerTutti.spec.js
 
+  - id: REQ-FLOTTA-035
+    title: "Il pacchetto per versione si compila al tag e si pubblica nella Release di GitHub di tana-drink"
+    area: "scripts/crea-pacchetto.mjs, .github/workflows/pacchetto.yml, docs/flotta.md, docs/gitflow.md"
+    description: >
+      Daniele, 18/11/2026 (nel messaggio della regia msg-tana-pacchetto-6):
+      «tana drink compila il pacchetto, provisiona istanza e aggiorna
+      istanza aggiornano con il pacchetto di release di tana-drink», e «si
+      puo mettere nella parte dei rilasci di github e appare in releases».
+      È la seconda fase di REQ-FLOTTA-034, interfaccia 16 del contratto con
+      la regia (docs/contratto-regia-app.md in drink-regia, REQ-FLOTTA-137 e
+      REQ-FLOTTA-140 della regia).
+
+      COSA: `node scripts/crea-pacchetto.mjs --tipo locali|demo` compila il
+      sito (locali: `PACCHETTO=1`; demo: `CLIENTE=demo`, come la compila la
+      regia oggi), lo mette insieme a functions/ con le sole dipendenze di
+      produzione (solo locali), firebase.json, le regole, gli indici e
+      `personalizza.mjs` in un file solo (solo locali), scrive
+      `pacchetto.json` nel formato 1 (versione, tag, beta, commit,
+      strumenti, personalizzabili, `campiVenue` sempre presente e mai vuoto,
+      l'impronta di ogni file) e ne fa `pacchetto-<tipo>-vX.Y.Z.tgz` con
+      accanto il `.sha256`. Il workflow `pacchetto.yml`, a ogni tag `v*`,
+      fa girare lint e test, compila i due pacchetti e li allega alla
+      Release del tag.
+
+      LE REGOLE DEL RILASCIO (dalla regia, 18/11/2026):
+      - un pacchetto non beta esce solo se il commit del tag sta in `main`
+        e lint e test su quel commit sono passati;
+      - un file allegato non si sostituisce mai: una versione corretta è
+        una versione nuova;
+      - la regola 2 di docs/flotta.md resta: il workflow scrive solo nella
+        Release di tana-drink, nessuna credenziale verso la regia;
+      - `scripts/genera-cliente.mjs` resta, come ripiego della regia
+        (interfaccia 12).
+    status: todo
+    generate_issue: true
+    labels: [flotta]
+    priority: P1
+    test_cases: []
   - id: REQ-PAG-013
     title: "Lo sconto cade sui prodotti che si stanno riscuotendo, e gli sconti si accumulano"
     area: "src/lib/pagamento.js, src/components/PaymentScreen.jsx, src/lib/api.js, src/lib/printer.js, functions/lib/payment-core.js"

@@ -25,11 +25,11 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 | ✅ | 316 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 9 | fatto a metà |
-| ⬜ | 48 | da fare |
+| ⬜ | 49 | da fare |
 | 🗑 | 8 | non più valido |
 
-**396 voci** in tutto. **340** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **48** sono lavori
+**397 voci** in tutto. **340** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **49** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **17** difetti noti sono ancora aperti.
 
@@ -64,7 +64,7 @@ come «vero oggi», non come «garantito».
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 15 | 4 |  |
 | [VENUE](#venue) | 6 | — |  |
-| [FLOTTA](#flotta) | 12 | — |  |
+| [FLOTTA](#flotta) | 12 | 1 |  |
 | [SITO](#sito) | — | 5 |  |
 
 ### Le prove, livello per livello
@@ -80,7 +80,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Unità | il progetto di dettaglio: un modulo da solo | 197 |
 
 **24** bisogni del locale, **0** con un test di accettazione.
-**148** requisiti su 388 sono collegati a un bisogno;
+**149** requisiti su 389 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -280,7 +280,7 @@ Daniele, 17/11/2026, sul pacchetto per versione della regia (REQ-FLOTTA-137 dell
 
 **Come si accetta**: Un sito compilato una volta e personalizzato per un locale di prova si apre col nome, i colori, il logo e l'informativa di quel locale, senza nessuna parola della Tana. Un tablet che aveva la versione compilata per il locale passa a quella uguale per tutti e, anche senza rete, si riapre sul suo locale con la coda e i conti di prima. Un sito che non sa a che locale appartiene non lascia lavorare nessuno, lo dice a parole comuni, e si collega da solo appena può.
 
-**Chi**: Gestore · **Lo realizzano**: [REQ-FLOTTA-034](#req-flotta-034--un-sito-uguale-per-tutti-i-locali-il-locale-lo-dice-la-configurazione-scritta-nella-pagina-al-momento-della-pubblicazione), [REQ-SIC-017](#req-sic-017--linformativa-privacy-e-cookie-è-quella-del-locale-e-i-suoi-link-sono-solo-link) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Gestore · **Lo realizzano**: [REQ-FLOTTA-034](#req-flotta-034--un-sito-uguale-per-tutti-i-locali-il-locale-lo-dice-la-configurazione-scritta-nella-pagina-al-momento-della-pubblicazione), [REQ-FLOTTA-035](#req-flotta-035--il-pacchetto-per-versione-si-compila-al-tag-e-si-pubblica-nella-release-di-github-di-tana-drink), [REQ-SIC-017](#req-sic-017--linformativa-privacy-e-cookie-è-quella-del-locale-e-i-suoi-link-sono-solo-link) · ⚠️ **Nessun test di accettazione, ancora.**
 
 ## Cosa fa il sistema
 
@@ -5133,6 +5133,14 @@ Daniele, 16/11/2026: «la vista dei tavoli è un'opzione per la versione per ris
 INTERFACCIA CON LA REGIA: l'elenco dei moduli è una copia tenuta allineata a mano (REQ-DEV-025). Va detto alla regia prima di rilasciarlo: id del modulo, la scelta «ristorante» che lo porta con sé, e da quali moduli dipende (la Sala richiede l'anagrafica dei tavoli, quindi probabilmente `menu_tavoli`). Da decidere con la regia se «ristorante» è un piano, un tipo di locale o un pacchetto di moduli. I TIPI DI LOCALE (Daniele, 17/11/2026, alla domanda della regia): contano come ristorante sia «ristorante» sia «pizzeria». Il modulo `ristorante` si vende ai locali registrati con uno dei due tipi; la regia passa il tipo vero scelto alla registrazione (fino a oggi mandava `bar` a tutti).
 
 **Dove**: `src/lib/licenza.js (MODULI_PREMIUM), firestore.rules (modulo()), la regia (piani.json, elenco dei moduli)` · **Serve**: [UR-020](#ur-020--un-ristorante-lavora-coi-suoi-tavoli-e-coi-suoi-prodotti-freschi)
+
+### FLOTTA
+
+#### REQ-FLOTTA-035 — Il pacchetto per versione si compila al tag e si pubblica nella Release di GitHub di tana-drink
+
+Daniele, 18/11/2026 (nel messaggio della regia msg-tana-pacchetto-6): «tana drink compila il pacchetto, provisiona istanza e aggiorna istanza aggiornano con il pacchetto di release di tana-drink», e «si puo mettere nella parte dei rilasci di github e appare in releases». È la seconda fase di REQ-FLOTTA-034, interfaccia 16 del contratto con la regia (docs/contratto-regia-app.md in drink-regia, REQ-FLOTTA-137 e REQ-FLOTTA-140 della regia).
+
+**Dove**: `scripts/crea-pacchetto.mjs, .github/workflows/pacchetto.yml, docs/flotta.md, docs/gitflow.md` · **Serve**: [UR-024](#ur-024--un-locale-nuovo-si-accende-con-la-versione-di-tutti-e-i-suoi-tablet-restano-collegati-al-locale)
 
 ### SITO
 

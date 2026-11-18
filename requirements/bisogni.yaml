@@ -612,5 +612,6 @@ bisogni:
       nessuno, lo dice a parole comuni, e si collega da solo appena può.
     requisiti:
       - REQ-FLOTTA-034
+      - REQ-FLOTTA-035
       - REQ-SIC-017
     test_cases: []
