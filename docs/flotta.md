@@ -101,6 +101,13 @@ node scripts/personalizza.mjs --dist <copia> --configurazione <locale.json> [--p
   `venue_legal_address` (o `venue_address` e `venue_postal_city`),
   `venue_vat_number` e `venue_email`: quelli che mancano si leggono «da
   inserire» nella pagina.
+- **L'informativa si scrive al deploy, ed è voluto.** Se il titolare cambia
+  i suoi dati in Impostazioni (`settings/bar`), le due pagine restano
+  quelle di prima finché la regia non lancia un aggiornamento, anche alla
+  stessa versione. Le pagine sono statiche apposta: si aprono anche quando
+  l'app non parte, e non chiamano nessun servizio, Firebase compreso.
+  Leggere `settings/bar` da lì vorrebbe dire caricare l'SDK in una pagina
+  che parla proprio di quali dati partono verso chi.
 - **La demo** non passa da qui: si compila con `CLIENTE=demo`, come oggi.
 
 ## Il titolare (REQ-FLOTTA-029)
