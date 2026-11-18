@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 17 novembre 2026.
+> Generato il 18 novembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 314 | fatto e coperto dai test |
+| ✅ | 316 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 9 | fatto a metà |
 | ⬜ | 48 | da fare |
 | 🗑 | 8 | non più valido |
 
-**394 voci** in tutto. **338** descrivono il sistema com'è oggi e
+**396 voci** in tutto. **340** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **48** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **17** difetti noti sono ancora aperti.
@@ -55,7 +55,7 @@ come «vero oggi», non come «garantito».
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
 | [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 14 | 2 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
-| [Sicurezza](#sicurezza) | 4 | 12 | Regole di accesso, App Check, e cosa protegge cosa. |
+| [Sicurezza](#sicurezza) | 5 | 12 | Regole di accesso, App Check, e cosa protegge cosa. |
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | 6 | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
@@ -64,7 +64,7 @@ come «vero oggi», non come «garantito».
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 15 | 4 |  |
 | [VENUE](#venue) | 6 | — |  |
-| [FLOTTA](#flotta) | 11 | — |  |
+| [FLOTTA](#flotta) | 12 | — |  |
 | [SITO](#sito) | — | 5 |  |
 
 ### Le prove, livello per livello
@@ -75,12 +75,12 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Livello | Cosa verifica | File di test |
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
-| Sistema | la specifica (REQ-*), sull'app intera | 14 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 200 |
-| Unità | il progetto di dettaglio: un modulo da solo | 193 |
+| Sistema | la specifica (REQ-*), sull'app intera | 15 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 201 |
+| Unità | il progetto di dettaglio: un modulo da solo | 197 |
 
-**23** bisogni del locale, **0** con un test di accettazione.
-**146** requisiti su 386 sono collegati a un bisogno;
+**24** bisogni del locale, **0** con un test di accettazione.
+**148** requisiti su 388 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -273,6 +273,14 @@ Daniele, 17/11/2026 (messaggio della regia, REQ-FLOTTA-134 per la sua parte): «
 **Come si accetta**: Un cliente registrato, una persona dello staff e un admin scaricano dal proprio profilo un file JSON con tutti i propri dati e nessun dato di altri; l'admin esporta quelli di una persona del locale e l'esportazione resta registrata; ogni download chiede un accesso recente e lo dice alla persona. L'informativa del locale nasce dallo stesso elenco dei dati personali da cui nasce il file, e una prova fallisce se una raccolta con dati di persone non è nell'elenco.
 
 **Chi**: Cliente, Banco, Sala, Gestore · **Lo realizzano**: [REQ-SIC-007](#req-sic-007--un-elenco-unico-nel-codice-dei-dati-personali-che-lapp-tiene), [REQ-SIC-008](#req-sic-008--scarica-i-miei-dati-per-ogni-persona-dal-suo-profilo), [REQ-SIC-009](#req-sic-009--ladmin-esporta-i-dati-di-una-persona-del-locale-e-resta-registrato), [REQ-SIC-010](#req-sic-010--il-download-dei-dati-chiede-un-accesso-recente-e-lo-si-dice-alla-persona), [REQ-SIC-011](#req-sic-011--le-categorie-particolari-di-dati-art-9-se-lapp-ne-tratta-dichiarate-e-protette), [REQ-SIC-012](#req-sic-012--uninformativa-tipo-per-il-locale-generata-dallelenco-dei-dati-personali), [REQ-SIC-013](#req-sic-013--la-cancellazione-dellaccount-fatta-da-sé-con-30-giorni-per-ripensarci), [REQ-SIC-014](#req-sic-014--il-titolare-esporta-tutti-i-dati-del-locale-in-ogni-momento), [REQ-SIC-015](#req-sic-015--i-dati-da-cui-può-derivare-un-controllo-a-distanza-del-personale-dichiarati-allo-staff), [REQ-SIC-016](#req-sic-016--lelenco-dei-servizi-esterni-a-cui-lapp-manda-dati-di-persone) · ⚠️ **Nessun test di accettazione, ancora.**
+
+#### UR-024 — Un locale nuovo si accende con la versione di tutti, e i suoi tablet restano collegati al locale
+
+Daniele, 17/11/2026, sul pacchetto per versione della regia (REQ-FLOTTA-137 della regia): «basta che sia una versione che io poi posso distribuire e deployare senza far partire una nuova build su github». La versione si compila una volta sola, uguale per tutti i locali, e la regia ci scrive i dati di ogni locale al momento della pubblicazione. Il locale non deve accorgersene: stessi dati, stesso nome, stessa informativa sua, e i tablet già installati non devono perdere il collegamento al locale passando alla versione nuova. Il 18/11/2026 Daniele: «si fallo entrare» per l'informativa privacy e cookie di ogni locale, che oggi è quella della Tana in ogni build.
+
+**Come si accetta**: Un sito compilato una volta e personalizzato per un locale di prova si apre col nome, i colori, il logo e l'informativa di quel locale, senza nessuna parola della Tana. Un tablet che aveva la versione compilata per il locale passa a quella uguale per tutti e, anche senza rete, si riapre sul suo locale con la coda e i conti di prima. Un sito che non sa a che locale appartiene non lascia lavorare nessuno, lo dice a parole comuni, e si collega da solo appena può.
+
+**Chi**: Gestore · **Lo realizzano**: [REQ-FLOTTA-034](#req-flotta-034--un-sito-uguale-per-tutti-i-locali-il-locale-lo-dice-la-configurazione-scritta-nella-pagina-al-momento-della-pubblicazione), [REQ-SIC-017](#req-sic-017--linformativa-privacy-e-cookie-è-quella-del-locale-e-i-suoi-link-sono-solo-link) · ⚠️ **Nessun test di accettazione, ancora.**
 
 ## Cosa fa il sistema
 
@@ -3300,6 +3308,16 @@ FATTO (1.10.53-beta): storage.rules legge la licenza (licenzaValida, alFree, mod
 
 **Dove**: `storage.rules, tests/regole/storage.test.js, .github/workflows/test.yml (job delle regole), IAM dei progetti (service agent dello Storage)` · **Serve**: [UR-015](#ur-015--il-piano-del-locale-decide-cosa-si-usa-e-chi-ha-tutto-non-se-ne-accorge) · **Lo dimostrano**: `tests/regole/storage.test.js`, `tests/unit/regoleStorageLicenza.test.js`, `tests/unit/allegatoInArchivio.test.js`
 
+#### REQ-SIC-017 — L'informativa privacy e cookie è quella del locale, e i suoi link sono solo link
+
+Da REQ-SIC-005, punti 4 e 6 di docs/sicurezza-demo.md, portati qui il 18/11/2026 col pacchetto per versione (Daniele: «si fallo entrare», sulla proposta della regia di metterli nella fase 1: un secondo locale non può partire con l'informativa della Tana). `public/privacy-policy.html` e `public/cookie-policy.html` finivano in ogni build così com'erano: sulla demo e sui locali della flotta il titolare del trattamento era EFFEVI («La Tana del Coniglio»), con la sua email. Ora sono modelli con i segnaposto del locale (nome, ragione sociale, sede, partita IVA, email), riempiti dalla build per il suo cliente e, nel sito uguale per tutti, da personalizza.mjs al deploy. La demo ha una pagina sua: nessun dato raccolto, tutto resta nel browser. I link dei social del locale passano solo se sono http, https, mailto o tel, sia quando si salvano sia quando si disegnano: un `javascript:` scritto in Impostazioni (che il bartender può scrivere) diventava un link nel piede del menù di ogni cliente. Il testo legale resta da far rivedere da un legale: qui cambia solo di chi è.
+
+CRITERIO: la build della Tana ha l'informativa con i dati della Tana; la build di un altro locale, la demo e il sito personalizzato non contengono «EFFEVI» né «latanadelconiglio»; un link social `javascript:` non diventa mai un link.
+
+COME È FATTO (18/11/2026). I modelli stanno in clienti/pagine/, con %VENUE_NAME%, %VENUE_TITOLARE% e %VENUE_EMAIL_LINK%; la demo ha i suoi in clienti/demo/pagine/. Il titolare si compone da venue_legal_name, venue_legal_address (o indirizzo e città), partita IVA e codice fiscale; quello che manca si legge «da inserire», come la partita IVA della Tana prima, invece di un dato inventato. Per la Tana la ragione sociale e la sede ora vengono da clienti/tana/venue.json, come sullo scontrino («EFFEVI - SRLS», «80035 Nola - Italy»). I link: linkSicuro in src/porte/configurazioneLocale.mjs, usato da socialDaTesto (al salvataggio; un indirizzo senza schema diventa https) e da socialDelLocale (al disegno).
+
+**Dove**: `clienti/pagine/privacy-policy.html, clienti/pagine/cookie-policy.html, clienti/demo/pagine/, clienti/personalizzazione.mjs, clienti/pluginCliente.js, scripts/personalizza.mjs, src/lib/venue.js, src/App.jsx` · **Serve**: [UR-024](#ur-024--un-locale-nuovo-si-accende-con-la-versione-di-tutti-e-i-suoi-tablet-restano-collegati-al-locale) · **Lo dimostrano**: `tests/unit/informativaDelLocale.test.js`, `tests/unit/linkDelLocale.test.js`
+
 ### Si lavora anche senza rete
 
 Cosa continua a funzionare quando la rete non c’è, e come lo si vede.
@@ -4586,6 +4604,20 @@ LA TESTATA DEL MENÙ (Daniele, 17/11/2026, «Ok» a dare alla demo una testata s
 
 **Dove**: `clienti/demo/venue.json` · **Serve**: [UR-014](#ur-014--la-demo-che-si-mostra-a-un-locale-nuovo-non-espone-niente-di-un-locale-vero) · **Lo dimostrano**: `tests/unit/clienteBuild.test.js`
 
+#### REQ-FLOTTA-034 — Un sito uguale per tutti i locali: il locale lo dice la configurazione, scritta nella pagina al momento della pubblicazione
+
+Fase 1 del pacchetto per versione (interfaccia 16 di docs/contratto-regia-app.md della regia, REQ-FLOTTA-137 della regia; Daniele, 18/11/2026: «si fallo entrare e procedi»). La regia compila il sito una volta per versione dal nostro tag e lo personalizza per ogni locale al deploy; la Tana continua a pubblicarsi da GitHub con la sua build, che non cambia (la regola 2 di docs/flotta.md resta, Daniele 18/11/2026).
+
+COSA SI CHIEDE. (1) La build in modalità pacchetto: nessun locale dentro (`__CLIENTE__` neutro, `__DEMO__` falso), i segnaposto `%VENUE_*%` lasciati in index.html, nel manifest e nelle pagine dell'informativa, il set neutro al posto dei file della Tana, e nessuna `VITE_FIREBASE_*` ammessa nella build. (2) La configurazione porta anche il locale: `venue` (solo le chiavi `venue_*` dell'app, solo testi, i link dei social solo http, https, mailto e tel), `profilo` (completo o leggero) e `regia` (solo i due progetti della regia); un valore fuori elenco vuol dire «vale la build». (3) La configurazione viaggia anche dentro index.html, come blocco `<script id="configurazione" type="application/json">`: arriva con la pagina, anche dalla cache del service worker e al primo avvio. Si legge in quest'ordine: il file ricordato nel dispositivo, il blocco nella pagina, la build. (4) Chi oggi legge la build al caricamento dei moduli (il locale, il tema di partenza, il profilo leggero, la regia) legge la configurazione, che resta sincrona. (5) Senza backend: si ricarica sempre appena il file arriva, non solo nei primi 10 secondi, perché nessuno può avere un conto in mano; si riprova quando torna la rete e a intervalli crescenti; al posto dell'app e del banner per lo sviluppatore una schermata a parole comuni, in italiano e inglese, e nessuna scrittura. (6) `scripts/personalizza.mjs` (nel pacchetto `personalizza.mjs`): dato il `dist/` neutro e la configurazione di un locale riempie i segnaposto, scrive il manifest, mette i file del locale sopra il set neutro, scrive `configurazione.json` e il blocco nella pagina; rifiuta un `dist/` già personalizzato e una configurazione che l'app non seguirebbe, ed esce con errore se resta un segnaposto.
+
+IL RISCHIO CHE SI CHIUDE (R3 nell'analisi del 18/11/2026): i tablet già installati hanno il locale nella build e nessuna configurazione ricordata; alla prima apertura del sito uguale per tutti, con la pagina arrivata e il file no, partirebbero su un progetto finto e vedrebbero la coda vuota. Col blocco nella pagina il locale arriva insieme alla pagina.
+
+CRITERIO: un `dist/` compilato in modalità pacchetto non contiene nomi né file della Tana e non ha backend; personalizzato, si apre col locale della configurazione; un dispositivo con la configurazione nella pagina parte senza rete col progetto giusto; un sito senza backend mostra la schermata e non scrive.
+
+COME È FATTO (18/11/2026, ramo feature/pacchetto). La regola su cosa ammette una configurazione sta in src/porte/configurazioneLocale.mjs, un modulo senza dipendenze usato dall'app (che lascia cadere) e da personalizza.mjs (che rifiuta). La porta (src/porte/configurazione.js) legge il blocco della pagina, completa profilo e regia con quelli della build, ricarica sempre senza backend e riprova (seguiConfigurazione: all'evento online e dopo 5 s, 15 s, 30 s, 1, 2 e 5 minuti). venue.js, themes.js, limiti.js, funzioniRegia.js e passaggioRegia.js leggono la configurazione; PROGETTI_REGIA sta nel modulo comune. main.jsx, senza backend e fuori dallo sviluppo, disegna NonCollegata al posto dell'app e non avvia progressivi né banner dei cookie. La build in modalità pacchetto è `PACCHETTO=1 npm run build` (clienti/pluginCliente.js), e si ferma se trova una VITE_FIREBASE_*, VITE_PROFILO, VITE_REGIA_PROGETTO o gli emulatori. Le funzioni che scrivono il locale nei file stanno in clienti/personalizzazione.mjs, comuni alla build e a scripts/personalizza.mjs. Il modulo è caricabile anche da Node (le costanti della build lette con typeof): i test di sistema e il seme arrivano fin lì da lib/limiti.js. Dalla revisione: i sostituti di replace sono funzioni (un «$'» nei testi del locale copiava pezzi di pagina nel blocco), e personalizza rilegge il blocco scritto; un file rovinato non fa dimenticare quello buono (prima, con una rete che alternava un JSON rotto e il file, l'app si ricaricava a ogni giro); senza backend il codice della regia resta nell'indirizzo, perché la ricarica lo perdeva; il pacchetto rifiuta anche VITE_APP_ENV diverso da production. tests/unit/avvioApp.test.jsx prova che senza backend non partono progressivi né cookie.
+
+**Dove**: `src/porte/configurazione.js, src/porte/configurazioneLocale.mjs, src/lib/venue.js, src/lib/themes.js, src/lib/limiti.js, src/lib/funzioniRegia.js, src/lib/passaggioRegia.js, src/lib/aggiornamenti.js, src/main.jsx, src/App.jsx, clienti/pluginCliente.js, clienti/personalizzazione.mjs, scripts/personalizza.mjs, docs/flotta.md` · **Serve**: [UR-024](#ur-024--un-locale-nuovo-si-accende-con-la-versione-di-tutti-e-i-suoi-tablet-restano-collegati-al-locale) · **Lo dimostrano**: `tests/unit/configurazioneLocale.test.js`, `tests/unit/personalizza.test.js`, `tests/component/NonCollegata.test.jsx`, `tests/sistema/sitoPerTutti.spec.js`
+
 ## Lavori previsti
 
 Roba decisa e non ancora scritta. **Non è quello che il sistema fa**: sta
@@ -4922,7 +4954,7 @@ Oggi test gira senza App Check e con la chiave reCAPTCHA della produzione, che p
 
 #### REQ-SIC-005 — La demo pubblica in sicurezza: lo script dei clienti, niente regia, configurazione finta, informativa per cliente
 
-Richiesta della regia (drink-regia REQ-FLOTTA-019), 02/11/2026. L'utente: «incarica un agente di verificare la sicurezza della demo», e letti i risultati, «dobbiamo risolvere anche tutte queste cose». Il disegno della modalità demo regge (nessuna demo nel pacchetto della Tana, nessuna richiesta verso Firebase, nessun dato personale nei dati di prova), ma: genera-cliente.mjs rifiuta la cartella «demo» prima di vedere che esiste, e la demo vecchia (un'app vera) restava online; la demo chiama la regia di produzione (presentazione, catalogo) a ogni apertura; con la configurazione vera e disableNetwork che fallisce in silenzio la rete resterebbe accesa; l'informativa privacy della Tana finisce in ogni build, demo e locali della flotta; nel pacchetto della demo restano nomi, foto e un fornitore della Tana; i link dei social accettano javascript:; la stampante finta non scapa il logo. Il dettaglio, coi file e le righe, in docs/sicurezza-demo.md. La regia ha già messo la sua difesa (PR #69): configurazione finta, niente indirizzo della regia, CSP con connect-src 'self', Storage chiuso.
+Richiesta della regia (drink-regia REQ-FLOTTA-019), 02/11/2026. L'utente: «incarica un agente di verificare la sicurezza della demo», e letti i risultati, «dobbiamo risolvere anche tutte queste cose». Il disegno della modalità demo regge (nessuna demo nel pacchetto della Tana, nessuna richiesta verso Firebase, nessun dato personale nei dati di prova), ma: genera-cliente.mjs rifiuta la cartella «demo» prima di vedere che esiste, e la demo vecchia (un'app vera) restava online; la demo chiama la regia di produzione (presentazione, catalogo) a ogni apertura; con la configurazione vera e disableNetwork che fallisce in silenzio la rete resterebbe accesa; l'informativa privacy della Tana finisce in ogni build, demo e locali della flotta; nel pacchetto della demo restano nomi, foto e un fornitore della Tana; i link dei social accettano javascript:; la stampante finta non scapa il logo. Il dettaglio, coi file e le righe, in docs/sicurezza-demo.md. La regia ha già messo la sua difesa (PR #69): configurazione finta, niente indirizzo della regia, CSP con connect-src 'self', Storage chiuso. Il 18/11/2026 i punti 4 (l'informativa della Tana in ogni build) e 6 (i link dei social) sono passati a REQ-SIC-017, col sito uguale per tutti: qui restano gli altri.
 
 **Dove**: `scripts/genera-cliente.mjs, src/lib/funzioniRegia.js, src/lib/presentazione.js, src/App.jsx, src/porte/configurazione.js, src/lib/firebaseClient.js, public/privacy-policy.html, public/cookie-policy.html, clienti/pluginCliente.js, src/demo/, src/lib/venue.js, src/lib/stampanteFinta.js, docs/sicurezza-demo.md` · **Serve**: [UR-014](#ur-014--la-demo-che-si-mostra-a-un-locale-nuovo-non-espone-niente-di-un-locale-vero)
 

@@ -41,7 +41,12 @@ strati:
 
 1. **la build**: `clienti/<slug>/venue.json`. `CLIENTE=tana npm run build`
    produce l'app della Tana, byte per byte come prima; `CLIENTE=demo` quella
-   neutra; `CLIENTE=bar-mario` quella del Bar Mario;
+   neutra; `CLIENTE=bar-mario` quella del Bar Mario. Oppure, dal
+   18/11/2026, il **sito uguale per tutti** (`PACCHETTO=1 npm run build`,
+   REQ-FLOTTA-034): compilato una volta per versione senza nessun locale,
+   e personalizzato dalla regia al deploy con `scripts/personalizza.mjs`,
+   che scrive il locale nella pagina e in `configurazione.json`
+   ([flotta.md](flotta.md));
 2. **le impostazioni**: Impostazioni → Il locale, dentro l'app. Quello che
    il locale scrive lì vince sulla build, senza ricompilare.
 

@@ -24,9 +24,9 @@
 // Logica pura: le impostazioni si passano, già in mano a chi chiama.
 
 import { isAdmin } from './ruoli.js'
+import { PROGETTI_REGIA } from '../porte/configurazioneLocale.mjs'
 import { licenzaDi } from './licenzaInVigore.js'
 import { leggi, scrivi } from './impostazioniLocali.js'
-// Solo dentro una funzione: funzioniRegia.js legge PROGETTI_REGIA da qui.
 import { erroreDellaRegia } from './funzioniRegia.js'
 import { formatoAttivo, tr } from './lingua.js'
 
@@ -131,7 +131,9 @@ export function statoProposta(stato, { ruolo, versione, scelta = null } = {}) {
 // passare un progetto altrui chiamato `foo-drink-regia`, perché il nome
 // del progetto è nell'indirizzo, dopo la regione. Un indirizzo che non
 // passa vale come nessuno: si sceglie dall'area clienti.
-export const PROGETTI_REGIA = ['drink-regia', 'drink-regia-test']
+// Scritti una volta sola in porte/configurazioneLocale.mjs: la stessa
+// regola vale per la configurazione del locale (REQ-FLOTTA-034).
+export { PROGETTI_REGIA }
 const SCELTA_URL_REGIA = new RegExp(
   String.raw`^https://[a-z]+-[a-z]+[0-9]+-(${PROGETTI_REGIA.join('|')})\.cloudfunctions\.net/[A-Za-z0-9_-]+$`
 )

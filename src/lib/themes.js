@@ -332,8 +332,10 @@ export const DEFAULT_THEME = 'tana-scuro'
 // IL TEMA DI PARTENZA (REQ-UI-033). La Tana parte dal suo; la demo e i
 // locali che genera la regia da Lime, il tema del prodotto: la demo che si
 // mostra a un locale nuovo aveva il rosa e l'oro della Tana (UR-014). Si
-// decide dal cliente della build; senza cliente la build è la Tana.
-export const temaDiPartenza = (cliente = CLIENTE) => (!cliente || cliente === 'tana' ? DEFAULT_THEME : 'lime-scuro')
+// decide dal locale (la build senza CLIENTE è la Tana). Il sito uguale per
+// tutti (REQ-FLOTTA-034) non ha locale finché la configurazione non lo
+// dice: parte da Lime, mai dai colori della Tana.
+export const temaDiPartenza = (cliente = CLIENTE) => (cliente === 'tana' ? DEFAULT_THEME : 'lime-scuro')
 export const TEMA_DI_PARTENZA = temaDiPartenza()
 
 // Un colore #rrggbb nei suoi tre canali, o null se non si legge: l'unico

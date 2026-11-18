@@ -84,6 +84,7 @@ export default {
     'The app for {nome} has been awaiting activation since {data}.',
   'L’app di {nome} è sospesa.': 'The app for {nome} has been suspended.',
   'L’app di {nome} è sospesa dal {data}.': 'The app for {nome} has been suspended since {data}.',
+  'L’app non è ancora collegata al locale': 'The app is not connected to the venue yet',
   "L'app è stata aggiornata. Ecco cosa è cambiato:": 'The app has been updated. This is what has changed:',
   'L’assistente non è arrivato a una risposta: si può riformulare la domanda.':
     'The assistant did not reach an answer: the question can be rephrased.',
@@ -174,6 +175,8 @@ export default {
     'Request for “{modulo}” sent to support: the module is activated once payment is confirmed.',
   "Richiesta di disdetta di «{modulo}» inviata all'assistenza.": 'Cancellation request for “{modulo}” sent to support.',
   'Salta questa versione': 'Skip this version',
+  'Se resta così, controllare la connessione del dispositivo.': 'If it stays like this, check the device’s connection.',
+  'Si collega da sola appena la connessione lo permette.': 'It will connect automatically as soon as a connection is available.',
   'Si spengono anche {moduli}, che lo richiedono.': '{moduli}, which require it, will also be switched off.',
   'Stile «{nome}»': '“{nome}” style',
   Strumento: 'Tool',

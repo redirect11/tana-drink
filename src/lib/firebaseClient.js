@@ -24,8 +24,10 @@ import { configurazione, haBackend } from '../porte/configurazione.js'
 // finto. Lo decide la build (`clienti/demo`), mai qualcosa a runtime.
 const suEmulatore = !__DEMO__ && import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true'
 
-// Il progetto lo dice la porta della configurazione (REQ-FLOTTA-021): il
-// file `configurazione.json` scritto dalla regia, o le `VITE_*` della build.
+// Il progetto lo dice la porta della configurazione (REQ-FLOTTA-021,
+// REQ-FLOTTA-034): il file `configurazione.json` scritto dalla regia, il
+// blocco con la stessa configurazione dentro index.html, o le `VITE_*`
+// della build.
 // Il `measurementId` serve a Google Analytics, attivato solo dietro
 // consenso (vedi lib/analytics.js).
 const firebaseConfig = configurazione().firebase
@@ -38,7 +40,7 @@ export const isFirebaseConfigured = Boolean(__DEMO__) || haBackend(configurazion
 
 if (!isFirebaseConfigured) {
   console.warn(
-    '[Firebase] Variabili VITE_FIREBASE_API_KEY / VITE_FIREBASE_PROJECT_ID mancanti, e nessun configurazione.json. ' +
+    '[Firebase] Variabili VITE_FIREBASE_API_KEY / VITE_FIREBASE_PROJECT_ID mancanti, e nessuna configurazione del locale (configurazione.json o blocco in index.html). ' +
       'Copia .env.example in .env e inserisci i valori del tuo progetto.'
   )
 }

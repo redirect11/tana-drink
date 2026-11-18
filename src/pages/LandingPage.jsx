@@ -3,6 +3,9 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useVenue } from '../lib/useVenue.js'
 import { useTestoStile } from '../lib/testiStile.js'
 import { useMenuCliente } from '../lib/useMenuCliente.js'
+// I link che il piede disegna davvero (REQ-SIC-017): la frase non rimanda
+// a link scartati perché non sono link.
+import { socialDelLocale } from '../lib/social.js'
 
 // I TASTI E I LINK AL MENÙ SOLO SE IL MENÙ C'È (REQ-LIC-002). Daniele,
 // 14/11/2026: «se il menù clienti è disattivato non ci si può arrivare in
@@ -107,7 +110,7 @@ export default function LandingPage() {
         </section>
       )}
 
-      {(venue.venue_city || venue.venue_email || venue.venue_phone || venue.venue_socials.length > 0) && (
+      {(venue.venue_city || venue.venue_email || venue.venue_phone || socialDelLocale(venue).length > 0) && (
         <section id="contatti" className="card">
           <h2 style={{ marginTop: 0 }}>{testo('home.contatti', 'Contatti')}</h2>
           {venue.venue_city && (
@@ -125,7 +128,7 @@ export default function LandingPage() {
               📞 <a href={`tel:${venue.venue_phone.replace(/[^\d+]/g, '')}`}>{venue.venue_phone}</a>
             </p>
           )}
-          {venue.venue_socials.length > 0 && (
+          {socialDelLocale(venue).length > 0 && (
             <p className="muted" style={{ margin: 0 }}>
               Seguici sui social (link in fondo alla pagina).
             </p>

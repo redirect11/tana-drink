@@ -20,9 +20,10 @@
 // IL PROFILO LEGGERO. Un locale Free è pubblicato con le sole regole di
 // Firestore e il sito (`firebase deploy --only firestore,hosting`): niente
 // Functions, niente Storage, perché sono quello che costa anche da fermo.
-// L'app lo capisce da `licenza.piano === 'free'`, oppure da una variabile
-// di build (`VITE_PROFILO=leggero`) che la regia può passare se un giorno
-// pubblicasse leggero un piano diverso.
+// L'app lo capisce da `licenza.piano === 'free'`, oppure dal profilo
+// dell'installazione (`profilo: 'leggero'` nella configurazione del locale,
+// o la variabile di build `VITE_PROFILO=leggero`), che la regia può dare se
+// un giorno pubblicasse leggero un piano diverso.
 //
 // ⚠️ COME PER I MODULI (lib/licenza.js), IL LIMITE NASCONDE, NON PROTEGGE:
 // è l'app che non lascia fare. La licenza non si riscrive più dall'app
@@ -37,6 +38,7 @@ import { NOME_PRODOTTO } from './prodotto.js'
 import { impostazioniRicordate, licenzaRicordata } from './impostazioniLocali.js'
 import { licenzaDi } from './licenzaInVigore.js'
 import { tr } from './lingua.js'
+import { configurazione } from '../porte/configurazione.js'
 
 export const PIANO_FREE = 'free'
 
@@ -57,13 +59,16 @@ function tetto(stato, chiave) {
 
 export const pianoFree = (stato) => licenzaDi(stato)?.piano === PIANO_FREE
 
-const BUILD_LEGGERA = import.meta.env?.VITE_PROFILO === 'leggero'
+// Il profilo lo dice la build (VITE_PROFILO) o, nel sito uguale per tutti,
+// la configurazione del locale (REQ-FLOTTA-034): configurazione() li ha
+// già messi insieme.
+const INSTALLAZIONE_LEGGERA = configurazione().profilo === 'leggero'
 
 // Niente Functions e niente Storage su questa installazione. La demo è
 // sempre leggera (REQ-FLOTTA-019): non chiama nessun servizio, e le
 // schermate nascondono i tasti che li userebbero (lettore SumUp, foto,
 // gestione delle utenze) come per un locale Free.
-export const profiloLeggero = (stato) => BUILD_LEGGERA || Boolean(__DEMO__) || pianoFree(stato)
+export const profiloLeggero = (stato) => INSTALLAZIONE_LEGGERA || Boolean(__DEMO__) || pianoFree(stato)
 
 // IN ALTO IL MARCHIO DEL PRODOTTO, NON IL LOCALE (REQ-UI-035): solo la demo
 // e i locali Free (Daniele, 17/11/2026: «Solo demo avrà quelle scritte e il
