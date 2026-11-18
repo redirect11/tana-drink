@@ -114,6 +114,7 @@ import { emojiDi } from '../lib/icone.js'
 import MetodoPagamento from './MetodoPagamento.jsx'
 import AttesaCliente from './AttesaCliente.jsx'
 import { inAttesa, fermoPerIlCliente } from '../lib/attesaCliente.js'
+import { tr, trSegnato } from '../lib/lingua.js'
 
 // ── Schermata UNICA POS creazione/modifica ordine (stile SumUp) ───────────
 // UN SOLO componente: con `order` è la MODIFICA di un ordine esistente,
@@ -223,8 +224,8 @@ function RigaOrdinabile({ id, attiva, bloccata, children }) {
       {attiva && !bloccata && (
         <span
           className="posd-riga-grip"
-          title="Trascina per spostare"
-          aria-label="Sposta la riga"
+          title={tr('Trascina per spostare')}
+          aria-label={tr('Sposta la riga')}
           {...attributes}
           {...listeners}
         >
@@ -248,7 +249,7 @@ function apertoIl(iso) {
     d.getDate() === oggi.getDate() &&
     d.getMonth() === oggi.getMonth() &&
     d.getFullYear() === oggi.getFullYear()
-  if (stessoGiorno) return `oggi ${ora}`
+  if (stessoGiorno) return tr('oggi {ora}', { ora })
   return `${d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })} ${ora}`
 }
 
@@ -398,7 +399,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     setGroupId(id)
     if (!isNew && orderIdCorrente) {
       setOrderGroup(orderIdCorrente, id || null).catch((e) =>
-        toastError(`Gruppo non aggiornato: ${e.message}`)
+        toastError(tr('Gruppo non aggiornato: {errore}', { errore: e.message }))
       )
     }
   }
@@ -991,7 +992,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       // cosa vera — o al banco si prepara una divisione che sul conto non
       // esiste.
       comandeLocali.scarta(contoPerLocali.id)
-      toastError(`Divisione non riuscita: ${e.message}`)
+      toastError(tr('Divisione non riuscita: {errore}', { errore: e.message }))
     })
   }
 
@@ -1749,7 +1750,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             arr.filter((c) => c.id !== inVolo.id)
           )
           saveDraft(oid, additions)
-          toastError(`Aggiunte non inviate: ${e.message}`)
+          toastError(tr('Aggiunte non inviate: {errore}', { errore: e.message }))
         }
       })()
     }
@@ -1889,7 +1890,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
         // Il conto non è nato: le righe tornano in bozza. Averle svuotate
         // subito non deve costare quello che si era battuto.
         saveDraft('new', [...partite, ...restanti])
-        toastError(`Ordine non creato: ${e.message}`)
+        toastError(tr('Ordine non creato: {errore}', { errore: e.message }))
         return null
       }
     }
@@ -1911,7 +1912,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       const dove = order?.id ? Promise.resolve(order) : creatingPromiseRef.current
       Promise.resolve(dove)
         .then((o) => (o?.id ? updateOrderInfo(o.id, { customer_name: nm }) : null))
-        .catch((e) => toastError(`Nome non salvato: ${e.message}`))
+        .catch((e) => toastError(tr('Nome non salvato: {errore}', { errore: e.message })))
     }
     setInfo({ customer_name: '', table_label: '', note: '' })
     navigate('/bar')
@@ -1931,8 +1932,8 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       Promise.resolve(nascita).then((o) => {
         if (!o) return
         printComanda(o, (o.comande || []).at(-1) || null)
-          .then(() => toastSuccess('Comanda inviata al banco'))
-          .catch((e) => setError(`Stampa: ${e.message}`))
+          .then(() => toastSuccess(tr('Comanda inviata al banco')))
+          .catch((e) => setError(tr('Stampa: {errore}', { errore: e.message })))
       })
       return
     }
@@ -1943,8 +1944,8 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       effComandeRef.current.filter((c) => c.status !== ORDER_STATUSES.ANNULLATO).at(-1) ??
       null
     printComanda(order, daStampare)
-      .then(() => toastSuccess('Comanda inviata al banco'))
-      .catch((e) => setError(`Stampa: ${e.message}`))
+      .then(() => toastSuccess(tr('Comanda inviata al banco')))
+      .catch((e) => setError(tr('Stampa: {errore}', { errore: e.message })))
   }
 
   // C'È QUALCOSA SU CUI LAVORARE? In creazione sono le righe in bozza —
@@ -2136,7 +2137,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   const cambiaModoConsegna = (modo) => {
     if (isNew) return
     setOrderServiceMode(order.id, modo).catch((e) =>
-      toastError(`Modo non cambiato: ${e.message}`)
+      toastError(tr('Modo non cambiato: {errore}', { errore: e.message }))
     )
   }
 
@@ -2144,7 +2145,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     setShowInfo(false)
     if (isNew || !order?.id || closed || !infoDirty) return
     updateOrderInfo(order.id, info).catch((e) =>
-      toastError(`Dati conto non salvati: ${e.message}`)
+      toastError(tr('Dati conto non salvati: {errore}', { errore: e.message }))
     )
   }
 
@@ -2288,8 +2289,8 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       <div className={`posd-topbar${mostraStatoLavoro ? ' con-lavoro' : ''}`}>
         {/* Sul telefono la sola freccia: "Ordini" scritto per esteso andava a
             capo e si mangiava la riga, dove servono numero, ora e stato. */}
-        <button className="btn ghost small" aria-label="Torna agli ordini" onClick={handleExit}>
-          {telefono ? '←' : '← Ordini'}
+        <button className="btn ghost small" aria-label={tr('Torna agli ordini')} onClick={handleExit}>
+          {telefono ? '←' : `← ${tr('Ordini')}`}
         </button>
         <strong className="posd-num">{headTitle}</strong>
         {/* QUANDO è stato aperto il conto, accanto al numero: sapere che quel
@@ -2301,7 +2302,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             (`status_times.aperto`). Senza, l'ora compariva mezzo secondo
             dopo il primo drink e spostava la barra (BUG-150). */}
         {!isNew && apertoAlle && !barraStretta && (
-          <span className="muted small posd-aperto" title="Conto aperto il">
+          <span className="muted small posd-aperto" title={tr('Conto aperto il')}>
             {apertoIl(apertoAlle)}
           </span>
         )}
@@ -2318,10 +2319,10 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           const emoji = <Icona nome={aperto && paid ? 'carta' : STATUS_ICONA[order.status]} gruppo="tasti" />
           const label =
             aperto && paid
-              ? 'Pagato'
+              ? tr('Pagato')
               : aperto && parziale
-                ? `Acconto ${formatPrice(paidAmount(order))}`
-                : STATUS_LABELS[order.status]
+                ? tr('Acconto {importo}', { importo: formatPrice(paidAmount(order)) })
+                : trSegnato(STATUS_LABELS[order.status])
           return (
             // IL `title` DICE DI COSA PARLA QUESTA PASTIGLIA. Da quando in
             // fondo alla barra c'è anche quella della lavorazione
@@ -2334,7 +2335,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             // è aperto davanti a chi guarda, e quanto resta da incassare sta
             // scritto sul tasto in fondo. Il nome per esteso non sparisce:
             // resta nel `title`, come già per l'ora e per l'id.
-            <span className={`pill ${cls} posd-conto-stato`} title={`Stato del conto: ${label}`}>
+            <span className={`pill ${cls} posd-conto-stato`} title={tr('Stato del conto: {stato}', { stato: label })}>
               {/* Il ramo largo resta scritto com'era — `{emoji} {label}`, tre
                   figli e i 6px del pill in mezzo — perché è così che si
                   vestono tutte le pastiglie dell'app: unirli in una stringa
@@ -2359,7 +2360,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           <span
             className="muted posd-serial"
             style={{ fontSize: '0.7rem', opacity: 0.6 }}
-            title="Progressivo interno dell'ordine"
+            title={tr("Progressivo interno dell'ordine")}
           >
             id {String(order.serial).padStart(5, '0')}
           </span>
@@ -2383,7 +2384,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
         {mostraStatoLavoro && (
           <span
             className={`pill ${active.status} posd-stato`}
-            title={`Stato della lavorazione: ${statoAlBanco(active.status, order.service_mode)}`}
+            title={tr('Stato della lavorazione: {stato}', { stato: statoAlBanco(active.status, order.service_mode) })}
           >
             <Icona nome={STATUS_ICONA[active.status]} gruppo="tasti" /> {statoAlBanco(active.status, order.service_mode)}
           </span>
@@ -2406,8 +2407,10 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
         if (!r) return null
         return (
           <div className="riaperto-nota" style={{ margin: '8px 8px 0', flexShrink: 0 }}>
-            <Icona nome="riapri" gruppo="tasti" />{' '}<strong>Conto riaperto</strong> il {quando(r.at)}
-            {r.chi ? ` da ${r.chi}` : ''}
+            <Icona nome="riapri" gruppo="tasti" />{' '}<strong>{tr('Conto riaperto')}</strong>{' '}
+            {r.chi
+              ? tr('il {quando} da {chi}', { quando: quando(r.at), chi: r.chi })
+              : tr('il {quando}', { quando: quando(r.at) })}
             {r.motivo ? <> — « {r.motivo} »</> : ''}
           </div>
         )
@@ -2418,8 +2421,8 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           arriva a voce, lo si segna da qui. */}
       {!isNew && inAttesa(order) && (
         <div className="riaperto-nota" role="status" style={{ margin: '8px 8px 0', flexShrink: 0 }}>
-          <AttesaCliente order={order} /> Il cliente deve accettare le modifiche: finché non risponde, l’ordine resta
-          fermo.{' '}
+          <AttesaCliente order={order} />{' '}
+          {tr('Il cliente deve accettare le modifiche: finché non risponde, l’ordine resta fermo.')}{' '}
           <button
             type="button"
             className="btn small"
@@ -2427,7 +2430,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
               rispondiAllaModifica(order.id, 'accettato', { alBanco: true }).catch((e) => setError(e.message))
             }
           >
-            Confermato dal cliente
+            {tr('Confermato dal cliente')}
           </button>
         </div>
       )}
@@ -2489,7 +2492,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           {telefono && !panelCollapsed && (
             <div
               className={`posd-altezza-handle${altezzaRz.attivo ? ' attiva' : ''}`}
-              title="Tieni premuto e trascina per cambiare l'altezza"
+              title={tr("Tieni premuto e trascina per cambiare l'altezza")}
               {...altezzaRz.handleProps}
             />
           )}
@@ -2501,7 +2504,11 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             >
               <span style={{ minWidth: 0 }}>
                 <span className="muted">
-                  <Icona nome="coda" gruppo="tasti" />{' '}{confirmedLines.reduce((s, l) => s + l.qty, 0) + draftCount} item — tocca per aprire
+                  <Icona nome="coda" gruppo="tasti" />{' '}
+                  {(() => {
+                    const n = confirmedLines.reduce((s, l) => s + l.qty, 0) + draftCount
+                    return n === 1 ? tr('1 item — tocca per aprire') : tr('{n} item — tocca per aprire', { n })
+                  })()}
                 </span>
                 <span className="posd-collapsed-tot" style={{ display: 'block' }}>
                   {formatPrice(confirmedTotal + draftTotal + extras)}
@@ -2538,11 +2545,11 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                 <button
                   className={`btn ghost small${organizzaLista ? ' active' : ''}`}
                   onClick={() => setOrganizzaLista((v) => !v)}
-                  aria-label={organizzaLista ? 'Fine riordino' : 'Organizza le righe'}
+                  aria-label={organizzaLista ? tr('Fine riordino') : tr('Organizza le righe')}
                   title={
                     organizzaLista
-                      ? 'Fine: le righe tornano a aprirsi al tocco'
-                      : 'Organizza: compaiono le maniglie per spostare le righe'
+                      ? tr('Fine: le righe tornano a aprirsi al tocco')
+                      : tr('Organizza: compaiono le maniglie per spostare le righe')
                   }
                 >
                   {organizzaLista ? '✓' : '↕'}
@@ -2566,11 +2573,11 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                   })
                 }
                 aria-expanded={!azioniRidotte}
-                aria-label={azioniRidotte ? 'Mostra i tasti del conto' : 'Nascondi i tasti del conto'}
+                aria-label={azioniRidotte ? tr('Mostra i tasti del conto') : tr('Nascondi i tasti del conto')}
                 title={
                   azioniRidotte
-                    ? 'Mostra Unisci, Dati conto e Prodotto libero'
-                    : 'Nascondi Unisci, Dati conto e Prodotto libero: restano nel ⋯'
+                    ? tr('Mostra Unisci, Dati conto e Prodotto libero')
+                    : tr('Nascondi Unisci, Dati conto e Prodotto libero: restano nel ⋯')
                 }
               >
                 {azioniRidotte ? '▾' : '▴'}
@@ -2578,8 +2585,8 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
               <button
                 className="btn ghost small"
                 onClick={() => setShowAzioni(true)}
-                aria-label="Azioni del conto"
-                title="Azioni del conto"
+                aria-label={tr('Azioni del conto')}
+                title={tr('Azioni del conto')}
               >
                 ⋯
               </button>
@@ -2600,13 +2607,21 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                     disabled={!canMerge && !canSplit}
                     title={
                       canMerge
-                        ? 'Unisci le righe uguali'
+                        ? tr('Unisci le righe uguali')
                         : canSplit
-                          ? 'Separa le quantità'
-                          : 'Niente da unire o separare'
+                          ? tr('Separa le quantità')
+                          : tr('Niente da unire o separare')
                     }
                   >
-                    {canMerge ? <><Icona nome="unisci" gruppo="tasti" /> Unisci</> : <><Icona nome="separa" gruppo="tasti" /> Separa</>}
+                    {canMerge ? (
+                      <>
+                        <Icona nome="unisci" gruppo="tasti" /> {tr('Unisci')}
+                      </>
+                    ) : (
+                      <>
+                        <Icona nome="separa" gruppo="tasti" /> {tr('Separa')}
+                      </>
+                    )}
                   </button>
                 )}
                 {/* NASCONDI I PAGATI sta qui, in riga con gli altri: da
@@ -2619,20 +2634,20 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                     onClick={() => setHidePaid((v) => !v)}
                     title={
                       hidePaid
-                        ? 'Rimetti in lista le righe già incassate'
-                        : 'Lascia in lista solo quello che resta da pagare'
+                        ? tr('Rimetti in lista le righe già incassate')
+                        : tr('Lascia in lista solo quello che resta da pagare')
                     }
                   >
-                    <Icona nome="carta" gruppo="tasti" /> {hidePaid ? `Mostra pagati (${paidCount})` : `Nascondi pagati (${paidCount})`}
+                    <Icona nome="carta" gruppo="tasti" /> {hidePaid ? tr('Mostra pagati ({n})', { n: paidCount }) : tr('Nascondi pagati ({n})', { n: paidCount })}
                   </button>
                 )}
                 <button
                   className="btn secondary small"
                   onClick={() => setShowComande(true)}
                   disabled={isNew}
-                  title={isNew ? 'Il conto non è ancora stato aperto' : 'Storico comande'}
+                  title={isNew ? tr('Il conto non è ancora stato aperto') : tr('Storico comande')}
                 >
-                  <IconReceipt /> Comande ({isNew ? 0 : comande.length})
+                  <IconReceipt /> {tr('Comande ({n})', { n: isNew ? 0 : comande.length })}
                 </button>
                 {/* «RIMETTI IN CORSO» STA NELLA BARRA IN FONDO, dove su un
                     conto chiuso ha già preso il posto di «Pagamento»: era
@@ -2641,7 +2656,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                     facciano due cose diverse. */}
             </div>
             {!isNew && order.table_label && (
-              <div className="muted small"><Icona nome="tavolo" gruppo="tasti" /> Tavolo {order.table_label}</div>
+              <div className="muted small"><Icona nome="tavolo" gruppo="tasti" /> {tr('Tavolo {tavolo}', { tavolo: order.table_label })}</div>
             )}
             {/* Conto di gruppo. In CREAZIONE si sceglie qui (se i gruppi
                 sono attivi): si deve poter associare l'ordine anche senza
@@ -2656,7 +2671,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                 {group && !groupIsContainer ? (
                   <span className="pill small"><Icona nome="staff" gruppo="tasti" /> {group.name}</span>
                 ) : (
-                  <span className="muted small">Nessun gruppo</span>
+                  <span className="muted small">{tr('Nessun gruppo')}</span>
                 )}
                 <span className="row" style={{ gap: 6 }}>
                   {/* Solo l'icona: il nome del gruppo, quando c'è, sta già a
@@ -2664,8 +2679,8 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                   <button
                     className="btn ghost small"
                     onClick={() => setPickGroup(true)}
-                    aria-label={group ? 'Cambia gruppo' : 'Associa a gruppo'}
-                    title={group ? 'Cambia gruppo' : 'Associa a gruppo'}
+                    aria-label={group ? tr('Cambia gruppo') : tr('Associa a gruppo')}
+                    title={group ? tr('Cambia gruppo') : tr('Associa a gruppo')}
                   >
                     <Icona nome="staff" gruppo="tasti" />
                   </button>
@@ -2675,8 +2690,8 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                     <button
                       className="btn ghost small"
                       onClick={() => scegliGruppo('')}
-                      aria-label="Togli dal gruppo"
-                      title="Togli dal gruppo"
+                      aria-label={tr('Togli dal gruppo')}
+                      title={tr('Togli dal gruppo')}
                     >
                       ✕
                     </button>
@@ -2686,8 +2701,10 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             )}
             {groupIsContainer && (
               <div className="banner" style={{ margin: '4px 0' }}>
-                <Icona nome="staff" gruppo="tasti" />{' '}“{group.name}” contiene altri gruppi: non può avere ordini
-                diretti. Scegli uno dei suoi sottogruppi.
+                <Icona nome="staff" gruppo="tasti" />{' '}
+                {tr('“{nome}” contiene altri gruppi: non può avere ordini diretti. Scegli uno dei suoi sottogruppi.', {
+                  nome: group.name,
+                })}
               </div>
             )}
 
@@ -2698,14 +2715,14 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             {!azioniRidotte && (
               <div className="posd-azioni-fisse">
                 <button className="btn ghost small block" onClick={() => setShowInfo(true)}>
-                  <Icona nome="profilo" gruppo="tasti" /> Dati conto
+                  <Icona nome="profilo" gruppo="tasti" /> {tr('Dati conto')}
                 </button>
                 <button
                   className="btn ghost small block"
                   disabled={closed}
                   onClick={() => setShowCustom(true)}
                 >
-                  <IconTag /> Prodotto libero
+                  <IconTag /> {tr('Prodotto libero')}
                 </button>
               </div>
             )}
@@ -2714,7 +2731,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           <div ref={listRef} className="posd-list" style={{ flex: 1, overflowY: 'auto', padding: '6px 12px 10px' }}>
             {orderedLines.length === 0 && (
               <p className="muted small" style={{ margin: '6px 0 0' }}>
-                Tocca i prodotti per aggiungerli all'ordine.
+                {tr("Tocca i prodotti per aggiungerli all'ordine.")}
               </p>
             )}
 
@@ -2794,7 +2811,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                     <span
                       className="grow"
                       style={{ fontSize: '1.08em', display: 'flex', alignItems: 'center', minWidth: 0, cursor: !closed && (isDraft || l.removable) ? 'pointer' : 'inherit' }}
-                      title={!closed && (isDraft || l.removable) ? `Modifica ${l.name}` : undefined}
+                      title={!closed && (isDraft || l.removable) ? tr('Modifica {nome}', { nome: l.name }) : undefined}
                     >
                       <span style={{ minWidth: 0, overflow: 'hidden' }}>
                         <span style={{ display: 'flex', alignItems: 'baseline', minWidth: 0 }}>
@@ -2806,7 +2823,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                               in bozza da un invio non riuscito, tiene la sua. */}
                           {autore && (
                             <span className="riga-autore">
-                              <OrderBy persona={autore} titolo="Aggiunto" />
+                              <OrderBy persona={autore} titolo={tr('Aggiunto')} />
                             </span>
                           )}
                           <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
@@ -2860,8 +2877,8 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                         {/* Etichette col nome: nella lista ci sono molte righe,
                             e i +/- della griglia hanno un altro significato. */}
                         <button
-                          aria-label={`Riduci ${l.name}`}
-                          title={altrui ? `Caricato da ${l.added_by.name || 'un altro'}` : undefined}
+                          aria-label={tr('Riduci {nome}', { nome: l.name })}
+                          title={altrui ? tr('Caricato da {nome}', { nome: l.added_by.name || tr('un altro') }) : undefined}
                           onClick={() => minusRow(l)}
                           disabled={!canMinus}
                         >
@@ -2869,8 +2886,14 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                         </button>
                         <strong>{l.qty}</strong>
                         <button
-                          aria-label={`Aumenta ${l.name}`}
-                          title={altrui ? `Caricato da ${l.added_by.name || 'un altro'}: per aggiungerne, toccare il prodotto` : undefined}
+                          aria-label={tr('Aumenta {nome}', { nome: l.name })}
+                          title={
+                            altrui
+                              ? tr('Caricato da {nome}: per aggiungerne, toccare il prodotto', {
+                                  nome: l.added_by.name || tr('un altro'),
+                                })
+                              : undefined
+                          }
                           onClick={() => plusRow(l)}
                           disabled={closed || isPaid || altrui}
                         >
@@ -2891,7 +2914,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           {/* Footer: avanzamento comanda + totale + CONFERMA vicino a PAGAMENTO.
               Ridimensionabile dalla maniglia in cima: font e tasti scalano. */}
           <div ref={piedeRef} className="posd-comanda-foot" style={{ '--foot-scale': footRz.width / 100 }}>
-            <div className="posd-foot-handle" title="Trascina per ingrandire/rimpicciolire" {...footRz.handleProps} />
+            <div className="posd-foot-handle" title={tr('Trascina per ingrandire/rimpicciolire')} {...footRz.handleProps} />
             {/* QUELLO CHE SI LEGGE, separato da quello che si preme. Sono
                 numeri: quando l'altezza manca cedono loro e scorrono, mentre
                 i tasti qui sotto restano dove sono (BUG-077). */}
@@ -2906,10 +2929,10 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                 <button
                   className="btn small"
                   onClick={() =>
-                    closePaidOrder(order.id).catch((e) => toastError(`Chiusura non riuscita: ${e.message}`))
+                    closePaidOrder(order.id).catch((e) => toastError(tr('Chiusura non riuscita: {errore}', { errore: e.message })))
                   }
                 >
-                  <IconCheck /> Chiudi conto
+                  <IconCheck /> {tr('Chiudi conto')}
                 </button>
               </div>
             )}
@@ -2927,10 +2950,10 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                   className="row between"
                   onClick={() => setMostraSupplementi((v) => !v)}
                   style={{ cursor: 'pointer', margin: 0, lineHeight: 1.35 }}
-                  title="Il conto senza supplementi — tocca per il dettaglio"
+                  title={tr('Il conto senza supplementi — tocca per il dettaglio')}
                 >
                   <strong style={{ fontSize: '0.95em' }}>
-                    Subtotale{' '}
+                    {tr('Subtotale')}{' '}
                     <span className="muted" style={{ fontWeight: 400, fontSize: '0.8em' }}>
                       {mostraSupplementi ? '▾' : '▸'}
                     </span>
@@ -2939,9 +2962,9 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                 </div>
                 {mostraSupplementi &&
                   [
-                    ['Coperto', Number(order?.coperto_amount || 0)],
-                    ['Servizio', Number(order?.service_charge_amount || 0)],
-                    ['Mancia', Number(order?.tip_amount || 0)],
+                    [tr('Coperto'), Number(order?.coperto_amount || 0)],
+                    [tr('supplemento|Servizio'), Number(order?.service_charge_amount || 0)],
+                    [tr('Mancia'), Number(order?.tip_amount || 0)],
                   ]
                     .filter(([, v]) => v > 0)
                     .map(([label, v]) => (
@@ -2957,7 +2980,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
               </>
             )}
             <div className="row between" style={extras > 0 ? { marginTop: 2 } : undefined}>
-              <strong>Totale</strong>
+              <strong>{tr('Totale')}</strong>
               <strong className="price">{formatPrice(confirmedTotal + draftTotal + extras)}</strong>
             </div>
             {/* CHE COSA È STATO PAGATO. C'era una riga sola — «Sconto e acconti
@@ -2967,7 +2990,8 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                 rispondeva a niente. */}
             {!isNew &&
               (() => {
-                const d = dettaglioIncassi(order)
+                // A schermo: le parole degli sconti seguono la lingua di chi guarda.
+                const d = dettaglioIncassi(order, { aSchermo: true })
                 if (d.sconto <= 0 && d.incassi.length === 0) return null
                 return (
                   <div className="posd-incassi">
@@ -2989,7 +3013,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                                 contrario sarebbe inventarselo. Le righe le
                                 copre solo chi le sceglie nella schermata di
                                 pagamento. */}
-                            {i.cosa ? 'Pagate' : 'Acconto'}
+                            {i.cosa ? tr('incasso|Pagate') : tr('Acconto')}
                             {i.metodo && <> · <MetodoPagamento metodo={i.metodo} /></>}
                             {i.quando ? ` · ${apertoIl(i.quando)}` : ''}
                           </span>
@@ -3018,13 +3042,13 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                 risponde, le righe restano dove sono e si vedono. */}
             {sceltaAggiunte && (
               <div className="posd-scelta-aggiunte">
-                <span className="muted small">Le righe nuove dove vanno?</span>
+                <span className="muted small">{tr('Le righe nuove dove vanno?')}</span>
                 <div className="grid-2" style={{ marginTop: 6 }}>
                   <button className="btn small" onClick={() => flushAdditions('comanda')}>
-                    &#10133; Nella comanda
+                    &#10133; {tr('Nella comanda')}
                   </button>
                   <button className="btn ghost small" onClick={() => flushAdditions('nuova')}>
-                    <IconPrinter /> Comanda nuova
+                    <IconPrinter /> {tr('Comanda nuova')}
                   </button>
                 </div>
               </div>
@@ -3038,16 +3062,16 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             <div className="grid-2">
               {stampaComandeOn && (
                 <button className="btn ghost small" disabled={!conRighe} onClick={inviaComanda}>
-                  <IconPrinter /> Invia comanda
+                  <IconPrinter /> {tr('Invia comanda')}
                 </button>
               )}
               {daRiaprire ? (
                 <button
                   className="btn small posd-riapri"
                   onClick={() => setShowRipristino(true)}
-                  title="Il conto torna fra quelli aperti"
+                  title={tr('Il conto torna fra quelli aperti')}
                 >
-                  <Icona nome="riapri" gruppo="tasti" /> Riapri conto
+                  <Icona nome="riapri" gruppo="tasti" /> {tr('Riapri conto')}
                 </button>
               ) : (
                 <button
@@ -3055,7 +3079,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                   disabled={isNew ? !conRighe : !canPay}
                   onClick={isNew ? handlePayNow : apriIlPagamento}
                 >
-                  <IconCard /> Pagamento{daIncassare > 0 ? ` · ${formatPrice(daIncassare)}` : ''}
+                  <IconCard /> {tr('Pagamento')}{daIncassare > 0 ? ` · ${formatPrice(daIncassare)}` : ''}
                 </button>
               )}
             </div>
@@ -3070,7 +3094,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                 disabled={isNew || closed}
                 onClick={() => setShowComande(true)}
               >
-                <IconRefresh /> Stato servizio
+                <IconRefresh /> {tr('Stato servizio')}
               </button>
             )}
 
@@ -3079,7 +3103,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
               disabled={annullaSpento}
               onClick={annullaOrdine}
             >
-              <IconX /> Annulla ordine
+              <IconX /> {tr('Annulla ordine')}
             </button>
             </div>
             </div>
@@ -3096,44 +3120,44 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                     className="btn ghost"
                     disabled={!conRighe}
                     onClick={inviaComanda}
-                    aria-label="Invia"
-                    title="Invia la comanda al banco"
+                    aria-label={tr('Invia')}
+                    title={tr('Invia la comanda al banco')}
                   >
                     <IconPrinter />
-                    {!soloIcone && ' Invia'}
+                    {!soloIcone && ` ${tr('Invia')}`}
                   </button>
                 )}
                 {daRiaprire ? (
                   <button
                     className="btn"
                     onClick={() => setShowRipristino(true)}
-                    aria-label="Riapri conto"
-                    title="Il conto torna fra quelli aperti"
+                    aria-label={tr('Riapri conto')}
+                    title={tr('Il conto torna fra quelli aperti')}
                   >
                     <Icona nome="riapri" gruppo="tasti" />
-                    {!soloIcone && ' Riapri conto'}
+                    {!soloIcone && ` ${tr('Riapri conto')}`}
                   </button>
                 ) : (
                   <button
                     className="btn"
                     disabled={isNew ? !conRighe : !canPay}
                     onClick={isNew ? handlePayNow : apriIlPagamento}
-                    aria-label="Paga"
-                    title="Incassa il conto"
+                    aria-label={tr('Paga')}
+                    title={tr('Incassa il conto')}
                   >
                     <IconCard />
-                    {!soloIcone && ' Paga'}
+                    {!soloIcone && ` ${tr('Paga')}`}
                   </button>
                 )}
                 <button
                   className="btn ghost"
                   disabled={annullaSpento}
                   onClick={annullaOrdine}
-                  aria-label="Annulla"
-                  title="Annulla l'ordine"
+                  aria-label={tr('Annulla')}
+                  title={tr("Annulla l'ordine")}
                 >
                   <IconX />
-                  {!soloIcone && ' Annulla'}
+                  {!soloIcone && ` ${tr('Annulla')}`}
                 </button>
               </div>
             )}
@@ -3153,24 +3177,24 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           {
             id: 'comande',
             icon: <IconReceipt />,
-            label: `Comande (${isNew ? 0 : comande.length})`,
-            hint: workflowOn ? 'Stato del servizio e ristampe' : 'Storico delle comande',
+            label: tr('Comande ({n})', { n: isNew ? 0 : comande.length }),
+            hint: workflowOn ? tr('Stato del servizio e ristampe') : tr('Storico delle comande'),
             disabled: isNew,
             onClick: () => setShowComande(true),
           },
           {
             id: 'libero',
             icon: <IconTag />,
-            label: 'Prodotto libero',
-            hint: 'Una voce che non è a menù',
+            label: tr('Prodotto libero'),
+            hint: tr('Una voce che non è a menù'),
             disabled: closed,
             onClick: () => setShowCustom(true),
           },
           {
             id: 'dati',
             icon: 'profilo',
-            label: 'Dati conto',
-            hint: 'Nome, tavolo, note',
+            label: tr('Dati conto'),
+            hint: tr('Nome, tavolo, note'),
             onClick: () => setShowInfo(true),
           },
           // LA SCHERMATA DA GIRARE AL CLIENTE. Il QR con cui segue l'ordine
@@ -3181,16 +3205,16 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           workflowOn && {
             id: 'cliente',
             icon: 'invio-telefono',
-            label: 'Mostra al cliente',
-            hint: "Il QR per seguire l'ordine dal suo telefono",
+            label: tr('Mostra al cliente'),
+            hint: tr("Il QR per seguire l'ordine dal suo telefono"),
             disabled: isNew,
             onClick: () => navigate(`/ordine/${order.id}?cliente=1`),
           },
           {
             id: 'storia',
             icon: 'orario',
-            label: 'Storia del conto',
-            hint: 'Aperto, chiuso, annullato, riaperto',
+            label: tr('Storia del conto'),
+            hint: tr('Aperto, chiuso, annullato, riaperto'),
             disabled: isNew,
             onClick: () => setShowStoria(true),
           },
@@ -3203,32 +3227,32 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           ((canMerge || canSplit) && {
             id: 'unisci-separa',
             icon: canMerge ? 'unisci' : 'separa',
-            label: canMerge ? 'Unisci le righe uguali' : 'Separa le quantità',
+            label: canMerge ? tr('Unisci le righe uguali') : tr('Separa le quantità'),
             hint: canMerge
-              ? 'Le stesse voci tornano una riga sola'
-              : 'Ogni pezzo diventa una riga a sé',
+              ? tr('Le stesse voci tornano una riga sola')
+              : tr('Ogni pezzo diventa una riga a sé'),
             onClick: canMerge ? mergeDraft : splitAllDraft,
           }),
           {
             id: 'svuota',
             icon: 'pulisci',
-            label: 'Svuota il conto',
-            hint: 'Toglie tutte le righe: chiede conferma',
+            label: tr('Svuota il conto'),
+            hint: tr('Toglie tutte le righe: chiede conferma'),
             disabled: !(righeDaSvuotare > 0) || closed,
             onClick: () => setConfirmSvuota(true),
           },
           {
             id: 'calcoli',
             icon: 'calcola',
-            label: mostraCalcoli ? 'Nascondi i calcoli delle righe' : 'Mostra i calcoli delle righe',
-            hint: 'Sotto ogni riga, «2 × 5,00 €», come le note',
+            label: mostraCalcoli ? tr('Nascondi i calcoli delle righe') : tr('Mostra i calcoli delle righe'),
+            hint: tr('Sotto ogni riga, «2 × 5,00 €», come le note'),
             onClick: toggleCalcoli,
           },
           groupsOn && {
             id: 'gruppo',
             icon: <IconGruppo />,
-            label: group ? `Gruppo: ${group.name}` : 'Associa a un gruppo',
-            hint: group ? 'Cambia o togli' : null,
+            label: group ? tr('Gruppo: {nome}', { nome: group.name }) : tr('Associa a un gruppo'),
+            hint: group ? tr('Cambia o togli') : null,
             onClick: () => setPickGroup(true),
           },
         ]}
@@ -3243,8 +3267,12 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             onClick={(e) => e.stopPropagation()}
           >
             <div className="row between" style={{ alignItems: 'center' }}>
-              <h3 style={{ margin: 0 }}><IconReceipt /> Comande</h3>
-              <button className="btn ghost small" onClick={() => setShowComande(false)}><IconClose /> Chiudi</button>
+              <h3 style={{ margin: 0 }}>
+                <IconReceipt /> {tr('Comande')}
+              </h3>
+              <button className="btn ghost small" onClick={() => setShowComande(false)}>
+                <IconClose /> {tr('Chiudi')}
+              </button>
             </div>
             {/* PIÙ DI UNA COMANDA: due modi di ristamparle, e servono
                 tutti e due. «Anche di stampare UNA SOLA comanda con tutti i
@@ -3262,21 +3290,23 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                   className="btn ghost small"
                   onClick={() =>
                     printComande(order, stampabili)
-                      .then((n) => toastSuccess(`${n} comande in stampa`))
-                      .catch((e) => setError(`Stampa: ${e.message}`))
+                      .then((n) =>
+                        toastSuccess(n === 1 ? tr('Una comanda in stampa') : tr('{n} comande in stampa', { n }))
+                      )
+                      .catch((e) => setError(tr('Stampa: {errore}', { errore: e.message })))
                   }
                 >
-                  <IconPrinter /> Una per comanda ({stampabili.length})
+                  <IconPrinter /> {tr('Una per comanda ({n})', { n: stampabili.length })}
                 </button>
                 <button
                   className="btn ghost small"
                   onClick={() =>
                     printComandaUnita(order)
-                      .then(() => toastSuccess('Comanda unita in stampa'))
-                      .catch((e) => setError(`Stampa: ${e.message}`))
+                      .then(() => toastSuccess(tr('Comanda unita in stampa')))
+                      .catch((e) => setError(tr('Stampa: {errore}', { errore: e.message })))
                   }
                 >
-                  <IconPrinter /> Tutto su una
+                  <IconPrinter /> {tr('Tutto su una')}
                 </button>
               </div>
             )}
@@ -3286,7 +3316,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                 <div className="card" key={c.id} style={{ margin: '10px 0 0', padding: 12 }}>
                   <div className="row between" style={{ alignItems: 'center' }}>
                     <span className="muted small" style={{ whiteSpace: 'nowrap' }}>
-                      COMANDA {c.seq}
+                      {tr('COMANDA {n}', { n: c.seq })}
                       {c.created_at ? ` · ${String(c.created_at).slice(11, 16)}` : ''}
                     </span>
                     {/* UNA COMANDA DIVISA NON È UNA COMANDA ANNULLATA. Nel
@@ -3304,7 +3334,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                     {(workflowOn || annullataPerDivisione(c)) && (
                       <span className={`pill ${c.status}`} style={{ fontSize: '0.7rem' }}>
                         {annullataPerDivisione(c) ? (
-                          <ConIcona nome="dividi" testo="Divisa" />
+                          <ConIcona nome="dividi" testo={tr('Divisa')} />
                         ) : (
                           <>
                             <Icona nome={STATUS_ICONA[c.status]} gruppo="tasti" />{' '}
@@ -3326,15 +3356,15 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                     {stampaComandeOn && (
                       <button
                         className="btn ghost small"
-                        aria-label={`Stampa comanda ${c.seq}`}
-                        onClick={() => printComanda(order, c).catch((e) => setError(`Stampa: ${e.message}`))}
+                        aria-label={tr('Stampa comanda {n}', { n: c.seq })}
+                        onClick={() => printComanda(order, c).catch((e) => setError(tr('Stampa: {errore}', { errore: e.message })))}
                       >
-                        <IconPrinter /> Stampa
+                        <IconPrinter /> {tr('Stampa')}
                       </button>
                     )}
                     {ns && workflowOn && !closed && puoSegnare(ruolo, ns) ? (
                       <button className="btn small" onClick={() => advance(c.id, ns)}>
-                        Segna “{statoAlBanco(ns, order.service_mode)}”
+                        {tr('Segna “{stato}”', { stato: statoAlBanco(ns, order.service_mode) })}
                       </button>
                     ) : (
                       <span />
@@ -3364,7 +3394,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                         style={{ marginTop: 6 }}
                         onClick={() => setParziale(c.id)}
                       >
-                        <Icona nome="dividi" gruppo="tasti" /> Preparazione parziale
+                        <Icona nome="dividi" gruppo="tasti" /> {tr('Preparazione parziale')}
                       </button>
                     )
                   )}
@@ -3378,13 +3408,13 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                     !closed &&
                     statiPrimaComanda(c.status, statoIniziale).length > 0 && (
                       <div className="row" style={{ gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
-                        <span className="muted small">Torna a</span>
+                        <span className="muted small">{tr('Torna a')}</span>
                         {statiPrimaComanda(c.status, statoIniziale).map((st) => (
                           <button
                             key={st}
                             className="chip"
                             onClick={() => advance(c.id, st)}
-                            title={`Riporta la comanda ${c.seq} a «${statoAlBanco(st, order.service_mode)}»`}
+                            title={tr('Riporta la comanda {n} a «{stato}»', { n: c.seq, stato: statoAlBanco(st, order.service_mode) })}
                           >
                             ↩︎ {statoAlBanco(st, order.service_mode)}
                           </button>
@@ -3394,7 +3424,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                 </div>
               )
             })}
-            {comande.length === 0 && <p className="muted small">Nessuna comanda.</p>}
+            {comande.length === 0 && <p className="muted small">{tr('Nessuna comanda.')}</p>}
 
             {/* QUI NON SI STAMPA PIU' LO SCONTRINO. C'era un tasto
                 «Scontrino (non fiscale)» in fondo a questo pannello: «non
@@ -3414,15 +3444,19 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           <div
             className="confirm-box"
             role="dialog"
-            aria-label="Dati conto"
+            aria-label={tr('Dati conto')}
             style={{ width: 'min(400px, 94vw)' }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="row between" style={{ alignItems: 'center' }}>
-              <h3 style={{ margin: 0 }}><Icona nome="profilo" gruppo="tasti" /> Dati conto</h3>
+              <h3 style={{ margin: 0 }}>
+                <Icona nome="profilo" gruppo="tasti" /> {tr('Dati conto')}
+              </h3>
               <button className="btn ghost small" onClick={chiudiInfo}>✕</button>
             </div>
-            <label htmlFor="pd-name" style={{ display: 'block', marginTop: 10 }}>Nome</label>
+            <label htmlFor="pd-name" style={{ display: 'block', marginTop: 10 }}>
+              {tr('Nome')}
+            </label>
             <input
               id="pd-name"
               value={info.customer_name}
@@ -3430,11 +3464,11 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
               autoFocus
               onKeyDown={infoOnEnter}
               onChange={(e) => setInfo((v) => ({ ...v, customer_name: e.target.value }))}
-              placeholder="Es. Marco, Tavolo 4…"
+              placeholder={tr('Es. Marco, Tavolo 4…')}
             />
             <div className="grid-2" style={{ marginTop: 8 }}>
               <div>
-                <label htmlFor="pd-table">Tavolo</label>
+                <label htmlFor="pd-table">{tr('Tavolo')}</label>
                 <input
                   id="pd-table"
                   value={info.table_label}
@@ -3444,7 +3478,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                 />
               </div>
               <div>
-                <label htmlFor="pd-note">Note</label>
+                <label htmlFor="pd-note">{tr('Note')}</label>
                 {/* UNA NOTA È UNA FRASE, non una parola. In una casella da
                     una riga «tavolo fuori, portare due bicchieri in più e
                     il ghiaccio a parte» si scriveva alla cieca, vedendone
@@ -3455,7 +3489,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                   rows={3}
                   value={info.note}
                   disabled={closed}
-                  placeholder="Es. tavolo fuori, ghiaccio a parte"
+                  placeholder={tr('Es. tavolo fuori, ghiaccio a parte')}
                   onChange={(e) => setInfo((v) => ({ ...v, note: e.target.value }))}
                 />
               </div>
@@ -3478,7 +3512,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                 style={{ marginTop: 12 }}
                 onClick={chiudiInfo}
               >
-                {isNew ? 'OK' : <><Icona nome="salva" gruppo="tasti" /> Salva dati conto</>}
+                {isNew ? 'OK' : <><Icona nome="salva" gruppo="tasti" /> {tr('Salva dati conto')}</>}
               </button>
             )}
           </div>
@@ -3553,7 +3587,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           <form
             className="confirm-box"
             role="dialog"
-            aria-label="Nome del conto"
+            aria-label={tr('Nome del conto')}
             style={{ width: 'min(360px, 94vw)' }}
             onClick={(e) => e.stopPropagation()}
             onSubmit={(e) => {
@@ -3562,30 +3596,32 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             }}
           >
             <div className="row between" style={{ alignItems: 'center' }}>
-              <h3 style={{ margin: 0 }}><Icona nome="profilo" gruppo="tasti" /> Nome del conto</h3>
+              <h3 style={{ margin: 0 }}>
+                <Icona nome="profilo" gruppo="tasti" /> {tr('Nome del conto')}
+              </h3>
               <button
                 type="button"
                 className="btn ghost small"
                 onClick={() => submitNew('')}
-                aria-label="Chiudi senza dare un nome"
-                title="Chiudi senza dare un nome"
+                aria-label={tr('Chiudi senza dare un nome')}
+                title={tr('Chiudi senza dare un nome')}
               >
                 ✕
               </button>
             </div>
             <p className="muted small" style={{ margin: '8px 0' }}>
-              Vuoto = numero progressivo. Si può cambiare dopo, dai Dati conto.
+              {tr('Vuoto = numero progressivo. Si può cambiare dopo, dai Dati conto.')}
             </p>
-            <label htmlFor="pos-askname">Nome</label>
+            <label htmlFor="pos-askname">{tr('Nome')}</label>
             <input
               id="pos-askname"
               value={info.customer_name}
               onChange={(e) => setInfo((v) => ({ ...v, customer_name: e.target.value }))}
-              placeholder="Es. Marco, Tavolo 4…"
+              placeholder={tr('Es. Marco, Tavolo 4…')}
               autoFocus
             />
             <button className="btn block" type="submit" style={{ marginTop: 10 }}>
-              Salva{info.customer_name.trim() ? '' : ' senza nome'}
+              {info.customer_name.trim() ? tr('Salva') : tr('Salva senza nome')}
             </button>
           </form>
         </div>
@@ -3647,7 +3683,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             // nuovo, e la prenotazione di stampa va restituita (BUG-047).
             releaseReceiptPrint(order.id)
             restoreOrder(order.id, { motivo, chi: chiSonoIo() }).catch((e) =>
-              setError(`Conto non ripristinato: ${e.message}`)
+              setError(tr('Conto non ripristinato: {errore}', { errore: e.message }))
             )
           }}
         />
@@ -3659,17 +3695,18 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           <div
             className="confirm-box"
             role="dialog"
-            aria-label="Scegli il gruppo"
+            aria-label={tr('Scegli il gruppo')}
             style={{ width: 'min(420px, 94vw)', maxHeight: '80vh', overflowY: 'auto' }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="row between" style={{ alignItems: 'center' }}>
-              <h3 style={{ margin: 0 }}><Icona nome="staff" gruppo="tasti" /> Conto di gruppo</h3>
+              <h3 style={{ margin: 0 }}>
+                <Icona nome="staff" gruppo="tasti" /> {tr('Conto di gruppo')}
+              </h3>
               <button className="btn ghost small" onClick={() => setPickGroup(false)}>✕</button>
             </div>
             <p className="muted small" style={{ margin: '8px 0' }}>
-              L’ordine entra nel conto del gruppo e si potrà pagare insieme
-              agli altri.
+              {tr('L’ordine entra nel conto del gruppo e si potrà pagare insieme agli altri.')}
             </p>
             <button
               className={`btn ${groupId ? 'ghost' : ''} block`}
@@ -3678,7 +3715,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                 setPickGroup(false)
               }}
             >
-              Nessun gruppo
+              {tr('Nessun gruppo')}
             </button>
             {groupChoices.map((g) => (
               <button
@@ -3695,7 +3732,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             ))}
             {groupChoices.length === 0 && (
               <p className="muted small" style={{ marginTop: 8 }}>
-                Nessun gruppo aperto: si creano dalla coda ordini.
+                {tr('Nessun gruppo aperto: si creano dalla coda ordini.')}
               </p>
             )}
           </div>
@@ -3709,10 +3746,14 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       {confirmSvuota && (
         <ConfirmDialog
           icona="pulisci"
-          title="Svuotare il conto?"
-          message={`Le ${righeDaSvuotare} righe battute finora vengono tolte. Il conto resta aperto, vuoto.`}
-          confirmLabel="Svuota"
-          cancelLabel="Indietro"
+          title={tr('Svuotare il conto?')}
+          message={
+            righeDaSvuotare === 1
+              ? tr('La riga battuta finora viene tolta. Il conto resta aperto, vuoto.')
+              : tr('Le {n} righe battute finora vengono tolte. Il conto resta aperto, vuoto.', { n: righeDaSvuotare })
+          }
+          confirmLabel={tr('Svuota')}
+          cancelLabel={tr('Indietro')}
           danger
           onCancel={() => setConfirmSvuota(false)}
           onConfirm={() => {
@@ -3725,14 +3766,16 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       {confirmCancel && (
         <ConfirmDialog
           icona="annullato"
-          title="Annullare l'ordine?"
+          title={tr("Annullare l'ordine?")}
           message={
             isNew
-              ? 'Le righe battute finora vengono buttate e si torna alla coda. Il conto non è ancora stato aperto.'
-              : `L'ordine #${order?.daily_number ?? ''} verrà annullato e le scorte già scalate torneranno a magazzino.`
+              ? tr('Le righe battute finora vengono buttate e si torna alla coda. Il conto non è ancora stato aperto.')
+              : tr("L'ordine #{n} verrà annullato e le scorte già scalate torneranno a magazzino.", {
+                  n: order?.daily_number ?? '',
+                })
           }
-          confirmLabel="Annulla ordine"
-          cancelLabel="Indietro"
+          confirmLabel={tr('Annulla ordine')}
+          cancelLabel={tr('Indietro')}
           danger
           onCancel={() => setConfirmCancel(false)}
           onConfirm={() => {
@@ -3765,13 +3808,13 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                   nascondiPerAnnullo(o.id)
                   return cancelOrder(o.id, { by: 'bartender' })
                 })
-                .catch((e) => toastError(`Annullo non riuscito: ${e.message}`))
+                .catch((e) => toastError(tr('Annullo non riuscito: {errore}', { errore: e.message })))
               return navigate('/bar')
             }
             cancelOrder(order.id, { by: 'bartender' }).catch((e) => {
               // Non è andata: torni a vederlo in coda, com'è giusto.
               mostraOrdine(order.id)
-              toastError(`Annullo non riuscito: ${e.message}`)
+              toastError(tr('Annullo non riuscito: {errore}', { errore: e.message }))
             })
             // Sparisce dalla coda SUBITO, senza aspettare il database:
             // altrimenti lo si ritrova lì per un istante e si dubita.

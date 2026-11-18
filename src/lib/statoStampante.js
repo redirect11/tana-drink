@@ -17,6 +17,7 @@
 import { useEffect, useState } from 'react'
 import { loadPrinterSettings, preparaStampante } from './printer.js'
 import { segnala, TIPO } from './diagnosticaStampante.js'
+import { daTradurre } from './lingua.js'
 
 const OGNI = 30000
 
@@ -50,11 +51,11 @@ export function controllaStampante() {
   if (_inCorso) return _inCorso
   _inCorso = (async () => {
     if (!loadPrinterSettings().ip) {
-      annuncia({ stato: 'spenta', motivo: 'Stampante non configurata' })
+      annuncia({ stato: 'spenta', motivo: daTradurre('Stampante non configurata') })
       return _stato
     }
     const r = await preparaStampante()
-    annuncia(r.ok ? { stato: 'ok', motivo: '' } : { stato: 'ko', motivo: r.motivo || 'Non risponde' })
+    annuncia(r.ok ? { stato: 'ok', motivo: '' } : { stato: 'ko', motivo: r.motivo || daTradurre('Non risponde') })
     return _stato
   })().finally(() => {
     _inCorso = null

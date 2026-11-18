@@ -1,5 +1,6 @@
 import { formatPrice } from '../lib/orderStatus.js'
 import { formatQty } from '../lib/inventory.js'
+import { tr } from '../lib/lingua.js'
 
 // ── LA SCHEDA DEL DRINK, DIETRO LA ⓘ ─────────────────────────────────
 //
@@ -22,7 +23,7 @@ export default function SchedaDrink({ drink, onClose }) {
       <div
         className="confirm-box scheda-drink"
         role="dialog"
-        aria-label={`Scheda di ${drink.name}`}
+        aria-label={tr('Scheda di {nome}', { nome: drink.name })}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="row between" style={{ alignItems: 'baseline', gap: 8 }}>
@@ -35,16 +36,16 @@ export default function SchedaDrink({ drink, onClose }) {
           </p>
         )}
 
-        <h4 style={{ margin: '14px 0 4px' }}>Ingredienti</h4>
+        <h4 style={{ margin: '14px 0 4px' }}>{tr('Ingredienti')}</h4>
         {ingredienti.length === 0 ? (
           <p className="muted small" style={{ margin: 0 }}>
-            Nessun ingrediente collegato al magazzino.
+            {tr('Nessun ingrediente collegato al magazzino.')}
           </p>
         ) : (
           <ul className="scheda-drink-righe">
             {ingredienti.map((r, i) => (
               <li key={i} className="row between">
-                <span>{r.name || 'ingrediente'}</span>
+                <span>{r.name || tr('ingrediente')}</span>
                 <strong>{formatQty(r.qty, r.unit)}</strong>
               </li>
             ))}
@@ -53,7 +54,7 @@ export default function SchedaDrink({ drink, onClose }) {
 
         {drink.recipe && (
           <>
-            <h4 style={{ margin: '14px 0 4px' }}>Come si prepara</h4>
+            <h4 style={{ margin: '14px 0 4px' }}>{tr('Come si prepara')}</h4>
             {/* A capo dove li ha messi chi l'ha scritta: una preparazione è
                 una sequenza di gesti, non un paragrafo. */}
             <p className="scheda-drink-preparazione">{drink.recipe}</p>
@@ -61,7 +62,7 @@ export default function SchedaDrink({ drink, onClose }) {
         )}
 
         <button type="button" className="btn block" style={{ marginTop: 16 }} onClick={onClose}>
-          Chiudi
+          {tr('Chiudi')}
         </button>
       </div>
     </div>

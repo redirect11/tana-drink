@@ -4,16 +4,17 @@
 // I temi agiscono sulle variabili CSS di :root (index.css).
 
 import { CLIENTE } from './venue.js'
+import { daTradurre } from './lingua.js'
 
 // Campi personalizzabili: chiave CSS → etichetta mostrata nelle impostazioni.
 export const THEME_FIELDS = [
-  { key: '--bg', label: 'Sfondo' },
-  { key: '--bg-2', label: 'Sfondo secondario' },
-  { key: '--card', label: 'Card' },
-  { key: '--accent', label: 'Colore accento' },
-  { key: '--accent-2', label: 'Accento secondario' },
-  { key: '--text', label: 'Testo' },
-  { key: '--muted', label: 'Testo attenuato' },
+  { key: '--bg', label: daTradurre('Sfondo') },
+  { key: '--bg-2', label: daTradurre('Sfondo secondario') },
+  { key: '--card', label: daTradurre('Card') },
+  { key: '--accent', label: daTradurre('Colore accento') },
+  { key: '--accent-2', label: daTradurre('Accento secondario') },
+  { key: '--text', label: daTradurre('Testo') },
+  { key: '--muted', label: daTradurre('Testo attenuato') },
 ]
 
 // ── LE FORME, NON SOLO I COLORI ──────────────────────────────────────
@@ -100,9 +101,14 @@ export const FORME = {
   },
 }
 
+// L'emoji sta a parte dal nome: il nome si traduce (`trSegnato`, REQ-UI-039),
+// l'emoji no, e nel dizionario un'emoji non ci va (tests/unit/icone.test.js).
 export const THEME_PRESETS = {
   'tana-scuro': {
-    label: '🌑 Tana scuro',
+    emoji: '🌑',
+    // Il nome del tema del locale è un marchio: resta com'è, e non entra
+    // nel dizionario (tests/unit/marchio.test.js).
+    label: 'Tana scuro',
     vars: {
       '--bg': '#0e0e15',
       '--bg-2': '#15151f',
@@ -114,7 +120,8 @@ export const THEME_PRESETS = {
     },
   },
   'notte-blu': {
-    label: '🌌 Notte blu',
+    emoji: '🌌',
+    label: daTradurre('Notte blu'),
     vars: {
       '--bg': '#0a1220',
       '--bg-2': '#101a2c',
@@ -130,7 +137,8 @@ export const THEME_PRESETS = {
     // Catppuccin Mocha (palette ufficiale): sobrio ma caldo, pensato per
     // il gestionale — base scura a tre livelli, malva come accento e
     // pesca per bottoni e gradienti. Vedi DESIGN.md.
-    label: '🐈 Catppuccin scuro',
+    emoji: '🐈',
+    label: daTradurre('Catppuccin scuro'),
     vars: {
       '--bg': '#11111b',
       '--bg-2': '#181825',
@@ -146,7 +154,8 @@ export const THEME_PRESETS = {
     // Catppuccin Latte, la gemella chiara di Mocha: stessi livelli
     // (crust → mantle → base), accenti più profondi perché sul chiaro
     // il contrasto va conquistato, non regalato.
-    label: '🥛 Catppuccin chiaro',
+    emoji: '🥛',
+    label: daTradurre('Catppuccin chiaro'),
     vars: {
       '--bg': '#dce0e8',
       '--bg-2': '#e6e9ef',
@@ -166,7 +175,8 @@ export const THEME_PRESETS = {
     // Palette di Pico CSS v2 (tema dark): ardesia blu e azzurro tecnico.
     // Non carichiamo il CSS di Pico — farebbe a botte col nostro — ne
     // adottiamo i colori dentro i nostri token. Vedi DESIGN.md.
-    label: '🔷 Pico scuro',
+    emoji: '🔷',
+    label: daTradurre('Pico scuro'),
     vars: {
       '--bg': '#13171f',
       '--bg-2': '#1a1f28',
@@ -182,7 +192,8 @@ export const THEME_PRESETS = {
   'pico-chiaro': {
     forme: 'pico',
     // Pico v2 chiaro: bianco piatto e blu petrolio, il look "documento".
-    label: '💠 Pico chiaro',
+    emoji: '💠',
+    label: daTradurre('Pico chiaro'),
     vars: {
       '--bg': '#fbfbfc',
       '--bg-2': '#ffffff',
@@ -195,7 +206,8 @@ export const THEME_PRESETS = {
     },
   },
   chiaro: {
-    label: '☀️ Chiaro',
+    emoji: '☀️',
+    label: daTradurre('Chiaro'),
     vars: {
       '--bg': '#f2f2f7',
       '--bg-2': '#ffffff',
@@ -212,7 +224,8 @@ export const THEME_PRESETS = {
     },
   },
   crema: {
-    label: '🥂 Crema',
+    emoji: '🥂',
+    label: daTradurre('Crema'),
     vars: {
       '--bg': '#f6f1e7',
       '--bg-2': '#fffaf0',
@@ -234,7 +247,8 @@ export const THEME_PRESETS = {
   // scurissimo della regia, non l'inchiostro bruno nato per l'oro.
   'lime-scuro': {
     forme: 'lime',
-    label: '🌿 Lime scuro',
+    emoji: '🌿',
+    label: daTradurre('Lime scuro'),
     vars: {
       '--bg': '#0c0f0a',
       '--bg-2': '#141911',
@@ -254,7 +268,8 @@ export const THEME_PRESETS = {
   // profondo della regia, #2f6b0f (6,1:1 sul fondo).
   'lime-chiaro': {
     forme: 'lime',
-    label: '🍃 Lime chiaro',
+    emoji: '🍃',
+    label: daTradurre('Lime chiaro'),
     vars: {
       '--bg': '#f7f9f1',
       '--bg-2': '#fefffa',
@@ -273,7 +288,8 @@ export const THEME_PRESETS = {
   // 05/11/2026: la tavolozza «sempre libera»). Fino alla 1.10.15 «Lavagna»
   // i colori li scriveva nel suo CSS, e il tema del menù non contava.
   lavagna: {
-    label: '🖍️ Lavagna',
+    emoji: '🖍️',
+    label: daTradurre('Lavagna'),
     vars: {
       '--bg': '#24332d',
       '--bg-2': '#1d2a25',
@@ -292,7 +308,8 @@ export const THEME_PRESETS = {
   // leggersi sull'avorio. Le forme sono quelle «documento» di Pico: angoli
   // appena smussati, tasti piatti, niente ombre — un libro non ha rilievi.
   meraviglie: {
-    label: '🎩 Meraviglie',
+    emoji: '🎩',
+    label: daTradurre('Meraviglie'),
     forme: 'pico',
     vars: {
       '--bg': '#f3ead6',
@@ -315,8 +332,10 @@ export const DEFAULT_THEME = 'tana-scuro'
 // IL TEMA DI PARTENZA (REQ-UI-033). La Tana parte dal suo; la demo e i
 // locali che genera la regia da Lime, il tema del prodotto: la demo che si
 // mostra a un locale nuovo aveva il rosa e l'oro della Tana (UR-014). Si
-// decide dal cliente della build; senza cliente la build è la Tana.
-export const temaDiPartenza = (cliente = CLIENTE) => (!cliente || cliente === 'tana' ? DEFAULT_THEME : 'lime-scuro')
+// decide dal locale (la build senza CLIENTE è la Tana). Il sito uguale per
+// tutti (REQ-FLOTTA-034) non ha locale finché la configurazione non lo
+// dice: parte da Lime, mai dai colori della Tana.
+export const temaDiPartenza = (cliente = CLIENTE) => (cliente === 'tana' ? DEFAULT_THEME : 'lime-scuro')
 export const TEMA_DI_PARTENZA = temaDiPartenza()
 
 // Un colore #rrggbb nei suoi tre canali, o null se non si legge: l'unico

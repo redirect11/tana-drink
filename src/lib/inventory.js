@@ -15,6 +15,8 @@
 // non sta sullo scaffale. Senza questo, al primo Daiquiri la manodopera
 // sarebbe andata a zero, il menù avrebbe detto «Ingrediente esaurito» e il
 // drink sarebbe sparito dalla carta, per non tornare più.
+import { daTradurre, tr } from './lingua.js'
+
 export const UNITA_GENERICA = 'U'
 export function unitaGenerica(unit) {
   return String(unit || '').toUpperCase() === UNITA_GENERICA
@@ -438,21 +440,21 @@ export function motivoNonMigrabile(item) {
     // scarico frazionato non esistono finché non lo dice una persona.
     const size = Number(item?.package_size) || 0
     if (size > 0 && !contentBase(item)) {
-      return `c'è scritto che un pezzo contiene ${size}, ma non di che misura: va detto se sono cl, grammi o U`
+      return tr("c'è scritto che un pezzo contiene {size}, ma non di che misura: va detto se sono cl, grammi o U", { size })
     }
     return null
   }
   const resa = Number(item?.resa) || 0
   const resaBase = item?.resa_unit ? baseUnit(item.resa_unit) : null
   if (resa > 0 && resaBase && resaBase !== unit) {
-    return `si compra a ${eti(unit)} e si usa in ${eti(resaBase)}: va detto a quanto corrisponde un pezzo`
+    return tr('si compra a {unita} e si usa in {uso}: va detto a quanto corrisponde un pezzo', { unita: eti(unit), uso: eti(resaBase) })
   }
   // Una «U» era già una cosa che si conta — il sacco, la confezione — quindi
   // un pezzo è una U e non serve nessuna confezione dichiarata. Per volumi e
   // pesi invece la confezione È il pezzo: senza, non si sa quanti pezzi
   // siano quei millilitri.
   if (!unitaGenerica(unit) && !(Number(item?.package_size) > 0)) {
-    return `si conta a ${eti(unit)} e non si sa quanto contiene una confezione: va detto a quanto corrisponde un pezzo`
+    return tr('si conta a {unita} e non si sa quanto contiene una confezione: va detto a quanto corrisponde un pezzo', { unita: eti(unit) })
   }
   return null
 }
@@ -499,9 +501,9 @@ export function stockStatus(item) {
 // accanto alla funzione che la calcola, non si finisce con due elenchi di
 // parole per gli stessi tre stati.
 export const ETICHETTA_SCORTA = {
-  ok: 'In scorta',
-  low: 'In esaurimento',
-  empty: 'Esaurito',
+  ok: daTradurre('In scorta'),
+  low: daTradurre('In esaurimento'),
+  empty: daTradurre('Esaurito'),
 }
 
 // ── C'È O NON C'È ────────────────────────────────────────────────────
@@ -562,10 +564,10 @@ export const assortimentoDi = (item) =>
 // nuovo ordine (REQ-MAG-036) — e due elenchi di parole per gli stessi
 // quattro stati diventano due vocabolari appena qualcuno ne cambia uno.
 export const ETICHETTA_ASSORTIMENTO = {
-  assortimento: 'In assortimento',
-  linea: 'In linea: non deve mancare',
-  premium: 'Premium',
-  out: 'Fuori assortimento: non si ricompra',
+  assortimento: daTradurre('In assortimento'),
+  linea: daTradurre('In linea: non deve mancare'),
+  premium: daTradurre('Premium'),
+  out: daTradurre('Fuori assortimento: non si ricompra'),
 }
 
 // `fornitoriPerArticolo` (item_id -> [supplier_id]) arriva dal LISTINO
@@ -1022,9 +1024,9 @@ export function prodottoDaRigaOrdine(riga) {
 // attribuita» (REQ-MAG-022).
 export function mancaNellaScheda(item) {
   const manca = []
-  if (!item?.category_id) manca.push('la categoria')
-  if (!(Number(item?.package_size) > 0)) manca.push('quanto contiene un pezzo')
-  if (!(Number(item?.low_threshold) > 0)) manca.push('la soglia di riordino')
+  if (!item?.category_id) manca.push(daTradurre('la categoria'))
+  if (!(Number(item?.package_size) > 0)) manca.push(daTradurre('quanto contiene un pezzo'))
+  if (!(Number(item?.low_threshold) > 0)) manca.push(daTradurre('la soglia di riordino'))
   return manca
 }
 

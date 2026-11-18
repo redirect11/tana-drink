@@ -26,6 +26,7 @@
 import { livelloDi } from './listini.js'
 import { prezzoDiverso, righeFattura } from './fatture.js'
 import { statoOrdineDi } from './statiOrdine.js'
+import { daTradurre, tr } from './lingua.js'
 
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0)
 
@@ -188,13 +189,13 @@ function problemiDellaRiga(r, fatturaConRighe) {
 }
 
 export const ETICHETTA_PROBLEMA = {
-  meno_merce: 'arrivato meno del richiesto',
-  piu_merce: 'arrivato più del richiesto',
-  non_ordinato: 'non era nell’ordine',
-  non_fatturato: 'non è sul documento',
-  solo_in_fattura: 'sul documento ma non arrivato',
-  quantita_diversa: 'sul documento una quantità diversa',
-  prezzo_diverso: 'prezzo diverso da quello dell’ordine',
+  meno_merce: daTradurre('arrivato meno del richiesto'),
+  piu_merce: daTradurre('arrivato più del richiesto'),
+  non_ordinato: daTradurre('non era nell’ordine'),
+  non_fatturato: daTradurre('non è sul documento'),
+  solo_in_fattura: daTradurre('sul documento ma non arrivato'),
+  quantita_diversa: daTradurre('sul documento una quantità diversa'),
+  prezzo_diverso: daTradurre('prezzo diverso da quello dell’ordine'),
 }
 
 // I totali dei tre elenchi, al netto. Servono anche quando la fattura non ha
@@ -258,10 +259,10 @@ export function riconciliato(order, fattura) {
 // quando il gesto è ammesso. Come `aggancioAmmesso`: la stessa risposta
 // serve a spegnere il tasto e a spiegarlo, così le due cose non divergono.
 export function percheNonSiChiude(order, fattura) {
-  if (statoOrdineDi(order) !== 'consegnato') return 'La merce non è ancora arrivata tutta.'
-  if (!fattura) return 'Manca il documento: senza, non c’è niente da riconciliare.'
+  if (statoOrdineDi(order) !== 'consegnato') return tr('La merce non è ancora arrivata tutta.')
+  if (!fattura) return tr('Manca il documento: senza, non c’è niente da riconciliare.')
   if (!riconciliato(order, fattura))
-    return 'Ordinato, ricevuto e fatturato non tornano ancora.'
+    return tr('Ordinato, ricevuto e fatturato non tornano ancora.')
   return null
 }
 

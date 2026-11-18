@@ -1,4 +1,5 @@
 import { FORMATI_PREZZO_MENU, formatoPrezziMenu } from '../lib/prezzoMenu.js'
+import { tr, trSegnato } from '../lib/lingua.js'
 
 // LA SCELTA DEL FORMATO DEI PREZZI DEL MENÙ (REQ-MENU-038), in Impostazioni →
 // Menù clienti. Tre tasti, ognuno col suo esempio: chi sceglie vede subito
@@ -9,11 +10,12 @@ export default function FormatoPrezziMenu({ settings, onSave }) {
   return (
     <div className="formato-prezzi">
       <p className="formato-prezzi-titolo" id="formato-prezzi-titolo">
-        Prezzi nel menù
+        {tr('Prezzi nel menù')}
       </p>
       <p className="muted small" style={{ margin: '0 0 8px' }}>
-        Come si leggono i prezzi nel menù dei clienti. Carrello, ordine, conti e scontrini riportano sempre l’importo in
-        euro.
+        {tr(
+          'Come si leggono i prezzi nel menù dei clienti. Carrello, ordine, conti e scontrini riportano sempre l’importo in euro.'
+        )}
       </p>
       <div className="mode-choice" role="group" aria-labelledby="formato-prezzi-titolo">
         {FORMATI_PREZZO_MENU.map((f) => (
@@ -24,7 +26,7 @@ export default function FormatoPrezziMenu({ settings, onSave }) {
             aria-pressed={scelto === f.id}
             onClick={() => scelto !== f.id && onSave({ formato_prezzi_menu: f.id })}
           >
-            {f.label}
+            {trSegnato(f.label)}
             <span className="formato-prezzi-esempio">{f.esempio}</span>
           </button>
         ))}

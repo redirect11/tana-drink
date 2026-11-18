@@ -41,6 +41,8 @@ vi.mock('../../src/lib/customerAuth.js', () => ({
   logoutCustomer: vi.fn(),
 }))
 vi.mock('../../src/lib/api.js', () => ({
+  // La lingua del profilo (REQ-UI-039): l'account non ne ha una sua.
+  leggiLinguaDelProfilo: vi.fn(() => Promise.resolve(null)),
   presentaAllaRegia: vi.fn(() => Promise.resolve({ ok: false, status: 0, errore: null })),
   DEFAULT_SETTINGS: {},
   settingsIniziali: () => ({}),

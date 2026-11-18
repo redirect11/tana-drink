@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import GrigliaMese from './GrigliaMese.jsx'
 import Icona from './Icona.jsx'
+import { tr } from '../lib/lingua.js'
 
 // ── LA RICERCA PER DATA (REQ-STAT-007) ─────────────────────────────────
 //
@@ -13,7 +14,7 @@ import Icona from './Icona.jsx'
 //   scelto:   la giornata scelta adesso (o '')
 //   onScegli(giornata)
 //   etichetta: quella della casella (da chi usa il componente)
-export default function CalendarioServizio({ servizio, scelto, oggi, onScegli, etichetta = 'Data', id = 'cerca-serata-giorno', min, max }) {
+export default function CalendarioServizio({ servizio, scelto, oggi, onScegli, etichetta, id = 'cerca-serata-giorno', min, max }) {
   const [aperto, setAperto] = useState(false)
   return (
     <div className="calendario-servizio">
@@ -24,10 +25,10 @@ export default function CalendarioServizio({ servizio, scelto, oggi, onScegli, e
           aria-expanded={aperto}
           onClick={() => setAperto((v) => !v)}
         >
-          <Icona nome="calendario" gruppo="tasti" /> Calendario
+          <Icona nome="calendario" gruppo="tasti" /> {tr('Calendario')}
         </button>
         <label className="muted small" htmlFor={id}>
-          {etichetta}
+          {etichetta ?? tr('Data')}
         </label>
         <input
           id={id}

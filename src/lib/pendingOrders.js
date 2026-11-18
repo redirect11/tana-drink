@@ -12,6 +12,7 @@ import { statoComandaNuova } from './comande.js'
 import { impostazioniRicordate } from './impostazioniLocali.js'
 import { rememberOrderId } from './cart.js'
 import { toastSync, toastSuccess, toastError } from './toast.js'
+import { tr } from './lingua.js'
 
 let state = { pending: [], banners: [] }
 const subs = new Set()
@@ -89,7 +90,9 @@ export function submitPosOrder({
   }
   setPending([...state.pending, { tempId, state: 'sending', realId: null, order }])
   // Sync poco invasiva: spinner in basso finché l'ordine non è sul server.
-  const toastId = toastSync(`Sincronizzo ordine${customer_name ? ` "${customer_name}"` : ''}…`)
+  const toastId = toastSync(
+    customer_name ? tr('Sincronizzo ordine "{nome}"…', { nome: customer_name }) : tr('Sincronizzo ordine…')
+  )
 
   ;(async () => {
     let created
@@ -110,7 +113,7 @@ export function submitPosOrder({
       })
     } catch (e) {
       patch(tempId, { state: 'error', error: e.message })
-      toastError(`Ordine non sincronizzato: ${e.message}`, { id: toastId })
+      toastError(tr('Ordine non sincronizzato: {errore}', { errore: e.message }), { id: toastId })
       return
     }
     // Ricorda l'ordine come "del cliente" SOLO se non è inserito dallo staff/
@@ -124,15 +127,15 @@ export function submitPosOrder({
     // card, mai buchi). Il timer è solo la rete di sicurezza se nessuna
     // griglia è montata a fare lo scambio.
     patch(tempId, { state: 'done', realId: created.id, order: { ...order, daily_number: created.daily_number } })
-    toastSuccess(`Ordine #${created.daily_number ?? ''} creato`, { id: toastId })
+    toastSuccess(tr('Ordine #{n} creato', { n: created.daily_number ?? '' }), { id: toastId })
     setTimeout(() => remove(tempId), 15000)
     try {
       // La stampa della comanda è un'azione a parte (esplicita): qui solo
       // se richiesta al momento dell'invio.
       if (printNow && stampaComandeNelPiano()) await printComanda(created, created.comande?.[0] ?? null)
     } catch (e) {
-      addBanner(`Comanda #${created.daily_number ?? ''} non stampata: ${e.message}`)
-      toastError(`Comanda non stampata: ${e.message}`)
+      addBanner(tr('Comanda #{n} non stampata: {errore}', { n: created.daily_number ?? '', errore: e.message }))
+      toastError(tr('Comanda non stampata: {errore}', { errore: e.message }))
     }
   })()
 

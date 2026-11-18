@@ -4,6 +4,7 @@ import { stiliDisponibili, stileMenu, patchDisinstalla, vesteDelloStile, stiliRi
 import { urlProvaMenu } from '../lib/marketplaceTemi.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import Icona from './Icona.jsx'
+import { tr, daTradurre, trSegnato } from '../lib/lingua.js'
 import { TemaIcone } from '../lib/temaIcone.js'
 import { temaIconeDi, GRUPPI_ICONE } from '../lib/icone.js'
 import { CHIAVE_AIUTI_CAMPI, aiutiCampiAccesi } from '../lib/aiutiCampi.js'
@@ -33,10 +34,12 @@ import {
 export default function ThemeSettings({ settings, onSave }) {
   return (
     <div className="card settings-section">
-      <h3><Icona nome="temi" /> Aspetto</h3>
+      <h3>
+        <Icona nome="temi" /> {tr('Aspetto')}
+      </h3>
       <ThemeEditor
-        title="Gestionale"
-        hint="I colori di chi lavora: coda, cassa, impostazioni, profilo."
+        title={tr('Gestionale')}
+        hint={tr('I colori di chi lavora: coda, cassa, impostazioni, profilo.')}
         value={settings.theme_staff}
         // Anteprima immediata: il gestionale è la vista in cui ci troviamo.
         livePreview
@@ -70,14 +73,15 @@ function AiutiDelleSchede({ settings, onSave }) {
   )
   return (
     <div style={{ marginTop: 18 }}>
-      <h4 style={{ margin: '0 0 4px' }}>Aiuti sotto i campi</h4>
+      <h4 style={{ margin: '0 0 4px' }}>{tr('Aiuti sotto i campi')}</h4>
       <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-        Le righe di spiegazione sotto i campi delle schede: drink, prodotti di magazzino, listini, documenti
-        dei fornitori. Valgono per tutti i terminali del locale.
+        {tr(
+          'Le righe di spiegazione sotto i campi delle schede: drink, prodotti di magazzino, listini, documenti dei fornitori. Valgono per tutti i terminali del locale.'
+        )}
       </p>
-      <div className="mode-choice" role="group" aria-label="Aiuti sotto i campi">
-        {opzione(false, 'Nascosti')}
-        {opzione(true, 'Visibili')}
+      <div className="mode-choice" role="group" aria-label={tr('Aiuti sotto i campi')}>
+        {opzione(false, tr('Nascosti'))}
+        {opzione(true, tr('Visibili'))}
       </div>
     </div>
   )
@@ -98,24 +102,25 @@ const ICONE_DI_PROVA = {
   segnali: ['avviso', 'fatto', 'attesa', 'licenza', 'cerca'],
 }
 const DESCRIZIONE_GRUPPO = {
-  navigazione: 'Menu laterale, sezioni e sottosezioni, barra in alto, moduli.',
-  tasti: 'Tasti, titoli delle sezioni, metodi di pagamento, stati dei conti.',
-  segnali: 'Avvisi e conferme nei testi, messaggi, campi di ricerca.',
+  navigazione: daTradurre('Menu laterale, sezioni e sottosezioni, barra in alto, moduli.'),
+  tasti: daTradurre('Tasti, titoli delle sezioni, metodi di pagamento, stati dei conti.'),
+  segnali: daTradurre('Avvisi e conferme nei testi, messaggi, campi di ricerca.'),
 }
 
 function IconeDelGestionale({ settings, onSave }) {
   return (
     <div style={{ marginTop: 18 }}>
-      <h4 style={{ margin: '0 0 4px' }}>Le icone del gestionale</h4>
+      <h4 style={{ margin: '0 0 4px' }}>{tr('Le icone del gestionale')}</h4>
       <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-        Il disegno delle icone del gestionale, gruppo per gruppo. Le pagine dei clienti seguono lo stile del
-        loro menù. I segnali di stato restano colorati in entrambi i casi.
+        {tr(
+          'Il disegno delle icone del gestionale, gruppo per gruppo. Le pagine dei clienti seguono lo stile del loro menù. I segnali di stato restano colorati in entrambi i casi.'
+        )}
       </p>
       {Object.entries(GRUPPI_ICONE).map(([gruppo, g]) => (
         <SceltaIcone
           key={gruppo}
           gruppo={gruppo}
-          label={g.label}
+          label={trSegnato(g.label)}
           tema={temaIconeDi(settings, gruppo)}
           scegli={(id) => onSave({ [g.chiave]: id })}
         />
@@ -147,7 +152,7 @@ function SceltaIcone({ gruppo, label, tema, scegli }) {
     <div style={{ marginTop: 10 }}>
       <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{label}</div>
       <div className="muted" style={{ fontSize: '0.8rem', margin: '0 0 6px' }}>
-        {DESCRIZIONE_GRUPPO[gruppo]}
+        {trSegnato(DESCRIZIONE_GRUPPO[gruppo])}
       </div>
       <div className="mode-choice">
         {opzione('silhouette', 'Silhouette')}
@@ -173,28 +178,24 @@ function CardDellaCoda({ settings, onSave }) {
   const colore = settings.bordo_colore_conto === true
   return (
     <div style={{ marginTop: 18 }}>
-      <h4 style={{ margin: '0 0 4px' }}>Le card della coda</h4>
+      <h4 style={{ margin: '0 0 4px' }}>{tr('Le card della coda')}</h4>
       <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-        La <strong>striscia colorata</strong> a sinistra di ogni card, nella coda e
-        sulla lavagna del banco. Può dire <strong>com&apos;è messo il conto</strong> —
-        da incassare, acconto, pagato, annullato — oppure portare il{' '}
-        <strong>colore del conto</strong>, quello scelto dal «⋯ Azioni» della card o
-        assegnato da solo ai conti nuovi. Il colore sul fondo della card resta in
-        ogni caso. Un conto senza colore, e un conto annullato, tengono sempre la
-        striscia dello stato.
+        {tr(
+          "La striscia colorata a sinistra di ogni card, nella coda e sulla lavagna del banco. Può dire com'è messo il conto — da incassare, acconto, pagato, annullato — oppure portare il colore del conto, quello scelto dal «⋯ Azioni» della card o assegnato da solo ai conti nuovi. Il colore sul fondo della card resta in ogni caso. Un conto senza colore, e un conto annullato, tengono sempre la striscia dello stato."
+        )}
       </p>
       <div className="mode-choice">
         <button
           className={`mode-option${colore ? '' : ' active'}`}
           onClick={() => onSave({ bordo_colore_conto: false })}
         >
-          <Icona nome="carta" gruppo="tasti" />{' '}Com&apos;è messo il conto
+          <Icona nome="carta" gruppo="tasti" /> {tr("Com'è messo il conto")}
         </button>
         <button
           className={`mode-option${colore ? ' active' : ''}`}
           onClick={() => onSave({ bordo_colore_conto: true })}
         >
-          <Icona nome="temi" gruppo="tasti" /> Il colore del conto
+          <Icona nome="temi" gruppo="tasti" /> {tr('Il colore del conto')}
         </button>
       </div>
     </div>
@@ -209,8 +210,8 @@ export function TemaMenuClienti({ settings, onSave }) {
     <>
       <StileMenuClienti settings={settings} onSave={onSave} />
       <ThemeEditor
-      title="Colori del menù"
-      hint="Come lo vedono i clienti sul telefono. Per provarlo: menu ▸ Vista cliente."
+        title={tr('Colori del menù')}
+        hint={tr('Come lo vedono i clienti sul telefono. Per provarlo: menu ▸ Vista cliente.')}
       value={settings.theme_client}
       onSave={(t) => onSave({ theme_client: t })}
       />
@@ -241,10 +242,11 @@ export function StileMenuClienti({ settings, onSave }) {
   const stili = stiliDisponibili(settings)
   return (
     <div style={{ margin: '14px 0 18px' }} role="group" aria-labelledby="stile-menu-titolo">
-      <h4 id="stile-menu-titolo" style={{ margin: '0 0 4px' }}>Stile del menù</h4>
+      <h4 id="stile-menu-titolo" style={{ margin: '0 0 4px' }}>{tr('Stile del menù')}</h4>
       <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-        Impaginazione, caratteri e movimento del menù e degli Special per i clienti. I colori sono quelli
-        scelti sotto. Il personale vede sempre lo stile classico.
+        {tr(
+          'Impaginazione, caratteri e movimento del menù e degli Special per i clienti. I colori sono quelli scelti sotto. Il personale vede sempre lo stile classico.'
+        )}
       </p>
       <div className="mode-choice stili-menu">
         {stili.map((s) => (
@@ -256,18 +258,18 @@ export function StileMenuClienti({ settings, onSave }) {
               onClick={() => onSave({ stile_menu: s.id })}
             >
               <AssaggioStile id={s.id} settings={settings} />
-              <strong>{s.nome}</strong>
+              <strong>{trSegnato(s.nome)}</strong>
               <span className="muted small" style={{ display: 'block', fontWeight: 400 }}>
-                {s.desc}
+                {trSegnato(s.desc)}
               </span>
             </button>
             <div className="stile-azioni">
               <a className="link-inline small" href={urlProvaMenu('stile', s.id)}>
-                Prova sul menù
+                {tr('Prova sul menù')}
               </a>
               {(s.gratis || stiliRicettaInstallati(settings).some((r) => r.id === s.id)) && (
                 <button type="button" className="link-inline small" onClick={() => onSave(patchDisinstalla(settings, s.id))}>
-                  Disinstalla
+                  {tr('Disinstalla')}
                 </button>
               )}
             </div>
@@ -278,9 +280,9 @@ export function StileMenuClienti({ settings, onSave }) {
       {/* Il catalogo degli stili (e dei temi) sta nella pagina del
           marketplace (REQ-MENU-023): qui si sceglie fra quelli installati. */}
       <p className="muted small" style={{ margin: '10px 0 0' }}>
-        Altri stili e temi, gratis, nel{' '}
+        {tr('Altri stili e temi, gratis, nel')}{' '}
         <Link className="link-inline" to="/bar?tab=marketplace">
-          marketplace
+          {tr('link|marketplace')}
         </Link>
         .
       </p>
@@ -336,7 +338,7 @@ function ThemeEditor({ title, hint, value, onSave, livePreview = false }) {
     <div style={{ marginTop: 10 }}>
       <p className="muted" style={{ margin: '0 0 6px', fontSize: '0.9rem' }}>
         <strong>{title}</strong>
-        {hasCustom && ' · personalizzato'}
+        {hasCustom && ` · ${tr('personalizzato')}`}
       </p>
       {hint && (
         <p className="muted" style={{ margin: '0 0 6px', fontSize: '0.82rem' }}>
@@ -347,21 +349,21 @@ function ThemeEditor({ title, hint, value, onSave, livePreview = false }) {
       {/* A TENDINA, non a chip: con otto preset (e cresceranno) la fila
           di bottoni si mangiava la pagina due volte, gestionale e cliente. */}
       <select
-        aria-label={`Tavolozza: ${title}`}
+        aria-label={tr('Tavolozza: {titolo}', { titolo: title })}
         value={current.preset || TEMA_DI_PARTENZA}
         onChange={(e) => pickPreset(e.target.value)}
         style={{ width: '100%', margin: '2px 0 8px', padding: '10px 12px', fontSize: '1rem' }}
       >
         {Object.entries(THEME_PRESETS).map(([id, p]) => (
           <option key={id} value={id}>
-            {p.label}
+            {p.emoji} {trSegnato(p.label)}
           </option>
         ))}
       </select>
 
       {!customizing ? (
         <button className="btn ghost small" onClick={startCustomize}>
-          <Icona nome="regola" gruppo="tasti" /> Personalizza colori
+          <Icona nome="regola" gruppo="tasti" /> {tr('Personalizza colori')}
         </button>
       ) : (
         <div style={{ marginTop: 8 }}>
@@ -371,7 +373,7 @@ function ThemeEditor({ title, hint, value, onSave, livePreview = false }) {
               key={f.key}
               style={{ alignItems: 'center', marginTop: 6 }}
             >
-              <span style={{ fontSize: '0.9rem' }}>{f.label}</span>
+              <span style={{ fontSize: '0.9rem' }}>{trSegnato(f.label)}</span>
               <input
                 type="color"
                 value={resolved[f.key]}
@@ -382,10 +384,10 @@ function ThemeEditor({ title, hint, value, onSave, livePreview = false }) {
           ))}
           <div className="grid-2" style={{ marginTop: 10 }}>
             <button className="btn ghost small" onClick={resetCustom}>
-              ↩︎ Ripristina preset
+              ↩︎ {tr('Ripristina preset')}
             </button>
             <button className="btn small" onClick={saveCustom}>
-              <Icona nome="salva" gruppo="tasti" /> Salva tema
+              <Icona nome="salva" gruppo="tasti" /> {tr('Salva tema')}
             </button>
           </div>
         </div>

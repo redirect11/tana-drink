@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { pianoSwitch } from '../lib/switchProdotto.js'
 import { switchProdotto } from '../lib/api.js'
+import { tr } from '../lib/lingua.js'
 
 // LO SWITCH PRODOTTO (REQ-MENU-043), in cima a Modifica menù. Flavio,
 // 14/11/2026: il fornitore gli aveva cambiato il Carpano Dry con un Noilly
@@ -40,13 +41,18 @@ export default function SwitchProdotto({ drinks = [], inventory = [], voci = [],
       const fatto = await switchProdotto(piano)
       setEsito({
         ok: true,
-        testo: `${uscita.name} sostituito da ${ingresso.name}: ${fatto.ricette} ricette, ${fatto.voci} voci del menù dei clienti.`,
+        testo: tr('{uscita} sostituito da {ingresso}: {ricette} ricette, {voci} voci del menù dei clienti.', {
+          uscita: uscita.name,
+          ingresso: ingresso.name,
+          ricette: fatto.ricette,
+          voci: fatto.voci,
+        }),
       })
       setUscitaId('')
       setIngressoId('')
       onFatto?.()
     } catch (e) {
-      setEsito({ ok: false, testo: `Switch non riuscito: ${e.message}` })
+      setEsito({ ok: false, testo: tr('Switch non riuscito: {errore}', { errore: e.message }) })
     } finally {
       setBusy(false)
     }
@@ -55,29 +61,29 @@ export default function SwitchProdotto({ drinks = [], inventory = [], voci = [],
   if (!aperto) {
     return (
       <button type="button" className="btn ghost block" style={{ marginBottom: 8 }} onClick={() => setAperto(true)}>
-        ⇄ Switch prodotto
+        ⇄ {tr('Switch prodotto')}
       </button>
     )
   }
 
   return (
-    <div className="card" role="group" aria-label="Switch prodotto" style={{ marginBottom: 8 }}>
+    <div className="card" role="group" aria-label={tr('Switch prodotto')} style={{ marginBottom: 8 }}>
       <div className="row between" style={{ alignItems: 'center' }}>
-        <strong>⇄ Switch prodotto</strong>
-        <button type="button" className="btn ghost small" onClick={() => setAperto(false)} aria-label="Chiudi lo switch">
+        <strong>⇄ {tr('Switch prodotto')}</strong>
+        <button type="button" className="btn ghost small" onClick={() => setAperto(false)} aria-label={tr('Chiudi lo switch')}>
           ✕
         </button>
       </div>
       <p className="muted small" style={{ margin: '4px 0 8px' }}>
-        Sostituisce un prodotto di magazzino con un altro in tutte le ricette che lo contengono, a parità di
-        quantità, e nelle etichette del menù dei clienti. Le ricette che contengono solo il prodotto in ingresso
-        restano invariate.
+        {tr(
+          'Sostituisce un prodotto di magazzino con un altro in tutte le ricette che lo contengono, a parità di quantità, e nelle etichette del menù dei clienti. Le ricette che contengono solo il prodotto in ingresso restano invariate.'
+        )}
       </p>
       <div className="grid-2">
         <div>
-          <label htmlFor="switch-uscita">Prodotto in uscita</label>
+          <label htmlFor="switch-uscita">{tr('Prodotto in uscita')}</label>
           <select id="switch-uscita" value={uscitaId} onChange={(e) => setUscitaId(e.target.value)}>
-            <option value="">— Scegli —</option>
+            <option value="">{tr('— Scegli —')}</option>
             {prodotti.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
@@ -87,9 +93,9 @@ export default function SwitchProdotto({ drinks = [], inventory = [], voci = [],
           </select>
         </div>
         <div>
-          <label htmlFor="switch-ingresso">Prodotto in ingresso</label>
+          <label htmlFor="switch-ingresso">{tr('Prodotto in ingresso')}</label>
           <select id="switch-ingresso" value={ingressoId} onChange={(e) => setIngressoId(e.target.value)}>
-            <option value="">— Scegli —</option>
+            <option value="">{tr('— Scegli —')}</option>
             {prodotti
               .filter((p) => p.id !== uscitaId)
               .map((p) => (
@@ -104,29 +110,37 @@ export default function SwitchProdotto({ drinks = [], inventory = [], voci = [],
       {piano && (
         <div className="small" style={{ marginTop: 10 }} role="status">
           {!daFare ? (
-            <p style={{ margin: 0 }}>{uscita.name} non è in nessuna ricetta né in nessuna etichetta del menù dei clienti.</p>
+            <p style={{ margin: 0 }}>
+              {tr('{nome} non è in nessuna ricetta né in nessuna etichetta del menù dei clienti.', { nome: uscita.name })}
+            </p>
           ) : (
             <>
               <p style={{ margin: 0 }}>
-                <strong>{piano.ricette.length}</strong> ricette e <strong>{piano.voci.length}</strong> voci del menù
-                dei clienti passano da {uscita.name} a {ingresso.name}.
+                {tr('{ricette} ricette e {voci} voci del menù dei clienti passano da {uscita} a {ingresso}.', {
+                  ricette: piano.ricette.length,
+                  voci: piano.voci.length,
+                  uscita: uscita.name,
+                  ingresso: ingresso.name,
+                })}
               </p>
               {piano.ricette.length > 0 && (
-                <ul aria-label="Ricette che cambiano" style={{ margin: '6px 0 0', paddingLeft: 18 }}>
+                <ul aria-label={tr('Ricette che cambiano')} style={{ margin: '6px 0 0', paddingLeft: 18 }}>
                   {piano.ricette.map((r) => (
                     <li key={r.id}>
                       {r.nome}
                       {r.conIngresso && (
-                        <span className="muted"> · contiene già {ingresso.name}: avrà due righe di {ingresso.name}</span>
+                        <span className="muted"> · {tr('contiene già {nome}: avrà due righe di {nome}', { nome: ingresso.name })}</span>
                       )}
                     </li>
                   ))}
                 </ul>
               )}
               {piano.voci.length > 0 && (
-                <ul aria-label="Voci del menù dei clienti che cambiano" style={{ margin: '6px 0 0', paddingLeft: 18 }}>
+                <ul aria-label={tr('Voci del menù dei clienti che cambiano')} style={{ margin: '6px 0 0', paddingLeft: 18 }}>
                   {piano.voci.map((v) => (
-                    <li key={v.id}>{v.nome || '(voce senza nome)'} · etichetta</li>
+                    <li key={v.id}>
+                      {v.nome || tr('(voce senza nome)')} · {tr('etichetta')}
+                    </li>
                   ))}
                 </ul>
               )}
@@ -134,10 +148,15 @@ export default function SwitchProdotto({ drinks = [], inventory = [], voci = [],
           )}
           {bloccato && (
             <div className="banner" style={{ marginTop: 8 }}>
-              {ingresso.name} non si dosa in{' '}
-              {[...new Set(piano.incompatibili.flatMap((i) => i.unita))].join(', ')} come {uscita.name} in{' '}
-              {piano.incompatibili.map((i) => i.nome).join(', ')}: la quantità perderebbe significato. Lo switch
-              richiede due prodotti misurati allo stesso modo.
+              {tr(
+                '{ingresso} non si dosa in {unita} come {uscita} in {ricette}: la quantità perderebbe significato. Lo switch richiede due prodotti misurati allo stesso modo.',
+                {
+                  ingresso: ingresso.name,
+                  unita: [...new Set(piano.incompatibili.flatMap((i) => i.unita))].join(', '),
+                  uscita: uscita.name,
+                  ricette: piano.incompatibili.map((i) => i.nome).join(', '),
+                }
+              )}
             </div>
           )}
         </div>
@@ -151,10 +170,16 @@ export default function SwitchProdotto({ drinks = [], inventory = [], voci = [],
 
       <div className="row" style={{ gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
         <button type="button" className="btn small" disabled={!daFare || bloccato || busy} onClick={esegui}>
-          {busy ? 'Sostituzione…' : piano?.ricette.length ? `Sostituisci in ${piano.ricette.length} ricette` : 'Sostituisci'}
+          {busy
+            ? tr('Sostituzione…')
+            : piano?.ricette.length === 1
+              ? tr('Sostituisci in 1 ricetta')
+              : piano?.ricette.length
+                ? tr('Sostituisci in {n} ricette', { n: piano.ricette.length })
+                : tr('Sostituisci')}
         </button>
         <button type="button" className="btn ghost small" disabled={busy} onClick={() => setAperto(false)}>
-          Annulla
+          {tr('Annulla')}
         </button>
       </div>
     </div>

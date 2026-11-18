@@ -2,6 +2,8 @@
 // Logica pura: calcolo ore di un turno (anche a cavallo di mezzanotte,
 // siamo un bar) e totali mensili per persona.
 
+import { tr } from './lingua.js'
+
 // Ore lavorate: "HH:MM" → "HH:MM", meno la pausa. Se l'uscita è prima
 // dell'entrata il turno passa la mezzanotte (+24h). Ritorna ore decimali
 // arrotondate ai centesimi, oppure null se gli orari non sono validi.
@@ -198,8 +200,8 @@ export function normalizeEntries(hoursRows, shiftRows) {
       open: false,
       label:
         e.start && e.end
-          ? `${e.start}–${e.end}${e.break_minutes > 0 ? ` (pausa ${e.break_minutes}′)` : ''}`
-          : 'ore',
+          ? `${e.start}–${e.end}${e.break_minutes > 0 ? ` ${tr('(pausa {n}′)', { n: e.break_minutes })}` : ''}`
+          : tr('ore'),
       note: e.note || '',
     })
   }
@@ -211,8 +213,10 @@ export function normalizeEntries(hoursRows, shiftRows) {
       open: !!s.open,
       hours: Number(s.hours) || 0,
       label: s.open
-        ? `${hhmm(s.clock_in)} · in corso`
+        ? `${hhmm(s.clock_in)} · ${tr('in corso')}`
         : `${hhmm(s.clock_in)}–${hhmm(s.clock_out)}`,
+      // 'timbratura' è un MARCATORE, non un testo: StaffHoursTab lo
+      // riconosce per non mostrarlo. Non si traduce.
       note: s.note || 'timbratura',
     })
   }

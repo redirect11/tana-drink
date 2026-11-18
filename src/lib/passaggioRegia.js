@@ -23,8 +23,9 @@
 // chiama, così la prova non ha bisogno di Firebase.
 
 import { urlFunzioneRegia, erroreDellaRegia, postaAllaRegia } from './funzioniRegia.js'
-import { PROGETTI_REGIA } from './aggiornamenti.js'
+import { PROGETTI_REGIA } from '../porte/configurazioneLocale.mjs'
 import { urlRegia } from './limiti.js'
+import { regiaInUso } from '../porte/configurazione.js'
 
 const CHIAVE_FRAMMENTO = 'accesso-regia'
 
@@ -128,7 +129,7 @@ export async function entraDallaRegia(codice, { accedi, prendi = globalThis.fetc
 // quella della build, ma solo se è uno dei progetti della regia (come le
 // Functions, funzioniRegia.js). Della licenza conta l'indirizzo del sito, non
 // il percorso: la pagina è sempre `/dashboard`.
-export function indirizzoAreaClienti(settings, progetto = import.meta.env?.VITE_REGIA_PROGETTO) {
+export function indirizzoAreaClienti(settings, progetto = regiaInUso()) {
   try {
     const daLicenza = new URL(urlRegia(settings))
     if (daLicenza.protocol === 'https:') return new URL('/dashboard', daLicenza.origin).href

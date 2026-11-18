@@ -7,23 +7,35 @@ import { MESI_CORTI } from '../lib/periodo.js'
 import { etichettaTipo, riepilogoMovimenti } from '../lib/movimentiProdotto.js'
 import GruppoChip from './GruppoChip.jsx'
 import Icona from './Icona.jsx'
+import { tr, daTradurre, trSegnato, formatoAttivo, conEtichetteTradotte } from '../lib/lingua.js'
 
 // LA MOVIMENTAZIONE DI UN PRODOTTO (REQ-MAG-048), dalla sua scheda in
 // Magazzino: i totali per tipo nel periodo, il venduto mese per mese (app e
 // Tiller) e l'elenco dei movimenti. Il conto sta in lib/movimentiProdotto.js.
 
 const PERIODI = [
-  { id: 30, label: '30 giorni' },
-  { id: 90, label: '90 giorni' },
-  { id: 365, label: '1 anno' },
-  { id: null, label: 'Tutto' },
+  { id: 30, label: daTradurre('30 giorni') },
+  { id: 90, label: daTradurre('90 giorni') },
+  { id: 365, label: daTradurre('1 anno') },
+  { id: null, label: daTradurre('periodo|Tutto') },
 ]
-const nomeMese = (k) => `${MESI_CORTI[Number(k.slice(5)) - 1]} ${k.slice(0, 4)}`
-// Un formatter solo, fatto una volta: toLocaleString con le opzioni ne
+// I mesi corti di lib/periodo.js sono segnati: «nov 2026», «Nov 2026».
+const nomeMese = (k) => `${trSegnato(MESI_CORTI[Number(k.slice(5)) - 1])} ${k.slice(0, 4)}`
+// Un formatter per lingua, fatto una volta: toLocaleString con le opzioni ne
 // costruisce uno nuovo a ogni riga, e un ingrediente di un anno ne ha
 // migliaia (BUG-117).
-const DATA_ORA = new Intl.DateTimeFormat('it-IT', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
-const quando = (iso) => (iso ? DATA_ORA.format(new Date(iso)) : '')
+const FORMATTER = new Map()
+const formatter = (chiave, crea) => {
+  if (!FORMATTER.has(chiave)) FORMATTER.set(chiave, crea())
+  return FORMATTER.get(chiave)
+}
+const quando = (iso) =>
+  iso
+    ? formatter(
+        `data-${formatoAttivo()}`,
+        () => new Intl.DateTimeFormat(formatoAttivo(), { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
+      ).format(new Date(iso))
+    : ''
 
 export default function MovimentiProdotto({ item, onClose }) {
   const [periodo, setPeriodo] = useState(90)
@@ -54,34 +66,34 @@ export default function MovimentiProdotto({ item, onClose }) {
       <div
         className="confirm-box larga"
         role="dialog"
-        aria-label={`Movimenti di ${item.name}`}
+        aria-label={tr('Movimenti di {nome}', { nome: item.name })}
         style={{ '--larga': '720px' }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="row between" style={{ alignItems: 'center' }}>
           <h3 style={{ margin: 0 }}><Icona nome="movimenti" gruppo="tasti" /> {item.name}</h3>
-          <button type="button" className="btn ghost small" aria-label="Chiudi" onClick={onClose}>
+          <button type="button" className="btn ghost small" aria-label={tr('Chiudi')} onClick={onClose}>
             ✕
           </button>
         </div>
         <GruppoChip
-          etichetta="Periodo"
-          opzioni={PERIODI}
+          etichetta={tr('Periodo')}
+          opzioni={conEtichetteTradotte(PERIODI)}
           valore={periodo}
           scegli={setPeriodo}
           style={{ margin: '10px 0' }}
         />
 
-        {errore && <div className="banner">Errore: {errore}</div>}
-        {!r && !errore && <div className="empty">Carico i movimenti…</div>}
+        {errore && <div className="banner">{tr('Errore: {errore}', { errore })}</div>}
+        {!r && !errore && <div className="empty">{tr('Carico i movimenti…')}</div>}
 
         {r && (
           <>
             <div className="summary-rows">
-              {r.tipi.length === 0 && <p className="muted small">Nessun movimento nel periodo.</p>}
+              {r.tipi.length === 0 && <p className="muted small">{tr('Nessun movimento nel periodo.')}</p>}
               {r.tipi.map((t) => (
                 <div className="summary-row" key={t.id}>
-                  <span className="muted">{t.label}</span>
+                  <span className="muted">{trSegnato(t.label)}</span>
                   <strong>{q(t.q)}</strong>
                 </div>
               ))}
@@ -89,12 +101,12 @@ export default function MovimentiProdotto({ item, onClose }) {
 
             {r.mesi.length > 0 && (
               <>
-                <h4 style={{ margin: '14px 0 6px' }}>Venduto mese per mese</h4>
+                <h4 style={{ margin: '14px 0 6px' }}>{tr('Venduto mese per mese')}</h4>
                 <div className="table-scroll">
                   <table className="macro-tab">
                     <thead>
                       <tr>
-                        <th className="rowhead">Mese</th>
+                        <th className="rowhead">{tr('Mese')}</th>
                         <th>App</th>
                         <th>Tiller</th>
                       </tr>
@@ -111,20 +123,19 @@ export default function MovimentiProdotto({ item, onClose }) {
                   </table>
                 </div>
                 <p className="muted small" style={{ margin: '6px 0 0' }}>
-                  Il venduto su Tiller è ricavato dalle ricette attuali delle voci vendute; non ha modificato
-                  la giacenza.
+                  {tr('Il venduto su Tiller è ricavato dalle ricette attuali delle voci vendute; non ha modificato la giacenza.')}
                 </p>
               </>
             )}
 
             {r.righe.length > 0 && (
               <>
-                <h4 style={{ margin: '14px 0 6px' }}>Movimenti</h4>
+                <h4 style={{ margin: '14px 0 6px' }}>{tr('Movimenti')}</h4>
                 <div className="inv-list">
                   {r.righe.map((m) => (
                     <div className="summary-row" key={m.id}>
                       <span className="muted small">
-                        {quando(m.created_at)} · {etichettaTipo(m.tipo)}
+                        {quando(m.created_at)} · {trSegnato(etichettaTipo(m.tipo))}
                       </span>
                       <span>{q(m.q)}</span>
                     </div>

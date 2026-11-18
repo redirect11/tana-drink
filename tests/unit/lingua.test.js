@@ -35,7 +35,7 @@ const senzaCommenti = (s) =>
 const testoDelLetterale = (s) => s.replace(/\\(['"`\\])/g, '$1').replace(/\\n/g, '\n')
 
 // `tr(` e `daTradurre(` come chiamate, non `function tr(` né `oggetto.tr(` né
-// `str(` / `trSegnato(` (che accetta un valore calcolato, e lo dice).
+// `str(` / `trSegnato(` / `trDato(` (che accettano un valore calcolato, e lo dicono).
 const CHIAMATA = /(?<![\w$.])(?<!function\s+)(tr|daTradurre)\(\s*/g
 // Il testo fra apici, e DOPO solo la virgola o la parentesi: un `+` dopo
 // vorrebbe dire una chiave diversa da quella che arriva a schermo.
@@ -132,6 +132,7 @@ describe('ogni testo ha la sua traduzione inglese (REQ-UI-038)', () => {
       export function tr(testo) {}
       const g = str('non è tr')
       const h = trSegnato(STATI[s])
+      const i = trDato(tema.nome)
     `)
     const viste = [...finto.matchAll(CHIAMATA)].map((m) => letturaDiUnaChiamata(finto, m))
     expect(viste).toEqual(['Conto chiuso', null, null, null, 'Pronto', 'Ordine #{n}'])
@@ -193,6 +194,43 @@ describe('tr e la lingua attiva', () => {
     impostaLingua('en')
     expect(trSegnato(STATI.pronto)).toBe('Ready')
     expect(trSegnato(undefined)).toBeUndefined()
+  })
+
+  // Il nome di un tema o di uno stile è a volte un'etichetta di casa
+  // (segnata con daTradurre) e a volte un DATO: il tema su misura della
+  // regia, lo stile a ricetta del locale. `trSegnato` su un dato con la
+  // barra lo tagliava come se fosse un contesto — «Nero | oro» diventava
+  // « oro», anche in italiano. `trDato` traduce solo quello che il
+  // dizionario conosce, e il resto lo lascia com'è.
+  it('un dato si mostra com’è, un’etichetta nota si traduce (trDato)', async () => {
+    const { trDato, trSegnato, impostaLingua } = await carica()
+    expect(trSegnato('Nero | oro')).toBe(' oro') // il difetto da cui nasce trDato
+    expect(trDato('Nero | oro')).toBe('Nero | oro')
+    expect(trDato('Pronto')).toBe('Pronto')
+    expect(trDato('ordinamento|Ordine')).toBe('Ordine')
+    expect(trDato(undefined)).toBeUndefined()
+    impostaLingua('en')
+    expect(trDato('Nero | oro')).toBe('Nero | oro')
+    expect(trDato('Pronto')).toBe('Ready')
+    expect(trDato('ordinamento|Ordine')).toBe('Sort')
+    // un nome di ogni oggetto JavaScript non è una chiave del dizionario
+    expect(trDato('constructor')).toBe('constructor')
+  })
+
+  // REQ-CLI-010: la lingua è di chi lavora. Su una pagina dei clienti — il
+  // menù, «Mostra al cliente» sul tablet girato — si legge l'italiano, che
+  // poi traduce il browser di chi guarda, anche se lo staff ha scelto
+  // l'inglese. Lo decide l'app (App.jsx), non il componente.
+  it('su una pagina dei clienti si legge l’italiano, qualunque sia la lingua scelta', async () => {
+    const { tr, impostaLingua, impostaPaginaCliente, linguaInUso, formatoAttivo } = await carica()
+    impostaLingua('en')
+    impostaPaginaCliente(true)
+    expect(tr('Conto chiuso')).toBe('Conto chiuso')
+    expect(linguaInUso()).toBe('it')
+    expect(formatoAttivo()).toBe('it-IT')
+    impostaPaginaCliente(false)
+    expect(tr('Conto chiuso')).toBe('Bill closed')
+    expect(formatoAttivo()).toBe('en-GB')
   })
 
   it('la scelta si ricorda sul dispositivo', async () => {

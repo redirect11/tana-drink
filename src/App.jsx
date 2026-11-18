@@ -24,6 +24,7 @@ import {
   subscribePrinterConfig,
   saveStaffToken,
   presentaAllaRegia,
+  leggiLinguaDelProfilo,
 } from './lib/api.js'
 import { usePresentazione } from './lib/usePresentazione.js'
 import { precaricaMenu } from './lib/menuCache.js'
@@ -107,7 +108,7 @@ import { TemaIcone } from './lib/temaIcone.js'
 import { AiutiCampi, aiutiCampiAccesi } from './lib/aiutiCampi.js'
 import { temiIconeDi, TUTTE_EMOJI, conEmoji } from './lib/icone.js'
 import { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react'
-import { useLingua, LINGUA_DI_PARTENZA } from './lib/lingua.js'
+import { useLingua, impostaLingua, impostaPaginaCliente, LINGUA_DI_PARTENZA, tr, trSegnato } from './lib/lingua.js'
 
 /* global __APP_VERSION__, __BUILD_ID__ */
 const VERSIONE = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : ''
@@ -121,17 +122,7 @@ export default function App() {
   // Il gestionale intero (coda, conto, profilo di chi lavora): lì il logo in
   // alto riporta alla coda.
   const gestionale = nelGestionale(location.pathname)
-  // LA LINGUA DELLA PAGINA (REQ-UI-038, REQ-CLI-010). L'attributo lang dice
-  // al browser in che lingua è il testo: lo leggono i lettori di schermo per
-  // la pronuncia, e il traduttore del browser per decidere se proporsi. Nel
-  // gestionale segue la lingua scelta; le pagine dei clienti restano «it»,
-  // la lingua in cui sono scritte: con «en» il browser le crederebbe già
-  // inglesi e non proporrebbe di tradurle — anche su un tablet dello staff
-  // in inglese girato verso il cliente.
   const lingua = useLingua()
-  useEffect(() => {
-    document.documentElement.lang = gestionale ? lingua : LINGUA_DI_PARTENZA
-  }, [gestionale, lingua])
   const { user, profile } = useCustomer()
   const hasOrders = useHasOrders()
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
@@ -175,8 +166,8 @@ export default function App() {
       // traccia anche dopo aver chiuso il box. Se il box esce adesso, la
       // notifica nasce già letta — è appena stata mostrata.
       recordNotif(
-        conEmoji('festa', 'L’app è stata aggiornata'),
-        'Tocca per rivedere cosa è cambiato',
+        conEmoji('festa', tr('L’app è stata aggiornata')),
+        tr('Tocca per rivedere cosa è cambiato'),
         { href: '/bar?tab=impostazioni&sezione=informazioni', letta: cosa === 'box' }
       )
     }
@@ -301,7 +292,7 @@ export default function App() {
     if (!online) wasOffline.current = true
     else if (wasOffline.current) {
       wasOffline.current = false
-      toastSuccess('Di nuovo online — sincronizzo le modifiche')
+      toastSuccess(tr('Di nuovo online — sincronizzo le modifiche'))
     }
   }, [online])
 
@@ -374,6 +365,15 @@ export default function App() {
         // Badge virtuale: timbra l'entrata (idempotente, non duplica al
         // refresh). Best-effort: se fallisce non blocca l'accesso.
         if (isStaff) clockIn({ uid: u.uid, name: nome }).catch(() => {})
+        // LA LINGUA È DEL PROFILO (REQ-UI-039): si parte con quella del
+        // dispositivo e, se l'account ne ha un'altra, si passa a quella.
+        // Nessuno la aspetta; e se nel frattempo è entrato un altro, la sua
+        // risposta non conta.
+        if (isStaff) {
+          leggiLinguaDelProfilo(u.uid).then((l) => {
+            if (l && auth.currentUser?.uid === u.uid) impostaLingua(l)
+          })
+        }
         // E GLI AVVISI SI RIACCENDONO. Uscendo, il dispositivo viene tolto
         // dai destinatari (vedi logoutStaff): rientrando va rimesso, senza
         // aspettare che si passi dalla coda.
@@ -509,6 +509,23 @@ export default function App() {
   // il suo tema finché non si sa che chi è entrato è un cliente.
   const clienteEntrato = collegato && accessoNoto && !ruoloInLettura && !staffRole
   const vesteGestionale = staffSurface || (gestionale && !clienteEntrato)
+  // LA LINGUA DELLA PAGINA (REQ-UI-038, REQ-CLI-010). La lingua scelta vale
+  // per chi lavora; le pagine dei CLIENTI restano in italiano e le traduce il
+  // browser — anche su un tablet dello staff in inglese girato verso il
+  // cliente («Mostra al cliente», ?cliente=1) o nell'anteprima «Vista
+  // cliente». Si dice a lib/lingua.js PRIMA che i figli si disegnino (è un
+  // conto fatto dall'indirizzo e da chi guarda, sempre lo stesso a parità
+  // di dati), così ogni `tr` di questo giro risponde nella lingua giusta.
+  // L'attributo lang segue: lo leggono i lettori di schermo per la pronuncia
+  // e il traduttore del browser per decidere se proporsi.
+  const paginaCliente =
+    !vesteGestionale ||
+    (location.pathname.startsWith('/ordine/') && new URLSearchParams(location.search).get('cliente') === '1')
+  impostaPaginaCliente(paginaCliente)
+  const linguaDellaPagina = paginaCliente ? LINGUA_DI_PARTENZA : lingua
+  useEffect(() => {
+    document.documentElement.lang = linguaDellaPagina
+  }, [linguaDellaPagina])
   // E IL TEMA IN PROVA (REQ-MENU-023): dal marketplace, chi lavora vede il
   // proprio menù coi colori di un tema prima di usarlo. Solo lui.
   const temaProvato = staffRole && anteprimaCliente ? temaInProva(settings, location.search) : null
@@ -593,13 +610,18 @@ export default function App() {
     // dimenticato di ascoltare la lingua — o un testo tenuto in un useMemo —
     // resterebbe nella lingua di prima. Cambiare lingua è raro; la bozza del
     // POS è già salvata in modo sincrono e sopravvive al ridisegno.
+    // È la lingua di CHI LAVORA, non quella della pagina: il passaggio a una
+    // pagina dei clienti («Mostra al cliente», «Vista cliente») ridisegna
+    // solo le pagine (la chiave sulle rotte, qui sotto). Con la lingua della
+    // pagina qui, ogni andata e ritorno rimontava anche barra, cassetto e
+    // chiamate, e chiudeva e riapriva le loro iscrizioni al database.
     <TemaIcone.Provider key={lingua} value={temaIcone}>
     {/* Gli aiuti sotto i campi delle schede: di partenza nascosti (REQ-UI-032). */}
     <AiutiCampi.Provider value={aiutiCampiAccesi(settings)}>
     <div className="app">
       {entrandoDallaRegia && (
         <div className="overlay ingresso-regia">
-          <Caricamento testo="Accesso dall’area clienti…" />
+          <Caricamento testo={tr('Accesso dall’area clienti…')} />
         </div>
       )}
       {/* Mostra/nascondi la topbar ovunque (utile sulle schermate a tutto
@@ -608,8 +630,8 @@ export default function App() {
       <button
         className={`topbar-toggle${topbarOpen ? ' open' : ''}`}
         onClick={() => setTopbarOpen((v) => !v)}
-        aria-label={topbarOpen ? 'Nascondi barra' : 'Mostra barra'}
-        title={topbarOpen ? 'Nascondi barra' : 'Mostra barra'}
+        aria-label={topbarOpen ? tr('Nascondi barra') : tr('Mostra barra')}
+        title={topbarOpen ? tr('Nascondi barra') : tr('Mostra barra')}
       >
         {topbarOpen ? '▴' : '▾'}
       </button>
@@ -623,7 +645,8 @@ export default function App() {
       )}
       {!online && (
         <div className="offline-ribbon">
-          <Icona nome="rete-assente" gruppo="segnali" /> Offline — puoi continuare a lavorare, tutto si sincronizza al ritorno della connessione
+          <Icona nome="rete-assente" gruppo="segnali" />{' '}
+          {tr('Offline — puoi continuare a lavorare, tutto si sincronizza al ritorno della connessione')}
         </div>
       )}
       {updateReady && (
@@ -631,7 +654,7 @@ export default function App() {
           className="update-banner"
           onClick={() => window.location.reload()}
         >
-          <Icona nome="aggiorna" gruppo="tasti" /> Nuova versione disponibile — tocca per aggiornare
+          <Icona nome="aggiorna" gruppo="tasti" /> {tr('Nuova versione disponibile — tocca per aggiornare')}
         </button>
       )}
       {novitaAperte && (
@@ -671,8 +694,8 @@ export default function App() {
         {menuQui && (
           <button
             className="topbar-burger"
-            aria-label="Menu"
-            title="Menu"
+            aria-label={tr('Menu')}
+            title={tr('Menu')}
             onClick={() => window.dispatchEvent(new Event('drink:toggle-drawer'))}
           >
             <Icona nome="menu_laterale" />
@@ -686,8 +709,8 @@ export default function App() {
         {indietroQui && (
           <button
             className="topbar-back"
-            aria-label="Indietro"
-            title="Indietro"
+            aria-label={tr('Indietro')}
+            title={tr('Indietro')}
             onClick={() => {
               if (window.history.length > 1) navigate(-1)
               else navigate('/bar')
@@ -704,7 +727,7 @@ export default function App() {
         <Link
           to={gestionale ? '/bar' : '/'}
           className="brand"
-          aria-label={`${chiInAlto}, ${gestionale ? 'coda ordini' : 'pagina iniziale'}`}
+          aria-label={gestionale ? tr('{nome}, coda ordini', { nome: chiInAlto }) : tr('{nome}, pagina iniziale', { nome: chiInAlto })}
           style={{ textDecoration: 'none', color: 'inherit' }}
         >
           {marchioInAlto ? (
@@ -727,7 +750,7 @@ export default function App() {
         {pagina && (
           <span className="topbar-pagina">
             <span aria-hidden>·</span> <Icona nome={(sezioneAttiva?.icona) || pagina.icona} />{' '}
-            {(sezioneAttiva?.label) || pagina.titolo}
+            {trSegnato(sezioneAttiva?.label) || trSegnato(pagina.titolo)}
           </span>
         )}
         <nav className="row">
@@ -757,8 +780,8 @@ export default function App() {
             <button
               className="topbar-piu"
               onClick={() => setMenuTopbar(true)}
-              aria-label="Altre azioni"
-              title="Altre azioni"
+              aria-label={tr('Altre azioni')}
+              title={tr('Altre azioni')}
             >
               ⋮
             </button>
@@ -771,7 +794,7 @@ export default function App() {
                si apre da ovunque. Del saluto resta il nome — l'iniziale nel
                quadratino è la stessa che marca gli ordini aperti da questa
                persona, così si riconosce a colpo d'occhio chi sta battendo. */
-            <Link className="topbar-io" to="/profilo-staff" title="Il mio profilo">
+            <Link className="topbar-io" to="/profilo-staff" title={tr('Il mio profilo')}>
               <span className="order-by staff" style={{ background: colorePersona(nomeInBarra) ?? undefined }}>
                 {(nomeInBarra || '?')[0].toUpperCase()}
               </span>
@@ -783,14 +806,15 @@ export default function App() {
                   bartender gli ordini aperti sono nella coda (/bar), non sono
                   ordini "suoi": niente schermata cliente. */}
               {hasOrders && mieiOrdini && (
-                <Link className="btn ghost small" to="/ordini">I miei ordini</Link>
+                <Link className="btn ghost small" to="/ordini">{tr('I miei ordini')}</Link>
               )}
               {user ? (
                 <Link className="btn ghost small" to="/profilo">
-                  <Icona nome="profilo" gruppo="tasti" />{' '}Ciao, {profile?.nome || user.displayName?.split(' ')[0] || 'Profilo'}
+                  <Icona nome="profilo" gruppo="tasti" />{' '}
+                  {tr('Ciao, {nome}', { nome: profile?.nome || user.displayName?.split(' ')[0] || tr('Profilo') })}
                 </Link>
               ) : accountsOn ? (
-                <Link className="btn ghost small" to="/accedi">Accedi</Link>
+                <Link className="btn ghost small" to="/accedi">{tr('Accedi')}</Link>
               ) : null}
             </>
           )}
@@ -807,17 +831,17 @@ export default function App() {
       {telefono && !staffRole && !onBackoffice && (menuNeiLink || user || accountsOn) && (
         <div className="barra-cliente">
           {menuNeiLink && (
-            <Link className="btn ghost small" to="/menu"><Icona nome="menu" gruppo="tasti" /> Menù</Link>
+            <Link className="btn ghost small" to="/menu"><Icona nome="menu" gruppo="tasti" /> {tr('Menù')}</Link>
           )}
           {hasOrders && mieiOrdini && (
-            <Link className="btn ghost small" to="/ordini"><Icona nome="coda" gruppo="tasti" /> I miei ordini</Link>
+            <Link className="btn ghost small" to="/ordini"><Icona nome="coda" gruppo="tasti" /> {tr('I miei ordini')}</Link>
           )}
           {user ? (
             <Link className="btn ghost small" to="/profilo">
-              <Icona nome="profilo" gruppo="tasti" />{' '}{profile?.nome || user.displayName?.split(' ')[0] || 'Profilo'}
+              <Icona nome="profilo" gruppo="tasti" />{' '}{profile?.nome || user.displayName?.split(' ')[0] || tr('Profilo')}
             </Link>
           ) : accountsOn ? (
-            <Link className="btn ghost small" to="/accedi"><Icona nome="accedi" gruppo="tasti" /> Accedi</Link>
+            <Link className="btn ghost small" to="/accedi"><Icona nome="accedi" gruppo="tasti" /> {tr('Accedi')}</Link>
           ) : null}
         </div>
       )}
@@ -834,49 +858,49 @@ export default function App() {
           {
             id: 'profilo',
             icon: 'profilo',
-            label: 'Il mio profilo',
-            hint: 'Nome e password',
+            label: tr('Il mio profilo'),
+            hint: tr('Nome e password'),
             onClick: () => navigate('/profilo-staff'),
           },
           isGestore(staffRole) && aiRaggiungibile() && !assistente.assente && {
             id: 'assistente',
             icon: 'fumetto',
-            label: 'Assistente AI',
+            label: tr('Assistente AI'),
             ...(assistente.senzaCredito
               ? { hint: assistente.avviso, onClick: assistente.avvisa }
-              : { hint: 'Giacenze, vendite, descrizioni del menù', onClick: () => setChatAperta(true) }),
+              : { hint: tr('Giacenze, vendite, descrizioni del menù'), onClick: () => setChatAperta(true) }),
           },
           !isSala(staffRole) && {
             id: 'pos',
             icon: 'nuovo-ordine',
-            label: 'POS — nuovo ordine',
+            label: tr('POS — nuovo ordine'),
             onClick: () => navigate('/pos'),
           },
           // Senza il menù digitale non c'è un menù da guardare (BUG-132).
           !isSala(staffRole) && menuDigitale && {
             id: 'vista-cliente',
             icon: 'vista-cliente',
-            label: 'Vista cliente',
-            hint: 'Il menù come lo vede chi ordina',
+            label: tr('Vista cliente'),
+            hint: tr('Il menù come lo vede chi ordina'),
             onClick: () => navigate('/menu?vista=cliente'),
           },
           isSala(staffRole) && {
             id: 'servizio',
             icon: 'coda',
-            label: 'Torna alla coda',
-            hint: 'La coda ordini, la stessa del banco',
+            label: tr('Torna alla coda'),
+            hint: tr('La coda ordini, la stessa del banco'),
             onClick: () => navigate('/bar'),
           },
           schermoIntero.disponibile && {
             id: 'schermo',
             icon: schermoIntero.attivo ? 'esci-schermo-intero' : 'schermo-intero',
-            label: schermoIntero.attivo ? 'Esci da schermo intero' : 'Schermo intero',
+            label: schermoIntero.attivo ? tr('Esci da schermo intero') : tr('Schermo intero'),
             hint: schermoIntero.attivo
               ? null
-              : 'Meglio ancora: installa l’app dalla schermata iniziale',
+              : tr('Meglio ancora: installa l’app dalla schermata iniziale'),
             onClick: schermoIntero.alterna,
           },
-          { id: 'esci', icon: 'esci', label: 'Esci', danger: true, onClick: () => logoutStaff() },
+          { id: 'esci', icon: 'esci', label: tr('Esci'), danger: true, onClick: () => logoutStaff() },
         ]}
       />
 
@@ -886,8 +910,9 @@ export default function App() {
 
       {!isFirebaseConfigured && (
         <div className="banner">
-          <Icona nome="avviso" gruppo="segnali" />{' '}Firebase non è configurato. Imposta <code>VITE_FIREBASE_API_KEY</code> e{' '}
-          <code>VITE_FIREBASE_PROJECT_ID</code> (vedi <code>.env.example</code> e{' '}
+          <Icona nome="avviso" gruppo="segnali" />{' '}
+          {tr('Firebase non è configurato. Variabili da impostare:')} <code>VITE_FIREBASE_API_KEY</code>,{' '}
+          <code>VITE_FIREBASE_PROJECT_ID</code> ({tr('vedi')} <code>.env.example</code>,{' '}
           <code>firestore.rules</code>).
         </div>
       )}
@@ -911,7 +936,10 @@ export default function App() {
       <main hidden={bloccata}>
         <StileCliente.Provider value={stilePagine}>
         <ConDemo>
-        <Routes>
+        {/* Una pagina dei clienti è in italiano anche sul tablet in inglese:
+            quando la pagina cambia lingua si ridisegna da capo, perché un
+            testo tenuto in un useMemo resterebbe nell'altra. */}
+        <Routes key={linguaDellaPagina}>
           <Route path="/" element={<LandingPage />} />
           {/* IL MENÙ DIGITALE è un modulo (REQ-LIC-002): senza, al suo posto
               una pagina che lo dice. La Tana ha tutti i moduli. */}
@@ -954,7 +982,7 @@ export default function App() {
         <a href={`${import.meta.env.BASE_URL}privacy-policy.html`}>Privacy</a>
         <a href={`${import.meta.env.BASE_URL}cookie-policy.html`} style={{ marginLeft: 14 }}>Cookie Policy</a>
         <button type="button" className="footer-link-btn" onClick={openCookiePreferences}>
-          Preferenze cookie
+          {tr('Preferenze cookie')}
         </button>
       </footer>
     </div>
@@ -998,16 +1026,16 @@ function AddToHomeHint() {
   return (
     <div className="a2hs-hint">
       <span>
-        Installa l’app: tocca{' '}
+        {tr('Installa l’app: tocca')}{' '}
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'text-bottom' }}>
           <path d="M12 3v12" />
           <path d="M8 7l4-4 4 4" />
           <path d="M6 12v7a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-7" />
         </svg>{' '}
-        <strong>Condividi</strong> e poi <strong>“Aggiungi a Home”</strong>.
-        {' '}Schermo intero e notifiche funzionano solo da lì.
+        {tr('«Condividi» e poi «Aggiungi a Home».')}{' '}
+        {tr('Schermo intero e notifiche funzionano solo da lì.')}
       </span>
-      <button className="a2hs-x" onClick={close} aria-label="Chiudi">✕</button>
+      <button className="a2hs-x" onClick={close} aria-label={tr('Chiudi')}>✕</button>
     </div>
   )
 }
@@ -1030,8 +1058,8 @@ function FullscreenButton() {
     <button
       className="btn ghost small topbar-schermo"
       onClick={alterna}
-      title={attivo ? 'Esci da schermo intero' : 'Schermo intero'}
-      aria-label={attivo ? 'Esci da schermo intero' : 'Schermo intero'}
+      title={attivo ? tr('Esci da schermo intero') : tr('Schermo intero')}
+      aria-label={attivo ? tr('Esci da schermo intero') : tr('Schermo intero')}
     >
       <Icona nome={attivo ? 'esci-schermo-intero' : 'schermo-intero'} gruppo="tasti" />
     </button>

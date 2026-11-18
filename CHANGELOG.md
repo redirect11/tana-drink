@@ -1,6 +1,6 @@
 # Cosa è cambiato
 
-## 1.10.56-beta — in lavorazione
+## 1.10.56-beta — 18/11/2026 (test)
 
 ### Aspetto
 
@@ -12,6 +12,21 @@
 
 ### Lingue
 
+- **Il gestionale si può usare in inglese.** In «Il mio profilo»
+  ciascuno, di qualsiasi ruolo, sceglie Italiano o English; la scelta sta
+  sull'account e lo segue su ogni dispositivo. In inglese: coda ordini,
+  accesso, menu laterale, conto, griglia dei prodotti, pagamento, apertura e
+  chiusura cassa, storico delle serate, la comanda al banco, le
+  impostazioni, il magazzino, la gestione del menù, fornitori e acquisti,
+  statistiche e bilancio, ore e paghe, utenti, buoni, marketplace e
+  assistente AI: tutto il gestionale. Date e giorni seguono la lingua; gli
+  importi restano in euro all'italiana. Restano in italiano gli scontrini e
+  tutto ciò che si stampa, gli esempi dei campi che il cliente legge, il
+  messaggio d'ordine al fornitore, le fatture ai clienti, le esportazioni,
+  e le pagine dei clienti, che traduce il loro browser (REQ-UI-039).
+- Nelle statistiche, nel bilancio e negli ordini ai fornitori un conteggio
+  di uno si legge al singolare: «1 ordine», «1 comanda», «1 prodotto
+  selezionato», invece di «1 ordini» (REQ-UI-039).
 - **Le pagine dei clienti funzionano tradotte dal browser.** Col menù
   tradotto da Chrome o da Safari, lo stato dell'ordine ora segue il banco
   («In preparazione», «Pronto») invece di restare su «Ordine ricevuto»;
@@ -21,6 +36,41 @@
 - Le basi per avere l'app in italiano e inglese: il meccanismo dei testi in
   due lingue, con una prova che boccia i testi senza traduzione inglese
   (REQ-UI-038). Le schermate lo useranno a partire dal gestionale.
+- Con il gestionale in inglese, «Mostra al cliente» e «Vista cliente»
+  mostrano la pagina del cliente in italiano senza ridisegnare il resto
+  dell'app: il menu laterale e gli avvisi a schermo restano dove sono
+  (REQ-CLI-010).
+
+### Privacy e sicurezza
+
+- **L'informativa privacy e cookie è quella del locale.** Il titolare del
+  trattamento, la sede, la partita IVA e l'email vengono dai dati del
+  locale, invece di essere scritti nella pagina; sulla demo e sugli altri
+  locali compariva la Tana. Per la Tana ragione sociale e sede si leggono
+  come sullo scontrino. La demo ha la sua: nessun dato raccolto
+  (REQ-SIC-017).
+- I collegamenti social del locale accettano solo indirizzi web, email e
+  telefono, sia quando si salvano in Impostazioni sia nel piede del menù;
+  un indirizzo scritto senza «https://» lo prende da sé (REQ-SIC-017).
+
+### Flotta
+
+- **Un sito uguale per tutti i locali.** La versione si può compilare una
+  volta sola, senza nessun locale dentro, e la regia ci scrive i dati di
+  ogni locale quando lo pubblica (`scripts/personalizza.mjs`). Il locale
+  arriva anche dentro la pagina: un tablet che passa a questo sito riparte
+  col suo locale anche senza rete. Un sito che non sa ancora di che locale
+  è mostra «L'app non è ancora collegata al locale», non lascia lavorare
+  nessuno e si collega da solo appena può. La Tana continua a pubblicarsi
+  con la sua build: per lei cambiano solo l'informativa e i link social
+  descritti sopra (REQ-FLOTTA-034).
+- **Il pacchetto per versione nella Release di GitHub.** A ogni tag di
+  versione, oltre al deploy della Tana, si compilano due pacchetti, quello
+  per i locali e quello della demo, e si allegano alla Release del tag con
+  la loro impronta: la regia li scarica da lì per attivare e aggiornare i
+  locali senza ricompilare. Un pacchetto che non è una beta esce solo da
+  una versione già in `main`, e un file allegato non si sostituisce mai
+  (REQ-FLOTTA-035).
 
 ## 1.10.55-beta — 17/11/2026 (test)
 

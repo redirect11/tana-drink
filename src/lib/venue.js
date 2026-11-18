@@ -5,7 +5,8 @@
 // prima era scritto nel codice in dieci posti diversi. Viene da due
 // strati, e vince il più vicino al locale:
 //   1. la BUILD: `clienti/<slug>/venue.json`, iniettato da Vite come
-//      `__CLIENTE__` (clienti/pluginCliente.js). Senza CLIENTE è la Tana;
+//      `__CLIENTE__` (clienti/pluginCliente.js), o nel sito uguale per
+//      tutti la configurazione scritta al deploy. Senza CLIENTE è la Tana;
 //   2. le IMPOSTAZIONI: `settings/bar`, chiavi `venue_*`. Un locale che le
 //      scrive da Impostazioni cambia nome e indirizzo senza rebuild.
 // Sotto a tutti e due una riserva NEUTRA, senza nessuna parola della Tana:
@@ -18,10 +19,20 @@
 // Logica pura: niente Firebase, niente React.
 
 import { NOME_PRODOTTO, NOME_CORTO_PRODOTTO } from './prodotto.js'
+import { configurazione } from '../porte/configurazione.js'
+import { linkSicuro } from '../porte/configurazioneLocale.mjs'
 
-const BUILD = typeof __CLIENTE__ !== 'undefined' ? __CLIENTE__ : { slug: 'tana', venue: {} }
+const VENUE_DELLA_BUILD = typeof __CLIENTE__ !== 'undefined' ? __CLIENTE__.venue || {} : {}
 
-// Lo slug del cliente per cui è stata compilata questa app.
+// IL LOCALE DI QUESTA INSTALLAZIONE (REQ-FLOTTA-034). Nel sito uguale per
+// tutti i locali la build non ne ha nessuno: lo slug e i dati arrivano con
+// la configurazione che la regia scrive al deploy (porte/configurazione.js),
+// e prendono il posto di quelli della build. La Tana non ha configurazione:
+// per lei vale la build, come prima.
+const config = configurazione()
+const BUILD = { slug: config.locale, venue: config.venue || VENUE_DELLA_BUILD }
+
+// Lo slug del locale per cui lavora questa app.
 export const CLIENTE = BUILD.slug
 
 
@@ -111,6 +122,14 @@ export function righeFiscali(venue) {
 
 // I social come li scrive il locale in Impostazioni: una riga per social,
 // «piattaforma indirizzo». Da e verso l'elenco di oggetti.
+// SOLO LINK VERI (REQ-SIC-017): `settings/bar` lo scrive anche il
+// bartender, e un `javascript:` finiva in `<a href>` nel piede del menù di
+// ogni cliente. Un indirizzo scritto senza schema («www.…») diventa https;
+// quello che non è http, https, mailto o tel non si salva. Uno schema non ha
+// punti: «barmario.it:8080» è un indirizzo con la porta, non lo schema
+// «barmario.it:».
+const conSchema = (href) => (/^[a-z][a-z0-9+-]*:/i.test(href) ? href : `https://${href}`)
+
 export function socialDaTesto(testo) {
   return String(testo || '')
     .split('\n')
@@ -119,8 +138,11 @@ export function socialDaTesto(testo) {
     .map((r) => {
       const [piattaforma, ...resto] = r.split(/\s+/)
       const href = resto.join(' ')
-      return href ? { piattaforma: piattaforma.toLowerCase(), href } : { piattaforma: 'link', href: piattaforma }
+      return href
+        ? { piattaforma: piattaforma.toLowerCase(), href: conSchema(href) }
+        : { piattaforma: 'link', href: conSchema(piattaforma) }
     })
+    .filter((s) => linkSicuro(s.href))
 }
 
 export const socialInTesto = (socials) =>

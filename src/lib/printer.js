@@ -53,6 +53,7 @@ import {
   scontoTotale,
 } from './pagamento.js'
 import { inAttesa } from './attesaCliente.js'
+import { daTradurre } from './lingua.js'
 
 // LA FIRMA DEL PRODOTTO IN FONDO ALLO SCONTRINO (REQ-LIC-003,
 // `limiti.marchio`): solo se la licenza la chiede, cioè il piano Free. Non
@@ -399,11 +400,12 @@ export function lavoroAnnullato(order, comanda = null) {
 // (admin, bartender), sala = la sala e i clienti dal loro telefono. Per una
 // comanda è chi ne ha battuto le righe (la firma della riga, REQ-ORD-023),
 // e per le comande di prima chi ha aperto il conto; per lo scontrino è chi
-// sta incassando.
+// sta incassando. Le etichette sono delle impostazioni, non della carta: si
+// mostrano con `trSegnato` (REQ-UI-039).
 export const ORIGINI_STAMPA = Object.freeze([
-  { id: 'tutti', label: 'Banco e sala' },
-  { id: 'banco', label: 'Solo dal banco' },
-  { id: 'sala', label: 'Solo dalla sala' },
+  { id: 'tutti', label: daTradurre('Banco e sala') },
+  { id: 'banco', label: daTradurre('Solo dal banco') },
+  { id: 'sala', label: daTradurre('Solo dalla sala') },
 ])
 export const origineDelRuolo = (role) => (isGestore(role) ? 'banco' : 'sala')
 export function stampaDa(da, role) {

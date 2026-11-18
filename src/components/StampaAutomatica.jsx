@@ -11,6 +11,10 @@ import ToggleRow from './ToggleRow.jsx'
 import { comandeConsentite } from '../lib/limiti.js'
 import GruppoChip from './GruppoChip.jsx'
 import Icona from './Icona.jsx'
+import { tr, conEtichetteTradotte } from '../lib/lingua.js'
+
+// Le provenienze di una stampa (Banco e sala, Solo dal banco…) nella lingua
+// di chi guarda: le etichette nascono in lib/printer.js.
 
 // ── QUANDO PARTE LA CARTA DA SÉ (REQ-UI-025) ─────────────────────────
 //
@@ -52,25 +56,24 @@ export default function StampaAutomatica({ settings, save }) {
 
   return (
     <div className="card settings-section">
-      <h3>Stampa automatica</h3>
+      <h3>{tr('Stampa automatica')}</h3>
       <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
-        Le stampe che escono <strong>da sole</strong>, senza premere un tasto.
-        Indirizzo della stampante, prova di stampa e dati sulla carta stanno in{' '}
-        <strong>Impostazioni → Stampante</strong>.
+        {tr(
+          'Le stampe che escono da sole, senza premere un tasto. Indirizzo della stampante, prova di stampa e dati sulla carta stanno in Impostazioni → Stampante.'
+        )}
       </p>
 
       {/* ── Quello che decide questo tablet ── */}
-      <h4 style={{ margin: '18px 0 2px' }}>Su questo terminale</h4>
+      <h4 style={{ margin: '18px 0 2px' }}>{tr('Su questo terminale')}</h4>
       <p className="muted" style={{ margin: '0 0 8px', fontSize: '0.8rem' }}>
-        Valgono per <strong>questo</strong> dispositivo e per chi ci è
-        collegato.
+        {tr('Valgono per questo dispositivo e per chi ci è collegato.')}
       </p>
 
       {comandeOn && (
         <>
           <ToggleRow
-            label="Stampa la comanda all’arrivo dell’ordine"
-            desc="La comanda si stampa appena l'ordine entra in coda, senza premere «Comanda»."
+            label={tr('Stampa la comanda all’arrivo dell’ordine')}
+            desc={tr("La comanda si stampa appena l'ordine entra in coda, senza premere «Comanda».")}
             checked={prn.autoPrintComanda === true}
             onChange={(v) => cambia({ autoPrintComanda: v })}
           />
@@ -78,10 +81,10 @@ export default function StampaAutomatica({ settings, save }) {
               se è acceso — una scelta su una stampa spenta non decide niente. */}
           {prn.autoPrintComanda === true && (
             <div className="stampa-da">
-              <span className="muted small">Comande prese</span>
+              <span className="muted small">{tr('Comande prese')}</span>
               <GruppoChip
-                etichetta="Comande prese"
-                opzioni={ORIGINI_STAMPA}
+                etichetta={tr('Comande prese')}
+                opzioni={conEtichetteTradotte(ORIGINI_STAMPA)}
                 valore={prn.autoPrintComandaDa || 'tutti'}
                 scegli={(v) => cambia({ autoPrintComandaDa: v })}
               />
@@ -93,25 +96,24 @@ export default function StampaAutomatica({ settings, save }) {
       {/* Diceva «quando l'ordine è pronto», ma la stampa da tempo parte alla
           CHIUSURA: l'etichetta descriveva il comportamento di due versioni fa. */}
       <ToggleRow
-        label="Stampa lo scontrino alla riscossione del conto"
-        desc="Lo scontrino si stampa quando il conto è incassato e chiuso."
+        label={tr('Stampa lo scontrino alla riscossione del conto')}
+        desc={tr('Lo scontrino si stampa quando il conto è incassato e chiuso.')}
         checked={prn.autoPrintScontrino === true}
         onChange={(v) => cambia({ autoPrintScontrino: v })}
       />
       {prn.autoPrintScontrino === true && (
         <div className="stampa-da">
-          <span className="muted small">Riscossioni fatte</span>
+          <span className="muted small">{tr('Riscossioni fatte')}</span>
           <GruppoChip
-            etichetta="Riscossioni fatte"
-            opzioni={ORIGINI_STAMPA}
+            etichetta={tr('Riscossioni fatte')}
+            opzioni={conEtichetteTradotte(ORIGINI_STAMPA)}
             valore={prn.autoPrintScontrinoDa || 'tutti'}
             scegli={(v) => cambia({ autoPrintScontrinoDa: v })}
           />
         </div>
       )}
       <p className="muted" style={{ margin: '0 0 8px', fontSize: '0.8rem' }}>
-        Banco: admin e bartender. Sala: il personale di sala e gli ordini dal
-        menù dei clienti.
+        {tr('Banco: admin e bartender. Sala: il personale di sala e gli ordini dal menù dei clienti.')}
       </p>
 
       {/* CHI STAMPA LE COMANDE PRESE IN SALA sta qui e non fra le cose della
@@ -121,7 +123,7 @@ export default function StampaAutomatica({ settings, save }) {
           parla di un interruttore che non è in pagina. */}
       {comandeOn && (
         <div style={{ marginTop: 14 }}>
-          <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>Comande prese in sala</div>
+          <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{tr('Comande prese in sala')}</div>
           {/* La sala l'IP ce l'ha (la configurazione arriva a tutti i dispositivi
               dal server): quello che si decide qui è se i telefoni parlino con la
               stampante o se la comanda esca al banco. */}
@@ -131,45 +133,51 @@ export default function StampaAutomatica({ settings, save }) {
               className={`mode-option${prn.stampaSala !== 'rimbalzo' ? ' active' : ''}`}
               onClick={() => cambia({ stampaSala: 'ip' })}
             >
-              <Icona nome="telefono" gruppo="tasti" /> La stampa il telefono
+              <Icona nome="telefono" gruppo="tasti" /> {tr('La stampa il telefono')}
             </button>
             <button
               type="button"
               className={`mode-option${prn.stampaSala === 'rimbalzo' ? ' active' : ''}`}
               onClick={() => cambia({ stampaSala: 'rimbalzo' })}
             >
-              <Icona nome="stampante" gruppo="tasti" /> La stampa il banco
+              <Icona nome="stampante" gruppo="tasti" /> {tr('La stampa il banco')}
             </button>
           </div>
           <p className="muted" style={{ fontSize: '0.8rem', margin: '8px 0 0' }}>
             {prn.stampaSala === 'rimbalzo'
-              ? 'La comanda esce al banco appena arriva l’ordine. Serve che al banco un terminale tenga aperta la coda ordini con la stampa automatica accesa.'
-              : 'Chi prende l’ordine al tavolo stampa la comanda dal suo telefono. La prima volta, su ogni telefono, va accettato l’avviso di sicurezza della stampante: il pallino nella coda ordini dice se funziona.'}
+              ? tr(
+                  'La comanda esce al banco appena arriva l’ordine. Serve che al banco un terminale tenga aperta la coda ordini con la stampa automatica accesa.'
+                )
+              : tr(
+                  'Chi prende l’ordine al tavolo stampa la comanda dal suo telefono. La prima volta, su ogni telefono, va accettato l’avviso di sicurezza della stampante: il pallino nella coda ordini dice se funziona.'
+                )}
           </p>
 
           {/* Scegliere "la stampa il banco" e lasciare spenta la stampa
               automatica vuol dire: non stampa nessuno. È successo. */}
           {prn.stampaSala === 'rimbalzo' && !prn.autoPrintComanda && (
             <div className="banner" style={{ marginTop: 8 }}>
-              <Icona nome="avviso" gruppo="segnali" /> La stampa automatica della comanda è <strong>spenta</strong>: così
-              le comande della sala non le stampa nessuno. Si accende qui sopra.
+              <Icona nome="avviso" gruppo="segnali" />{' '}
+              {tr(
+                'La stampa automatica della comanda è spenta: così le comande della sala non le stampa nessuno. Si accende qui sopra.'
+              )}
             </div>
           )}
           {/* Lo stesso buco per un'altra strada: la stampa è accesa, ma solo
               per le comande del banco (REQ-STAMPA-021). */}
           {prn.stampaSala === 'rimbalzo' && prn.autoPrintComanda && prn.autoPrintComandaDa === 'banco' && (
             <div className="banner" style={{ marginTop: 8 }}>
-              <Icona nome="avviso" gruppo="segnali" /> La comanda automatica è impostata <strong>solo dal banco</strong>: così
-              le comande della sala non le stampa nessuno.
+              <Icona nome="avviso" gruppo="segnali" />{' '}
+              {tr('La comanda automatica è impostata solo dal banco: così le comande della sala non le stampa nessuno.')}
             </div>
           )}
         </div>
       )}
 
       {/* ── Quello che vale per tutti ── */}
-      <h4 style={{ margin: '22px 0 2px' }}>Per tutto il locale</h4>
+      <h4 style={{ margin: '22px 0 2px' }}>{tr('Per tutto il locale')}</h4>
       <p className="muted" style={{ margin: '0 0 8px', fontSize: '0.8rem' }}>
-        Valgono su ogni terminale del locale.
+        {tr('Valgono su ogni terminale del locale.')}
       </p>
 
       {/* ── LO SCONTRINO D'ACCONTO (REQ-STAMPA-015) ──────────────────────
@@ -178,8 +186,10 @@ export default function StampaAutomatica({ settings, save }) {
           suo gemello col tasto lo segue perché uno SPEGNE l'altro, e due
           interruttori legati così si guardano insieme o non si capiscono. */}
       <ToggleRow
-        label="Lo scontrino d’acconto a ogni riscossione"
-        desc="A ogni incasso che non chiude il conto si stampa la ricevuta d’acconto. Segue la stampa automatica dello scontrino di questo terminale, qui sopra."
+        label={tr('Lo scontrino d’acconto a ogni riscossione')}
+        desc={tr(
+          'A ogni incasso che non chiude il conto si stampa la ricevuta d’acconto. Segue la stampa automatica dello scontrino di questo terminale, qui sopra.'
+        )}
         checked={accontoSempre(settings)}
         onChange={(v) => save({ [CHIAVE_ACCONTO_SEMPRE]: v })}
       />
@@ -191,11 +201,15 @@ export default function StampaAutomatica({ settings, save }) {
           finito?» — e chi torna qui per spegnere l'automatico non capirebbe
           cosa ha perso. */}
       <ToggleRow
-        label="Un tasto per l’acconto con lo scontrino"
+        label={tr('Un tasto per l’acconto con lo scontrino')}
         desc={
           accontoSempre(settings)
-            ? 'Non disponibile: la ricevuta d’acconto si stampa già a ogni riscossione, qui sopra. Spenta quella, il tasto torna disponibile.'
-            : 'Aggiunge alla schermata di pagamento «Acconto con scontrino», che incassa una parte del conto e ne stampa la ricevuta.'
+            ? tr(
+                'Non disponibile: la ricevuta d’acconto si stampa già a ogni riscossione, qui sopra. Spenta quella, il tasto torna disponibile.'
+              )
+            : tr(
+                'Aggiunge alla schermata di pagamento «Acconto con scontrino», che incassa una parte del conto e ne stampa la ricevuta.'
+              )
         }
         checked={tastoAcconto(settings)}
         disabled={accontoSempre(settings)}

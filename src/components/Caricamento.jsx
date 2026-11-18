@@ -1,3 +1,5 @@
+import { tr } from '../lib/lingua.js'
+
 // ── «UN ATTIMO» DETTO BENE ───────────────────────────────────────────
 //
 // «Verifica accesso…» scritto e basta, su una pagina vuota, non si
@@ -8,7 +10,7 @@
 //
 // Non ha una percentuale apposta: non sappiamo quanto ci vuole, e una barra
 // che si ferma a metà è peggio del silenzio.
-export default function Caricamento({ testo = 'Un attimo…', piccolo = false }) {
+export default function Caricamento({ testo = tr('Un attimo…'), piccolo = false }) {
   return (
     <div className={`caricamento${piccolo ? ' piccolo' : ''}`} role="status" aria-live="polite">
       <span className="caricamento-bolle" aria-hidden>

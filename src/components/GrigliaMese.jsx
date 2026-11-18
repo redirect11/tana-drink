@@ -1,7 +1,14 @@
 import { useState } from 'react'
 import { grigliaMese, nomeMese, chiaveGiorno } from '../lib/periodo.js'
+import { tr, formatoAttivo } from '../lib/lingua.js'
 
-const GIORNI = ['L', 'M', 'M', 'G', 'V', 'S', 'D']
+// Le iniziali dei giorni, da lunedì, nella lingua in uso (L M M G V S D,
+// M T W T F S S): una settimana qualsiasi che comincia di lunedì, il
+// 05/01/2026, letta a mezzogiorno UTC perché nessun fuso la sposti.
+const iniziali = () =>
+  Array.from({ length: 7 }, (_, i) =>
+    new Date(Date.UTC(2026, 0, 5 + i, 12)).toLocaleDateString(formatoAttivo(), { weekday: 'narrow', timeZone: 'UTC' })
+  )
 
 // ── LA GRIGLIA DEL MESE, UNA PER TUTTA L'APP (REQ-STAT-007) ────────────
 //
@@ -26,12 +33,13 @@ export default function GrigliaMese({ iniziale, oggi, servizio, classeDi = () =>
     setMese({ anno: d.getUTCFullYear(), mese: d.getUTCMonth() })
   }
   const stato = (giorno) => (giorno > oggi ? '' : servizio?.has(giorno) ? ' servizio' : ' senza')
-  const detto = (giorno) => (giorno > oggi ? '' : servizio?.has(giorno) ? ', servizio' : ', nessun servizio')
+  const detto = (giorno) =>
+    giorno > oggi ? '' : servizio?.has(giorno) ? `, ${tr('servizio')}` : `, ${tr('nessun servizio')}`
 
   return (
     <div className="periodo-pannello">
       <div className="periodo-testata">
-        <button type="button" className="btn ghost small" onClick={() => sposta(-1)} aria-label="Mese precedente">
+        <button type="button" className="btn ghost small" onClick={() => sposta(-1)} aria-label={tr('Mese precedente')}>
           ‹
         </button>
         <strong>{nomeMese(mese.anno, mese.mese)}</strong>
@@ -39,14 +47,14 @@ export default function GrigliaMese({ iniziale, oggi, servizio, classeDi = () =>
           type="button"
           className="btn ghost small"
           onClick={() => sposta(1)}
-          aria-label="Mese successivo"
+          aria-label={tr('Mese successivo')}
           disabled={chiaveGiorno(new Date(Date.UTC(mese.anno, mese.mese + 1, 1))) > oggi}
         >
           ›
         </button>
       </div>
       <div className="periodo-griglia">
-        {GIORNI.map((g, i) => (
+        {iniziali().map((g, i) => (
           <span key={i} className="periodo-intestazione">
             {g}
           </span>
@@ -69,7 +77,7 @@ export default function GrigliaMese({ iniziale, oggi, servizio, classeDi = () =>
         )}
       </div>
       <p className="muted small periodo-aiuto">
-        <span className="legenda-servizio" /> servizio · <span className="legenda-senza" /> nessun servizio
+        <span className="legenda-servizio" /> {tr('servizio')} · <span className="legenda-senza" /> {tr('nessun servizio')}
         {aiuto ? ` · ${aiuto}` : ''}
       </p>
     </div>

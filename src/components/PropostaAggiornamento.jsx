@@ -6,6 +6,7 @@ import { recordNotif } from '../lib/notifyStore.js'
 import { urlRegia } from '../lib/limiti.js'
 import Icona from './Icona.jsx'
 import { conEmoji } from '../lib/icone.js'
+import { tr, useLingua } from '../lib/lingua.js'
 import {
   MESSAGGI_AGGIORNAMENTI,
   SCELTE,
@@ -63,7 +64,7 @@ export function SceltaDallAreaClienti({ settings, piccolo = false }) {
           target="_blank"
           rel="noopener noreferrer"
         >
-          Apri l’area clienti
+          {tr('Apri l’area clienti')}
         </a>
       )}
     </>
@@ -74,6 +75,7 @@ export function SceltaDallAreaClienti({ settings, piccolo = false }) {
 // la proposta di aggiornamento. Uno alla volta, e mai sopra il box delle
 // novità (`inPausa`), che è quello di un aggiornamento appena arrivato.
 export default function PropostaAggiornamento({ settings, ruolo, inPausa = false }) {
+  useLingua()
   const { url, fatta, scegli, inCorso, erroreDi } = useSceltaAggiornamento(settings)
   const [visto, setVisto] = useState(avvisoVisto)
   // «Più tardi»: il box torna alla prossima apertura dell'app, non prima.
@@ -91,7 +93,7 @@ export default function PropostaAggiornamento({ settings, ruolo, inPausa = false
   const idAvviso = avviso && !inPausa ? avviso.id : null
   useEffect(() => {
     if (!idAvviso) return
-    recordNotif(conEmoji('fatture', 'Condizioni del servizio aggiornate'), 'Tocca per rileggere l’avviso', {
+    recordNotif(conEmoji('fatture', tr('Condizioni del servizio aggiornate')), tr('Tocca per rileggere l’avviso'), {
       href: INFORMAZIONI,
       letta: true,
     })
@@ -103,11 +105,11 @@ export default function PropostaAggiornamento({ settings, ruolo, inPausa = false
   if (avviso) {
     const dal = dataAvviso(avviso.dal)
     return (
-      <Box icona="fatture" titolo="Condizioni del servizio" etichetta="Avviso sulle condizioni del servizio">
+      <Box icona="fatture" titolo={tr('Condizioni del servizio')} etichetta={tr('Avviso sulle condizioni del servizio')}>
         <p style={{ whiteSpace: 'pre-line', margin: '10px 0 0' }}>{avviso.testo}</p>
-        {dal && <p className="muted small" style={{ margin: '8px 0 0' }}>In vigore dal {dal}.</p>}
+        {dal && <p className="muted small" style={{ margin: '8px 0 0' }}>{tr('In vigore dal {data}.', { data: dal })}</p>}
         <button className="btn block" style={{ marginTop: 12 }} onClick={() => setVisto(String(avviso.id))}>
-          Ho letto
+          {tr('Ho letto')}
         </button>
       </Box>
     )
@@ -115,10 +117,10 @@ export default function PropostaAggiornamento({ settings, ruolo, inPausa = false
 
   if (fatta?.scelta === SCELTE.AGGIORNA && partitoChiuso !== fatta.tag) {
     return (
-      <Box titolo={`Versione ${numeroVersione(fatta.tag)}`} etichetta="Aggiornamento partito">
+      <Box titolo={tr('Versione {n}', { n: numeroVersione(fatta.tag) })} etichetta={tr('Aggiornamento partito')}>
         <p style={{ margin: '10px 0 0' }}>{MESSAGGI_AGGIORNAMENTI.partito}</p>
         <button className="btn block" style={{ marginTop: 12 }} onClick={() => setPartitoChiuso(fatta.tag)}>
-          Chiudi
+          {tr('Chiudi')}
         </button>
       </Box>
     )
@@ -128,14 +130,14 @@ export default function PropostaAggiornamento({ settings, ruolo, inPausa = false
 
   const errore = erroreDi(proposta.tag)
   return (
-    <Box titolo={`Versione ${numeroVersione(proposta.tag)} disponibile`} etichetta="Aggiornamento disponibile">
+    <Box titolo={tr('Versione {n} disponibile', { n: numeroVersione(proposta.tag) })} etichetta={tr('Aggiornamento disponibile')}>
       <p className="muted small" style={{ margin: '6px 0 0' }}>
-        Prima di aggiornare, ecco cosa cambia:
+        {tr('Prima di aggiornare, ecco cosa cambia:')}
       </p>
       {proposta.note ? (
         <Changelog testo={String(proposta.note)} />
       ) : (
-        <p className="muted small" style={{ marginTop: 10 }}>Le note di questa versione non sono arrivate.</p>
+        <p className="muted small" style={{ marginTop: 10 }}>{tr('Le note di questa versione non sono arrivate.')}</p>
       )}
       {!url && <SceltaDallAreaClienti settings={settings} />}
       {errore && (
@@ -148,15 +150,15 @@ export default function PropostaAggiornamento({ settings, ruolo, inPausa = false
         {url && (
           <>
             <button className="btn block" disabled={inCorso} onClick={() => scegli(proposta.tag, SCELTE.AGGIORNA)}>
-              Aggiorna
+              {tr('Aggiorna')}
             </button>
             <button className="btn ghost block" disabled={inCorso} onClick={() => scegli(proposta.tag, SCELTE.SALTA)}>
-              Salta questa versione
+              {tr('Salta questa versione')}
             </button>
           </>
         )}
         <button className="btn ghost block" onClick={() => setRimandata(proposta.tag)}>
-          Più tardi
+          {tr('Più tardi')}
         </button>
       </div>
     </Box>

@@ -5747,6 +5747,9 @@ requirements:
       in docs/sicurezza-demo.md. La regia ha già messo la sua difesa (PR
       #69): configurazione finta, niente indirizzo della regia, CSP con
       connect-src 'self', Storage chiuso.
+      Il 18/11/2026 i punti 4 (l'informativa della Tana in ogni build) e 6
+      (i link dei social) sono passati a REQ-SIC-017, col sito uguale per
+      tutti: qui restano gli altri.
     status: todo
     generate_issue: true
     labels: [sicurezza, privacy, demo]
@@ -15900,6 +15903,162 @@ requirements:
     test_cases:
       - tests/unit/clienteBuild.test.js
 
+  - id: REQ-FLOTTA-034
+    title: "Un sito uguale per tutti i locali: il locale lo dice la configurazione, scritta nella pagina al momento della pubblicazione"
+    area: "src/porte/configurazione.js, src/porte/configurazioneLocale.mjs, src/lib/venue.js, src/lib/themes.js, src/lib/limiti.js, src/lib/funzioniRegia.js, src/lib/passaggioRegia.js, src/lib/aggiornamenti.js, src/main.jsx, src/App.jsx, clienti/pluginCliente.js, clienti/personalizzazione.mjs, scripts/personalizza.mjs, docs/flotta.md"
+    description: >
+      Fase 1 del pacchetto per versione (interfaccia 16 di
+      docs/contratto-regia-app.md della regia, REQ-FLOTTA-137 della regia;
+      Daniele, 18/11/2026: «si fallo entrare e procedi»). La regia compila il
+      sito una volta per versione dal nostro tag e lo personalizza per ogni
+      locale al deploy; la Tana continua a pubblicarsi da GitHub con la sua
+      build, che non cambia (la regola 2 di docs/flotta.md resta, Daniele
+      18/11/2026).
+      COSA SI CHIEDE. (1) La build in modalità pacchetto: nessun locale
+      dentro (`__CLIENTE__` neutro, `__DEMO__` falso), i segnaposto
+      `%VENUE_*%` lasciati in index.html, nel manifest e nelle pagine
+      dell'informativa, il set neutro al posto dei file della Tana, e
+      nessuna `VITE_FIREBASE_*` ammessa nella build. (2) La configurazione
+      porta anche il locale: `venue` (solo le chiavi `venue_*` dell'app,
+      solo testi, i link dei social solo http, https, mailto e tel),
+      `profilo` (completo o leggero) e `regia` (solo i due progetti della
+      regia); un valore fuori elenco vuol dire «vale la build». (3) La
+      configurazione viaggia anche dentro index.html, come blocco
+      `<script id="configurazione" type="application/json">`: arriva con
+      la pagina, anche dalla cache del service worker e al primo avvio. Si
+      legge in quest'ordine: il file ricordato nel dispositivo, il blocco
+      nella pagina, la build. (4) Chi oggi legge la build al caricamento
+      dei moduli (il locale, il tema di partenza, il profilo leggero, la
+      regia) legge la configurazione, che resta sincrona. (5) Senza
+      backend: si ricarica sempre appena il file arriva, non solo nei primi
+      10 secondi, perché nessuno può avere un conto in mano; si riprova
+      quando torna la rete e a intervalli crescenti; al posto dell'app e
+      del banner per lo sviluppatore una schermata a parole comuni, in
+      italiano e inglese, e nessuna scrittura. (6) `scripts/personalizza.mjs`
+      (nel pacchetto `personalizza.mjs`): dato il `dist/` neutro e la
+      configurazione di un locale riempie i segnaposto, scrive il
+      manifest, mette i file del locale sopra il set neutro, scrive
+      `configurazione.json` e il blocco nella pagina; rifiuta un `dist/`
+      già personalizzato e una configurazione che l'app non seguirebbe, ed
+      esce con errore se resta un segnaposto.
+      IL RISCHIO CHE SI CHIUDE (R3 nell'analisi del 18/11/2026): i tablet
+      già installati hanno il locale nella build e nessuna configurazione
+      ricordata; alla prima apertura del sito uguale per tutti, con la
+      pagina arrivata e il file no, partirebbero su un progetto finto e
+      vedrebbero la coda vuota. Col blocco nella pagina il locale arriva
+      insieme alla pagina.
+      CRITERIO: un `dist/` compilato in modalità pacchetto non contiene
+      nomi né file della Tana e non ha backend; personalizzato, si apre col
+      locale della configurazione; un dispositivo con la configurazione
+      nella pagina parte senza rete col progetto giusto; un sito senza
+      backend mostra la schermata e non scrive.
+      COME È FATTO (18/11/2026, ramo feature/pacchetto). La regola su cosa
+      ammette una configurazione sta in src/porte/configurazioneLocale.mjs,
+      un modulo senza dipendenze usato dall'app (che lascia cadere) e da
+      personalizza.mjs (che rifiuta). La porta (src/porte/configurazione.js)
+      legge il blocco della pagina, completa profilo e regia con quelli della
+      build, ricarica sempre senza backend e riprova (seguiConfigurazione:
+      all'evento online e dopo 5 s, 15 s, 30 s, 1, 2 e 5 minuti). venue.js,
+      themes.js, limiti.js, funzioniRegia.js e passaggioRegia.js leggono la
+      configurazione; PROGETTI_REGIA sta nel modulo comune. main.jsx, senza
+      backend e fuori dallo sviluppo, disegna NonCollegata al posto
+      dell'app e non avvia progressivi né banner dei cookie. La build in
+      modalità pacchetto è `PACCHETTO=1 npm run build` (clienti/pluginCliente.js),
+      e si ferma se trova una VITE_FIREBASE_*, VITE_PROFILO,
+      VITE_REGIA_PROGETTO o gli emulatori. Le funzioni che scrivono il
+      locale nei file stanno in clienti/personalizzazione.mjs, comuni alla
+      build e a scripts/personalizza.mjs. Il modulo è caricabile anche da
+      Node (le costanti della build lette con typeof): i test di sistema e
+      il seme arrivano fin lì da lib/limiti.js.
+      Dalla revisione: i sostituti di replace sono funzioni (un «$'» nei
+      testi del locale copiava pezzi di pagina nel blocco), e personalizza
+      rilegge il blocco scritto; un file rovinato non fa dimenticare quello
+      buono (prima, con una rete che alternava un JSON rotto e il file,
+      l'app si ricaricava a ogni giro); senza backend il codice della regia
+      resta nell'indirizzo, perché la ricarica lo perdeva; il pacchetto
+      rifiuta anche VITE_APP_ENV diverso da production. tests/unit/avvioApp.test.jsx
+      prova che senza backend non partono progressivi né cookie.
+    status: implemented
+    generate_issue: true
+    labels: [flotta]
+    priority: P1
+    test_cases:
+      - tests/unit/configurazioneLocale.test.js
+      - tests/unit/personalizza.test.js
+      - tests/component/NonCollegata.test.jsx
+      - tests/sistema/sitoPerTutti.spec.js
+
+  - id: REQ-FLOTTA-035
+    title: "Il pacchetto per versione si compila al tag e si pubblica nella Release di GitHub di tana-drink"
+    area: "scripts/crea-pacchetto.mjs, .github/workflows/pacchetto.yml, docs/flotta.md, docs/gitflow.md"
+    description: >
+      Daniele, 18/11/2026 (nel messaggio della regia msg-tana-pacchetto-6):
+      «tana drink compila il pacchetto, provisiona istanza e aggiorna
+      istanza aggiornano con il pacchetto di release di tana-drink», e «si
+      puo mettere nella parte dei rilasci di github e appare in releases».
+      È la seconda fase di REQ-FLOTTA-034, interfaccia 16 del contratto con
+      la regia (docs/contratto-regia-app.md in drink-regia, REQ-FLOTTA-137 e
+      REQ-FLOTTA-140 della regia).
+
+      COSA: `node scripts/crea-pacchetto.mjs --tipo locali|demo` compila il
+      sito (locali: `PACCHETTO=1`; demo: `CLIENTE=demo`, come la compila la
+      regia oggi), lo mette insieme a functions/ con le sole dipendenze di
+      produzione (solo locali), firebase.json, le regole, gli indici e
+      `personalizza.mjs` in un file solo (solo locali), scrive
+      `pacchetto.json` nel formato 1 (versione, tag, beta, commit,
+      strumenti, personalizzabili, `campiVenue` sempre presente e mai vuoto,
+      l'impronta di ogni file) e ne fa `pacchetto-<tipo>-vX.Y.Z.tgz` con
+      accanto il `.sha256`. Il workflow `pacchetto.yml`, a ogni tag `v*`,
+      fa girare lint e test, compila i due pacchetti e li allega alla
+      Release del tag.
+
+      LE REGOLE DEL RILASCIO (dalla regia, 18/11/2026):
+      - un pacchetto non beta esce solo se il commit del tag sta in `main`
+        e lint e test su quel commit sono passati;
+      - un file allegato non si sostituisce mai: una versione corretta è
+        una versione nuova;
+      - la regola 2 di docs/flotta.md resta: il workflow scrive solo nella
+        Release di tana-drink, nessuna credenziale verso la regia;
+      - `scripts/genera-cliente.mjs` resta, come ripiego della regia
+        (interfaccia 12).
+
+      COME È FATTO (18/11/2026): il comando rifiuta un `.env` nella radice
+      (la build lo leggerebbe), i file tracciati modificati (il manifesto
+      dice un commit) e un tag diverso da `v` + package.json; controlla la
+      build come la controllava la regia (nei locali i segni della demo di
+      controlla-build-senza-demo.mjs e i segnaposto, nella demo la demo e
+      niente `drinkpos-demo`); le dipendenze delle Functions con
+      `npm ci --omit=dev --no-bin-links` (un collegamento in node_modules
+      è un percorso che esce dal pacchetto, e la regia lo rifiuta);
+      personalizza.mjs unito da Vite in modalità server, senza public/.
+      Il workflow crea la Release in bozza e la pubblica dopo l'ultimo
+      file, perché con le «release immutabili» di GitHub dopo non si
+      aggiunge più niente; prima gli archivi e poi le impronte. Il test
+      che legge il workflow sta in tests/unit/flottaCi.test.js (che è di
+      REQ-FLOTTA-001). Provato in locale con le regole della regia
+      (scripts/lib-pacchetto.js di drink-regia): il pacchetto dei locali
+      passa i controlli prima e dopo personalizza.mjs lanciato dalla
+      radice del pacchetto con un ambiente vuoto, quello della demo
+      passa i suoi.
+
+      Dalla revisione (18/11/2026): docs/gitflow.md e CLAUDE.md dicevano di
+      taggare `vX.Y.Z` su develop e `vX.Y.Z-prod` su main, e con quella
+      regola un pacchetto non beta non sarebbe uscito mai, in silenzio.
+      Riallineati alla pratica dei rilasci dalla 1.10.43 (il tag pieno
+      solo sul commit di main), e un tag su main che non è v + package.json
+      ferma il workflow in rosso. problemiDelManifesto ora copia tutti i
+      controlli di lib-pacchetto.js della regia (beta, impronte, percorsi,
+      strumenti, profili), da tenere allineati a mano; APP_VERSION fuori
+      dalla build; --uscita dentro dist/ rifiutata. Restano aperte le
+      «release immutabili» di GitHub (impostazione del repository, la
+      decide Daniele) e la ripresa di un giro interrotto, che oggi è a
+      mano (docs/flotta.md).
+    status: implemented
+    generate_issue: true
+    labels: [flotta]
+    priority: P1
+    test_cases:
+      - tests/unit/creaPacchetto.test.js
   - id: REQ-PAG-013
     title: "Lo sconto cade sui prodotti che si stanno riscuotendo, e gli sconti si accumulano"
     area: "src/lib/pagamento.js, src/components/PaymentScreen.jsx, src/lib/api.js, src/lib/printer.js, functions/lib/payment-core.js"
@@ -17967,8 +18126,208 @@ requirements:
       personalizzabili dal gestore (testo('chiave', 'predefinito') di
       lib/testiStile.js) e le loro versioni inglesi, insieme a REQ-MENU-046;
       il dizionario inglese caricato solo quando serve, se pesa sul pacchetto.
-    status: todo
+      Lavorato sul ramo feature/gestionale-inglese. FATTO: la lingua sul
+      profilo — profili_staff/{uid} (regole: ognuno solo il suo, solo
+      `lingua` fra it/en; fuori dal backup, perché il titolare non potrebbe
+      rimettere i profili degli altri), salvaLinguaDelProfilo e
+      leggiLinguaDelProfilo in api.js, la lettura al login senza farsi
+      aspettare (App.jsx), il riquadro «Lingua» in Il mio profilo coi nomi
+      delle lingue nella loro lingua; «Il mio profilo» tradotto (area
+      testi/en/profilo.js). Banco e cassa tradotti (17/11): coda, accesso, menu laterale, barra in alto, conto, griglia dei prodotti, pagamento, apertura e chiusura cassa, scheda Cassa (aree testi/en/coda, conto, cassa; le etichette di src/lib in comune). Anche le tabelle di src/lib che il banco mostra (coda.js, sezioni.js, ruoli.js, comande.js, storiaOrdine.js, statoStampante.js, erroriAccesso.js, pendingOrders.js): dove erano costruite al caricamento del modulo ora sono funzioni (filtriStato, etichettaRuolo, servizioEtichetta, etichettaAnnullo). LE PAGINE DEI CLIENTI RESTANO ITALIANE anche su un tablet dello staff in inglese (dalla revisione del 17/11): App.jsx dice a lib/lingua.js se la schermata è del cliente (non personale, «Vista cliente», «Mostra al cliente» ?cliente=1) e lì tr risponde in italiano, con lang=it. CHI NON HA MAI SCELTO ha l'italiano: leggiLinguaDelProfilo risponde it per un profilo senza lingua, e un collega non eredita la lingua di chi ha usato il tablet prima. Lo scontrino resta italiano (prova cartaInItaliano). Secondo giro (17/11): impostazioni (SettingsTab e pannelli), magazzino e comanda al banco, gestione del menù (aree impostazioni, magazzino, menu). Terzo giro (17/11): fornitori e acquisti, statistiche e bilancio, ore e paghe, utenti e buoni, marketplace, assistente AI, avvisi e novità (aree fornitori, statistiche, staff, altro), con le tabelle di src/lib che mostrano (stati e movimenti degli ordini ai fornitori, periodi e mesi, scadenze dei buoni, temi del marketplace). Date e giorni seguono la lingua (formatoAttivo); gli importi restano all'italiana («7,00 €»). RESTANO ITALIANI apposta: la carta stampata, le pagine dei clienti, il messaggio e la mail d'ordine al fornitore, le fatture ai clienti, le esportazioni, i dati (nomi, note, risposte dell'AI) e DevTools, che si vede solo in sviluppo. FUORI da qui: le lingue del menù scelte dal gestore (REQ-MENU-046).
+    status: implemented
     generate_issue: true
     labels: [ui, lingue]
     priority: P2
+    test_cases:
+      - tests/regole/profiliStaff.test.js
+      - tests/component/CodaInInglese.test.jsx
+      - tests/component/ContoInInglese.test.jsx
+      - tests/component/CassaInInglese.test.jsx
+      - tests/unit/cartaInItaliano.test.js
+      - tests/component/ImpostazioniInInglese.test.jsx
+      - tests/component/MagazzinoInInglese.test.jsx
+      - tests/component/MenuInInglese.test.jsx
+      - tests/component/FornitoriInInglese.test.jsx
+      - tests/component/StatisticheInInglese.test.jsx
+      - tests/component/StaffInInglese.test.jsx
+
+  - id: REQ-SIC-007
+    title: "Un elenco unico, nel codice, dei dati personali che l'app tiene"
+    area: "src/lib (elenco dei dati personali), firestore.rules, functions/"
+    description: >
+      Per ogni dato di una persona: dove sta (raccolta e campo di Firestore,
+      Storage, log, FCM, SumUp, l'AI), perché, la base giuridica, per quanto
+      tempo, a chi va, e se è DELICATO (pagamenti e riferimenti SumUp,
+      telefono, indirizzo, posizione, testi o file mandati all'AI con dati di
+      terzi, tracce di accesso, IP). Dallo stesso elenco nascono l'informativa
+      (REQ-SIC-012) e il file scaricato (REQ-SIC-008): l'informativa non dice
+      meno di quello che si tiene, il file non dà meno di quello che
+      l'informativa dice. Una prova fallisce se una raccolta con dati di
+      persone di firestore.rules, o un campo scritto dalle Functions, non è
+      nell'elenco. È la prima misura, prima di ogni altro codice: la regia la
+      chiede come risposta.
+    status: todo
+    generate_issue: true
+    labels: [sicurezza, privacy]
+    priority: P1
     test_cases: []
+
+  - id: REQ-SIC-008
+    title: "«Scarica i miei dati» per ogni persona, dal suo profilo"
+    area: "Il mio profilo (staff, admin), il profilo del cliente registrato"
+    description: >
+      Cliente registrato, staff e admin scaricano dal proprio profilo un file
+      JSON con TUTTO quello che l'app tiene su di loro (account, ruoli, ordini
+      e conti in cui compaiono, presenze e turni, chiamate allo staff,
+      preferenze, token delle notifiche, consensi, contatti, e ogni altro
+      dato dell'elenco REQ-SIC-007), e mai dati di altri: in un conto con più
+      persone ognuno vede le sue righe. GDPR artt. 15 e 20.
+    status: todo
+    generate_issue: true
+    labels: [sicurezza, privacy]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-SIC-009
+    title: "L'admin esporta i dati di una persona del locale, e resta registrato"
+    area: "Impostazioni (Utenti e ruoli, Clienti), una Function"
+    description: >
+      Per rispondere a una richiesta che arriva al locale, l'admin — solo lui
+      — esporta i dati di una persona del locale, cliente o staff, nello
+      stesso formato di REQ-SIC-008. Ogni esportazione resta registrata: chi,
+      di chi, quando.
+    status: todo
+    generate_issue: true
+    labels: [sicurezza, privacy]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-SIC-010
+    title: "Il download dei dati chiede un accesso recente, e lo si dice alla persona"
+    area: "REQ-SIC-008, REQ-SIC-009"
+    description: >
+      Si scarica solo con un accesso recente, altrimenti si rientra; ogni
+      download — fatto dalla persona o dall'admin — lo si dice alla persona
+      interessata, con un avviso nell'app.
+    status: todo
+    generate_issue: true
+    labels: [sicurezza, privacy]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-SIC-011
+    title: "Le categorie particolari di dati (art. 9): se l'app ne tratta, dichiarate e protette"
+    area: "note dei clienti, preferenze, note delle righe e dei conti"
+    description: >
+      La regia chiede se l'app tratta dati di categorie particolari (salute,
+      opinioni, biometria…): per esempio allergie nelle preferenze o nelle
+      note dei clienti, note libere sulle righe di un conto. Se sì vanno
+      dichiarate nell'elenco (REQ-SIC-007), protette e chieste col consenso
+      esplicito; se no, va detto perché.
+    status: todo
+    generate_issue: true
+    labels: [sicurezza, privacy]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-SIC-012
+    title: "Un'informativa tipo per il locale, generata dall'elenco dei dati personali"
+    area: "docs/ (bozza), la pagina «Privacy» del locale"
+    description: >
+      Dall'elenco di REQ-SIC-007 nasce un'informativa tipo che il locale
+      mostra ai suoi clienti e al suo staff, coi suoi dati di titolare.
+      Non omette niente, soprattutto i dati sensibili. Il testo è una bozza
+      che approva Daniele.
+    status: todo
+    generate_issue: true
+    labels: [sicurezza, privacy]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-SIC-013
+    title: "La cancellazione dell'account fatta da sé, con 30 giorni per ripensarci"
+    area: "Il mio profilo, il profilo del cliente, una Function"
+    description: >
+      Daniele, 17/11/2026 (messaggio della regia, punto 7): «ok» ai 30 giorni e alla cancellazione fatta da sé, come nella regia (REQ-FLOTTA-134). La schermata propone prima «Scarica i miei dati» (REQ-SIC-008); l'account resta disattivato per 30 giorni, in cui si può annullare e scaricare ancora; poi si cancella da solo. Restano solo i dati che il locale deve tenere per legge (fiscali: ordini, incassi, chiusure), dichiarati nell'informativa. Per lo staff vanno chiariti i vincoli (presenze e turni che il locale deve tenere).
+    status: todo
+    generate_issue: true
+    labels: [sicurezza, privacy]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-SIC-014
+    title: "Il titolare esporta tutti i dati del locale in ogni momento"
+    area: "Backup e ripristino (src/components/BackupPanel.jsx, src/lib/backup.js)"
+    description: >
+      Messaggio della regia, punto 8: il locale è titolare dei dati dei suoi clienti e del suo personale e deve poterli avere tutti, durante il contratto e alla fine come restituzione (alla chiusura c'è già l'archivio della regia, 180 giorni). In parte esiste già: «Esporta tutto» del backup. Da verificare che comprenda tutti i dati personali dell'elenco REQ-SIC-007 (oggi alcune raccolte sono fuori dal backup apposta: presenze, profili_staff…) e che il formato sia leggibile da una macchina.
+    status: todo
+    generate_issue: true
+    labels: [sicurezza, privacy]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-SIC-015
+    title: "I dati da cui può derivare un controllo a distanza del personale, dichiarati allo staff"
+    area: "informativa per lo staff (REQ-SIC-012), presenze, chi ha battuto/incassato, tempi di preparazione"
+    description: >
+      Messaggio della regia, punto 9: lo Statuto dei lavoratori (art. 4) chiede, per gli strumenti da cui può derivare un controllo a distanza, un accordo o un'autorizzazione, o almeno un'informativa chiara al dipendente [da verificare col legale]. L'elenco di questi dati (presenza ogni 3 minuti, chi ha battuto/incassato/annullato cosa e quando, tempi di preparazione, iniziali sulle righe, storia del conto, ore e turni) entra nell'informativa per lo staff. La valutazione legale la fa Daniele col legale.
+    status: todo
+    generate_issue: true
+    labels: [sicurezza, privacy]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-SIC-016
+    title: "L'elenco dei servizi esterni a cui l'app manda dati di persone"
+    area: "REQ-SIC-007, l'accordo di trattamento della regia (REQ-FLOTTA-135)"
+    description: >
+      Messaggio della regia: per l'accordo di trattamento fra Stonebit e il locale, che elenca i sub-responsabili, serve l'elenco dei servizi esterni a cui l'app manda dati di persone (Google/Firebase e i suoi servizi, FCM, SumUp, la regia e il fornitore dell'AI, altri), verificato nel codice e tenuto insieme all'elenco dei dati personali.
+    status: todo
+    generate_issue: true
+    labels: [sicurezza, privacy]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-SIC-017
+    title: "L'informativa privacy e cookie è quella del locale, e i suoi link sono solo link"
+    area: "clienti/pagine/privacy-policy.html, clienti/pagine/cookie-policy.html, clienti/demo/pagine/, clienti/personalizzazione.mjs, clienti/pluginCliente.js, scripts/personalizza.mjs, src/lib/venue.js, src/App.jsx"
+    description: >
+      Da REQ-SIC-005, punti 4 e 6 di docs/sicurezza-demo.md, portati qui il
+      18/11/2026 col pacchetto per versione (Daniele: «si fallo entrare»,
+      sulla proposta della regia di metterli nella fase 1: un secondo
+      locale non può partire con l'informativa della Tana).
+      `public/privacy-policy.html` e `public/cookie-policy.html` finivano
+      in ogni build così com'erano: sulla demo e sui locali della flotta il
+      titolare del trattamento era EFFEVI («La Tana del Coniglio»), con la
+      sua email. Ora sono modelli con i segnaposto del locale (nome,
+      ragione sociale, sede, partita IVA, email), riempiti dalla build per
+      il suo cliente e, nel sito uguale per tutti, da personalizza.mjs al
+      deploy. La demo ha una pagina sua: nessun dato raccolto, tutto resta
+      nel browser. I link dei social del locale passano solo se sono http,
+      https, mailto o tel, sia quando si salvano sia quando si disegnano:
+      un `javascript:` scritto in Impostazioni (che il bartender può
+      scrivere) diventava un link nel piede del menù di ogni cliente.
+      Il testo legale resta da far rivedere da un legale: qui cambia solo
+      di chi è.
+      CRITERIO: la build della Tana ha l'informativa con i dati della Tana;
+      la build di un altro locale, la demo e il sito personalizzato non
+      contengono «EFFEVI» né «latanadelconiglio»; un link social
+      `javascript:` non diventa mai un link.
+      COME È FATTO (18/11/2026). I modelli stanno in clienti/pagine/, con
+      %VENUE_NAME%, %VENUE_TITOLARE% e %VENUE_EMAIL_LINK%; la demo ha i suoi
+      in clienti/demo/pagine/. Il titolare si compone da venue_legal_name,
+      venue_legal_address (o indirizzo e città), partita IVA e codice
+      fiscale; quello che manca si legge «da inserire», come la partita IVA
+      della Tana prima, invece di un dato inventato. Per la Tana la ragione
+      sociale e la sede ora vengono da clienti/tana/venue.json, come sullo
+      scontrino («EFFEVI - SRLS», «80035 Nola - Italy»). I link: linkSicuro
+      in src/porte/configurazioneLocale.mjs, usato da socialDaTesto (al
+      salvataggio; un indirizzo senza schema diventa https) e da
+      socialDelLocale (al disegno).
+    status: implemented
+    generate_issue: true
+    labels: [sicurezza, privacy, flotta]
+    priority: P1
+    test_cases:
+      - tests/unit/informativaDelLocale.test.js
+      - tests/unit/linkDelLocale.test.js

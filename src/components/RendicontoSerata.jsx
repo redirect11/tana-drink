@@ -9,6 +9,7 @@ import {
   categorieDi,
   sommaRighe,
 } from '../lib/rendiconto.js'
+import { tr, formatoAttivo } from '../lib/lingua.js'
 
 // RENDICONTO DELLA SERATA: la lettura completa di una cassa chiusa, in due
 // viste sugli stessi ordini.
@@ -26,7 +27,7 @@ import {
 const fmtOra = (iso) => {
   if (!iso) return '—'
   try {
-    return new Date(iso).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+    return new Date(iso).toLocaleTimeString(formatoAttivo(), { hour: '2-digit', minute: '2-digit' })
   } catch {
     return '—'
   }
@@ -34,7 +35,7 @@ const fmtOra = (iso) => {
 const fmtData = (iso) => {
   if (!iso) return ''
   try {
-    return new Date(iso).toLocaleDateString('it-IT', {
+    return new Date(iso).toLocaleDateString(formatoAttivo(), {
       weekday: 'long',
       day: '2-digit',
       month: '2-digit',
@@ -49,8 +50,8 @@ const pct = (v) => (v == null ? '—' : `${v.toFixed(1).replace('.', ',')}%`)
 // Come è stato incassato un conto — e se non lo è stato, perché.
 const comePagato = (c) => {
   if (c.metodi.length) return <MetodiPagamento metodi={c.metodi} />
-  if (c.omaggio) return <><Icona nome="sconto" gruppo="tasti" /> offerto</>
-  if (c.daIncassare) return <><Icona nome="giallo" gruppo="tasti" /> da incassare</>
+  if (c.omaggio) return <><Icona nome="sconto" gruppo="tasti" /> {tr('offerto')}</>
+  if (c.daIncassare) return <><Icona nome="giallo" gruppo="tasti" /> {tr('da incassare')}</>
   return '—'
 }
 
@@ -79,7 +80,12 @@ export default function RendicontoSerata({ session, orders, drinksById, itemsByI
   const ctx = useMemo(() => ({ drinksById, itemsById }), [drinksById, itemsById])
   const conti = useMemo(() => rendicontoOrdini(orders, ctx), [orders, ctx])
   const prodotti = useMemo(() => rendicontoProdotti(orders, ctx), [orders, ctx])
-  const categorie = useMemo(() => categorieDi(prodotti), [prodotti])
+  // «Tutte» la scrive lib/rendiconto.js in italiano: si traduce qui, dove
+  // si mostra. Le altre voci sono nomi di categoria, cioè dati.
+  const categorie = useMemo(
+    () => categorieDi(prodotti).map((c) => (c.key === '__tutte__' ? { ...c, label: tr('categorie|Tutte') } : c)),
+    [prodotti]
+  )
   const prodottiVisti = useMemo(
     () => (cat === '__tutte__' ? prodotti : prodotti.filter((p) => p.categoria === cat)),
     [prodotti, cat]
@@ -102,48 +108,51 @@ export default function RendicontoSerata({ session, orders, drinksById, itemsByI
     <div className="rendiconto">
       <div className="row between" style={{ alignItems: 'flex-start', gap: 12 }}>
         <div>
-          <h2 style={{ margin: 0 }}>Rendiconto chiusura cassa</h2>
+          <h2 style={{ margin: 0 }}>{tr('Rendiconto chiusura cassa')}</h2>
           <div className="muted small">
             {fmtData(session?.opened_at)} · {fmtOra(session?.opened_at)} →{' '}
-            {session?.closed_at ? fmtOra(session.closed_at) : 'in corso'}
+            {session?.closed_at ? fmtOra(session.closed_at) : tr('in corso')}
           </div>
         </div>
         <button className="btn ghost small" onClick={onClose}>
-          ← Chiudi
+          ← {tr('Chiudi')}
         </button>
       </div>
 
       {/* Testata: i numeri che si guardano per primi. */}
       <div className="rend-kpi">
         <div className="rend-kpi-box">
-          <span className="muted small">Incassato</span>
+          <span className="muted small">{tr('Incassato')}</span>
           <strong>{formatPrice(totIncassato.netto)}</strong>
           <span className="muted small">
-            {totIncassato.conti} conti chiusi
-            {omaggi.length > 0 && `, ${omaggi.length} offerti`}
+            {totIncassato.conti === 1 ? tr('1 conto chiuso') : tr('{n} conti chiusi', { n: totIncassato.conti })}
+            {omaggi.length > 0 &&
+              (omaggi.length === 1 ? tr(', 1 offerto') : tr(', {n} offerti', { n: omaggi.length }))}
           </span>
         </div>
         {aperti.length > 0 && (
           <div className="rend-kpi-box">
-            <span className="muted small">Da incassare</span>
+            <span className="muted small">{tr('Da incassare')}</span>
             <strong>{formatPrice(totAperti.netto)}</strong>
-            <span className="muted small">{aperti.length} conti ancora aperti</span>
+            <span className="muted small">
+              {aperti.length === 1 ? tr('1 conto ancora aperto') : tr('{n} conti ancora aperti', { n: aperti.length })}
+            </span>
           </div>
         )}
         <div className="rend-kpi-box">
-          <span className="muted small">Sconti concessi</span>
+          <span className="muted small">{tr('Sconti concessi')}</span>
           <strong>{totConti.sconto > 0 ? `−${formatPrice(totConti.sconto)}` : formatPrice(0)}</strong>
-          <span className="muted small">su {formatPrice(totConti.lordo)} di listino</span>
+          <span className="muted small">{tr('su {importo} di listino', { importo: formatPrice(totConti.lordo) })}</span>
         </div>
         <div className="rend-kpi-box">
-          <span className="muted small">Costo merce</span>
+          <span className="muted small">{tr('Costo merce')}</span>
           <strong>{formatPrice(totConti.costo)}</strong>
-          <span className="muted small">{totConti.parziale ? 'stima parziale' : 'da ricette'}</span>
+          <span className="muted small">{totConti.parziale ? tr('stima parziale') : tr('da ricette')}</span>
         </div>
         <div className="rend-kpi-box rend-kpi-forte">
-          <span className="muted small">Guadagno lordo</span>
+          <span className="muted small">{tr('Guadagno lordo')}</span>
           <strong>{formatPrice(totConti.guadagno)}</strong>
-          <span className="muted small">margine {pct(totConti.margine)}</span>
+          <span className="muted small">{tr('margine {percentuale}', { percentuale: pct(totConti.margine) })}</span>
         </div>
       </div>
 
@@ -161,8 +170,9 @@ export default function RendicontoSerata({ session, orders, drinksById, itemsByI
 
       {totConti.parziale && (
         <div className="banner">
-          Il costo di qualche ingrediente non è in magazzino: le righe segnate con ~ hanno un
-          guadagno <strong>ottimistico</strong>, non un dato certo.
+          {tr(
+            'Il costo di qualche ingrediente non è in magazzino: le righe segnate con ~ hanno un guadagno ottimistico, non un dato certo.'
+          )}
         </div>
       )}
 
@@ -172,14 +182,14 @@ export default function RendicontoSerata({ session, orders, drinksById, itemsByI
           className={`tab${vista === 'conti' ? ' active' : ''}`}
           onClick={() => setVista('conti')}
         >
-          <Icona nome="elenco" gruppo="tasti" /> Conti
+          <Icona nome="elenco" gruppo="tasti" /> {tr('Conti')}
         </button>
         <button
           type="button"
           className={`tab${vista === 'prodotti' ? ' active' : ''}`}
           onClick={() => setVista('prodotti')}
         >
-          <Icona nome="statistiche" gruppo="tasti" /> Cumulativo vendite
+          <Icona nome="statistiche" gruppo="tasti" /> {tr('Cumulativo vendite')}
         </button>
       </div>
 
@@ -193,18 +203,20 @@ export default function RendicontoSerata({ session, orders, drinksById, itemsByI
               className={`tab${forma === 'card' ? ' active' : ''}`}
               onClick={() => cambiaForma('card')}
             >
-              ▤ Lista
+              ▤ {tr('forma|Lista')}
             </button>
             <button
               type="button"
               className={`tab${forma === 'tabella' ? ' active' : ''}`}
               onClick={() => cambiaForma('tabella')}
             >
-              ▦ Tabella
+              ▦ {tr('forma|Tabella')}
             </button>
           </div>
           <div className="muted small" style={{ margin: '0 0 8px' }}>
-            {totConti.conti} conti · tocca per vedere cosa è stato venduto
+            {totConti.conti === 1
+              ? tr('1 conto · tocca per vedere cosa è stato venduto')
+              : tr('{n} conti · tocca per vedere cosa è stato venduto', { n: totConti.conti })}
           </div>
         </>
       )}
@@ -219,23 +231,23 @@ export default function RendicontoSerata({ session, orders, drinksById, itemsByI
               onToggle={() => setApertoId(apertoId === c.id ? null : c.id)}
             />
           ))}
-          {conti.length === 0 && <p className="muted small">Nessun conto in questa serata.</p>}
+          {conti.length === 0 && <p className="muted small">{tr('Nessun conto in questa serata.')}</p>}
         </div>
       ) : vista === 'conti' ? (
         <div className="table-scroll">
           <table className="rend-tab">
             <thead>
               <tr>
-                <th className="rowhead">Conto</th>
-                <th>Ora</th>
-                <th>Pezzi</th>
-                <th>Pagamento</th>
-                <th>Listino</th>
-                <th>Sconto</th>
-                <th>Incassato</th>
-                <th>Costo</th>
-                <th>Guadagno</th>
-                <th>Marg.</th>
+                <th className="rowhead">{tr('Conto')}</th>
+                <th>{tr('Ora')}</th>
+                <th>{tr('Pezzi')}</th>
+                <th>{tr('Pagamento')}</th>
+                <th>{tr('importo|Listino')}</th>
+                <th>{tr('Sconto')}</th>
+                <th>{tr('Incassato')}</th>
+                <th>{tr('Costo')}</th>
+                <th>{tr('Guadagno')}</th>
+                <th>{tr('Marg.')}</th>
               </tr>
             </thead>
             <tbody>
@@ -250,14 +262,14 @@ export default function RendicontoSerata({ session, orders, drinksById, itemsByI
               {conti.length === 0 && (
                 <tr>
                   <td className="rowhead" colSpan={10}>
-                    <span className="muted">Nessun conto in questa serata.</span>
+                    <span className="muted">{tr('Nessun conto in questa serata.')}</span>
                   </td>
                 </tr>
               )}
             </tbody>
             <tfoot>
               <tr>
-                <th className="rowhead">Totale</th>
+                <th className="rowhead">{tr('Totale')}</th>
                 <th />
                 <th>{totConti.pezzi}</th>
                 <th />
@@ -281,16 +293,16 @@ export default function RendicontoSerata({ session, orders, drinksById, itemsByI
             <table className="rend-tab">
               <thead>
                 <tr>
-                  <th className="rowhead">Prodotto</th>
-                  <th>Categoria</th>
-                  <th>Pezzi</th>
-                  <th>Prezzo medio</th>
-                  <th>Listino</th>
-                  <th>Sconto</th>
-                  <th>Venduto</th>
-                  <th>Costo</th>
-                  <th>Guadagno</th>
-                  <th>Marg.</th>
+                  <th className="rowhead">{tr('Prodotto')}</th>
+                  <th>{tr('Categoria')}</th>
+                  <th>{tr('Pezzi')}</th>
+                  <th>{tr('Prezzo medio')}</th>
+                  <th>{tr('importo|Listino')}</th>
+                  <th>{tr('Sconto')}</th>
+                  <th>{tr('Venduto')}</th>
+                  <th>{tr('Costo')}</th>
+                  <th>{tr('Guadagno')}</th>
+                  <th>{tr('Marg.')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -298,7 +310,7 @@ export default function RendicontoSerata({ session, orders, drinksById, itemsByI
                   <tr key={p.name}>
                     <td className="rowhead">
                       {p.name}
-                      {!p.costoNoto && <span className="muted" title="costo non completo"> ~</span>}
+                      {!p.costoNoto && <span className="muted" title={tr('costo non completo')}> ~</span>}
                     </td>
                     <td className="muted">{p.categoria}</td>
                     <td>{p.qty}</td>
@@ -316,7 +328,7 @@ export default function RendicontoSerata({ session, orders, drinksById, itemsByI
                 {prodottiVisti.length === 0 && (
                   <tr>
                     <td className="rowhead" colSpan={10}>
-                      <span className="muted">Nessun prodotto in questa categoria.</span>
+                      <span className="muted">{tr('Nessun prodotto in questa categoria.')}</span>
                     </td>
                   </tr>
                 )}
@@ -324,7 +336,8 @@ export default function RendicontoSerata({ session, orders, drinksById, itemsByI
               <tfoot>
                 <tr>
                   <th className="rowhead">
-                    Totale{cat !== '__tutte__' ? ` · ${cat}` : ''}
+                    {tr('Totale')}
+                    {cat !== '__tutte__' ? ` · ${cat}` : ''}
                   </th>
                   <th />
                   <th>{totProdotti.qty}</th>
@@ -343,10 +356,9 @@ export default function RendicontoSerata({ session, orders, drinksById, itemsByI
       )}
 
       <p className="muted small" style={{ marginTop: 10 }}>
-        Gli importi sono il <strong>venduto reale</strong>, non il listino: lo sconto del conto è
-        ripartito <strong>in proporzione al prezzo</strong> di ogni riga (su 10&nbsp;€ con 1&nbsp;€
-        di sconto, una birra da 4&nbsp;€ conta 3,60 e un cocktail da 6&nbsp;€ conta 5,40). Il costo
-        viene dalle ricette valorizzate sull&apos;inventario, IVA compresa come i ricavi.
+        {tr(
+          'Gli importi sono il venduto reale, non il listino: lo sconto del conto è ripartito in proporzione al prezzo di ogni riga (su 10 € con 1 € di sconto, una birra da 4 € conta 3,60 e un cocktail da 6 € conta 5,40). Il costo viene dalle ricette valorizzate sull’inventario, IVA compresa come i ricavi.'
+        )}
       </p>
     </div>
   )
@@ -360,10 +372,10 @@ function CardConto({ conto, aperto, onToggle }) {
       <button type="button" className="rend-card-head" onClick={onToggle}>
         <span className="rend-card-num">#{conto.numero ?? '—'}</span>
         <span className="grow rend-card-nome">
-          {conto.nome || <span className="muted">senza nome</span>}
+          {conto.nome || <span className="muted">{tr('senza nome')}</span>}
           <span className="muted small">
             {' '}
-            · {fmtOra(conto.quando)} · {conto.pezzi} pz
+            · {fmtOra(conto.quando)} · {tr('{n} pz', { n: conto.pezzi })}
           </span>
           <br />
           <span className="muted small">{comePagato(conto)}</span>
@@ -374,7 +386,7 @@ function CardConto({ conto, aperto, onToggle }) {
             <span className="sconto-badge"> <Icona nome="sconto" gruppo="tasti" /> −{formatPrice(conto.sconto)}</span>
           )}
           <span className={`muted small${conto.guadagno < 0 ? ' neg' : ''}`}>
-            guadagno {formatPrice(conto.guadagno)}
+            {tr('conto|guadagno {importo}', { importo: formatPrice(conto.guadagno) })}
             {conto.parziale ? ' ~' : ''}
           </span>
         </span>
@@ -386,12 +398,12 @@ function CardConto({ conto, aperto, onToggle }) {
             <div className="row between rend-card-riga" key={`${conto.id}-${r.name}-${i}`}>
               <span className="grow">
                 {r.qty}× {r.name}
-                <span className="muted small"> · {formatPrice(r.prezzo)} cad.</span>
+                <span className="muted small"> · {tr('{prezzo} cad.', { prezzo: formatPrice(r.prezzo) })}</span>
               </span>
               {r.sconto > 0 && <span className="muted small">−{formatPrice(r.sconto)}</span>}
               <strong>{formatPrice(r.netto)}</strong>
               <span className="muted small" style={{ minWidth: 92, textAlign: 'right' }}>
-                {r.costoNoto ? `costo ${formatPrice(r.costo)}` : 'costo n/d'}
+                {r.costoNoto ? tr('costo {importo}', { importo: formatPrice(r.costo) }) : tr('costo n/d')}
               </span>
             </div>
           ))}
@@ -410,7 +422,7 @@ function RigaConto({ conto, aperto, onToggle }) {
         <td className="rowhead">
           <span className="rend-caret">{aperto ? '▾' : '▸'}</span> #{conto.numero ?? '—'}
           {conto.nome ? ` · ${conto.nome}` : ''}
-          {conto.parziale && <span className="muted" title="costo non completo"> ~</span>}
+          {conto.parziale && <span className="muted" title={tr('costo non completo')}> ~</span>}
         </td>
         <td>{fmtOra(conto.quando)}</td>
         <td>{conto.pezzi}</td>
@@ -433,7 +445,7 @@ function RigaConto({ conto, aperto, onToggle }) {
             <td colSpan={2} className="muted">
               {r.categoria}
             </td>
-            <td className="muted">{formatPrice(r.prezzo)} cad.</td>
+            <td className="muted">{tr('{prezzo} cad.', { prezzo: formatPrice(r.prezzo) })}</td>
             <td className="muted">{formatPrice(r.lordo)}</td>
             <td>{r.sconto > 0 ? `−${formatPrice(r.sconto)}` : '—'}</td>
             <td>{formatPrice(r.netto)}</td>

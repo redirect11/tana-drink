@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import Icona from './Icona.jsx'
+import { tr } from '../lib/lingua.js'
 
 // MENU DELLE AZIONI, dal basso. Su uno schermo da telefono i tasti
 // secondari — unisci, gruppi, dati del conto, annulla — occupavano più
@@ -9,7 +10,7 @@ import Icona from './Icona.jsx'
 //
 // Le voci disabilitate restano visibili e spente: sparire e ricomparire
 // sposta tutte le altre proprio mentre stai per premerle.
-export default function ActionSheet({ open, onClose, titolo = 'Azioni', voci = [] }) {
+export default function ActionSheet({ open, onClose, titolo = tr('Azioni'), voci = [] }) {
   // Il tasto "indietro" del telefono chiude il menu invece di uscire dalla
   // schermata: è quello che uno si aspetta con un pannello aperto.
   useEffect(() => {
@@ -33,7 +34,7 @@ export default function ActionSheet({ open, onClose, titolo = 'Azioni', voci = [
         <div className="action-sheet-maniglia" />
         <div className="action-sheet-titolo">
           <strong>{titolo}</strong>
-          <button className="btn ghost small" onClick={onClose} aria-label="Chiudi">
+          <button className="btn ghost small" onClick={onClose} aria-label={tr('Chiudi')}>
             ✕
           </button>
         </div>

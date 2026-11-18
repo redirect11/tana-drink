@@ -28,6 +28,7 @@ import {
   fattureSenzaFetta,
 } from '../../src/lib/fatture.js'
 import { fetteFornitore } from '../../src/lib/listini.js'
+import { impostaLingua } from '../../src/lib/lingua.js'
 
 const FORNITORI = [
   { id: 'nova', name: 'Nova' },
@@ -110,6 +111,24 @@ describe('il fornitore fa da guardia', () => {
     const motivo = aggancioAmmesso(FATTURA_NOVA, fetta('enofel'), { fatture: [] })
     expect(motivo).toMatch(/Enofel/)
     expect(motivo).toMatch(/Nova/)
+    expect(motivo).toBe('Questa parte dell’ordine è di Enofel: il documento è di Nova.')
+  })
+
+  // REQ-UI-039: la frase passa da `tr` coi suoi segnaposti, e in inglese
+  // si legge intera, ripiego compreso.
+  it('in inglese il motivo si legge in inglese', () => {
+    impostaLingua('en')
+    try {
+      expect(aggancioAmmesso(FATTURA_NOVA, fetta('enofel'), { fatture: [] })).toBe(
+        'This portion of the order is from Enofel: the document is from Nova.'
+      )
+      const senza = { id: 'po-2', created_at: '2026-08-20T09:00:00.000Z', lines: [{ item_id: 'x', qty_packages: 1 }] }
+      expect(aggancioAmmesso(FATTURA_NOVA, fetta(null, senza), { fatture: [] })).toBe(
+        'This portion of the order is from another supplier: the document is from Nova.'
+      )
+    } finally {
+      impostaLingua('it')
+    }
   })
 
   it('sulla sua, invece, si aggancia', () => {
@@ -121,7 +140,9 @@ describe('il fornitore fa da guardia', () => {
   // aggancia niente.
   it('una fetta senza fornitore non prende nessun documento', () => {
     const senza = { id: 'po-2', created_at: '2026-08-20T09:00:00.000Z', lines: [{ item_id: 'x', qty_packages: 1 }] }
-    expect(aggancioAmmesso(FATTURA_NOVA, fetta(null, senza), { fatture: [] })).toMatch(/fornitore/)
+    expect(aggancioAmmesso(FATTURA_NOVA, fetta(null, senza), { fatture: [] })).toBe(
+      'Questa parte dell’ordine è di un altro fornitore: il documento è di Nova.'
+    )
   })
 })
 

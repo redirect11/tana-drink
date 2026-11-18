@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { formatPrice } from '../lib/orderStatus.js'
+import { tr } from '../lib/lingua.js'
 
 // ── IL RIEPILOGO, FORNITORE PER FORNITORE (REQ-MAG-037) ──────────────
 //
@@ -37,21 +38,19 @@ export default function RiepilogoOrdini({
   return (
     <div className="card ordine-riepilogo">
       <div className="row between" style={{ alignItems: 'center', gap: 8 }}>
-        <strong>Riepilogo dell’ordine</strong>
+        <strong>{tr('Riepilogo dell’ordine')}</strong>
         <button type="button" className="btn ghost small" onClick={onIndietro}>
-          ← Torna alla composizione
+          ← {tr('Torna alla composizione')}
         </button>
       </div>
       <p className="muted small" style={{ marginTop: 4 }}>
-        Si crea un ordine per ogni fornitore. Tocca il nome per rivedere i
-        prodotti scelti per lui, poi conferma quel fornitore: i suoi prodotti
-        passano <strong>in assortimento</strong> finché la merce non arriva.
-        Una <strong>bozza</strong> si salva e basta: si riprende dalla Lista
-        ordini e non tocca il magazzino.
+        {tr(
+          'Si crea un ordine per ogni fornitore. Tocca il nome per rivedere i prodotti scelti per lui, poi conferma quel fornitore: i suoi prodotti passano in assortimento finché la merce non arriva. Una bozza si salva e basta: si riprende dalla Lista ordini e non tocca il magazzino.'
+        )}
       </p>
 
       {fette.length === 0 ? (
-        <p className="muted small">Non è rimasto niente da ordinare.</p>
+        <p className="muted small">{tr('Non è rimasto niente da ordinare.')}</p>
       ) : (
         <>
           <div className="inv-list">
@@ -69,10 +68,10 @@ export default function RiepilogoOrdini({
           </div>
           <p className="muted small ordine-conta">
             {quanti === 0
-              ? 'Tutti i fornitori sono stati ordinati.'
+              ? tr('Tutti i fornitori sono stati ordinati.')
               : quanti === 1
-                ? 'Resta 1 fornitore da confermare.'
-                : `Restano ${quanti} fornitori da confermare.`}
+                ? tr('Resta 1 fornitore da confermare.')
+                : tr('Restano {n} fornitori da confermare.', { n: quanti })}
           </p>
         </>
       )}
@@ -81,7 +80,7 @@ export default function RiepilogoOrdini({
 }
 
 function FornitoreDaConfermare({ fetta, ordine, aperta, onApri, onConferma, onTogli }) {
-  const nome = fetta.supplier_name || 'Senza fornitore'
+  const nome = fetta.supplier_name || tr('Senza fornitore')
   const ordinato = !!ordine
   return (
     <div
@@ -95,21 +94,21 @@ function FornitoreDaConfermare({ fetta, ordine, aperta, onApri, onConferma, onTo
           type="button"
           className="btn ghost grow riepilogo-nome"
           aria-expanded={aperta}
-          aria-label={`I prodotti di ${nome}`}
+          aria-label={tr('I prodotti di {nome}', { nome })}
           onClick={onApri}
         >
           <span className="inv-row-name">{nome}</span>
           <span className="muted small">
-            {fetta.righe.length === 1 ? '1 prodotto' : `${fetta.righe.length} prodotti`} ·{' '}
-            {fetta.totali.pieces} pezzi
+            {fetta.righe.length === 1 ? tr('1 prodotto') : tr('{n} prodotti', { n: fetta.righe.length })} ·{' '}
+            {fetta.totali.pieces === 1 ? tr('1 pezzo') : tr('{n} pezzi', { n: fetta.totali.pieces })}
           </span>
         </button>
         <span className="muted small">
-          {formatPrice(fetta.totali.gross)} <span className="muted small">+IVA</span>
+          {formatPrice(fetta.totali.gross)} <span className="muted small">{tr('+IVA')}</span>
         </span>
         {ordinato ? (
           <span className={`pill small ${ordine.bozza ? '' : 'ordinato'}`}>
-            {ordine.bozza ? 'In bozza' : 'Ordinato'}
+            {ordine.bozza ? tr('In bozza') : tr('Ordinato')}
           </span>
         ) : (
           <span className="row" style={{ gap: 4 }}>
@@ -122,13 +121,13 @@ function FornitoreDaConfermare({ fetta, ordine, aperta, onApri, onConferma, onTo
             <button
               type="button"
               className="btn ghost small"
-              title="Salva senza mandarlo: non tocca il magazzino"
+              title={tr('Salva senza mandarlo: non tocca il magazzino')}
               onClick={() => onConferma?.({ bozza: true })}
             >
-              Salva in bozza
+              {tr('Salva in bozza')}
             </button>
             <button type="button" className="btn small" onClick={() => onConferma?.()}>
-              Crea l’ordine
+              {tr('Crea l’ordine')}
             </button>
           </span>
         )}
@@ -138,10 +137,10 @@ function FornitoreDaConfermare({ fetta, ordine, aperta, onApri, onConferma, onTo
         <div className="inv-row-dettaglio">
           <div className="inv-list inv-table riepilogo-tabella">
             <div className="inv-thead">
-              <span className="inv-th">Prodotto</span>
-              <span className="inv-th inv-cell-num">Pezzi</span>
-              <span className="inv-th inv-cell-num">€/pz</span>
-              <span className="inv-th inv-cell-num">Totale</span>
+              <span className="inv-th">{tr('Prodotto')}</span>
+              <span className="inv-th inv-cell-num">{tr('Pezzi')}</span>
+              <span className="inv-th inv-cell-num">{tr('€/pz')}</span>
+              <span className="inv-th inv-cell-num">{tr('Totale')}</span>
               <span aria-hidden />
             </div>
             {fetta.righe.map((r) => (
@@ -173,8 +172,8 @@ function FornitoreDaConfermare({ fetta, ordine, aperta, onApri, onConferma, onTo
                     <button
                       type="button"
                       className="btn ghost small"
-                      aria-label={`Togli ${r.item_name} dall’ordine di ${nome}`}
-                      title="Togli dall’ordine"
+                      aria-label={tr('Togli {prodotto} dall’ordine di {nome}', { prodotto: r.item_name, nome })}
+                      title={tr('Togli dall’ordine')}
                       onClick={() => onTogli?.(r)}
                     >
                       ✕

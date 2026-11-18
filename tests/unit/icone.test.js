@@ -31,7 +31,7 @@ import {
   testoConIcona,
   dividiIcona,
 } from '../../src/lib/icone.js'
-import { STATUS_ICONA, STATUS_EMOJI, PAYMENT_METHOD_LABELS } from '../../src/lib/orderStatus.js'
+import { STATUS_ICONA, STATUS_EMOJI, etichettaMetodo } from '../../src/lib/orderStatus.js'
 import { NAV_GESTIONALE, NAV_SALA, titoloPagina } from '../../src/lib/sezioni.js'
 import { MODULI_PREMIUM } from '../../src/lib/licenza.js'
 
@@ -104,8 +104,8 @@ describe('le icone dentro i testi', () => {
       pagato: '💶',
       annullato: '✖️',
     })
-    expect(PAYMENT_METHOD_LABELS.banco).toBe('💶 Contante')
-    expect(PAYMENT_METHOD_LABELS.misto).toBe('💶+💳 Misto')
+    expect(etichettaMetodo('banco')).toBe('💶 Contante')
+    expect(etichettaMetodo('misto')).toBe('💶+💳 Misto')
     for (const nome of Object.values(STATUS_ICONA)) expect(emojiDi(nome), nome).toBeTruthy()
   })
 })

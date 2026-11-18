@@ -28,6 +28,8 @@
 // Logica pura: niente React, così la leggono anche lib/sezioni.js e le
 // prove.
 
+import { daTradurre } from './lingua.js'
+
 export const VOCABOLARIO = Object.freeze({
   // ── Le pagine e le sezioni del gestionale ──
   coda: { emoji: '🧾', disegno: 'ReceiptText' },
@@ -186,9 +188,9 @@ export const TEMA_ICONE_DI_PARTENZA = 'silhouette'
 //   segnali     — gli avvisi nei testi, i messaggi, i campi di ricerca.
 // Ogni gruppo ha la sua chiave su settings/bar.
 export const GRUPPI_ICONE = Object.freeze({
-  navigazione: { chiave: 'tema_icone_navigazione', label: 'Navigazione' },
-  tasti: { chiave: 'tema_icone_tasti', label: 'Tasti e stati' },
-  segnali: { chiave: 'tema_icone_segnali', label: 'Segnali e messaggi' },
+  navigazione: { chiave: 'tema_icone_navigazione', label: daTradurre('Navigazione') },
+  tasti: { chiave: 'tema_icone_tasti', label: daTradurre('Tasti e stati') },
+  segnali: { chiave: 'tema_icone_segnali', label: daTradurre('Segnali e messaggi') },
 })
 export const GRUPPO_DI_PARTENZA = 'navigazione'
 

@@ -1,4 +1,5 @@
 import { conEmoji } from './icone.js'
+import { daTradurre, trSegnato } from './lingua.js'
 
 // ── RUOLI ────────────────────────────────────────────────────────────
 // Il ruolo vive nei custom claims di Firebase Auth (`token.claims.role`),
@@ -23,18 +24,28 @@ export const RUOLI = ['admin', 'bartender', 'staff']
 // cliente (che toglie il claim).
 export const RUOLI_ASSEGNABILI = [...RUOLI, 'cliente']
 
-export const RUOLO_ETICHETTA = {
-  admin: conEmoji('premium', 'Admin'),
-  bartender: conEmoji('menu', 'Bartender'),
-  staff: conEmoji('servizio', 'Staff'),
-  cliente: conEmoji('clienti', 'Cliente'),
+// IL NOME DEL RUOLO CON LA SUA ICONA, nella lingua di chi guarda
+// (REQ-UI-039). Era una tabella di etichette già composte al caricamento
+// del modulo: tradotte lì, sarebbero rimaste nella lingua di quel momento.
+// Qui icona e nome restano separati, e l'etichetta si compone quando si
+// disegna. `etichettaRuolo(r)?.split(' ')[0]` è ancora l'emoji del ruolo.
+const RUOLO_VOCE = {
+  admin: { icona: 'premium', nome: daTradurre('Admin') },
+  bartender: { icona: 'menu', nome: daTradurre('Bartender') },
+  staff: { icona: 'servizio', nome: daTradurre('Staff') },
+  cliente: { icona: 'clienti', nome: daTradurre('Cliente') },
+}
+
+export function etichettaRuolo(role) {
+  const v = Object.hasOwn(RUOLO_VOCE, role ?? '') ? RUOLO_VOCE[role] : null
+  return v ? conEmoji(v.icona, trSegnato(v.nome)) : undefined
 }
 
 export const RUOLO_DESCRIZIONE = {
-  admin: 'Accesso completo, e in più nomina i ruoli degli altri utenti.',
-  bartender: 'Gestionale completo: cassa, ordini, inventario, menù, impostazioni.',
-  staff: 'Solo gli ordini pronti da servire e i propri ordini.',
-  cliente: 'Nessun accesso al gestionale: vede il menù e i suoi ordini.',
+  admin: daTradurre('Accesso completo, e in più nomina i ruoli degli altri utenti.'),
+  bartender: daTradurre('Gestionale completo: cassa, ordini, inventario, menù, impostazioni.'),
+  staff: daTradurre('Solo gli ordini pronti da servire e i propri ordini.'),
+  cliente: daTradurre('Nessun accesso al gestionale: vede il menù e i suoi ordini.'),
 }
 
 // Ruolo effettivo: qualunque cosa non sia un ruolo noto è un cliente.

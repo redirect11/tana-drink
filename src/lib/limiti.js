@@ -20,9 +20,10 @@
 // IL PROFILO LEGGERO. Un locale Free è pubblicato con le sole regole di
 // Firestore e il sito (`firebase deploy --only firestore,hosting`): niente
 // Functions, niente Storage, perché sono quello che costa anche da fermo.
-// L'app lo capisce da `licenza.piano === 'free'`, oppure da una variabile
-// di build (`VITE_PROFILO=leggero`) che la regia può passare se un giorno
-// pubblicasse leggero un piano diverso.
+// L'app lo capisce da `licenza.piano === 'free'`, oppure dal profilo
+// dell'installazione (`profilo: 'leggero'` nella configurazione del locale,
+// o la variabile di build `VITE_PROFILO=leggero`), che la regia può dare se
+// un giorno pubblicasse leggero un piano diverso.
 //
 // ⚠️ COME PER I MODULI (lib/licenza.js), IL LIMITE NASCONDE, NON PROTEGGE:
 // è l'app che non lascia fare. La licenza non si riscrive più dall'app
@@ -36,6 +37,8 @@
 import { NOME_PRODOTTO } from './prodotto.js'
 import { impostazioniRicordate, licenzaRicordata } from './impostazioniLocali.js'
 import { licenzaDi } from './licenzaInVigore.js'
+import { tr } from './lingua.js'
+import { configurazione } from '../porte/configurazione.js'
 
 export const PIANO_FREE = 'free'
 
@@ -56,13 +59,16 @@ function tetto(stato, chiave) {
 
 export const pianoFree = (stato) => licenzaDi(stato)?.piano === PIANO_FREE
 
-const BUILD_LEGGERA = import.meta.env?.VITE_PROFILO === 'leggero'
+// Il profilo lo dice la build (VITE_PROFILO) o, nel sito uguale per tutti,
+// la configurazione del locale (REQ-FLOTTA-034): configurazione() li ha
+// già messi insieme.
+const INSTALLAZIONE_LEGGERA = configurazione().profilo === 'leggero'
 
 // Niente Functions e niente Storage su questa installazione. La demo è
 // sempre leggera (REQ-FLOTTA-019): non chiama nessun servizio, e le
 // schermate nascondono i tasti che li userebbero (lettore SumUp, foto,
 // gestione delle utenze) come per un locale Free.
-export const profiloLeggero = (stato) => BUILD_LEGGERA || Boolean(__DEMO__) || pianoFree(stato)
+export const profiloLeggero = (stato) => INSTALLAZIONE_LEGGERA || Boolean(__DEMO__) || pianoFree(stato)
 
 // IN ALTO IL MARCHIO DEL PRODOTTO, NON IL LOCALE (REQ-UI-035): solo la demo
 // e i locali Free (Daniele, 17/11/2026: «Solo demo avrà quelle scritte e il
@@ -205,35 +211,65 @@ export function limitiInChiaro(stato) {
   const conti = maxContiAperti(stato)
   const giorni = giorniDiStorico(stato)
   const utenti = maxUtenti(stato)
-  if (prodotti !== null) righe.push(`Prodotti a listino: al massimo ${prodotti}`)
-  if (conti !== null) righe.push(`Conti aperti contemporaneamente: al massimo ${conti}`)
-  if (giorni !== null) righe.push(`Storico consultabile: ${giorni === 1 ? 'l’ultimo giorno' : `gli ultimi ${giorni} giorni`}`)
-  if (utenti !== null) righe.push(`Utenti: al massimo ${utenti}`)
-  if (!scontiConsentiti(stato)) righe.push('Sconti sul conto non consentiti')
-  if (!stampaConsentita(stato)) righe.push('Stampa di comande e scontrini non compresa')
-  if (!comandeConsentite(stato)) righe.push('Comande e stati del servizio non compresi: cassa semplice')
-  if (!aiConsentita(stato)) righe.push('Funzioni AI non comprese')
-  if (rigaMarchio(stato)) righe.push('Firma del prodotto in calce allo scontrino')
+  if (prodotti !== null) righe.push(tr('Prodotti a listino: al massimo {n}', { n: prodotti }))
+  if (conti !== null) righe.push(tr('Conti aperti contemporaneamente: al massimo {n}', { n: conti }))
+  if (giorni !== null)
+    righe.push(giorni === 1 ? tr('Storico consultabile: l’ultimo giorno') : tr('Storico consultabile: gli ultimi {n} giorni', { n: giorni }))
+  if (utenti !== null) righe.push(tr('Utenti: al massimo {n}', { n: utenti }))
+  if (!scontiConsentiti(stato)) righe.push(tr('Sconti sul conto non consentiti'))
+  if (!stampaConsentita(stato)) righe.push(tr('Stampa di comande e scontrini non compresa'))
+  if (!comandeConsentite(stato)) righe.push(tr('Comande e stati del servizio non compresi: cassa semplice'))
+  if (!aiConsentita(stato)) righe.push(tr('Funzioni AI non comprese'))
+  if (rigaMarchio(stato)) righe.push(tr('Firma del prodotto in calce allo scontrino'))
   return righe
 }
 
 // ── COSA SI LEGGE ─────────────────────────────────────────────────────
 // Frasi piane, senza toni da venditore: cosa non si può fare e perché. Il
 // collegamento alla regia lo aggiunge chi le mostra (AvvisoPiano).
-const plurale = (n, uno, tanti) => `${n} ${n === 1 ? uno : tanti}`
-
+// Funzioni e GETTER, non testi fissi: si leggono quando si mostrano (o
+// quando si lancia l'errore), e parlano già la lingua di chi guarda
+// (REQ-UI-039). Un `tr` al caricamento del modulo fisserebbe la lingua.
 export const MESSAGGI_PIANO = {
   prodotti: (n) =>
-    `Nel piano Free il menù ha al massimo ${plurale(n, 'prodotto', 'prodotti')}. Per aggiungerne passa a un piano a pagamento.`,
-  conti: (n) => `Nel piano Free puoi avere al massimo ${plurale(n, 'conto aperto', 'conti aperti')} insieme.`,
-  storico: (n) => `Nel piano Free lo storico mostra ${n === 1 ? 'l’ultimo giorno' : `gli ultimi ${n} giorni`}.`,
-  staff: 'Nel piano Free l’app la usa solo il titolare. Per aggiungere lo staff passa a un piano a pagamento.',
-  foto: 'Le foto dei prodotti sono dei piani a pagamento.',
-  stampa: 'La stampa di comande e scontrini è dei piani a pagamento.',
-  ai: 'Le funzioni AI sono dei piani a pagamento.',
-  comande: 'Nel piano Free la cassa è semplice: si battono le righe e si incassa. Comande, stati del servizio e preparazione sono dei piani a pagamento.',
-  allegati: 'Gli allegati delle fatture sono dei piani a pagamento.',
-  sumup: 'I pagamenti con SumUp sono dei piani a pagamento. Nel piano Free il conto si chiude in contanti o con la carta su un POS esterno.',
+    n === 1
+      ? tr('Nel piano Free il menù ha al massimo 1 prodotto. Per aggiungerne passa a un piano a pagamento.')
+      : tr('Nel piano Free il menù ha al massimo {n} prodotti. Per aggiungerne passa a un piano a pagamento.', { n }),
+  conti: (n) =>
+    n === 1
+      ? tr('Nel piano Free puoi avere al massimo 1 conto aperto insieme.')
+      : tr('Nel piano Free puoi avere al massimo {n} conti aperti insieme.', { n }),
+  storico: (n) =>
+    n === 1
+      ? tr('Nel piano Free lo storico mostra l’ultimo giorno.')
+      : tr('Nel piano Free lo storico mostra gli ultimi {n} giorni.', { n }),
+  get staff() {
+    return tr('Nel piano Free l’app la usa solo il titolare. Per aggiungere lo staff passa a un piano a pagamento.')
+  },
+  get foto() {
+    return tr('Le foto dei prodotti sono dei piani a pagamento.')
+  },
+  get stampa() {
+    return tr('La stampa di comande e scontrini è dei piani a pagamento.')
+  },
+  get ai() {
+    return tr('Le funzioni AI sono dei piani a pagamento.')
+  },
+  get comande() {
+    return tr(
+      'Nel piano Free la cassa è semplice: si battono le righe e si incassa. Comande, stati del servizio e preparazione sono dei piani a pagamento.'
+    )
+  },
+  get allegati() {
+    return tr('Gli allegati delle fatture sono dei piani a pagamento.')
+  },
+  get sumup() {
+    return tr(
+      'I pagamenti con SumUp sono dei piani a pagamento. Nel piano Free il conto si chiude in contanti o con la carta su un POS esterno.'
+    )
+  },
   // Un piano a pagamento senza il modulo: non è «il piano Free».
-  sumup_modulo: 'I pagamenti con SumUp sono un modulo che il tuo piano non include: si aggiunge dalla regia.',
+  get sumup_modulo() {
+    return tr('I pagamenti con SumUp sono un modulo che il tuo piano non include: si aggiunge dalla regia.')
+  },
 }

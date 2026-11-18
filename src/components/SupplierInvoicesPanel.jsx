@@ -38,6 +38,7 @@ import {
   DOC_NESSUNO,
   DOC_NOTA_CREDITO,
   TIPI_DOCUMENTO,
+  etichettaTipoDocumento,
 } from '../lib/fatture.js'
 import {
   PESO_MASSIMO,
@@ -49,6 +50,7 @@ import AiutoCampo from './AiutoCampo.jsx'
 import FatturaDaAI from './FatturaDaAI.jsx'
 import TastoAI from './TastoAI.jsx'
 import { aiRaggiungibile } from '../lib/aiApi.js'
+import { tr } from '../lib/lingua.js'
 
 // Il magazzino è quasi quattrocento prodotti: nessuno li scorre, si cercano.
 // Poche righe per volta e non sessanta come nella schermata degli ordini,
@@ -61,7 +63,7 @@ const LIMITE_RICERCA = 8
 // una conferma, nell'etichetta di un tasto. Era ricopiato in quattro punti, e
 // quattro copie della stessa frase prima o poi non dicono più la stessa cosa.
 const nomeDocumento = (fattura) =>
-  `${fattura?.supplier_name || 'fornitore'}${fattura?.number ? ` #${fattura.number}` : ''}`
+  `${fattura?.supplier_name || tr('fornitore')}${fattura?.number ? ` #${fattura.number}` : ''}`
 
 // Scadenzario fornitori (come FORNITORI REC dell'Excel): documenti/proforma
 // per fornitore con importo, stato pagato e note; totale da pagare a colpo
@@ -231,7 +233,7 @@ export default function SupplierInvoicesPanel() {
 
   async function togliAllegato(inv) {
     const quale = nomeDocumento(inv)
-    if (!confirm(`Togliere l’allegato dal documento di ${quale}? Il file viene cancellato.`)) return
+    if (!confirm(tr('Togliere l’allegato dal documento di {nome}? Il file viene cancellato.', { nome: quale }))) return
     setError(null)
     try {
       const agg = await togliAllegatoDaFattura(inv.id)
@@ -254,7 +256,8 @@ export default function SupplierInvoicesPanel() {
   }
 
   async function remove(inv) {
-    if (!confirm(`Eliminare il documento ${inv.number || ''} di ${inv.supplier_name}?`)) return
+    if (!confirm(tr('Eliminare il documento {numero} di {nome}?', { numero: inv.number || '', nome: inv.supplier_name })))
+      return
     try {
       await deleteSupplierInvoice(inv.id)
       setInvoices((prev) => prev.filter((i) => i.id !== inv.id))
@@ -279,7 +282,7 @@ export default function SupplierInvoicesPanel() {
 
   return (
     <div>
-      {error && <div className="banner">Errore: {error}</div>}
+      {error && <div className="banner">{tr('Errore: {errore}', { errore: error })}</div>}
 
       {/* `accept` LARGO APPOSTA: elencando i tipi uno per uno, su Android
           certi telefoni smettono di offrire la fotocamera — ed è proprio da
@@ -289,23 +292,23 @@ export default function SupplierInvoicesPanel() {
         ref={fileRef}
         type="file"
         accept="image/*,application/pdf"
-        aria-label="Il file da allegare al documento"
+        aria-label={tr('Il file da allegare al documento')}
         style={{ display: 'none' }}
         onChange={allegaScelto}
       />
 
       <div className="inv-summary">
         <span className="chip" style={{ cursor: 'default' }}>
-          Da pagare <strong>{formatPrice(totals.unpaid)}</strong>
+          {tr('Da pagare')} <strong>{formatPrice(totals.unpaid)}</strong>
         </span>
         <button className={`chip ${onlyUnpaid ? 'active' : ''}`} onClick={() => setOnlyUnpaid((v) => !v)}>
-          Solo da pagare
+          {tr('Solo da pagare')}
         </button>
         <button
           className={`chip ${soloSenzaOrdine ? 'active' : ''}`}
           onClick={() => setSoloSenzaOrdine((v) => !v)}
         >
-          Senza ordine ({fattureSenzaFetta(invoices).length})
+          {tr('Senza ordine ({n})', { n: fattureSenzaFetta(invoices).length })}
         </button>
         {/* Lo stesso mestiere del chip qui accanto (REQ-MAG-031): un buco si
             conta in testa e si isola con un tocco. */}
@@ -313,7 +316,7 @@ export default function SupplierInvoicesPanel() {
           className={`chip ${soloSenzaAllegato ? 'active' : ''}`}
           onClick={() => setSoloSenzaAllegato((v) => !v)}
         >
-          Senza allegato ({fattureSenzaAllegato(invoices).length})
+          {tr('Senza allegato ({n})', { n: fattureSenzaAllegato(invoices).length })}
         </button>
       </div>
 
@@ -326,7 +329,7 @@ export default function SupplierInvoicesPanel() {
       {suppliers.length > 0 && (
         <div className="chips-row">
           <button className={`chip ${supplierFilter === 'all' ? 'active' : ''}`} onClick={() => setSupplierFilter('all')}>
-            Tutti
+            {tr('Tutti')}
           </button>
           {suppliers.map((s) => (
             <button
@@ -357,13 +360,13 @@ export default function SupplierInvoicesPanel() {
       ) : (
         <div className="grid-2">
           <button className="btn block" onClick={() => setAdding(true)}>
-            + Nuovo documento
+            + {tr('Nuovo documento')}
           </button>
           {/* Dove l'AI non arriva (piano Free, demo) il tasto non c'è, e
               «Nuovo documento» prende tutta la riga. */}
           {aiRaggiungibile() && (
             <TastoAI className="btn ghost block" onClick={() => setLeggendo(true)}>
-              Leggi con l’AI
+              {tr('Leggi con l’AI')}
             </TastoAI>
           )}
         </div>
@@ -387,7 +390,7 @@ export default function SupplierInvoicesPanel() {
                   {inv.supplier_name || '—'} {inv.number && <span className="muted small">#{inv.number}</span>}
                 </div>
                 <div className="muted small">
-                  {inv.date || '—'} · {inv.doc_type}
+                  {inv.date || '—'} · {etichettaTipoDocumento(inv.doc_type)}
                   {inv.notes && ` · ${inv.notes}`}
                 </div>
                 {/* GENERATA DA NOI, NON ARRIVATA DAL FORNITORE
@@ -395,7 +398,7 @@ export default function SupplierInvoicesPanel() {
                     quanto ci si aspetta di pagare e la seconda quanto lui
                     chiede. Il documento vero si allega qui sotto. */}
                 {fatturaGenerata(inv) && (
-                  <span className="pill small">Generata dall’ordine</span>
+                  <span className="pill small">{tr('Generata dall’ordine')}</span>
                 )}
               </div>
               <div className="inv-qty">
@@ -417,7 +420,7 @@ export default function SupplierInvoicesPanel() {
               </div>
               <button
                 className="btn ghost small"
-                aria-label={`Modifica il documento di ${nomeDocumento(inv)}`}
+                aria-label={tr('Modifica il documento di {nome}', { nome: nomeDocumento(inv) })}
                 onClick={() => {
                   setAdding(false)
                   setModificaPer(inv.id)
@@ -425,7 +428,14 @@ export default function SupplierInvoicesPanel() {
               >
                 <Icona nome="modifica" gruppo="tasti" />
               </button>
-              <button className="btn ghost small" onClick={() => remove(inv)} aria-label="Elimina" title="Elimina"><Icona nome="elimina" gruppo="tasti" /></button>
+              <button
+                className="btn ghost small"
+                onClick={() => remove(inv)}
+                aria-label={tr('Elimina')}
+                title={tr('Elimina')}
+              >
+                <Icona nome="elimina" gruppo="tasti" />
+              </button>
             </div>
             )}
 
@@ -462,7 +472,7 @@ export default function SupplierInvoicesPanel() {
               style={{ marginTop: 6 }}
               onClick={() => setProdottiPer(inv)}
             >
-              <Icona nome="aggiungi" gruppo="tasti" /> Aggiungi prodotti
+              <Icona nome="aggiungi" gruppo="tasti" /> {tr('Aggiungi prodotti')}
             </button>
             {/* COSA È STATO CORRETTO (REQ-MAG-041): una modifica su un
                 documento già pagato è legittima, ma è il gesto che a fine
@@ -472,7 +482,7 @@ export default function SupplierInvoicesPanel() {
         ))}
       </div>
 
-      {visible.length === 0 && <div className="empty">Nessun documento.</div>}
+      {visible.length === 0 && <div className="empty">{tr('Nessun documento.')}</div>}
 
       {prodottiPer && (
         <DialogoProdotti
@@ -513,9 +523,11 @@ function RigheDelDocumento({ fattura }) {
   return (
     <div className="muted small" style={{ margin: '4px 4px 0' }}>
       {righe.map((l) => `${l.qty_packages}× ${l.name}`).join(', ')}
-      {' · netto '}
-      {formatPrice(totali.net)}
-      {caricate > 0 ? ` · ${caricate === righe.length ? 'caricati' : `${caricate} caricati`} a magazzino` : ''}
+      {' · '}
+      {tr('netto {importo}', { importo: formatPrice(totali.net) })}
+      {caricate > 0
+        ? ` · ${caricate === righe.length ? tr('caricati a magazzino') : tr('{n} caricati a magazzino', { n: caricate })}`
+        : ''}
     </div>
   )
 }
@@ -524,7 +536,11 @@ function RigheDelDocumento({ fattura }) {
 // articoli e il netto. Il fornitore non ci va — sono tutte dello stesso
 // fornitore, e ripeterlo toglierebbe spazio ai numeri che le distinguono.
 function etichettaFetta(fetta) {
-  return `${String(fetta.created_at || '').slice(0, 10)} · ${fetta.lines.length} art. · netto ${formatPrice(fetta.total_net)}`
+  return tr('{data} · {n} art. · netto {netto}', {
+    data: String(fetta.created_at || '').slice(0, 10),
+    n: fetta.lines.length,
+    netto: formatPrice(fetta.total_net),
+  })
 }
 
 // ── A QUALE PARTE DI QUALE ORDINE SI RIFERISCE ───────────────────────
@@ -546,13 +562,13 @@ function LegameConLOrdine({ fattura, ordini, suppliers, onCollega, onScollega })
   if (righe.length === 0) {
     return (
       <div className="row between" style={{ alignItems: 'center', gap: 8, margin: '4px 4px 0' }}>
-        <span className="badge-low">senza ordine</span>
+        <span className="badge-low">{tr('senza ordine')}</span>
         <button
           className="btn ghost small"
-          aria-label={`Collega a un ordine il documento di ${quale}`}
+          aria-label={tr('Collega a un ordine il documento di {nome}', { nome: quale })}
           onClick={onCollega}
         >
-          <Icona nome="unisci" gruppo="tasti" /> Collega a un ordine
+          <Icona nome="unisci" gruppo="tasti" /> {tr('Collega a un ordine')}
         </button>
       </div>
     )
@@ -565,14 +581,14 @@ function LegameConLOrdine({ fattura, ordini, suppliers, onCollega, onScollega })
             {/* In mano ci sono gli ultimi venticinque ordini: di uno più
                 vecchio si sa che il legame c'è, non cosa contiene — e dirlo
                 è meglio che far sparire il legame. */}
-            Ordine {fetta ? etichettaFetta(fetta) : 'collegato'}
+            {fetta ? tr('Ordine {dettaglio}', { dettaglio: etichettaFetta(fetta) }) : tr('Ordine collegato')}
           </span>
           <button
             className="btn ghost small"
-            aria-label={`Scollega questo ordine dal documento di ${quale}`}
+            aria-label={tr('Scollega questo ordine dal documento di {nome}', { nome: quale })}
             onClick={() => onScollega(order_id)}
           >
-            Scollega
+            {tr('Scollega')}
           </button>
         </div>
       ))}
@@ -581,10 +597,10 @@ function LegameConLOrdine({ fattura, ordini, suppliers, onCollega, onScollega })
       <button
         className="btn ghost small"
         style={{ marginTop: 4 }}
-        aria-label={`Aggiungi un altro ordine al documento di ${quale}`}
+        aria-label={tr('Aggiungi un altro ordine al documento di {nome}', { nome: quale })}
         onClick={onCollega}
       >
-        ＋ Aggiungi un altro ordine
+        ＋ {tr('Aggiungi un altro ordine')}
       </button>
     </div>
   )
@@ -606,7 +622,7 @@ function AllegatoDelDocumento({ fattura, caricando, onAllega, onTogli }) {
   if (caricando) {
     return (
       <div className="muted small" style={{ margin: '4px 4px 0' }}>
-        Carico l’allegato…
+        {tr('Carico l’allegato…')}
       </div>
     )
   }
@@ -626,23 +642,23 @@ function AllegatoDelDocumento({ fattura, caricando, onAllega, onTogli }) {
             href={allegato.url}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label={`Apri l’allegato del documento di ${quale}`}
+            aria-label={tr('Apri l’allegato del documento di {nome}', { nome: quale })}
           >
-            Apri
+            {tr('Apri')}
           </a>
           <button
             className="btn ghost small"
-            aria-label={`Sostituisci l’allegato del documento di ${quale}`}
+            aria-label={tr('Sostituisci l’allegato del documento di {nome}', { nome: quale })}
             onClick={onAllega}
           >
-            Sostituisci
+            {tr('Sostituisci')}
           </button>
           <button
             className="btn ghost small"
-            aria-label={`Togli l’allegato dal documento di ${quale}`}
+            aria-label={tr('Togli l’allegato dal documento di {nome}', { nome: quale })}
             onClick={onTogli}
           >
-            Togli
+            {tr('Togli')}
           </button>
         </>
       ) : fattura.doc_type === DOC_NESSUNO ? (
@@ -653,25 +669,26 @@ function AllegatoDelDocumento({ fattura, caricando, onAllega, onTogli }) {
         // ricevuta può arrivare dopo.
         <>
           <span className="muted small grow" style={{ minWidth: 0 }}>
-            Nessun documento da allegare.
+            {tr('Nessun documento da allegare.')}
           </span>
           <button
             className="btn ghost small"
-            aria-label={`Allega il documento di ${quale}`}
+            aria-label={tr('Allega il documento di {nome}', { nome: quale })}
             onClick={onAllega}
           >
-            <Icona nome="allegato" gruppo="tasti" /> Allega
+            <Icona nome="allegato" gruppo="tasti" /> {tr('Allega')}
           </button>
         </>
       ) : (
         <>
-          <span className="badge-low">senza allegato</span>
+          <span className="badge-low">{tr('senza allegato')}</span>
           <button
             className="btn ghost small"
-            aria-label={`Allega il documento di ${quale}`}
+            aria-label={tr('Allega il documento di {nome}', { nome: quale })}
             onClick={onAllega}
           >
-            <Icona nome="allegato" gruppo="tasti" />{' '}Allega foto o PDF, fino a {pesoLeggibile(PESO_MASSIMO)}
+            <Icona nome="allegato" gruppo="tasti" />{' '}
+            {tr('Allega foto o PDF, fino a {peso}', { peso: pesoLeggibile(PESO_MASSIMO) })}
           </button>
         </>
       )}
@@ -689,25 +706,25 @@ function DialogoOrdine({ fattura, ordini, fatture, suppliers, onCancel, onConfir
     () => fetteCollegabili(fattura, ordini, { suppliers, fatture }),
     [fattura, ordini, suppliers, fatture]
   )
-  const nome = fattura.supplier_name || 'questo fornitore'
+  const nome = fattura.supplier_name || tr('questo fornitore')
   return (
     <div className="overlay confirm-overlay" onClick={onCancel}>
       <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
-        <h3 style={{ marginTop: 0 }}><Icona nome="unisci" gruppo="tasti" /> Collega a un ordine</h3>
+        <h3 style={{ marginTop: 0 }}>
+          <Icona nome="unisci" gruppo="tasti" /> {tr('Collega a un ordine')}
+        </h3>
         <p className="muted">
-          Il documento si collega alla parte dell’ordine di {nome}: un ordine
-          può contenere più fornitori, e ognuno rilascia la sua fattura.
+          {tr('Il documento si collega alla parte dell’ordine di {nome}: un ordine può contenere più fornitori, e ognuno rilascia la sua fattura.', { nome })}
         </p>
         {fette.length === 0 ? (
           <p className="muted small">
-            Nessun ordine di {nome} da collegare: o non ce ne sono fra gli
-            ultimi, o la loro parte ha già un documento.
+            {tr('Nessun ordine di {nome} da collegare: o non ce ne sono fra gli ultimi, o la loro parte ha già un documento.', { nome })}
           </p>
         ) : (
           <>
-            <label htmlFor="fo-ordine">Ordine</label>
+            <label htmlFor="fo-ordine">{tr('Ordine')}</label>
             <select id="fo-ordine" value={scelto} onChange={(e) => setScelto(e.target.value)}>
-              <option value="">— Scegli un ordine —</option>
+              <option value="">{tr('— Scegli un ordine —')}</option>
               {fette.map((f) => (
                 <option key={f.order_id} value={f.order_id}>
                   {etichettaFetta(f)}
@@ -717,9 +734,11 @@ function DialogoOrdine({ fattura, ordini, fatture, suppliers, onCancel, onConfir
           </>
         )}
         <div className="row" style={{ gap: 10, marginTop: 16 }}>
-          <button className="btn ghost grow" onClick={onCancel}>Annulla</button>
+          <button className="btn ghost grow" onClick={onCancel}>
+            {tr('Annulla')}
+          </button>
           <button className="btn grow" disabled={!scelto} onClick={() => onConfirm(scelto)}>
-            Collega
+            {tr('Collega')}
           </button>
         </div>
       </div>
@@ -740,11 +759,12 @@ function LeCorrezioni({ fattura }) {
   if (voci.length === 0) return null
   return (
     <div className="muted small" style={{ margin: '6px 4px 0' }}>
-      <strong>Correzioni</strong>
+      <strong>{tr('Correzioni')}</strong>
       <ul className="ordine-storia">
         {[...voci].reverse().map((v, k) => (
           <li key={`${v.at}-${k}`}>
-            <span className="muted small">{giornoEOra(v.at)}</span> {descriviMovimento(v)}
+            <span className="muted small">{giornoEOra(v.at)}</span>{' '}
+            {descriviMovimento(v, { etichettaTipo: etichettaTipoDocumento })}
           </li>
         ))}
       </ul>
@@ -824,15 +844,18 @@ function InvoiceForm({ suppliers, busy, fattura = null, onCancel, onSave }) {
 
   return (
     <form className="card" onSubmit={submit}>
-      <strong>{modifica ? `Correggi il documento di ${nomeDocumento(fattura)}` : 'Nuovo documento'}</strong>
+      <strong>
+        {modifica ? tr('Correggi il documento di {nome}', { nome: nomeDocumento(fattura) }) : tr('Nuovo documento')}
+      </strong>
       {modifica && (
         <p className="muted small" style={{ marginTop: 2 }}>
-          Prodotti, allegato e ordine collegato restano come sono. La
-          correzione resta scritta sotto il documento.
+          {tr('Prodotti, allegato e ordine collegato restano come sono. La correzione resta scritta sotto il documento.')}
         </p>
       )}
 
-      <label htmlFor={campo('sup')} style={{ marginTop: 8 }}>Fornitore *</label>
+      <label htmlFor={campo('sup')} style={{ marginTop: 8 }}>
+        {tr('Fornitore *')}
+      </label>
       <select
         id={campo('sup')}
         value={form.supplier_id}
@@ -840,32 +863,31 @@ function InvoiceForm({ suppliers, busy, fattura = null, onCancel, onSave }) {
         disabled={fornitoreBloccato}
         required
       >
-        <option value="">— Scegli —</option>
+        <option value="">{tr('— Scegli —')}</option>
         {suppliers.map((s) => (
           <option key={s.id} value={s.id}>{s.name}</option>
         ))}
       </select>
       {fornitoreBloccato && (
         <p className="muted small">
-          Il documento è collegato a un ordine di questo fornitore: per
-          cambiarlo, scollega prima l’ordine.
+          {tr('Il documento è collegato a un ordine di questo fornitore: per cambiarlo, scollega prima l’ordine.')}
         </p>
       )}
 
       <div className="grid-2">
         <div>
-          <label htmlFor={campo('num')}>Numero doc.</label>
-          <input id={campo('num')} value={form.number} onChange={set('number')} placeholder="Es. 1556" />
+          <label htmlFor={campo('num')}>{tr('Numero doc.')}</label>
+          <input id={campo('num')} value={form.number} onChange={set('number')} placeholder={tr('Es. 1556')} />
         </div>
         <div>
-          <label htmlFor={campo('date')}>Data</label>
+          <label htmlFor={campo('date')}>{tr('Data')}</label>
           <input id={campo('date')} type="date" value={form.date} onChange={set('date')} />
         </div>
       </div>
 
       <div className="grid-2">
         <div>
-          <label htmlFor={campo('type')}>Tipo</label>
+          <label htmlFor={campo('type')}>{tr('Tipo')}</label>
           {/* «NESSUN DOCUMENTO» È UN TIPO COME GLI ALTRI (REQ-MAG-038):
               «il caso di pagare un fornitore senza fattura non c'è. Anche se
               può capitare, io creerò SEMPRE un item nello scadenzario che
@@ -873,13 +895,17 @@ function InvoiceForm({ suppliers, busy, fattura = null, onCancel, onSave }) {
               Il contante al piccolo fornitore deve comparire nel totale del
               mese come tutti gli altri soldi che escono. */}
           <select id={campo('type')} value={form.doc_type} onChange={set('doc_type')}>
+            {/* Il valore è quello che si salva, sempre italiano; il testo
+                è l'etichetta nella lingua di chi guarda (REQ-UI-039). */}
             {tipi.map((t) => (
-              <option key={t}>{t}</option>
+              <option key={t} value={t}>
+                {etichettaTipoDocumento(t)}
+              </option>
             ))}
           </select>
         </div>
         <div>
-          <label htmlFor={campo('amount')}>Importo € *</label>
+          <label htmlFor={campo('amount')}>{tr('Importo € *')}</label>
           <input
             id={campo('amount')}
             type="number"
@@ -897,17 +923,16 @@ function InvoiceForm({ suppliers, busy, fattura = null, onCancel, onSave }) {
           l'istante in cui uno si chiede se deve metterlo lui. */}
       {form.doc_type === DOC_NOTA_CREDITO && (
         <p className="muted small">
-          L’importo si scrive positivo: una nota di credito viene sottratta
-          dai totali dello scadenzario.
+          {tr('L’importo si scrive positivo: una nota di credito viene sottratta dai totali dello scadenzario.')}
         </p>
       )}
 
-      <label htmlFor={campo('notes')}>Note</label>
+      <label htmlFor={campo('notes')}>{tr('Note')}</label>
       <input
         id={campo('notes')}
         value={form.notes}
         onChange={set('notes')}
-        placeholder="Es. differenza di prezzo sulla fattura 1556"
+        placeholder={tr('Es. differenza di prezzo sulla fattura 1556')}
       />
 
       {/* «GIÀ PAGATO» SOLO ALLA CREAZIONE: correggendo, il pagamento resta il
@@ -916,14 +941,16 @@ function InvoiceForm({ suppliers, busy, fattura = null, onCancel, onSave }) {
       {!modifica && (
         <label className="row" style={{ marginTop: 10 }}>
           <input type="checkbox" style={{ width: 'auto' }} checked={form.paid} onChange={set('paid')} />
-          <span>Già pagato</span>
+          <span>{tr('Già pagato')}</span>
         </label>
       )}
 
       <div className="grid-2" style={{ marginTop: 12 }}>
-        <button type="button" className="btn ghost" onClick={onCancel} disabled={busy}>Annulla</button>
+        <button type="button" className="btn ghost" onClick={onCancel} disabled={busy}>
+          {tr('Annulla')}
+        </button>
         <button type="submit" className="btn" disabled={busy}>
-          {modifica ? 'Salva le correzioni' : 'Salva'}
+          {modifica ? tr('Salva le correzioni') : tr('Salva')}
         </button>
       </div>
     </form>
@@ -1013,19 +1040,19 @@ function DialogoProdotti({ fattura, items, listini, ordini, fatture, suppliers, 
     <div className="overlay confirm-overlay" onClick={onCancel}>
       <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
         <h3 style={{ marginTop: 0 }}>
-          <Icona nome="aggiungi" gruppo="tasti" />{' '}Prodotti di {fattura.supplier_name || 'questo fornitore'}
+          <Icona nome="aggiungi" gruppo="tasti" />{' '}
+          {tr('Prodotti di {nome}', { nome: fattura.supplier_name || tr('questo fornitore') })}
           {fattura.number ? ` #${fattura.number}` : ''}
         </h3>
         <p className="muted">
-          I prodotti restano sul documento. Il carico a magazzino si sceglie qui
-          sotto, ed è una cosa a parte.
+          {tr('I prodotti restano sul documento. Il carico a magazzino si sceglie qui sotto, ed è una cosa a parte.')}
         </p>
 
         {collegabili.length > 0 && (
           <>
-            <label htmlFor="fp-ordine">Riprendi le righe da un ordine, e collegalo</label>
+            <label htmlFor="fp-ordine">{tr('Riprendi le righe da un ordine, e collegalo')}</label>
             <select id="fp-ordine" value={ordineScelto} onChange={(e) => riprendi(e.target.value)}>
-              <option value="">— Scegli un ordine —</option>
+              <option value="">{tr('— Scegli un ordine —')}</option>
               {collegabili.map((f) => (
                 <option key={f.order_id} value={f.order_id}>
                   {etichettaFetta(f)}
@@ -1034,24 +1061,26 @@ function DialogoProdotti({ fattura, items, listini, ordini, fatture, suppliers, 
             </select>
             <AiutoCampo style={{ margin: '4px 0 0' }}>
               {ordineScelto
-                ? 'Il documento resta collegato alla parte dell’ordine che riguarda questo fornitore.'
-                : 'Le righe si copiano dall’ordine e il documento vi resta collegato.'}
+                ? tr('Il documento resta collegato alla parte dell’ordine che riguarda questo fornitore.')
+                : tr('Le righe si copiano dall’ordine e il documento vi resta collegato.')}
             </AiutoCampo>
           </>
         )}
 
-        <label htmlFor="fp-cerca" style={{ marginTop: 8 }}>Cerca un prodotto</label>
+        <label htmlFor="fp-cerca" style={{ marginTop: 8 }}>
+          {tr('Cerca un prodotto')}
+        </label>
         <input
           id="fp-cerca"
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Es. Campari"
+          placeholder={tr('Es. Campari')}
         />
 
         {query.trim() !== '' && trovati.length === 0 && (
           <p className="muted small" style={{ marginTop: 6 }}>
-            Nessun prodotto corrisponde alla ricerca.
+            {tr('Nessun prodotto corrisponde alla ricerca.')}
           </p>
         )}
 
@@ -1062,13 +1091,13 @@ function DialogoProdotti({ fattura, items, listini, ordini, fatture, suppliers, 
                 <span className="grow" style={{ minWidth: 0 }}>
                   <span className="inv-row-name">{it.name}</span>
                   <span className="muted small" style={{ display: 'block' }}>
-                    In casa: {formatQty(it.stock, it.unit)}
-                    {contenutoDelPezzo(it) ? ` · 1 pz = ${contenutoDelPezzo(it)}` : ''}
+                    {tr('In casa: {qta}', { qta: formatQty(it.stock, it.unit) })}
+                    {contenutoDelPezzo(it) ? ` · ${tr('1 pz = {contenuto}', { contenuto: contenutoDelPezzo(it) })}` : ''}
                   </span>
                 </span>
                 <button
                   className="btn small"
-                  aria-label={`Aggiungi ${it.name}`}
+                  aria-label={tr('Aggiungi {nome}', { nome: it.name })}
                   onClick={() => aggiungi(it)}
                 >
                   ＋
@@ -1079,7 +1108,7 @@ function DialogoProdotti({ fattura, items, listini, ordini, fatture, suppliers, 
         </div>
         {trovati.length > LIMITE_RICERCA && (
           <p className="muted small" style={{ marginTop: 6 }}>
-            Mostrati {LIMITE_RICERCA} prodotti su {trovati.length}: restringi la ricerca.
+            {tr('Mostrati {n} prodotti su {totale}: restringi la ricerca.', { n: LIMITE_RICERCA, totale: trovati.length })}
           </p>
         )}
 
@@ -1094,9 +1123,9 @@ function DialogoProdotti({ fattura, items, listini, ordini, fatture, suppliers, 
                   type="number"
                   step="1"
                   min="0"
-                  aria-label={`Quantità di ${r.name}`}
+                  aria-label={tr('Quantità di {nome}', { nome: r.name })}
                   value={r.qty_packages ?? ''}
-                  placeholder="pz"
+                  placeholder={tr('pz')}
                   onChange={(e) => cambia(r.rid, 'qty_packages', e.target.value)}
                   style={{ width: 68, textAlign: 'right' }}
                 />
@@ -1104,14 +1133,14 @@ function DialogoProdotti({ fattura, items, listini, ordini, fatture, suppliers, 
                   type="number"
                   step="0.01"
                   min="0"
-                  aria-label={`Prezzo di ${r.name}`}
+                  aria-label={tr('Prezzo di {nome}', { nome: r.name })}
                   value={r.unit_cost ?? ''}
                   onChange={(e) => cambia(r.rid, 'unit_cost', e.target.value)}
                   style={{ width: 88, textAlign: 'right' }}
                 />
                 <button
                   className="btn ghost small"
-                  title="Togli dal documento"
+                  title={tr('Togli dal documento')}
                   onClick={() => togli(r.rid)}
                 >
                   ✕
@@ -1130,8 +1159,10 @@ function DialogoProdotti({ fattura, items, listini, ordini, fatture, suppliers, 
                     onChange={(e) => cambia(r.rid, 'aggiorna_prezzo', e.target.checked)}
                   />
                   <span className="muted">
-                    Aggiorna il prezzo: in archivio {formatPrice(archivio)} →{' '}
-                    {formatPrice(r.unit_cost)}
+                    {tr('Aggiorna il prezzo: in archivio {vecchio} → {nuovo}', {
+                      vecchio: formatPrice(archivio),
+                      nuovo: formatPrice(r.unit_cost),
+                    })}
                   </span>
                 </label>
               )}
@@ -1142,7 +1173,7 @@ function DialogoProdotti({ fattura, items, listini, ordini, fatture, suppliers, 
         {righe.length > 0 && (
           <>
             <div className="row between" style={{ marginTop: 10 }}>
-              <span className="muted">Totale netto dei prodotti</span>
+              <span className="muted">{tr('Totale netto dei prodotti')}</span>
               <strong>{formatPrice(totali.net)}</strong>
             </div>
 
@@ -1154,26 +1185,28 @@ function DialogoProdotti({ fattura, items, listini, ordini, fatture, suppliers, 
                 disabled={bloccato}
                 onChange={(e) => setCarica(e.target.checked)}
               />
-              <span>Carica la merce a magazzino</span>
+              <span>{tr('Carica la merce a magazzino')}</span>
             </label>
             <p className="muted small">
               {bloccato
-                ? 'Il carico non è disponibile finché il magazzino non è aggiornato alla nuova gestione (Magazzino, il banner in alto). I prodotti si aggiungono lo stesso al documento.'
+                ? tr('Il carico non è disponibile finché il magazzino non è aggiornato alla nuova gestione (Magazzino, il banner in alto). I prodotti si aggiungono lo stesso al documento.')
                 : daOrdine
-                  ? 'Queste righe vengono da un ordine già consegnato: la merce è entrata in magazzino alla consegna.'
-                  : 'Senza carico i prodotti restano solo sul documento e le giacenze non cambiano.'}
+                  ? tr('Queste righe vengono da un ordine già consegnato: la merce è entrata in magazzino alla consegna.')
+                  : tr('Senza carico i prodotti restano solo sul documento e le giacenze non cambiano.')}
             </p>
           </>
         )}
 
         <div className="row" style={{ gap: 10, marginTop: 16 }}>
-          <button className="btn ghost grow" onClick={onCancel}>Annulla</button>
+          <button className="btn ghost grow" onClick={onCancel}>
+            {tr('Annulla')}
+          </button>
           <button
             className="btn grow"
             disabled={righe.length === 0}
             onClick={() => onConfirm(righe, carica, ordineScelto || null)}
           >
-            {carica ? 'Aggiungi e carica' : 'Aggiungi senza caricare'}
+            {carica ? tr('Aggiungi e carica') : tr('Aggiungi senza caricare')}
           </button>
         </div>
       </div>

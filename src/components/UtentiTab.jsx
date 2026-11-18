@@ -20,7 +20,7 @@ import { associazioniDi, nomeOperatore } from '../lib/operatore.js'
 import {
   RUOLI,
   RUOLI_ASSEGNABILI,
-  RUOLO_ETICHETTA,
+  etichettaRuolo,
   RUOLO_DESCRIZIONE,
   isAdmin,
 } from '../lib/ruoli.js'
@@ -30,6 +30,7 @@ import { Sottosezioni } from '../lib/sottosezioni.js'
 import AvvisoPiano from './AvvisoPiano.jsx'
 import { staffConsentito, MESSAGGI_PIANO } from '../lib/limiti.js'
 import Icona, { ConIcona } from './Icona.jsx'
+import { tr, daTradurre, trSegnato, useLingua, conEtichetteTradotte } from '../lib/lingua.js'
 
 // GESTIONE UTENTI. Due elenchi in uno: il personale (admin/bartender/staff)
 // e i clienti registrati dal sito. La nomina dei ruoli è dell'admin: da qui
@@ -39,13 +40,14 @@ import Icona, { ConIcona } from './Icona.jsx'
 // Il bartender vede gli elenchi e può chiamare col cerca-persone, ma non
 // tocca i ruoli: dare le chiavi del locale è dell'amministratore.
 const SEZIONI_UTENTI = [
-  { id: 'utenze', icona: 'staff', label: 'Utenze registrate' },
-  { id: 'cassa', icona: 'cassa', label: 'Chi apre la cassa' },
-  { id: 'nuovo', icona: 'aggiungi', label: 'Nuovo account' },
-  { id: 'vip', icona: 'buono', label: 'Buoni VIP' },
+  { id: 'utenze', icona: 'staff', label: daTradurre('Utenze registrate') },
+  { id: 'cassa', icona: 'cassa', label: daTradurre('Chi apre la cassa') },
+  { id: 'nuovo', icona: 'aggiungi', label: daTradurre('Nuovo account') },
+  { id: 'vip', icona: 'buono', label: daTradurre('Buoni VIP') },
 ]
 
 export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
+  useLingua()
   const venue = useVenue()
   const admin = isAdmin(role)
   // Tre sezioni come nelle altre pagine; si apre sull'elenco, che è il
@@ -158,8 +160,8 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
   }, [users, cerca])
 
   if (!conStaff) return <AvvisoPiano messaggio={MESSAGGI_PIANO.staff} impostazioni={impostazioni} />
-  if (error && !users) return <div className="banner">Errore: {error}</div>
-  if (!users) return <div className="empty">Carico gli utenti…</div>
+  if (error && !users) return <div className="banner">{tr('Errore: {messaggio}', { messaggio: error })}</div>
+  if (!users) return <div className="empty">{tr('Carico gli utenti…')}</div>
 
   // Riga utente, uguale per personale e clienti.
   const riga = (u) => (
@@ -167,23 +169,23 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
       <div>
         <div>
           {u.name || u.email}
-          {u.uid === myUid && <span className="muted"> (tu)</span>}
-          {u.disabled && <span className="pill annullato" style={{ marginLeft: 6 }}>sospeso</span>}
+          {u.uid === myUid && <span className="muted"> {tr('(tu)')}</span>}
+          {u.disabled && <span className="pill annullato" style={{ marginLeft: 6 }}>{tr('sospeso')}</span>}
         </div>
         <div className="desc">
-          <ConIcona testo={RUOLO_ETICHETTA[u.role] ?? u.role} />
+          <ConIcona testo={etichettaRuolo(u.role) ?? u.role} />
           {u.name && u.email ? ` · ${u.email}` : ''}
         </div>
       </div>
       <div className="row" style={{ gap: 6 }}>
         {RUOLI.includes(u.role) && u.uid !== myUid && !u.disabled && (
           pendingCalls.some((c) => c.to_uid === u.uid) ? (
-            <span className="pill in_preparazione"><Icona nome="lettore" gruppo="tasti" /> In chiamata…</span>
+            <span className="pill in_preparazione"><Icona nome="lettore" gruppo="tasti" /> {tr('In chiamata…')}</span>
           ) : (
             <button
               className="btn small"
               disabled={busy}
-              title="Chiama (cerca-persone)"
+              title={tr('Chiama (cerca-persone)')}
               onClick={() => setCallTarget(u)}
             >
               <Icona nome="lettore" gruppo="tasti" />
@@ -195,24 +197,26 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
             <button
               className="btn ghost small"
               disabled={busy}
-              title="Cambia ruolo"
+              title={tr('Cambia ruolo')}
               onClick={() => {
                 setRuoloScelto(u.role)
                 setCambioRuolo(u)
               }}
             >
-              <Icona nome="ruolo" gruppo="tasti" /> Ruolo
+              <Icona nome="ruolo" gruppo="tasti" /> {tr('Ruolo')}
             </button>
             <button
               className="btn ghost small"
               disabled={busy}
-              title={u.disabled ? 'Riattiva l’accesso' : 'Sospendi l’accesso'}
+              title={u.disabled ? tr('Riattiva l’accesso') : tr('Sospendi l’accesso')}
               onClick={() =>
                 setConfirm({
-                  title: u.disabled ? `Riattivare ${u.email}?` : `Sospendere ${u.email}?`,
+                  title: u.disabled
+                    ? tr('Riattivare {email}?', { email: u.email })
+                    : tr('Sospendere {email}?', { email: u.email }),
                   message: u.disabled
-                    ? 'Tornerà a poter accedere con le stesse credenziali.'
-                    : 'Non potrà più accedere. L’account e il suo storico restano: si può riattivare quando vuoi.',
+                    ? tr('Tornerà a poter accedere con le stesse credenziali.')
+                    : tr('Non potrà più accedere. L’account e il suo storico restano: si può riattivare quando vuoi.'),
                   run: () => run(() => setStaffDisabled(u.uid, !u.disabled)),
                 })
               }
@@ -222,12 +226,13 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
             <button
               className="btn ghost small"
               disabled={busy}
-              title="Elimina definitivamente"
+              title={tr('Elimina definitivamente')}
               onClick={() =>
                 setConfirm({
-                  title: `Eliminare ${u.email}?`,
-                  message:
-                    'Operazione irreversibile: l’account sparisce. Se serve solo togliergli l’accesso, usa Sospendi.',
+                  title: tr('Eliminare {email}?', { email: u.email }),
+                  message: tr(
+                    'Operazione irreversibile: l’account sparisce. Se serve solo togliergli l’accesso, usa Sospendi.'
+                  ),
                   danger: true,
                   run: () => run(() => removeStaff(u.uid)),
                 })
@@ -245,17 +250,16 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
     <div>
       {/* Il titolo sta nella barra in alto (vedi lib/sezioni.js). */}
       <Sottosezioni
-        voci={admin ? SEZIONI_UTENTI : SEZIONI_UTENTI.slice(0, 1)}
+        voci={conEtichetteTradotte(admin ? SEZIONI_UTENTI : SEZIONI_UTENTI.slice(0, 1))}
         attiva={sezione}
         scegli={setSezione}
       />
-      {error && <div className="banner">Errore: {error}</div>}
+      {error && <div className="banner">{tr('Errore: {messaggio}', { messaggio: error })}</div>}
 
       {!admin && (
         <div className="card settings-section">
           <p className="muted small" style={{ margin: 0 }}>
-            I ruoli li assegna l’<strong>admin</strong>. Da qui puoi consultare
-            l’elenco e chiamare un collega col cerca-persone.
+            {tr('I ruoli li assegna l’admin. Da qui puoi consultare l’elenco e chiamare un collega col cerca-persone.')}
           </p>
         </div>
       )}
@@ -269,30 +273,29 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
       {admin && sezione === 'nuovo' && (
         <div className="card settings-section">
           <p className="muted small" style={{ margin: '0 0 10px' }}>
-            Serve solo per creare un account al posto di qualcuno. Chi si registra
-            da sé compare fra i clienti: gli dai il ruolo e basta.
+            {tr('Serve solo per creare un account al posto di qualcuno. Chi si registra da sé compare fra i clienti: gli dai il ruolo e basta.')}
           </p>
           {(
             <form onSubmit={handleCreate}>
-              <label htmlFor="staff-name">Nome</label>
+              <label htmlFor="staff-name">{tr('Nome')}</label>
               <input
                 id="staff-name"
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="es. Giulia"
+                placeholder={tr('es. Giulia')}
               />
-              <label htmlFor="staff-email">Email</label>
+              <label htmlFor="staff-email">{tr('Email')}</label>
               <input
                 id="staff-email"
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder={`cameriera@${venue.venue_email_domain || 'esempio.it'}`}
+                placeholder={tr('cameriera@{dominio}', { dominio: venue.venue_email_domain || 'esempio.it' })}
               />
-              <label htmlFor="staff-password">Password (min 6 caratteri)</label>
+              <label htmlFor="staff-password">{tr('Password (min 6 caratteri)')}</label>
               <input
                 id="staff-password"
                 type="text"
@@ -300,9 +303,9 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
                 minLength={6}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="da comunicare al collaboratore"
+                placeholder={tr('da comunicare al collaboratore')}
               />
-              <label>Ruolo</label>
+              <label>{tr('Ruolo')}</label>
               <div className="mode-choice">
                 {RUOLI.map((value) => (
                   <button
@@ -311,15 +314,15 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
                     className={`mode-option${nuovoRuolo === value ? ' active' : ''}`}
                     onClick={() => setNuovoRuolo(value)}
                   >
-                    <ConIcona testo={RUOLO_ETICHETTA[value]} />
+                    <ConIcona testo={etichettaRuolo(value)} />
                   </button>
                 ))}
               </div>
               <p className="muted small" style={{ margin: '8px 0 0' }}>
-                {RUOLO_DESCRIZIONE[nuovoRuolo]}
+                {trSegnato(RUOLO_DESCRIZIONE[nuovoRuolo])}
               </p>
               <button className="btn block" style={{ marginTop: 12 }} type="submit" disabled={busy}>
-                {busy ? 'Creo…' : <><Icona nome="aggiungi" gruppo="tasti" /> Crea account</>}
+                {busy ? tr('Creo…') : <><Icona nome="aggiungi" gruppo="tasti" /> {tr('Crea account')}</>}
               </button>
             </form>
           )}
@@ -333,27 +336,26 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
       {sezione === 'utenze' && (
         <>
       <div className="card settings-section">
-        <h3>Personale ({personale.length})</h3>
-        {personale.length === 0 && <div className="empty">Nessun account con un ruolo.</div>}
+        <h3>{tr('Personale ({n})', { n: personale.length })}</h3>
+        {personale.length === 0 && <div className="empty">{tr('Nessun account con un ruolo.')}</div>}
         {personale.map(riga)}
       </div>
 
       {admin && (
         <div className="card settings-section">
-          <h3>Clienti registrati ({clienti.length})</h3>
+          <h3>{tr('Clienti registrati ({n})', { n: clienti.length })}</h3>
           <p className="muted small" style={{ margin: '0 0 10px' }}>
-            Si sono registrati dal sito. Non vedono nulla del gestionale finché
-            non gli dai un ruolo.
+            {tr('Si sono registrati dal sito. Non vedono nulla del gestionale finché non gli dai un ruolo.')}
           </p>
           <input
             type="search"
-            placeholder="Cerca per nome o email…"
+            placeholder={tr('Cerca per nome o email…')}
             value={cerca}
             onChange={(e) => setCerca(e.target.value)}
           />
           {clienti.length === 0 && (
             <div className="empty" style={{ marginTop: 10 }}>
-              {cerca ? 'Nessuno con questo nome.' : 'Ancora nessun cliente registrato.'}
+              {cerca ? tr('Nessuno con questo nome.') : tr('Ancora nessun cliente registrato.')}
             </div>
           )}
           {(tuttiClienti ? clienti : clienti.slice(0, 25)).map(riga)}
@@ -363,7 +365,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
               style={{ marginTop: 8 }}
               onClick={() => setTuttiClienti(true)}
             >
-              Mostra tutti ({clienti.length})
+              {tr('Mostra tutti ({n})', { n: clienti.length })}
             </button>
           )}
         </div>
@@ -375,7 +377,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
         <div className="overlay confirm-overlay" onClick={() => setCambioRuolo(null)}>
           <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
             <h3 style={{ marginTop: 0 }}>
-              Ruolo di {cambioRuolo.name || cambioRuolo.email}
+              {tr('Ruolo di {nome}', { nome: cambioRuolo.name || cambioRuolo.email })}
             </h3>
             <div className="mode-choice" style={{ flexWrap: 'wrap' }}>
               {RUOLI_ASSEGNABILI.map((value) => (
@@ -385,19 +387,19 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
                   className={`mode-option${ruoloScelto === value ? ' active' : ''}`}
                   onClick={() => setRuoloScelto(value)}
                 >
-                  <ConIcona testo={RUOLO_ETICHETTA[value]} />
+                  <ConIcona testo={etichettaRuolo(value)} />
                 </button>
               ))}
             </div>
             <p className="muted small" style={{ marginBottom: 4 }}>
-              {RUOLO_DESCRIZIONE[ruoloScelto]}
+              {trSegnato(RUOLO_DESCRIZIONE[ruoloScelto])}
             </p>
             <p className="muted small" style={{ marginTop: 0 }}>
-              Il nuovo ruolo vale dal suo prossimo accesso.
+              {tr('Il nuovo ruolo vale dal suo prossimo accesso.')}
             </p>
             <div className="row" style={{ gap: 10, marginTop: 12 }}>
               <button className="btn ghost grow" onClick={() => setCambioRuolo(null)}>
-                Annulla
+                {tr('Annulla')}
               </button>
               <button
                 className="btn grow"
@@ -408,9 +410,8 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
                   setCambioRuolo(null)
                   if (isAdmin(nuovo)) {
                     setConfirm({
-                      title: `Nominare admin ${u.email}?`,
-                      message:
-                        'Un admin ha accesso completo e può cambiare i ruoli di tutti, incluso il tuo.',
+                      title: tr('Nominare admin {email}?', { email: u.email }),
+                      message: tr('Un admin ha accesso completo e può cambiare i ruoli di tutti, incluso il tuo.'),
                       run: () => run(() => setStaffRole(u.uid, nuovo)),
                     })
                   } else {
@@ -418,7 +419,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
                   }
                 }}
               >
-                Assegna
+                {tr('Assegna')}
               </button>
             </div>
           </div>
@@ -429,7 +430,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
         <ConfirmDialog
           title={confirm.title}
           message={confirm.message}
-          confirmLabel="Conferma"
+          confirmLabel={tr('Conferma')}
           danger={confirm.danger}
           onCancel={() => setConfirm(null)}
           onConfirm={() => {
@@ -443,22 +444,22 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
       {callTarget && (
         <div className="overlay confirm-overlay" onClick={() => setCallTarget(null)}>
           <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0 }}><Icona nome="lettore" gruppo="tasti" /> Chiama {callTarget.name || callTarget.email}</h3>
+            <h3 style={{ marginTop: 0 }}><Icona nome="lettore" gruppo="tasti" /> {tr('Chiama {nome}', { nome: callTarget.name || callTarget.email })}</h3>
             <p className="muted" style={{ marginTop: 0 }}>
-              Il dispositivo vibrerà con insistenza finché non risponde.
+              {tr('Il dispositivo vibrerà con insistenza finché non risponde.')}
             </p>
             <textarea
               rows={2}
-              placeholder="Messaggio (facoltativo): es. «Vieni al bancone»"
+              placeholder={tr('Messaggio (facoltativo): es. «Vieni al bancone»')}
               value={callMessage}
               onChange={(e) => setCallMessage(e.target.value)}
             />
             <div className="row" style={{ gap: 10, marginTop: 12 }}>
               <button className="btn ghost grow" onClick={() => setCallTarget(null)}>
-                Annulla
+                {tr('Annulla')}
               </button>
               <button className="btn grow" onClick={sendCall}>
-                <Icona nome="lettore" gruppo="tasti" /> Chiama
+                <Icona nome="lettore" gruppo="tasti" /> {tr('Chiama')}
               </button>
             </div>
           </div>
@@ -509,10 +510,9 @@ function ChiApreLaCassa({ utenti }) {
   if (admins.length < 2) {
     return (
       <div className="card settings-section">
-        <h3>Chi apre la cassa</h3>
+        <h3>{tr('Chi apre la cassa')}</h3>
         <p className="muted small" style={{ margin: 0 }}>
-          C’è un solo account admin: all’apertura della cassa non c’è niente da
-          scegliere. La domanda compare da quando ce n’è più d’uno.
+          {tr('C’è un solo account admin: all’apertura della cassa non c’è niente da scegliere. La domanda compare da quando ce n’è più d’uno.')}
         </p>
       </div>
     )
@@ -520,19 +520,16 @@ function ChiApreLaCassa({ utenti }) {
 
   return (
     <div className="card settings-section">
-      <h3>Chi apre la cassa</h3>
+      <h3>{tr('Chi apre la cassa')}</h3>
       <p className="muted" style={{ margin: '0 0 12px', fontSize: '0.85rem' }}>
-        All’apertura della cassa si sceglie chi sta lavorando, senza rifare il
-        login. Qui si decide chi può comparire in quell’elenco, <strong>per
-        ogni account</strong>: il tablet resta collegato con un account solo, e
-        da quale dipende chi ci lavora. Se non spunti nessuno, compaiono tutti.
+        {tr('All’apertura della cassa si sceglie chi sta lavorando, senza rifare il login. Qui si decide chi può comparire in quell’elenco, per ogni account: il tablet resta collegato con un account solo, e da quale dipende chi ci lavora. Se non spunti nessuno, compaiono tutti.')}
       </p>
       {admins.map((account) => {
         const ammessi = associazioniDi(mappa, account.uid)
         return (
           <div key={account.uid} style={{ marginBottom: 14 }}>
             <div style={{ fontWeight: 600 }}>
-              Col login di {account.nome}{' '}
+              {tr('Col login di {nome}', { nome: account.nome })}{' '}
               <span className="muted small">{account.email}</span>
             </div>
             <div className="chips-row" style={{ marginTop: 6 }}>
@@ -546,11 +543,11 @@ function ChiApreLaCassa({ utenti }) {
                     className={`chip${dentro ? ' active' : ''}`}
                     aria-pressed={dentro}
                     disabled={sempre}
-                    title={sempre ? 'È il suo account: c’è sempre' : undefined}
+                    title={sempre ? tr('È il suo account: c’è sempre') : undefined}
                     onClick={() => cambia(account.uid, altro.uid, !dentro)}
                   >
                     {altro.nome}
-                    {sempre ? ' (sempre)' : ''}
+                    {sempre ? ` ${tr('(sempre)')}` : ''}
                   </button>
                 )
               })}

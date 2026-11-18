@@ -7,6 +7,8 @@
 // stessa freccia. Il grid delle colonne è dichiarato dalla tabella
 // (`--inv-cols`), quindi qui dentro non si aggiunge imbottitura orizzontale
 // o le colonne si sfalsano dall'intestazione.
+import { tr } from '../lib/lingua.js'
+
 export default function SortTh({ label, col, sort, onSort, num = false }) {
   const active = sort.col === col
   return (
@@ -14,7 +16,7 @@ export default function SortTh({ label, col, sort, onSort, num = false }) {
       type="button"
       className={`inv-th${num ? ' inv-cell-num' : ''}${active ? ' active' : ''}`}
       onClick={() => onSort(col)}
-      title={`Ordina per ${label}`}
+      title={tr('Ordina per {colonna}', { colonna: label })}
     >
       {label}
       <span aria-hidden className="inv-th-arrow">{active ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</span>

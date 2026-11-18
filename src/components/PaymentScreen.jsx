@@ -28,6 +28,7 @@ import { scontiConsentiti, stampaConsentita, servizioAttivo } from '../lib/limit
 import { showToast, toastError } from '../lib/toast.js'
 import Icona from './Icona.jsx'
 import MetodoPagamento from './MetodoPagamento.jsx'
+import { tr, useLingua } from '../lib/lingua.js'
 import {
   remainingItems,
   paidAmount,
@@ -104,6 +105,7 @@ const digitsToEuro = (s) => (parseInt(s || '0', 10) || 0) / 100
 // l'ordine esista sul server (pagamento diretto dal POS), le azioni
 // aspettano qui l'id reale — la UI intanto è già piena e reattiva.
 export default function PaymentScreen({ order: orderProp, settings, onClose, onPaid, onBeforePay, onError, resolveOrderId, chi = null }) {
+  useLingua()
   const online = useOnline()
   // Chiusura per pagamento COMPLETATO (non semplice annulla): chiude e avvisa
   // il chiamante, che può tornare alla coda ordini.
@@ -168,7 +170,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                 // La carta non è uscita: la prenotazione torna libera, così la
                 // prossima chiusura ci riprova. Vedi BUG-047.
                 releaseReceiptPrint(order.id)
-                onError?.(`Scontrino non stampato: ${e.message}`)
+                onError?.(tr('Scontrino non stampato: {errore}', { errore: e.message }))
               })
           }
         } else {
@@ -192,7 +194,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             )
             .catch((e) => {
               console.warn('[printer] scontrino:', e.message)
-              onError?.(`Scontrino non stampato: ${e.message}`)
+              onError?.(tr('Scontrino non stampato: {errore}', { errore: e.message }))
             })
         }
       }
@@ -337,7 +339,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   // Di chi è questo conto: il tavolo se c'è, se no il nome. È la stessa
   // riga che la coda mette sulle card (destinazioneConto), e qui serve in
   // testata perché è così che si chiama un conto quando lo si incassa.
-  const dove = [order.table_label ? `Tavolo ${order.table_label}` : '', order.customer_name]
+  const dove = [order.table_label ? tr('Tavolo {tavolo}', { tavolo: order.table_label }) : '', order.customer_name]
     .filter(Boolean)
     .join(' · ')
   useEffect(() => {
@@ -481,7 +483,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
     })
     aggiorna().catch((e) => {
       setOptimisticDisc(null)
-      toastError(`Sconto non aggiornato: ${e.message}`)
+      toastError(tr('Sconto non aggiornato: {errore}', { errore: e.message }))
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [firmaSelezione, splitting, selezioneVuota, scontoPreparato, scontoOra, closed])
@@ -497,8 +499,8 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   // far aspettare il cassiere davanti a una transazione che non partirà.
   const senzaRete = !online
   const methods = [
-    { key: 'banco', label: 'Contante', icona: 'paghe' },
-    { key: 'carta', label: 'Carta di Credito', icona: 'carta' },
+    { key: 'banco', label: tr('Contante'), icona: 'paghe' },
+    { key: 'carta', label: tr('Carta di Credito'), icona: 'carta' },
   ]
   // SENZA FUNCTIONS IL LETTORE NON C'È (REQ-LIC-004): sul profilo leggero
   // del piano Free nessuno parla coi server di SumUp, e un tasto che non
@@ -514,8 +516,8 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
       // Scritto lì sotto stava sempre in mezzo, mangiava una riga a una
       // schermata che ne ha poche, e chi incassa non lo leggeva comunque.
       motivo: senzaRete
-        ? 'Senza rete il lettore SumUp non può autorizzare: incassa e registra come Carta di Credito.'
-        : 'Il lettore SumUp non è ancora configurato: si attiva in Impostazioni → Pagamenti.',
+        ? tr('Senza rete il lettore SumUp non può autorizzare: incassa e registra come Carta di Credito.')
+        : tr('Il lettore SumUp non è ancora configurato: si attiva in Impostazioni → Pagamenti.'),
     },
   )
   // Buono come SCONTO (non metodo di pagamento): si applica al totale e si
@@ -642,7 +644,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             const oid = await orderId()
             setTimeout(() => {
               registerPayment(oid, { amount: toPay, method: 'lettore', items, autoServe, sconto }).catch((e) =>
-                onError?.(`Lettore simulato: ${e.message}`)
+                onError?.(tr('Lettore simulato: {errore}', { errore: e.message }))
               )
             }, 2500)
           } catch (e) {
@@ -656,7 +658,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
         await onBeforePay?.()
         const res = await readerCheckout(await orderId(), { amount: toPay, items, sconto })
         if (res?.unavailable) {
-          setError('Lettore non disponibile in ambiente di sviluppo: simula dai DevTools.')
+          setError(tr('Lettore non disponibile in ambiente di sviluppo: simula dai DevTools.'))
           return
         }
         setReaderStarted(true)
@@ -675,7 +677,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
         await registerPayment(await orderId(), { amount: toPay, method, items, autoServe, chiude: willClose, sconto })
       } catch (e) {
         setError(e.message)
-        onError?.(`Pagamento non registrato: ${e.message}`)
+        onError?.(tr('Pagamento non registrato: {errore}', { errore: e.message }))
       }
     })()
     if (willClose) closePaid({ amount: toPay, method }, { senzaStampa })
@@ -702,7 +704,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
     ) {
       printScontrinoAcconto(order, { amount: toPay, method, items, sconto }).catch((e) => {
         console.warn('[printer] acconto:', e.message)
-        onError?.(`Ricevuta d'acconto non stampata: ${e.message}`)
+        onError?.(tr("Ricevuta d'acconto non stampata: {errore}", { errore: e.message }))
       })
     }
   }
@@ -722,7 +724,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
         await chiudiImpagato(await orderId(), { nota, chi: chiSono })
       } catch (e) {
         setError(e.message)
-        onError?.(`Chiusura impagato non registrata: ${e.message}`)
+        onError?.(tr('Chiusura impagato non registrata: {errore}', { errore: e.message }))
       }
     })()
     setImpagatoAperta(false)
@@ -758,7 +760,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
           await applyVoucherDiscount(await orderId(), vid, voucherReq, { items: righeSelezionate })
         } catch (e) {
           setOptimisticDisc(null)
-          toastError(`Buono non applicato: ${e.message}`)
+          toastError(tr('Buono non applicato: {errore}', { errore: e.message }))
         }
       })()
       return
@@ -782,7 +784,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
         })
       } catch (e) {
         setOptimisticDisc(null)
-        toastError(`Sconto non applicato: ${e.message}`)
+        toastError(tr('Sconto non applicato: {errore}', { errore: e.message }))
       }
     })()
   }
@@ -793,7 +795,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
       try {
         await setOrderLotteryCode(await orderId(), lotteryCode)
       } catch (e) {
-        toastError(`Codice lotteria non salvato: ${e.message}`)
+        toastError(tr('Codice lotteria non salvato: {errore}', { errore: e.message }))
       }
     })()
   }
@@ -822,7 +824,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   return (
     <div
       role="dialog"
-      aria-label="Pagamento"
+      aria-label={tr('Pagamento')}
       style={{
         position: 'fixed',
         inset: 0,
@@ -850,10 +852,10 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             era in mezzo alle righe dei drink, dove sembrava una voce del
             conto. Qui sta dove si guarda per sapere di chi è il conto. */}
         <h3 style={{ margin: 0 }}>
-          <Icona nome="carta" gruppo="tasti" />{' '}Pagamento · #{order.daily_number ?? '—'}
+          <Icona nome="carta" gruppo="tasti" />{' '}{tr('Pagamento')} · #{order.daily_number ?? '—'}
           {dove && <span className="muted"> · {dove}</span>}
         </h3>
-        <button className="btn ghost small" onClick={onClose}>✕ Chiudi</button>
+        <button className="btn ghost small" onClick={onClose}>✕ {tr('Chiudi')}</button>
       </div>
 
       {error && <div className="banner" style={{ margin: '8px 12px 0', flexShrink: 0 }}>{error}</div>}
@@ -881,7 +883,11 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               <div className="payscreen-comandi">
                 {remaining.some((r) => r.qty > 1) && (
                   <button className="btn ghost small" onClick={() => setSeparati((v) => !v)}>
-                    {separati ? <><Icona nome="unisci" gruppo="tasti" /> Unisci uguali</> : <><Icona nome="separa" gruppo="tasti" /> Separa uguali</>}
+                    {separati ? (
+                      <><Icona nome="unisci" gruppo="tasti" /> {tr('Unisci uguali')}</>
+                    ) : (
+                      <><Icona nome="separa" gruppo="tasti" /> {tr('Separa uguali')}</>
+                    )}
                   </button>
                 )}
                 {/* UN TASTO SOLO CHE CAMBIA SCRITTA, come i suoi vicini. Dice
@@ -896,7 +902,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                     riga, e «Deseleziona tutti» è già la più lunga della
                     schermata. */}
                 <button className="btn ghost small" onClick={() => portaTutte(selezioneVuota)}>
-                  {selezioneVuota ? 'Seleziona tutti' : 'Deseleziona tutti'}
+                  {selezioneVuota ? tr('Seleziona tutti') : tr('Deseleziona tutti')}
                 </button>
               </div>
             )}
@@ -939,7 +945,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                                 niente — quindi si toglie e si aggiunge una
                                 unità per volta. */}
                             <button
-                              aria-label={`Togli ${r.name} dal pagamento`}
+                              aria-label={tr('Togli {nome} dal pagamento', { nome: r.name })}
                               onClick={() => tocca(r, 'meno', i)}
                               disabled={closed || !on}
                             >
@@ -951,7 +957,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                                 il gesto che l'utente ha chiesto per dire
                                 «solo questa» — spento non lo sarebbe mai. */}
                             <button
-                              aria-label={`Paga ${r.name}`}
+                              aria-label={tr('Paga {nome}', { nome: r.name })}
                               onClick={() => tocca(r, 'piu', i)}
                               disabled={closed || (on && !allSelected)}
                             >
@@ -983,20 +989,22 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                     <span className="muted small"> · {r.qty}× {formatPrice(r.unit_price)}</span>
                   </button>
                   <span className="qty">
-                    <button aria-label={`Togli ${r.name} dal pagamento`} onClick={() => tocca(r, 'meno')} disabled={closed || s === 0}>−</button>
+                    <button aria-label={tr('Togli {nome} dal pagamento', { nome: r.name })} onClick={() => tocca(r, 'meno')} disabled={closed || s === 0}>−</button>
                     <strong>{s}/{r.qty}</strong>
-                    <button aria-label={`Paga ${r.name}`} onClick={() => tocca(r, 'piu')} disabled={closed || (s >= r.qty && !allSelected)}>+</button>
+                    <button aria-label={tr('Paga {nome}', { nome: r.name })} onClick={() => tocca(r, 'piu')} disabled={closed || (s >= r.qty && !allSelected)}>+</button>
                   </span>
                 </div>
               )
             })}
             {remaining.length === 0 && !closed && (
-              <p className="muted small">Nessun articolo da pagare{due > 0 ? ': resta il residuo (coperto/servizio).' : '.'}</p>
+              <p className="muted small">
+                {due > 0 ? tr('Nessun articolo da pagare: resta il residuo (coperto/servizio).') : tr('Nessun articolo da pagare.')}
+              </p>
             )}
             {(order.payments || []).length > 0 && (
               <div style={{ marginTop: 14 }}>
-                <span className="muted small" style={{ letterSpacing: 0.5 }}>GIÀ PAGATO</span>
-                {dettaglioIncassi(order).incassi.map((p, idx) => (
+                <span className="muted small" style={{ letterSpacing: 0.5 }}>{tr('GIÀ PAGATO')}</span>
+                {dettaglioIncassi(order, { aSchermo: true }).incassi.map((p, idx) => (
                   <div key={idx} style={{ marginTop: 4 }}>
                     <div className="row between muted small">
                       <span>
@@ -1005,7 +1013,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                             particolare, sono soldi lasciati sul conto. Le
                             righe le copre solo chi le sceglie qui a
                             sinistra. */}
-                        {p.cosa ? 'Pagate' : 'Acconto'}
+                        {p.cosa ? tr('incasso|Pagate') : tr('incasso|Acconto')}
                         {p.metodo && <> · <MetodoPagamento metodo={p.metodo} /></>}
                         {p.quando ? ` · ${String(p.quando).slice(11, 16)}` : ''}
                       </span>
@@ -1037,22 +1045,22 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                 sola vorrebbe dire tornare alla cifra di cui nessuno sa il
                 perché. Con un solo sconto su tutto il conto la riga è quella
                 di sempre. */}
-            {scontiDelConto(order).map((sc, idx) => (
+            {scontiDelConto(order, { aSchermo: true }).map((sc, idx) => (
               <div className="row between muted small" key={idx}>
                 <span>{sc.etichetta}</span>
                 <span>−{formatPrice(sc.importo)}</span>
               </div>
             ))}
             <div className="row between small">
-              <span style={{ color: '#2ecc71' }}>Pagato</span>
+              <span style={{ color: '#2ecc71' }}>{tr('Pagato')}</span>
               <span style={{ color: '#2ecc71' }}>{formatPrice(paid)}</span>
             </div>
             <div className="row between small">
-              <span style={{ color: '#e74c3c' }}>Ammontare dovuto</span>
+              <span style={{ color: '#e74c3c' }}>{tr('Ammontare dovuto')}</span>
               <span style={{ color: '#e74c3c' }}>{formatPrice(due)}</span>
             </div>
             <div className="row between" style={{ marginTop: 4 }}>
-              <strong>Totale</strong>
+              <strong>{tr('Totale')}</strong>
               <strong className="price">{formatPrice(order.total)}</strong>
             </div>
           </div>
@@ -1068,7 +1076,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
         <div className="payscreen-pad">
           <div className="row between" style={{ alignItems: 'baseline', flexShrink: 0 }}>
             <span className="muted small">
-              AMMONTARE DOVUTO
+              {tr('AMMONTARE DOVUTO')}
               <br />
               <span style={{ fontSize: '1.2rem' }}>{formatPrice(due)}</span>
             </span>
@@ -1080,12 +1088,12 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                     niente, è un acconto). Dirlo qui evita di scoprirlo dopo,
                     a conto chiuso. */}
                 {manual
-                  ? 'IMPORTO A MANO'
+                  ? tr('IMPORTO A MANO')
                   : selezioneVuota
-                    ? 'NESSUNA RIGA SCELTA'
+                    ? tr('NESSUNA RIGA SCELTA')
                     : splitting
-                      ? `RIGHE SCELTE (${selection.reduce((n, r) => n + (Number(r.qty) || 0), 0)})`
-                      : 'PAGAMENTO'}
+                      ? tr('RIGHE SCELTE ({n})', { n: selection.reduce((n, r) => n + (Number(r.qty) || 0), 0) })
+                      : tr('PAGAMENTO')}
                 {op ? ` (${acc != null ? formatPrice(acc) : ''} ${op === 'x' ? '×' : op})` : ''}
               </span>
               <br />
@@ -1100,7 +1108,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               che qualcuno credeva pagate. */}
           {manual && amount > 0 && amount < due && (
             <p className="muted small" style={{ margin: '2px 0 0', textAlign: 'right' }}>
-              Acconto: resta sul conto, non copre righe precise.
+              {tr('Acconto: resta sul conto, non copre righe precise.')}
             </p>
           )}
           {/* Zero righe scelte: lo zero grande in cima potrebbe sembrare un
@@ -1109,12 +1117,13 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               resta una strada buona anche da qui. */}
           {!manual && selezioneVuota && !closed && due > 0 && (
             <p className="muted small" style={{ margin: '2px 0 0', textAlign: 'right' }}>
-              Nessuna riga scelta: tocca le voci da incassare, o batti un importo.
+              {tr('Nessuna riga scelta: tocca le voci da incassare, o batti un importo.')}
             </p>
           )}
           {change > 0 && method === 'banco' && (
             <p className="small" style={{ margin: '2px 0 0', textAlign: 'right', flexShrink: 0 }}>
-              Resto: <strong>{formatPrice(change)}</strong> (si incassano {formatPrice(toPay)})
+              {tr('Resto:')} <strong>{formatPrice(change)}</strong>{' '}
+              {tr('(si incassano {importo})', { importo: formatPrice(toPay) })}
             </p>
           )}
           {/* QUANTO DÀ IL CLIENTE E QUANTO RESTO DARE (REQ-PAG-015). Solo
@@ -1138,12 +1147,13 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
           )}
           {readerStarted && order.payment_status === 'in_attesa' && (
             <p className="muted small" style={{ margin: '2px 0 0', flexShrink: 0 }}>
-              <Icona nome="lettore" gruppo="tasti" />{' '}Transazione avviata sul lettore: il conto si aggiorna da solo all'esito.
+              <Icona nome="lettore" gruppo="tasti" />{' '}
+              {tr("Transazione avviata sul lettore: il conto si aggiorna da solo all'esito.")}
             </p>
           )}
-          {closed && <p style={{ margin: '2px 0 0', flexShrink: 0 }}><Icona nome="fatto" gruppo="segnali" /> Conto pagato e chiuso.</p>}
+          {closed && <p style={{ margin: '2px 0 0', flexShrink: 0 }}><Icona nome="fatto" gruppo="segnali" /> {tr('Conto pagato e chiuso.')}</p>}
 
-          <div className="paypad" role="group" aria-label="Tastierino importo">
+          <div className="paypad" role="group" aria-label={tr('Tastierino importo')}>
             <button className="paypad-key danger" onClick={clear}>C</button>
             <button className="paypad-key accent" onClick={() => divideBy(2)}>/2</button>
             <button className="paypad-key accent" onClick={() => divideBy(3)}>/3</button>
@@ -1163,13 +1173,15 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             <button className="paypad-key" onClick={() => key('00')}>00</button>
             <button className="paypad-key" onClick={() => key('0')}>0</button>
             <button className="paypad-key accent" onClick={equals}>=</button>
-            <button className="paypad-key danger" aria-label="Cancella cifra" onClick={back}>←</button>
+            <button className="paypad-key danger" aria-label={tr('Cancella cifra')} onClick={back}>←</button>
           </div>
 
           {scontoFuoriMisura && (
             <div className="banner" style={{ marginTop: 10 }}>
-              Lo sconto ({formatPrice(order.discount_amount)}) supera quello che stai
-              riscuotendo ({formatPrice(baseSconto)}): correggilo qui sotto prima di incassare.
+              {tr('Lo sconto ({sconto}) supera quello che stai riscuotendo ({importo}): correggilo qui sotto prima di incassare.', {
+                sconto: formatPrice(order.discount_amount),
+                importo: formatPrice(baseSconto),
+              })}
             </div>
           )}
 
@@ -1191,7 +1203,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               rubasse una riga. */}
           {!closed && cassaChiusa && (
             <div className="banner payscreen-cassa-chiusa" role="status">
-              <Icona nome="rosso" gruppo="segnali" /> Cassa chiusa: per incassare va aperta la cassa.
+              <Icona nome="rosso" gruppo="segnali" /> {tr('Cassa chiusa: per incassare va aperta la cassa.')}
             </div>
           )}
           {!closed && (
@@ -1199,13 +1211,15 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               className="btn block payscreen-collect"
               title={
                 !autoServeBase && !served
-                  ? `Comande non ancora servite: il conto resta aperto anche dopo l'incasso${riscuotiEServi ? ', a meno di «Riscuoti e servi»' : ''}.`
+                  ? riscuotiEServi
+                    ? tr("Comande non ancora servite: il conto resta aperto anche dopo l'incasso, a meno di «Riscuoti e servi».")
+                    : tr("Comande non ancora servite: il conto resta aperto anche dopo l'incasso.")
                   : undefined
               }
               disabled={cassaChiusa || saving || scontoFuoriMisura || (due > 0 && !(toPay > 0))}
               onClick={() => riscuoti()}
             >
-              {due <= 0 ? 'Chiudi conto · 0,00 €' : `Riscuotere · ${formatPrice(toPay)}`}
+              {due <= 0 ? tr('Chiudi conto · 0,00 €') : tr('Riscuotere · {importo}', { importo: formatPrice(toPay) })}
             </button>
           )}
           {/* LE DUE VIE ALTERNATIVE, AFFIANCATE SU UNA RIGA SOLA (chiesto
@@ -1227,7 +1241,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                   disabled={cassaChiusa || saving || scontoFuoriMisura || !(toPay > 0)}
                   onClick={() => riscuoti({ senzaStampa: true })}
                 >
-                  Riscuoti (senza stampa) · {formatPrice(toPay)}
+                  {tr('Riscuoti (senza stampa) · {importo}', { importo: formatPrice(toPay) })}
                 </button>
               )}
               {/* ── IL TERZO TASTO ────────────────────────────────────
@@ -1248,12 +1262,14 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                   onClick={() =>
                     chiudeOra
                       ? showToast(
-                          'Questo incasso salda il conto: la carta che esce è lo scontrino, non un acconto. Togli qualche riga per riscuoterne solo una parte.'
+                          tr(
+                            'Questo incasso salda il conto: la carta che esce è lo scontrino, non un acconto. Togli qualche riga per riscuoterne solo una parte.'
+                          )
                         )
                       : riscuoti({ conAcconto: true })
                   }
                 >
-                  Acconto con scontrino · {formatPrice(toPay)}
+                  {tr('Acconto con scontrino · {importo}', { importo: formatPrice(toPay) })}
                 </button>
               )}
               {/* Consegnato e incassato nello stesso gesto: un tasto solo invece
@@ -1265,7 +1281,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                   disabled={cassaChiusa || saving || scontoFuoriMisura || (due > 0 && !(toPay > 0))}
                   onClick={() => riscuoti({ servi: true })}
                 >
-                  Riscuoti e servi · chiude il conto
+                  {tr('Riscuoti e servi · chiude il conto')}
                 </button>
               )}
             </div>
@@ -1280,19 +1296,19 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               giorno che il modulo si riaccende. */}
           <div style={{ display: 'flex', gap: 6, marginTop: 8, flexShrink: 0 }}>
             <button className="btn ghost small grow" onClick={() => setShowLottery(true)}>
-              <Icona nome="buono" gruppo="tasti" />{' '}Codice Lotteria{order.lottery_code ? ' ✓' : ''}
+              <Icona nome="buono" gruppo="tasti" />{' '}{tr('Codice Lotteria')}{order.lottery_code ? ' ✓' : ''}
             </button>
             {stampaOn && (
               <button
                 className="btn ghost small grow"
-                onClick={() => printScontrino(order).catch((e) => setError(`Stampa: ${e.message}`))}
+                onClick={() => printScontrino(order).catch((e) => setError(tr('Stampa: {errore}', { errore: e.message })))}
               >
-                <Icona nome="stampa" gruppo="tasti" /> Preconto
+                <Icona nome="stampa" gruppo="tasti" /> {tr('Preconto')}
               </button>
             )}
             {fattureOn && (
               <button className="btn ghost small grow" onClick={() => setShowInvoice(true)}>
-                <Icona nome="email" gruppo="tasti" />{' '}Invia fattura{order.invoice_number ? ' ✓' : ''}
+                <Icona nome="email" gruppo="tasti" />{' '}{tr('Invia fattura')}{order.invoice_number ? ' ✓' : ''}
               </button>
             )}
           </div>
@@ -1331,7 +1347,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               che apre la sua finestra invece di diventare il metodo scelto. */}
           {!closed && due > 0 && (
             <button type="button" className="payscreen-method" disabled={cassaChiusa} onClick={() => setImpagatoAperta(true)}>
-              <Icona nome="orario" gruppo="tasti" /> Impagato
+              <Icona nome="orario" gruppo="tasti" /> {tr('Impagato')}
             </button>
           )}
 
@@ -1341,7 +1357,11 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                 per poterlo vedere e togliere. */}
             {!closed && (scontiConsentiti(settings) || (order.discount_amount || 0) > 0) && (
               <button className="btn ghost small block" onClick={() => setShowDiscount(true)}>
-                {order.discount?.type === 'buono' ? <><Icona nome="buono" gruppo="tasti" /> Buono</> : <><Icona nome="sconto" gruppo="tasti" /> Sconto</>}
+                {order.discount?.type === 'buono' ? (
+                  <><Icona nome="buono" gruppo="tasti" /> {tr('Buono')}</>
+                ) : (
+                  <><Icona nome="sconto" gruppo="tasti" /> {tr('Sconto')}</>
+                )}
                 {(order.discount_amount || 0) > 0 ? ` (−${formatPrice(order.discount_amount)})` : ''}
               </button>
             )}
@@ -1352,26 +1372,28 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
       {/* ── Modale IMPAGATO (REQ-CASSA-016) ── */}
       {impagatoAperta && (
         <div className="overlay confirm-overlay" onClick={() => setImpagatoAperta(false)}>
-          <div className="confirm-box" role="dialog" aria-label="Chiudi impagato" onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0 }}><Icona nome="orario" gruppo="tasti" /> Chiudi impagato</h3>
+          <div className="confirm-box" role="dialog" aria-label={tr('Chiudi impagato')} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ marginTop: 0 }}><Icona nome="orario" gruppo="tasti" /> {tr('Chiudi impagato')}</h3>
             <p className="muted small" style={{ margin: '0 0 10px' }}>
-              Il conto si chiude senza incasso: {formatPrice(due)} restano da riscuotere. Le comande risultano
-              servite. Per incassarlo in seguito si riapre il conto e si riscuote.
+              {tr(
+                'Il conto si chiude senza incasso: {importo} restano da riscuotere. Le comande risultano servite. Per incassarlo in seguito si riapre il conto e si riscuote.',
+                { importo: formatPrice(due) }
+              )}
             </p>
-            <label htmlFor="nota-impagato">Note (stampate in grande sullo scontrino)</label>
+            <label htmlFor="nota-impagato">{tr('Note (stampate in grande sullo scontrino)')}</label>
             <textarea
               id="nota-impagato"
               rows={3}
               value={notaImpagato}
               onChange={(e) => setNotaImpagato(e.target.value)}
-              placeholder="Es. paga Mario domani"
+              placeholder={tr('Es. paga Mario domani')}
             />
             <div className="row" style={{ gap: 8, marginTop: 12 }}>
               <button type="button" className="btn ghost grow" onClick={() => setImpagatoAperta(false)}>
-                Annulla
+                {tr('Annulla')}
               </button>
               <button type="button" className="btn grow" onClick={confermaImpagato}>
-                Chiudi impagato
+                {tr('Chiudi impagato')}
               </button>
             </div>
           </div>
@@ -1384,7 +1406,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
           <div
             className="confirm-box larga"
             role="dialog"
-            aria-label="Sconto"
+            aria-label={tr('Sconto')}
             // Più larga (REQ-UI-028, Flavio 10/10/2026): a 320 px i tasti
             // del tastierino erano piccoli per un dito, col tablet in mano.
             // La misura è fisica, divisa per lo zoom (BUG-116, index.css).
@@ -1392,7 +1414,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             onClick={(e) => e.stopPropagation()}
           >
             <div className="row between" style={{ alignItems: 'center' }}>
-              <h3 style={{ margin: 0 }}><Icona nome="sconto" gruppo="tasti" /> Sconto</h3>
+              <h3 style={{ margin: 0 }}><Icona nome="sconto" gruppo="tasti" /> {tr('Sconto')}</h3>
               <button className="btn ghost small" onClick={() => setShowDiscount(false)}>✕</button>
             </div>
 
@@ -1418,8 +1440,8 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               <button
                 className={`btn small grow ${discType === 'buono' ? '' : 'ghost'}`}
                 disabled={vipList.length === 0}
-                title={vipList.length === 0 ? 'Nessun buono con saldo' : 'Sconto col buono'}
-                aria-label="Buono"
+                title={vipList.length === 0 ? tr('Nessun buono con saldo') : tr('Sconto col buono')}
+                aria-label={tr('Buono')}
                 onClick={() => {
                   setDiscType('buono')
                   setDiscDigits('')
@@ -1433,7 +1455,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                 al suo saldo e si applica al totale come uno sconto. */}
             {discType === 'buono' && (
               <div style={{ marginTop: 10 }}>
-                <label htmlFor="disc-voucher"><Icona nome="buono" gruppo="tasti" /> Buono di</label>
+                <label htmlFor="disc-voucher"><Icona nome="buono" gruppo="tasti" /> {tr('Buono di')}</label>
                 <select
                   id="disc-voucher"
                   value={voucherId}
@@ -1443,10 +1465,10 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                   }}
                   style={{ width: '100%' }}
                 >
-                  <option value="">— Scegli il beneficiario —</option>
+                  <option value="">— {tr('Scegli il beneficiario')} —</option>
                   {vipList.map((v) => (
                     <option key={v.id} value={v.id}>
-                      {v.holder_name} · saldo {formatPrice(v.balance)}
+                      {v.holder_name} · {tr('saldo {importo}', { importo: formatPrice(v.balance) })}
                     </option>
                   ))}
                 </select>
@@ -1464,9 +1486,11 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               <p className="muted small" style={{ margin: '2px 0 0' }}>
                 {discType === 'buono'
                   ? chosenVoucher
-                    ? `Dal buono: −${formatPrice(voucherRedeem)}${voucherRedeem < voucherReq ? ' (saldo/totale insufficiente)' : ''}`
-                    : 'Scegli un beneficiario'
-                  : `Sconto su quello che stai riscuotendo: −${formatPrice(discPreview)}`}
+                    ? voucherRedeem < voucherReq
+                      ? tr('Dal buono: −{importo} (saldo/totale insufficiente)', { importo: formatPrice(voucherRedeem) })
+                      : tr('Dal buono: −{importo}', { importo: formatPrice(voucherRedeem) })
+                    : tr('Scegli un beneficiario')
+                  : tr('Sconto su quello che stai riscuotendo: −{importo}', { importo: formatPrice(discPreview) })}
               </p>
             </div>
 
@@ -1483,7 +1507,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               <button className="paypad-key" onClick={() => setDiscDigits((s) => (s + '0').slice(0, 6))}>0</button>
               <button
                 className="paypad-key danger"
-                aria-label="Cancella cifra sconto"
+                aria-label={tr('Cancella cifra sconto')}
                 onClick={() => setDiscDigits((s) => s.slice(0, -1))}
               >
                 ←
@@ -1496,7 +1520,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               disabled={saving || (discType === 'buono' && !(voucherRedeem > 0))}
               onClick={applyDiscount}
             >
-              Applica {(discType === 'buono' ? voucherRedeem : discPreview) > 0
+              {tr('Applica')} {(discType === 'buono' ? voucherRedeem : discPreview) > 0
                 ? `(−${formatPrice(discType === 'buono' ? voucherRedeem : discPreview)})`
                 : ''}
             </button>
@@ -1514,12 +1538,12 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                       await setOrderDiscount(await orderId(), null)
                     } catch (e) {
                       setOptimisticDisc(null)
-                      toastError(`Sconto non rimosso: ${e.message}`)
+                      toastError(tr('Sconto non rimosso: {errore}', { errore: e.message }))
                     }
                   })()
                 }}
               >
-                Rimuovi sconto
+                {tr('Rimuovi sconto')}
               </button>
             )}
           </div>
@@ -1532,28 +1556,27 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
           <div
             className="confirm-box"
             role="dialog"
-            aria-label="Codice Lotteria"
+            aria-label={tr('Codice Lotteria')}
             style={{ width: 'min(360px, 94vw)' }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="row between" style={{ alignItems: 'center' }}>
-              <h3 style={{ margin: 0 }}><Icona nome="buono" gruppo="tasti" /> Codice Lotteria</h3>
+              <h3 style={{ margin: 0 }}><Icona nome="buono" gruppo="tasti" /> {tr('Codice Lotteria')}</h3>
               <button className="btn ghost small" onClick={() => setShowLottery(false)}>✕</button>
             </div>
             <p className="muted small" style={{ margin: '8px 0' }}>
-              Il codice della "lotteria degli scontrini" che il cliente mostra
-              al pagamento: viene salvato sul conto e stampato sullo scontrino.
+              {tr('Il codice della "lotteria degli scontrini" che il cliente mostra al pagamento: viene salvato sul conto e stampato sullo scontrino.')}
             </p>
-            <label htmlFor="ps-lottery">Codice</label>
+            <label htmlFor="ps-lottery">{tr('Codice')}</label>
             <input
               id="ps-lottery"
               value={lotteryCode}
               onChange={(e) => setLotteryCode(e.target.value.toUpperCase())}
-              placeholder="Es. ABCD1234"
+              placeholder={tr('Es. ABCD1234')}
               style={{ width: '100%' }}
             />
             <button className="btn block" style={{ marginTop: 10 }} disabled={saving} onClick={saveLottery}>
-              Salva codice
+              {tr('Salva codice')}
             </button>
           </div>
         </div>
@@ -1565,35 +1588,39 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
           <div
             className="confirm-box"
             role="dialog"
-            aria-label="Invia fattura"
+            aria-label={tr('Invia fattura')}
             style={{ width: 'min(420px, 94vw)', maxHeight: '90vh', overflowY: 'auto' }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="row between" style={{ alignItems: 'center' }}>
-              <h3 style={{ margin: 0 }}><Icona nome="email" gruppo="tasti" /> Fattura di cortesia</h3>
+              <h3 style={{ margin: 0 }}><Icona nome="email" gruppo="tasti" /> {tr('Fattura di cortesia')}</h3>
               <button className="btn ghost small" onClick={() => setShowInvoice(false)}>✕</button>
             </div>
 
             {invoice ? (
               <>
                 <p style={{ margin: '10px 0 4px' }}>
-                  <Icona nome="fatto" gruppo="segnali" />{' '}Emessa la fattura <strong>n. {invoice.number}</strong> ·{' '}
-                  {formatPrice(invoice.total)}
+                  <Icona nome="fatto" gruppo="segnali" />{' '}
+                  {tr('Emessa la fattura n. {numero} · {importo}', { numero: invoice.number, importo: formatPrice(invoice.total) })}
                 </p>
                 <p className="muted small" style={{ margin: '0 0 10px' }}>
-                  Intestata a {invoice.customer?.denominazione}. La ritrovi nel
-                  gestionale, tab Fatture.
+                  {tr('Intestata a {cliente}. La ritrovi nel gestionale, tab Fatture.', {
+                    cliente: invoice.customer?.denominazione ?? '',
+                  })}
                 </p>
                 <button className="btn block" onClick={() => sendInvoiceEmail(invoice)}>
-                  <Icona nome="email" gruppo="tasti" />{' '}Invia via email{invoice.customer?.email ? ` a ${invoice.customer.email}` : ''}
+                  <Icona nome="email" gruppo="tasti" />{' '}
+                  {invoice.customer?.email
+                    ? tr('Invia via email a {email}', { email: invoice.customer.email })
+                    : tr('Invia via email')}
                 </button>
                 {stampaOn && (
                   <button
                     className="btn secondary block"
                     style={{ marginTop: 6 }}
-                    onClick={() => printFattura(invoice).catch((e) => setError(`Stampa: ${e.message}`))}
+                    onClick={() => printFattura(invoice).catch((e) => setError(tr('Stampa: {errore}', { errore: e.message })))}
                   >
-                    <Icona nome="stampa" gruppo="tasti" /> Stampa fattura
+                    <Icona nome="stampa" gruppo="tasti" /> {tr('Stampa fattura')}
                   </button>
                 )}
               </>
@@ -1601,15 +1628,16 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               <>
                 {order.invoice_number && (
                   <p className="muted small" style={{ margin: '8px 0 0' }}>
-                    <Icona nome="avviso" gruppo="segnali" />{' '}Per questo conto risulta già emessa la fattura n.{' '}
-                    {order.invoice_number} (vedi tab Fatture).
+                    <Icona nome="avviso" gruppo="segnali" />{' '}
+                    {tr('Per questo conto risulta già emessa la fattura n. {numero} (vedi tab Fatture).', {
+                      numero: order.invoice_number,
+                    })}
                   </p>
                 )}
                 <p className="muted small" style={{ margin: '8px 0' }}>
-                  Documento di cortesia con i dati del cliente (la fattura
-                  elettronica vera resta al commercialista/SDI).
+                  {tr('Documento di cortesia con i dati del cliente (la fattura elettronica vera resta al commercialista/SDI).')}
                 </p>
-                <label htmlFor="inv-den">Ragione sociale / Nome *</label>
+                <label htmlFor="inv-den">{tr('Ragione sociale / Nome *')}</label>
                 <input
                   id="inv-den"
                   value={billing.denominazione}
@@ -1618,7 +1646,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                 />
                 <div className="grid-2" style={{ marginTop: 6 }}>
                   <div>
-                    <label htmlFor="inv-piva">P.IVA</label>
+                    <label htmlFor="inv-piva">{tr('P.IVA')}</label>
                     <input
                       id="inv-piva"
                       value={billing.piva}
@@ -1626,7 +1654,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                     />
                   </div>
                   <div>
-                    <label htmlFor="inv-cf">Codice fiscale</label>
+                    <label htmlFor="inv-cf">{tr('Codice fiscale')}</label>
                     <input
                       id="inv-cf"
                       value={billing.cf}
@@ -1636,7 +1664,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                 </div>
                 <div className="grid-2" style={{ marginTop: 6 }}>
                   <div>
-                    <label htmlFor="inv-sdi">Codice SDI / PEC</label>
+                    <label htmlFor="inv-sdi">{tr('Codice SDI / PEC')}</label>
                     <input
                       id="inv-sdi"
                       value={billing.sdi}
@@ -1644,7 +1672,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                     />
                   </div>
                   <div>
-                    <label htmlFor="inv-email">Email</label>
+                    <label htmlFor="inv-email">{tr('Email')}</label>
                     <input
                       id="inv-email"
                       type="email"
@@ -1653,7 +1681,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                     />
                   </div>
                 </div>
-                <label htmlFor="inv-addr" style={{ marginTop: 6, display: 'block' }}>Indirizzo</label>
+                <label htmlFor="inv-addr" style={{ marginTop: 6, display: 'block' }}>{tr('Indirizzo')}</label>
                 <input
                   id="inv-addr"
                   value={billing.indirizzo}
@@ -1666,7 +1694,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                   disabled={saving || !billing.denominazione.trim()}
                   onClick={emettiFattura}
                 >
-                  Emetti fattura · {formatPrice(order.total)}
+                  {tr('Emetti fattura · {importo}', { importo: formatPrice(order.total) })}
                 </button>
               </>
             )}
@@ -1684,9 +1712,9 @@ function RestoContanti({ importo, ricevuti, altro, scegli, scrivi }) {
   const proposte = contantiProbabili(importo)
   const { resto, mancano } = ricevuti != null ? restoDa(ricevuti, importo) : { resto: 0, mancano: 0 }
   return (
-    <div className="resto-box" role="group" aria-label="Contanti ricevuti">
+    <div className="resto-box" role="group" aria-label={tr('Contanti ricevuti')}>
       <div className="resto-scelte">
-        <span className="muted small">Il cliente dà</span>
+        <span className="muted small">{tr('Il cliente dà')}</span>
         {proposte.map((v) => (
           <button
             key={v}
@@ -1701,8 +1729,8 @@ function RestoContanti({ importo, ricevuti, altro, scegli, scrivi }) {
         <input
           className="resto-altro"
           inputMode="decimal"
-          aria-label="Altro importo ricevuto"
-          placeholder="Altro"
+          aria-label={tr('Altro importo ricevuto')}
+          placeholder={tr('importo|Altro')}
           value={altro}
           onChange={(e) => scrivi(e.target.value)}
         />
@@ -1710,11 +1738,11 @@ function RestoContanti({ importo, ricevuti, altro, scegli, scrivi }) {
       {ricevuti != null &&
         (mancano > 0 ? (
           <p className="resto-esito neg">
-            Mancano <strong>{formatPrice(mancano)}</strong>
+            {tr('resto|Mancano')} <strong>{formatPrice(mancano)}</strong>
           </p>
         ) : (
           <p className="resto-esito">
-            Resto da dare <strong>{formatPrice(resto)}</strong>
+            {tr('Resto da dare')} <strong>{formatPrice(resto)}</strong>
           </p>
         ))}
     </div>

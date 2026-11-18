@@ -7,6 +7,7 @@ import { formatPrice } from '../lib/orderStatus.js'
 import GroupView from './GroupView.jsx'
 import { IconGruppo, IconPersona } from './Icons.jsx'
 import Icona from './Icona.jsx'
+import { tr } from '../lib/lingua.js'
 
 // Pannello a scomparsa nella coda: panoramica dei gruppi aperti con
 // totale e stato del conto, creazione rapida e avvio ordine per gruppo.
@@ -36,7 +37,7 @@ export default function GroupsPanel({ orders, role }) {
   return (
     <div className="card groups-panel">
       <div className="row between" style={{ cursor: 'pointer' }} onClick={() => setOpen((v) => !v)}>
-        <strong><Icona nome="staff" gruppo="tasti" /> Gruppi ({roots.length})</strong>
+        <strong><Icona nome="staff" gruppo="tasti" /> {tr('Gruppi ({n})', { n: roots.length })}</strong>
         <span className="muted">{open ? '▾' : '▸'}</span>
       </div>
 
@@ -44,7 +45,7 @@ export default function GroupsPanel({ orders, role }) {
         <div style={{ marginTop: 10 }}>
           {roots.length === 0 && (
             <div className="muted small" style={{ marginBottom: 8 }}>
-              Nessun gruppo aperto.
+              {tr('Nessun gruppo aperto.')}
             </div>
           )}
           {roots.map((node) => {
@@ -61,21 +62,22 @@ export default function GroupsPanel({ orders, role }) {
                     <strong>{node.group.name}</strong>
                   </div>
                   <div className="muted small">
-                    {t.orderCount} ordini · {formatPrice(t.total)}
-                    {s.remaining > 0 ? ` · da pagare ${formatPrice(s.remaining)}` : ''}
+                    {t.orderCount === 1 ? tr('1 ordine') : tr('{n} ordini', { n: t.orderCount })} ·{' '}
+                    {formatPrice(t.total)}
+                    {s.remaining > 0 ? ` · ${tr('da pagare {importo}', { importo: formatPrice(s.remaining) })}` : ''}
                   </div>
                 </div>
                 <div className="row" style={{ gap: 6, flexShrink: 0 }}>
                   <span className={`pill ${s.settled ? 'chiuso' : 'aperto'}`}>
-                    {s.settled ? 'Pagato' : 'Aperto'}
+                    {s.settled ? tr('Pagato') : tr('stato|Aperto')}
                   </span>
                   {!node.group.has_child_groups && (
                     <button
                       className="btn ghost small"
                       onClick={() => navigate(`/pos?group=${node.group.id}`)}
                       // Il tasto è solo un'icona (REQ-UI-031): il nome sta qui.
-                      aria-label="Nuovo ordine nel gruppo"
-                      title="Nuovo ordine nel gruppo"
+                      aria-label={tr('Nuovo ordine nel gruppo')}
+                      title={tr('Nuovo ordine nel gruppo')}
                     >
                       <Icona nome="nuovo-ordine" gruppo="tasti" />
                     </button>
@@ -88,13 +90,13 @@ export default function GroupsPanel({ orders, role }) {
           <div className="row" style={{ gap: 8, marginTop: 10 }}>
             <input
               type="text"
-              placeholder="+ Nuovo gruppo"
+              placeholder={tr('+ Nuovo gruppo')}
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && crea()}
             />
             <button className="btn small" style={{ flexShrink: 0 }} onClick={crea} disabled={!newName.trim()}>
-              Crea
+              {tr('Crea')}
             </button>
           </div>
         </div>

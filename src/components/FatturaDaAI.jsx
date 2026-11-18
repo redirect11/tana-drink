@@ -8,6 +8,7 @@ import {
   righeDaProposta,
   propostaRegistrabile,
 } from '../lib/fatturaAI.js'
+import { tr } from '../lib/lingua.js'
 
 // Il costo di una lettura è di qualche centesimo: fino a quattro decimali,
 // come nella descrizione proposta (DescrizioneAI).
@@ -70,7 +71,7 @@ export default function FatturaDaAI({ suppliers, items, listini, onAnnulla, onRe
     const r = await chiediAI({ tipo: 'fattura', file: base64, media_type: pronto.type })
     if (!r.ok) {
       // Anche quando il risultato non serve il costo resta: si dice.
-      const costo = r.costo_eur != null ? ` Costo ${euro(r.costo_eur)}.` : ''
+      const costo = r.costo_eur != null ? ` ${tr('Costo {importo}.', { importo: euro(r.costo_eur) })}` : ''
       return setStato({ fase: 'errore', messaggio: messaggioAI(r.codice) + costo })
     }
     setProposta(propostaDaFattura(r.risultato, { suppliers, items, listini }))
@@ -95,7 +96,7 @@ export default function FatturaDaAI({ suppliers, items, listini, onAnnulla, onRe
       try {
         await allegaDocumentoAFattura(doc.id, stato.file)
       } catch (err) {
-        avviso = `Documento registrato, ma l’allegato non è stato caricato: ${err.message}`
+        avviso = tr('Documento registrato, ma l’allegato non è stato caricato: {errore}', { errore: err.message })
       }
       // Il riassunto serve alla chat (REQ-AI-006), che lo rimanda al modello
       // al posto del documento: nomi e numeri, niente file.
@@ -119,13 +120,12 @@ export default function FatturaDaAI({ suppliers, items, listini, onAnnulla, onRe
   if (stato.fase !== 'proposta') {
     return (
       <div className="card fattura-ai">
-        <strong>Leggi un documento con l’AI</strong>
+        <strong>{tr('Leggi un documento con l’AI')}</strong>
         <p className="muted small" style={{ margin: '4px 0 8px' }}>
-          Dalla foto o dal PDF della fattura l’AI propone fornitore, numero, data, importo e righe, da rivedere prima
-          di registrare. Usa il credito AI del locale.
+          {tr('Dalla foto o dal PDF della fattura l’AI propone fornitore, numero, data, importo e righe, da rivedere prima di registrare. Usa il credito AI del locale.')}
         </p>
         {stato.fase === 'attesa' ? (
-          <p role="status">Lettura del documento in corso… può richiedere qualche decina di secondi.</p>
+          <p role="status">{tr('Lettura del documento in corso… può richiedere qualche decina di secondi.')}</p>
         ) : (
           <>
             {stato.fase === 'errore' && (
@@ -140,14 +140,14 @@ export default function FatturaDaAI({ suppliers, items, listini, onAnnulla, onRe
               ref={fileRef}
               type="file"
               accept="image/*,application/pdf"
-              aria-label="La foto o il PDF della fattura"
+              aria-label={tr('La foto o il PDF della fattura')}
               onChange={leggi}
             />
           </>
         )}
         <div className="row" style={{ gap: 8, marginTop: 10 }}>
           <button type="button" className="btn ghost small" onClick={onAnnulla} disabled={stato.fase === 'attesa'}>
-            Annulla
+            {tr('Annulla')}
           </button>
         </div>
       </div>
@@ -156,43 +156,42 @@ export default function FatturaDaAI({ suppliers, items, listini, onAnnulla, onRe
 
   const p = proposta
   return (
-    <div className="card fattura-ai" role="group" aria-label="Documento letto dall’AI">
-      <strong>Documento letto dall’AI</strong>
+    <div className="card fattura-ai" role="group" aria-label={tr('Documento letto dall’AI')}>
+      <strong>{tr('Documento letto dall’AI')}</strong>
       <p className="muted small" style={{ margin: '2px 0 8px' }}>
-        Proposta da rivedere: ogni campo si corregge prima di registrare.
+        {tr('Proposta da rivedere: ogni campo si corregge prima di registrare.')}
       </p>
-      {errore && <div className="banner">Errore: {errore}</div>}
+      {errore && <div className="banner">{tr('Errore: {errore}', { errore })}</div>}
 
-      <label htmlFor="fai-sup">Fornitore *</label>
+      <label htmlFor="fai-sup">{tr('Fornitore *')}</label>
       <select id="fai-sup" value={p.supplier_id} onChange={cambia('supplier_id')} required>
-        <option value="">— Scegli —</option>
+        <option value="">{tr('— Scegli —')}</option>
         {suppliers.map((s) => (
           <option key={s.id} value={s.id}>
             {s.name}
           </option>
         ))}
       </select>
-      {p.fornitore_letto && <p className="muted small">Sul documento: {p.fornitore_letto}</p>}
+      {p.fornitore_letto && <p className="muted small">{tr('Sul documento: {nome}', { nome: p.fornitore_letto })}</p>}
 
       <div className="grid-2">
         <div>
-          <label htmlFor="fai-num">Numero doc.</label>
+          <label htmlFor="fai-num">{tr('Numero doc.')}</label>
           <input id="fai-num" value={p.number} onChange={cambia('number')} />
         </div>
         <div>
-          <label htmlFor="fai-data">Data</label>
+          <label htmlFor="fai-data">{tr('Data')}</label>
           <input id="fai-data" type="date" value={p.date} onChange={cambia('date')} />
         </div>
       </div>
-      <label htmlFor="fai-importo">Importo € *</label>
+      <label htmlFor="fai-importo">{tr('Importo € *')}</label>
       <input id="fai-importo" type="number" step="any" min="0" value={p.amount} onChange={cambia('amount')} />
 
       {p.righe.length > 0 && (
         <>
-          <h4 style={{ margin: '12px 0 4px' }}>Righe</h4>
+          <h4 style={{ margin: '12px 0 4px' }}>{tr('Righe')}</h4>
           <p className="muted small" style={{ margin: '0 0 6px' }}>
-            Si registrano le righe spuntate, abbinate a un prodotto del magazzino. Quantità in colli, costo unitario
-            al netto dello sconto di riga.
+            {tr('Si registrano le righe spuntate, abbinate a un prodotto del magazzino. Quantità in colli, costo unitario al netto dello sconto di riga.')}
           </p>
           {p.righe.map((r) => (
             <div key={r.chiave} className="fattura-ai-riga">
@@ -203,19 +202,19 @@ export default function FatturaDaAI({ suppliers, items, listini, onAnnulla, onRe
                   disabled={!r.item_id}
                   onChange={(e) => cambiaRiga(r.chiave, { includi: e.target.checked })}
                 />
-                <span className="small">{r.letta || '(riga senza descrizione)'}</span>
+                <span className="small">{r.letta || tr('(riga senza descrizione)')}</span>
               </label>
               <select
-                aria-label={`Prodotto per «${r.letta}»`}
+                aria-label={tr('Prodotto per «{riga}»', { riga: r.letta })}
                 value={r.item_id}
                 onChange={(e) => cambiaRiga(r.chiave, { item_id: e.target.value, includi: Boolean(e.target.value) })}
               >
-                <option value="">— Prodotto da abbinare —</option>
+                <option value="">{tr('— Prodotto da abbinare —')}</option>
                 {opzioniProdotti}
               </select>
               <div className="fattura-ai-numeri">
                 <label>
-                  Qtà
+                  {tr('Qtà')}
                   <input
                     type="number"
                     step="any"
@@ -225,7 +224,7 @@ export default function FatturaDaAI({ suppliers, items, listini, onAnnulla, onRe
                   />
                 </label>
                 <label>
-                  Costo €
+                  {tr('Costo €')}
                   <input
                     type="number"
                     step="any"
@@ -235,7 +234,7 @@ export default function FatturaDaAI({ suppliers, items, listini, onAnnulla, onRe
                   />
                 </label>
                 <label>
-                  IVA %
+                  {tr('IVA %')}
                   <input
                     type="number"
                     step="any"
@@ -249,14 +248,14 @@ export default function FatturaDaAI({ suppliers, items, listini, onAnnulla, onRe
           ))}
           <label className="row" style={{ gap: 6, alignItems: 'center', marginTop: 8 }}>
             <input type="checkbox" checked={carica} onChange={(e) => setCarica(e.target.checked)} />
-            <span className="small">Carica le righe a magazzino</span>
+            <span className="small">{tr('Carica le righe a magazzino')}</span>
           </label>
         </>
       )}
 
       {p.daVerificare.length > 0 && (
         <div className="small" style={{ marginTop: 10 }}>
-          <strong>Da verificare</strong>
+          <strong>{tr('Da verificare')}</strong>
           <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>
             {p.daVerificare.map((x, i) => (
               <li key={i}>{x}</li>
@@ -267,17 +266,17 @@ export default function FatturaDaAI({ suppliers, items, listini, onAnnulla, onRe
 
       {stato.costo != null && (
         <p className="muted small" style={{ margin: '8px 0 0' }}>
-          Costo della lettura {euro(stato.costo)}
-          {stato.credito != null ? ` · credito rimasto ${euro(stato.credito)}` : ''}
+          {tr('Costo della lettura {importo}', { importo: euro(stato.costo) })}
+          {stato.credito != null ? ` · ${tr('credito rimasto {importo}', { importo: euro(stato.credito) })}` : ''}
         </p>
       )}
 
       <div className="row" style={{ gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
         <button type="button" className="btn small" onClick={registra} disabled={busy || !propostaRegistrabile(p)}>
-          {busy ? 'Registrazione…' : 'Registra il documento'}
+          {busy ? tr('Registrazione…') : tr('Registra il documento')}
         </button>
         <button type="button" className="btn ghost small" onClick={onAnnulla} disabled={busy}>
-          Annulla
+          {tr('Annulla')}
         </button>
       </div>
     </div>

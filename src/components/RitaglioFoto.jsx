@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { disposizione, fotoRitagliata, trattieni, zoomIniziale, zoomMinimo, ZOOM_MASSIMO } from '../lib/ritaglioFoto.js'
+import { tr } from '../lib/lingua.js'
 
 // IL RITAGLIO DELLA FOTO, NELLA SCHEDA DEL PRODOTTO (REQ-MENU-039). Flavio,
 // 12/11/2026: «quando si carica la foto dovrebbe apparire il selezionatore
@@ -104,11 +105,12 @@ export default function RitaglioFoto({ file, onConferma, onAnnulla }) {
   const d = disposizione(foto, posa, lato)
   return (
     <div className="overlay confirm-overlay" onClick={onAnnulla}>
-      <div className="confirm-box ritaglio-foto" role="dialog" aria-label="Ritaglia la foto" onClick={(e) => e.stopPropagation()}>
-        <h3 style={{ marginTop: 0 }}>Ritaglia la foto</h3>
+      <div className="confirm-box ritaglio-foto" role="dialog" aria-label={tr('Ritaglia la foto')} onClick={(e) => e.stopPropagation()}>
+        <h3 style={{ marginTop: 0 }}>{tr('Ritaglia la foto')}</h3>
         <p className="muted small" style={{ margin: '0 0 10px' }}>
-          Trascina la foto per inquadrarla; col cursore, la rotella o due dita si ingrandisce o si rimpicciolisce. La
-          parte della cornice che resta vuota diventa bianca.
+          {tr(
+            'Trascina la foto per inquadrarla; col cursore, la rotella o due dita si ingrandisce o si rimpicciolisce. La parte della cornice che resta vuota diventa bianca.'
+          )}
         </p>
         <div className="ritaglio-spazio">
           <div
@@ -134,7 +136,7 @@ export default function RitaglioFoto({ file, onConferma, onAnnulla }) {
           </div>
         </div>
         <label htmlFor="ritaglio-zoom" className="small">
-          Ingrandimento
+          {tr('Ingrandimento')}
         </label>
         <input
           id="ritaglio-zoom"
@@ -147,10 +149,10 @@ export default function RitaglioFoto({ file, onConferma, onAnnulla }) {
         />
         <div className="row" style={{ gap: 10, marginTop: 12 }}>
           <button type="button" className="btn ghost grow" onClick={onAnnulla}>
-            Annulla
+            {tr('Annulla')}
           </button>
           <button type="button" className="btn grow" onClick={conferma} disabled={preparo || !d}>
-            {preparo ? 'Preparo la foto…' : 'Usa questa foto'}
+            {preparo ? tr('Preparo la foto…') : tr('Usa questa foto')}
           </button>
         </div>
       </div>

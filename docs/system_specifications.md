@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 17 novembre 2026.
+> Generato il 18 novembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 313 | fatto e coperto dai test |
+| ✅ | 317 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 9 | fatto a metà |
-| ⬜ | 39 | da fare |
+| ⬜ | 48 | da fare |
 | 🗑 | 8 | non più valido |
 
-**384 voci** in tutto. **337** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **39** sono lavori
+**397 voci** in tutto. **341** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **48** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **17** difetti noti sono ancora aperti.
 
@@ -55,16 +55,16 @@ come «vero oggi», non come «garantito».
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
 | [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 14 | 2 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
-| [Sicurezza](#sicurezza) | 4 | 2 | Regole di accesso, App Check, e cosa protegge cosa. |
+| [Sicurezza](#sicurezza) | 5 | 12 | Regole di accesso, App Check, e cosa protegge cosa. |
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | 6 | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
-| [Interfaccia](#interfaccia) | 33 | 5 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
+| [Interfaccia](#interfaccia) | 34 | 4 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 24 | 2 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 15 | 4 |  |
 | [VENUE](#venue) | 6 | — |  |
-| [FLOTTA](#flotta) | 11 | — |  |
+| [FLOTTA](#flotta) | 13 | — |  |
 | [SITO](#sito) | — | 5 |  |
 
 ### Le prove, livello per livello
@@ -75,12 +75,12 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Livello | Cosa verifica | File di test |
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
-| Sistema | la specifica (REQ-*), sull'app intera | 14 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 190 |
-| Unità | il progetto di dettaglio: un modulo da solo | 192 |
+| Sistema | la specifica (REQ-*), sull'app intera | 15 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 202 |
+| Unità | il progetto di dettaglio: un modulo da solo | 197 |
 
-**22** bisogni del locale, **0** con un test di accettazione.
-**136** requisiti su 376 sono collegati a un bisogno;
+**24** bisogni del locale, **0** con un test di accettazione.
+**149** requisiti su 389 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -265,6 +265,22 @@ Daniele, 17/11/2026: «l'app andrebbe tradotta in inglese», e poi «da oggi tut
 **Come si accetta**: Ogni testo a schermo dell'app ha la sua traduzione inglese, e una prova boccia quelli che non ce l'hanno. Un cliente col telefono in inglese ordina dal menù tradotto dal browser senza che la pagina si blocchi o mostri importi vecchi, e legge titoli e descrizioni nelle lingue che il gestore ha scelto e compilato. Chi lavora sceglie l'inglese e batte, incassa e chiude la serata senza incontrare testi italiani.
 
 **Chi**: Cliente, Banco, Sala, Gestore · **Lo realizzano**: [REQ-UI-038](#req-ui-038--i-testi-a-schermo-hanno-litaliano-e-linglese-e-una-prova-boccia-quelli-senza-traduzione), [REQ-CLI-010](#req-cli-010--le-pagine-dei-clienti-funzionano-tradotte-dal-browser), [REQ-MENU-046](#req-menu-046--le-lingue-del-menù-le-sceglie-il-gestore-e-titoli-e-descrizioni-si-scrivono-in-ognuna), [REQ-UI-039](#req-ui-039--il-gestionale-in-inglese) · ⚠️ **Nessun test di accettazione, ancora.**
+
+#### UR-023 — Ogni persona sa quali dati l'app tiene su di lei, e li può scaricare
+
+Daniele, 17/11/2026 (messaggio della regia, REQ-FLOTTA-134 per la sua parte): «bisognerebbe mettere anche il download dei dati dell'utente e le policy di questa cosa […] sia per i clienti registrati che per l'admin, lo staff e tutti i ruoli», e «nella policy dobbiamo dire tutti i dati che memorizziamo e tutti i dati che gli torniamo indietro e non dobbiamo omettere nulla, soprattutto i dati sensibili». GDPR, artt. 12, 15 e 20: copia dei propri dati, portabilità, risposta entro un mese. Nell'app il titolare del trattamento è il locale, Stonebit è responsabile (art. 28) e gli dà gli strumenti per rispondere.
+
+**Come si accetta**: Un cliente registrato, una persona dello staff e un admin scaricano dal proprio profilo un file JSON con tutti i propri dati e nessun dato di altri; l'admin esporta quelli di una persona del locale e l'esportazione resta registrata; ogni download chiede un accesso recente e lo dice alla persona. L'informativa del locale nasce dallo stesso elenco dei dati personali da cui nasce il file, e una prova fallisce se una raccolta con dati di persone non è nell'elenco.
+
+**Chi**: Cliente, Banco, Sala, Gestore · **Lo realizzano**: [REQ-SIC-007](#req-sic-007--un-elenco-unico-nel-codice-dei-dati-personali-che-lapp-tiene), [REQ-SIC-008](#req-sic-008--scarica-i-miei-dati-per-ogni-persona-dal-suo-profilo), [REQ-SIC-009](#req-sic-009--ladmin-esporta-i-dati-di-una-persona-del-locale-e-resta-registrato), [REQ-SIC-010](#req-sic-010--il-download-dei-dati-chiede-un-accesso-recente-e-lo-si-dice-alla-persona), [REQ-SIC-011](#req-sic-011--le-categorie-particolari-di-dati-art-9-se-lapp-ne-tratta-dichiarate-e-protette), [REQ-SIC-012](#req-sic-012--uninformativa-tipo-per-il-locale-generata-dallelenco-dei-dati-personali), [REQ-SIC-013](#req-sic-013--la-cancellazione-dellaccount-fatta-da-sé-con-30-giorni-per-ripensarci), [REQ-SIC-014](#req-sic-014--il-titolare-esporta-tutti-i-dati-del-locale-in-ogni-momento), [REQ-SIC-015](#req-sic-015--i-dati-da-cui-può-derivare-un-controllo-a-distanza-del-personale-dichiarati-allo-staff), [REQ-SIC-016](#req-sic-016--lelenco-dei-servizi-esterni-a-cui-lapp-manda-dati-di-persone) · ⚠️ **Nessun test di accettazione, ancora.**
+
+#### UR-024 — Un locale nuovo si accende con la versione di tutti, e i suoi tablet restano collegati al locale
+
+Daniele, 17/11/2026, sul pacchetto per versione della regia (REQ-FLOTTA-137 della regia): «basta che sia una versione che io poi posso distribuire e deployare senza far partire una nuova build su github». La versione si compila una volta sola, uguale per tutti i locali, e la regia ci scrive i dati di ogni locale al momento della pubblicazione. Il locale non deve accorgersene: stessi dati, stesso nome, stessa informativa sua, e i tablet già installati non devono perdere il collegamento al locale passando alla versione nuova. Il 18/11/2026 Daniele: «si fallo entrare» per l'informativa privacy e cookie di ogni locale, che oggi è quella della Tana in ogni build.
+
+**Come si accetta**: Un sito compilato una volta e personalizzato per un locale di prova si apre col nome, i colori, il logo e l'informativa di quel locale, senza nessuna parola della Tana. Un tablet che aveva la versione compilata per il locale passa a quella uguale per tutti e, anche senza rete, si riapre sul suo locale con la coda e i conti di prima. Un sito che non sa a che locale appartiene non lascia lavorare nessuno, lo dice a parole comuni, e si collega da solo appena può.
+
+**Chi**: Gestore · **Lo realizzano**: [REQ-FLOTTA-034](#req-flotta-034--un-sito-uguale-per-tutti-i-locali-il-locale-lo-dice-la-configurazione-scritta-nella-pagina-al-momento-della-pubblicazione), [REQ-FLOTTA-035](#req-flotta-035--il-pacchetto-per-versione-si-compila-al-tag-e-si-pubblica-nella-release-di-github-di-tana-drink), [REQ-SIC-017](#req-sic-017--linformativa-privacy-e-cookie-è-quella-del-locale-e-i-suoi-link-sono-solo-link) · ⚠️ **Nessun test di accettazione, ancora.**
 
 ## Cosa fa il sistema
 
@@ -3292,6 +3308,16 @@ FATTO (1.10.53-beta): storage.rules legge la licenza (licenzaValida, alFree, mod
 
 **Dove**: `storage.rules, tests/regole/storage.test.js, .github/workflows/test.yml (job delle regole), IAM dei progetti (service agent dello Storage)` · **Serve**: [UR-015](#ur-015--il-piano-del-locale-decide-cosa-si-usa-e-chi-ha-tutto-non-se-ne-accorge) · **Lo dimostrano**: `tests/regole/storage.test.js`, `tests/unit/regoleStorageLicenza.test.js`, `tests/unit/allegatoInArchivio.test.js`
 
+#### REQ-SIC-017 — L'informativa privacy e cookie è quella del locale, e i suoi link sono solo link
+
+Da REQ-SIC-005, punti 4 e 6 di docs/sicurezza-demo.md, portati qui il 18/11/2026 col pacchetto per versione (Daniele: «si fallo entrare», sulla proposta della regia di metterli nella fase 1: un secondo locale non può partire con l'informativa della Tana). `public/privacy-policy.html` e `public/cookie-policy.html` finivano in ogni build così com'erano: sulla demo e sui locali della flotta il titolare del trattamento era EFFEVI («La Tana del Coniglio»), con la sua email. Ora sono modelli con i segnaposto del locale (nome, ragione sociale, sede, partita IVA, email), riempiti dalla build per il suo cliente e, nel sito uguale per tutti, da personalizza.mjs al deploy. La demo ha una pagina sua: nessun dato raccolto, tutto resta nel browser. I link dei social del locale passano solo se sono http, https, mailto o tel, sia quando si salvano sia quando si disegnano: un `javascript:` scritto in Impostazioni (che il bartender può scrivere) diventava un link nel piede del menù di ogni cliente. Il testo legale resta da far rivedere da un legale: qui cambia solo di chi è.
+
+CRITERIO: la build della Tana ha l'informativa con i dati della Tana; la build di un altro locale, la demo e il sito personalizzato non contengono «EFFEVI» né «latanadelconiglio»; un link social `javascript:` non diventa mai un link.
+
+COME È FATTO (18/11/2026). I modelli stanno in clienti/pagine/, con %VENUE_NAME%, %VENUE_TITOLARE% e %VENUE_EMAIL_LINK%; la demo ha i suoi in clienti/demo/pagine/. Il titolare si compone da venue_legal_name, venue_legal_address (o indirizzo e città), partita IVA e codice fiscale; quello che manca si legge «da inserire», come la partita IVA della Tana prima, invece di un dato inventato. Per la Tana la ragione sociale e la sede ora vengono da clienti/tana/venue.json, come sullo scontrino («EFFEVI - SRLS», «80035 Nola - Italy»). I link: linkSicuro in src/porte/configurazioneLocale.mjs, usato da socialDaTesto (al salvataggio; un indirizzo senza schema diventa https) e da socialDelLocale (al disegno).
+
+**Dove**: `clienti/pagine/privacy-policy.html, clienti/pagine/cookie-policy.html, clienti/demo/pagine/, clienti/personalizzazione.mjs, clienti/pluginCliente.js, scripts/personalizza.mjs, src/lib/venue.js, src/App.jsx` · **Serve**: [UR-024](#ur-024--un-locale-nuovo-si-accende-con-la-versione-di-tutti-e-i-suoi-tablet-restano-collegati-al-locale) · **Lo dimostrano**: `tests/unit/informativaDelLocale.test.js`, `tests/unit/linkDelLocale.test.js`
+
 ### Si lavora anche senza rete
 
 Cosa continua a funzionare quando la rete non c’è, e come lo si vede.
@@ -3805,6 +3831,24 @@ Daniele, 17/11/2026, dopo «La vista del banco» (BUG-168): «nelle opzioni dell
 Daniele, 17/11/2026: «da oggi tutte le funzioni dovranno avere testi in italiano ed inglese». Il meccanismo su cui poggia tutto il resto (UR-022): un testo si scrive in italiano, che resta la lingua di partenza, e accanto ha la sua traduzione inglese; la lingua attiva decide quale si mostra. Una prova legge i testi passati dal meccanismo e fallisce se ne manca la traduzione inglese. Da oggi ogni funzione nuova o toccata porta i suoi testi in tutte e due le lingue, nello stesso commit. L'attributo lang della pagina segue la lingua attiva. Codice, commenti, commit e PR restano in italiano. ORA in src/lib/lingua.js: `tr('testo italiano', { valori })` e il dizionario inglese src/lib/testi/en/, un file per area (conflitti di merge, e chi cerca i testi della cassa li cerca lì), con l'italiano esatto come chiave — il codice si legge come prima e i test che cercano l'italiano restano validi. Niente libreria esterna. Le regole: segnaposti coi nomi senza accenti; un CONTESTO per le parole ambigue (`tr('ordinamento|Ordine')`, in italiano si legge «Ordine»); i plurali scritti tutti e due; le tabelle di etichette segnano i testi con `daTradurre('…')` e li traducono dove li mostrano con `trSegnato`, perché un `tr` al caricamento del modulo fisserebbe la lingua. La lingua si ricorda sul dispositivo (chi la sceglie e dove è REQ-UI-039); l'attributo lang della pagina la segue solo nel gestionale — le pagine dei clienti restano «it», o il traduttore del browser non si proporrebbe (REQ-CLI-010) —, e al cambio di lingua l'app si ridisegna da capo (chiave sulla radice in App.jsx), così nessun componente resta nella lingua di prima. La prova legge i sorgenti e boccia: `tr`/`daTradurre` senza traduzione, con un testo calcolato o attaccato con un +, importati con un altro nome; le traduzioni inutilizzate, i doppioni fra aree, i segnaposti che non combaciano o con gli accenti. Dalla revisione (17/11): un testo JSX scritto senza `tr` la prova non lo vede — la regola di CLAUDE.md la fa rispettare chi scrive e chi rivede.
 
 **Dove**: `src/lib (testi in due lingue), tutti i componenti con testi a schermo` · **Serve**: [UR-022](#ur-022--chi-non-parla-italiano-usa-il-menù-e-il-gestionale-nella-sua-lingua) · **Lo dimostrano**: `tests/unit/lingua.test.js`
+
+#### REQ-UI-039 — Il gestionale in inglese
+
+Daniele, 17/11/2026: dopo le pagine dei clienti, il gestionale va tradotto. Tutti i testi del banco, della cassa, delle impostazioni, del magazzino e delle altre sezioni passano dal meccanismo dei testi in due lingue (REQ-UI-038), una sezione alla volta: prima banco e cassa, poi il resto.
+
+CHI SCEGLIE (Daniele, 17/11/2026): «Chiunque può scegliere la lingua nel gestionale, qualsiasi ruolo. La lingua è legata al profilo». Quindi in «Il mio profilo» ogni persona — admin, bartender, sala — sceglie italiano o inglese, e la scelta sta sul suo account (profili_staff/{uid}, che legge e scrive solo lei): la segue su ogni tablet e telefono. Sul dispositivo ne resta una copia, perché l'app parta subito nella lingua giusta anche senza rete; all'accesso vince quella dell'account. Niente lingua di partenza del locale: si parte in italiano. Si lavora su un ramo feature/, e il selettore arriva insieme alle prime sezioni tradotte (banco e cassa): una scelta che non cambia niente non si mostra. Da decidere quando si comincia (dalla revisione di REQ-UI-038, 17/11/2026): date e importi seguono la lingua (formatPrice e le date oggi sono fissi su it-IT, serve un punto unico); i testi personalizzabili dal gestore (testo('chiave', 'predefinito') di lib/testiStile.js) e le loro versioni inglesi, insieme a REQ-MENU-046; il dizionario inglese caricato solo quando serve, se pesa sul pacchetto. Lavorato sul ramo feature/gestionale-inglese.
+
+FATTO: la lingua sul profilo — profili_staff/{uid} (regole: ognuno solo il suo, solo `lingua` fra it/en; fuori dal backup, perché il titolare non potrebbe rimettere i profili degli altri), salvaLinguaDelProfilo e leggiLinguaDelProfilo in api.js, la lettura al login senza farsi aspettare (App.jsx), il riquadro «Lingua» in Il mio profilo coi nomi delle lingue nella loro lingua; «Il mio profilo» tradotto (area testi/en/profilo.js). Banco e cassa tradotti (17/11): coda, accesso, menu laterale, barra in alto, conto, griglia dei prodotti, pagamento, apertura e chiusura cassa, scheda Cassa (aree testi/en/coda, conto, cassa; le etichette di src/lib in comune). Anche le tabelle di src/lib che il banco mostra (coda.js, sezioni.js, ruoli.js, comande.js, storiaOrdine.js, statoStampante.js, erroriAccesso.js, pendingOrders.js): dove erano costruite al caricamento del modulo ora sono funzioni (filtriStato, etichettaRuolo, servizioEtichetta, etichettaAnnullo).
+
+LE PAGINE DEI CLIENTI RESTANO ITALIANE anche su un tablet dello staff in inglese (dalla revisione del 17/11): App.jsx dice a lib/lingua.js se la schermata è del cliente (non personale, «Vista cliente», «Mostra al cliente» ?cliente=1) e lì tr risponde in italiano, con lang=it.
+
+CHI NON HA MAI SCELTO ha l'italiano: leggiLinguaDelProfilo risponde it per un profilo senza lingua, e un collega non eredita la lingua di chi ha usato il tablet prima. Lo scontrino resta italiano (prova cartaInItaliano). Secondo giro (17/11): impostazioni (SettingsTab e pannelli), magazzino e comanda al banco, gestione del menù (aree impostazioni, magazzino, menu). Terzo giro (17/11): fornitori e acquisti, statistiche e bilancio, ore e paghe, utenti e buoni, marketplace, assistente AI, avvisi e novità (aree fornitori, statistiche, staff, altro), con le tabelle di src/lib che mostrano (stati e movimenti degli ordini ai fornitori, periodi e mesi, scadenze dei buoni, temi del marketplace). Date e giorni seguono la lingua (formatoAttivo); gli importi restano all'italiana («7,00 €»).
+
+RESTANO ITALIANI apposta: la carta stampata, le pagine dei clienti, il messaggio e la mail d'ordine al fornitore, le fatture ai clienti, le esportazioni, i dati (nomi, note, risposte dell'AI) e DevTools, che si vede solo in sviluppo.
+
+FUORI da qui: le lingue del menù scelte dal gestore (REQ-MENU-046).
+
+**Dove**: `src/pages/BartenderPage.jsx, src/components (gestionale), Il mio profilo (src/pages/StaffProfilePage.jsx), src/lib/lingua.js, firestore.rules (profili_staff)` · **Serve**: [UR-022](#ur-022--chi-non-parla-italiano-usa-il-menù-e-il-gestionale-nella-sua-lingua) · **Lo dimostrano**: `tests/regole/profiliStaff.test.js`, `tests/component/CodaInInglese.test.jsx`, `tests/component/ContoInInglese.test.jsx`, `tests/component/CassaInInglese.test.jsx`, `tests/unit/cartaInItaliano.test.js`, `tests/component/ImpostazioniInInglese.test.jsx`, `tests/component/MagazzinoInInglese.test.jsx`, `tests/component/MenuInInglese.test.jsx`, `tests/component/FornitoriInInglese.test.jsx`, `tests/component/StatisticheInInglese.test.jsx`, `tests/component/StaffInInglese.test.jsx`
 
 ### Come si lavora al progetto
 
@@ -4560,6 +4604,26 @@ LA TESTATA DEL MENÙ (Daniele, 17/11/2026, «Ok» a dare alla demo una testata s
 
 **Dove**: `clienti/demo/venue.json` · **Serve**: [UR-014](#ur-014--la-demo-che-si-mostra-a-un-locale-nuovo-non-espone-niente-di-un-locale-vero) · **Lo dimostrano**: `tests/unit/clienteBuild.test.js`
 
+#### REQ-FLOTTA-034 — Un sito uguale per tutti i locali: il locale lo dice la configurazione, scritta nella pagina al momento della pubblicazione
+
+Fase 1 del pacchetto per versione (interfaccia 16 di docs/contratto-regia-app.md della regia, REQ-FLOTTA-137 della regia; Daniele, 18/11/2026: «si fallo entrare e procedi»). La regia compila il sito una volta per versione dal nostro tag e lo personalizza per ogni locale al deploy; la Tana continua a pubblicarsi da GitHub con la sua build, che non cambia (la regola 2 di docs/flotta.md resta, Daniele 18/11/2026).
+
+COSA SI CHIEDE. (1) La build in modalità pacchetto: nessun locale dentro (`__CLIENTE__` neutro, `__DEMO__` falso), i segnaposto `%VENUE_*%` lasciati in index.html, nel manifest e nelle pagine dell'informativa, il set neutro al posto dei file della Tana, e nessuna `VITE_FIREBASE_*` ammessa nella build. (2) La configurazione porta anche il locale: `venue` (solo le chiavi `venue_*` dell'app, solo testi, i link dei social solo http, https, mailto e tel), `profilo` (completo o leggero) e `regia` (solo i due progetti della regia); un valore fuori elenco vuol dire «vale la build». (3) La configurazione viaggia anche dentro index.html, come blocco `<script id="configurazione" type="application/json">`: arriva con la pagina, anche dalla cache del service worker e al primo avvio. Si legge in quest'ordine: il file ricordato nel dispositivo, il blocco nella pagina, la build. (4) Chi oggi legge la build al caricamento dei moduli (il locale, il tema di partenza, il profilo leggero, la regia) legge la configurazione, che resta sincrona. (5) Senza backend: si ricarica sempre appena il file arriva, non solo nei primi 10 secondi, perché nessuno può avere un conto in mano; si riprova quando torna la rete e a intervalli crescenti; al posto dell'app e del banner per lo sviluppatore una schermata a parole comuni, in italiano e inglese, e nessuna scrittura. (6) `scripts/personalizza.mjs` (nel pacchetto `personalizza.mjs`): dato il `dist/` neutro e la configurazione di un locale riempie i segnaposto, scrive il manifest, mette i file del locale sopra il set neutro, scrive `configurazione.json` e il blocco nella pagina; rifiuta un `dist/` già personalizzato e una configurazione che l'app non seguirebbe, ed esce con errore se resta un segnaposto.
+
+IL RISCHIO CHE SI CHIUDE (R3 nell'analisi del 18/11/2026): i tablet già installati hanno il locale nella build e nessuna configurazione ricordata; alla prima apertura del sito uguale per tutti, con la pagina arrivata e il file no, partirebbero su un progetto finto e vedrebbero la coda vuota. Col blocco nella pagina il locale arriva insieme alla pagina.
+
+CRITERIO: un `dist/` compilato in modalità pacchetto non contiene nomi né file della Tana e non ha backend; personalizzato, si apre col locale della configurazione; un dispositivo con la configurazione nella pagina parte senza rete col progetto giusto; un sito senza backend mostra la schermata e non scrive.
+
+COME È FATTO (18/11/2026, ramo feature/pacchetto). La regola su cosa ammette una configurazione sta in src/porte/configurazioneLocale.mjs, un modulo senza dipendenze usato dall'app (che lascia cadere) e da personalizza.mjs (che rifiuta). La porta (src/porte/configurazione.js) legge il blocco della pagina, completa profilo e regia con quelli della build, ricarica sempre senza backend e riprova (seguiConfigurazione: all'evento online e dopo 5 s, 15 s, 30 s, 1, 2 e 5 minuti). venue.js, themes.js, limiti.js, funzioniRegia.js e passaggioRegia.js leggono la configurazione; PROGETTI_REGIA sta nel modulo comune. main.jsx, senza backend e fuori dallo sviluppo, disegna NonCollegata al posto dell'app e non avvia progressivi né banner dei cookie. La build in modalità pacchetto è `PACCHETTO=1 npm run build` (clienti/pluginCliente.js), e si ferma se trova una VITE_FIREBASE_*, VITE_PROFILO, VITE_REGIA_PROGETTO o gli emulatori. Le funzioni che scrivono il locale nei file stanno in clienti/personalizzazione.mjs, comuni alla build e a scripts/personalizza.mjs. Il modulo è caricabile anche da Node (le costanti della build lette con typeof): i test di sistema e il seme arrivano fin lì da lib/limiti.js. Dalla revisione: i sostituti di replace sono funzioni (un «$'» nei testi del locale copiava pezzi di pagina nel blocco), e personalizza rilegge il blocco scritto; un file rovinato non fa dimenticare quello buono (prima, con una rete che alternava un JSON rotto e il file, l'app si ricaricava a ogni giro); senza backend il codice della regia resta nell'indirizzo, perché la ricarica lo perdeva; il pacchetto rifiuta anche VITE_APP_ENV diverso da production. tests/unit/avvioApp.test.jsx prova che senza backend non partono progressivi né cookie.
+
+**Dove**: `src/porte/configurazione.js, src/porte/configurazioneLocale.mjs, src/lib/venue.js, src/lib/themes.js, src/lib/limiti.js, src/lib/funzioniRegia.js, src/lib/passaggioRegia.js, src/lib/aggiornamenti.js, src/main.jsx, src/App.jsx, clienti/pluginCliente.js, clienti/personalizzazione.mjs, scripts/personalizza.mjs, docs/flotta.md` · **Serve**: [UR-024](#ur-024--un-locale-nuovo-si-accende-con-la-versione-di-tutti-e-i-suoi-tablet-restano-collegati-al-locale) · **Lo dimostrano**: `tests/unit/configurazioneLocale.test.js`, `tests/unit/personalizza.test.js`, `tests/component/NonCollegata.test.jsx`, `tests/sistema/sitoPerTutti.spec.js`
+
+#### REQ-FLOTTA-035 — Il pacchetto per versione si compila al tag e si pubblica nella Release di GitHub di tana-drink
+
+Daniele, 18/11/2026 (nel messaggio della regia msg-tana-pacchetto-6): «tana drink compila il pacchetto, provisiona istanza e aggiorna istanza aggiornano con il pacchetto di release di tana-drink», e «si puo mettere nella parte dei rilasci di github e appare in releases». È la seconda fase di REQ-FLOTTA-034, interfaccia 16 del contratto con la regia (docs/contratto-regia-app.md in drink-regia, REQ-FLOTTA-137 e REQ-FLOTTA-140 della regia).
+
+**Dove**: `scripts/crea-pacchetto.mjs, .github/workflows/pacchetto.yml, docs/flotta.md, docs/gitflow.md` · **Serve**: [UR-024](#ur-024--un-locale-nuovo-si-accende-con-la-versione-di-tutti-e-i-suoi-tablet-restano-collegati-al-locale) · **Lo dimostrano**: `tests/unit/creaPacchetto.test.js`
+
 ## Lavori previsti
 
 Roba decisa e non ancora scritta. **Non è quello che il sistema fa**: sta
@@ -4896,9 +4960,69 @@ Oggi test gira senza App Check e con la chiave reCAPTCHA della produzione, che p
 
 #### REQ-SIC-005 — La demo pubblica in sicurezza: lo script dei clienti, niente regia, configurazione finta, informativa per cliente
 
-Richiesta della regia (drink-regia REQ-FLOTTA-019), 02/11/2026. L'utente: «incarica un agente di verificare la sicurezza della demo», e letti i risultati, «dobbiamo risolvere anche tutte queste cose». Il disegno della modalità demo regge (nessuna demo nel pacchetto della Tana, nessuna richiesta verso Firebase, nessun dato personale nei dati di prova), ma: genera-cliente.mjs rifiuta la cartella «demo» prima di vedere che esiste, e la demo vecchia (un'app vera) restava online; la demo chiama la regia di produzione (presentazione, catalogo) a ogni apertura; con la configurazione vera e disableNetwork che fallisce in silenzio la rete resterebbe accesa; l'informativa privacy della Tana finisce in ogni build, demo e locali della flotta; nel pacchetto della demo restano nomi, foto e un fornitore della Tana; i link dei social accettano javascript:; la stampante finta non scapa il logo. Il dettaglio, coi file e le righe, in docs/sicurezza-demo.md. La regia ha già messo la sua difesa (PR #69): configurazione finta, niente indirizzo della regia, CSP con connect-src 'self', Storage chiuso.
+Richiesta della regia (drink-regia REQ-FLOTTA-019), 02/11/2026. L'utente: «incarica un agente di verificare la sicurezza della demo», e letti i risultati, «dobbiamo risolvere anche tutte queste cose». Il disegno della modalità demo regge (nessuna demo nel pacchetto della Tana, nessuna richiesta verso Firebase, nessun dato personale nei dati di prova), ma: genera-cliente.mjs rifiuta la cartella «demo» prima di vedere che esiste, e la demo vecchia (un'app vera) restava online; la demo chiama la regia di produzione (presentazione, catalogo) a ogni apertura; con la configurazione vera e disableNetwork che fallisce in silenzio la rete resterebbe accesa; l'informativa privacy della Tana finisce in ogni build, demo e locali della flotta; nel pacchetto della demo restano nomi, foto e un fornitore della Tana; i link dei social accettano javascript:; la stampante finta non scapa il logo. Il dettaglio, coi file e le righe, in docs/sicurezza-demo.md. La regia ha già messo la sua difesa (PR #69): configurazione finta, niente indirizzo della regia, CSP con connect-src 'self', Storage chiuso. Il 18/11/2026 i punti 4 (l'informativa della Tana in ogni build) e 6 (i link dei social) sono passati a REQ-SIC-017, col sito uguale per tutti: qui restano gli altri.
 
 **Dove**: `scripts/genera-cliente.mjs, src/lib/funzioniRegia.js, src/lib/presentazione.js, src/App.jsx, src/porte/configurazione.js, src/lib/firebaseClient.js, public/privacy-policy.html, public/cookie-policy.html, clienti/pluginCliente.js, src/demo/, src/lib/venue.js, src/lib/stampanteFinta.js, docs/sicurezza-demo.md` · **Serve**: [UR-014](#ur-014--la-demo-che-si-mostra-a-un-locale-nuovo-non-espone-niente-di-un-locale-vero)
+
+#### REQ-SIC-007 — Un elenco unico, nel codice, dei dati personali che l'app tiene
+
+Per ogni dato di una persona: dove sta (raccolta e campo di Firestore, Storage, log, FCM, SumUp, l'AI), perché, la base giuridica, per quanto tempo, a chi va, e se è DELICATO (pagamenti e riferimenti SumUp, telefono, indirizzo, posizione, testi o file mandati all'AI con dati di terzi, tracce di accesso, IP). Dallo stesso elenco nascono l'informativa (REQ-SIC-012) e il file scaricato (REQ-SIC-008): l'informativa non dice meno di quello che si tiene, il file non dà meno di quello che l'informativa dice. Una prova fallisce se una raccolta con dati di persone di firestore.rules, o un campo scritto dalle Functions, non è nell'elenco. È la prima misura, prima di ogni altro codice: la regia la chiede come risposta.
+
+**Dove**: `src/lib (elenco dei dati personali), firestore.rules, functions/` · **Serve**: [UR-023](#ur-023--ogni-persona-sa-quali-dati-lapp-tiene-su-di-lei-e-li-può-scaricare)
+
+#### REQ-SIC-008 — «Scarica i miei dati» per ogni persona, dal suo profilo
+
+Cliente registrato, staff e admin scaricano dal proprio profilo un file JSON con TUTTO quello che l'app tiene su di loro (account, ruoli, ordini e conti in cui compaiono, presenze e turni, chiamate allo staff, preferenze, token delle notifiche, consensi, contatti, e ogni altro dato dell'elenco REQ-SIC-007), e mai dati di altri: in un conto con più persone ognuno vede le sue righe. GDPR artt. 15 e 20.
+
+**Dove**: `Il mio profilo (staff, admin), il profilo del cliente registrato` · **Serve**: [UR-023](#ur-023--ogni-persona-sa-quali-dati-lapp-tiene-su-di-lei-e-li-può-scaricare)
+
+#### REQ-SIC-009 — L'admin esporta i dati di una persona del locale, e resta registrato
+
+Per rispondere a una richiesta che arriva al locale, l'admin — solo lui — esporta i dati di una persona del locale, cliente o staff, nello stesso formato di REQ-SIC-008. Ogni esportazione resta registrata: chi, di chi, quando.
+
+**Dove**: `Impostazioni (Utenti e ruoli, Clienti), una Function` · **Serve**: [UR-023](#ur-023--ogni-persona-sa-quali-dati-lapp-tiene-su-di-lei-e-li-può-scaricare)
+
+#### REQ-SIC-010 — Il download dei dati chiede un accesso recente, e lo si dice alla persona
+
+Si scarica solo con un accesso recente, altrimenti si rientra; ogni download — fatto dalla persona o dall'admin — lo si dice alla persona interessata, con un avviso nell'app.
+
+**Dove**: `REQ-SIC-008, REQ-SIC-009` · **Serve**: [UR-023](#ur-023--ogni-persona-sa-quali-dati-lapp-tiene-su-di-lei-e-li-può-scaricare)
+
+#### REQ-SIC-011 — Le categorie particolari di dati (art. 9): se l'app ne tratta, dichiarate e protette
+
+La regia chiede se l'app tratta dati di categorie particolari (salute, opinioni, biometria…): per esempio allergie nelle preferenze o nelle note dei clienti, note libere sulle righe di un conto. Se sì vanno dichiarate nell'elenco (REQ-SIC-007), protette e chieste col consenso esplicito; se no, va detto perché.
+
+**Dove**: `note dei clienti, preferenze, note delle righe e dei conti` · **Serve**: [UR-023](#ur-023--ogni-persona-sa-quali-dati-lapp-tiene-su-di-lei-e-li-può-scaricare)
+
+#### REQ-SIC-012 — Un'informativa tipo per il locale, generata dall'elenco dei dati personali
+
+Dall'elenco di REQ-SIC-007 nasce un'informativa tipo che il locale mostra ai suoi clienti e al suo staff, coi suoi dati di titolare. Non omette niente, soprattutto i dati sensibili. Il testo è una bozza che approva Daniele.
+
+**Dove**: `docs/ (bozza), la pagina «Privacy» del locale` · **Serve**: [UR-023](#ur-023--ogni-persona-sa-quali-dati-lapp-tiene-su-di-lei-e-li-può-scaricare)
+
+#### REQ-SIC-013 — La cancellazione dell'account fatta da sé, con 30 giorni per ripensarci
+
+Daniele, 17/11/2026 (messaggio della regia, punto 7): «ok» ai 30 giorni e alla cancellazione fatta da sé, come nella regia (REQ-FLOTTA-134). La schermata propone prima «Scarica i miei dati» (REQ-SIC-008); l'account resta disattivato per 30 giorni, in cui si può annullare e scaricare ancora; poi si cancella da solo. Restano solo i dati che il locale deve tenere per legge (fiscali: ordini, incassi, chiusure), dichiarati nell'informativa. Per lo staff vanno chiariti i vincoli (presenze e turni che il locale deve tenere).
+
+**Dove**: `Il mio profilo, il profilo del cliente, una Function` · **Serve**: [UR-023](#ur-023--ogni-persona-sa-quali-dati-lapp-tiene-su-di-lei-e-li-può-scaricare)
+
+#### REQ-SIC-014 — Il titolare esporta tutti i dati del locale in ogni momento
+
+Messaggio della regia, punto 8: il locale è titolare dei dati dei suoi clienti e del suo personale e deve poterli avere tutti, durante il contratto e alla fine come restituzione (alla chiusura c'è già l'archivio della regia, 180 giorni). In parte esiste già: «Esporta tutto» del backup. Da verificare che comprenda tutti i dati personali dell'elenco REQ-SIC-007 (oggi alcune raccolte sono fuori dal backup apposta: presenze, profili_staff…) e che il formato sia leggibile da una macchina.
+
+**Dove**: `Backup e ripristino (src/components/BackupPanel.jsx, src/lib/backup.js)` · **Serve**: [UR-023](#ur-023--ogni-persona-sa-quali-dati-lapp-tiene-su-di-lei-e-li-può-scaricare)
+
+#### REQ-SIC-015 — I dati da cui può derivare un controllo a distanza del personale, dichiarati allo staff
+
+Messaggio della regia, punto 9: lo Statuto dei lavoratori (art. 4) chiede, per gli strumenti da cui può derivare un controllo a distanza, un accordo o un'autorizzazione, o almeno un'informativa chiara al dipendente [da verificare col legale]. L'elenco di questi dati (presenza ogni 3 minuti, chi ha battuto/incassato/annullato cosa e quando, tempi di preparazione, iniziali sulle righe, storia del conto, ore e turni) entra nell'informativa per lo staff. La valutazione legale la fa Daniele col legale.
+
+**Dove**: `informativa per lo staff (REQ-SIC-012), presenze, chi ha battuto/incassato, tempi di preparazione` · **Serve**: [UR-023](#ur-023--ogni-persona-sa-quali-dati-lapp-tiene-su-di-lei-e-li-può-scaricare)
+
+#### REQ-SIC-016 — L'elenco dei servizi esterni a cui l'app manda dati di persone
+
+Messaggio della regia: per l'accordo di trattamento fra Stonebit e il locale, che elenca i sub-responsabili, serve l'elenco dei servizi esterni a cui l'app manda dati di persone (Google/Firebase e i suoi servizi, FCM, SumUp, la regia e il fornitore dell'AI, altri), verificato nel codice e tenuto insieme all'elenco dei dati personali.
+
+**Dove**: `REQ-SIC-007, l'accordo di trattamento della regia (REQ-FLOTTA-135)` · **Serve**: [UR-023](#ur-023--ogni-persona-sa-quali-dati-lapp-tiene-su-di-lei-e-li-può-scaricare)
 
 ### Intelligenza artificiale
 
@@ -4957,14 +5081,6 @@ FATTO (17/11/2026): le violazioni di axe corrette (BUG-167); la prova è un CANC
 DA FARE: la prova sul sito di test vero (dopo il prossimo tag); i comandi su `div` cliccabili; il fuoco nelle finestre di dialogo; gli avvisi letti; i temi uno per uno (anche `--muted` a 4,5, con la regia); la prova a mano a ogni versione maggiore (tastiera, NVDA, zoom 200%); infine la pagina «Accessibilità» collegata dal piè di pagina comune (src/App.jsx, accanto a Privacy), col testo approvato da Daniele.
 
 **Dove**: `tests/sistema/accessibilita.spec.js (axe-core), index.html (viewport), src/index.css (contrasto), componenti con comandi su div, src/App.jsx (piè di pagina)` · **Serve**: [UR-021](#ur-021--chi-ha-una-disabilità-usa-il-menù-la-home-del-locale-e-il-gestionale-come-tutti)
-
-#### REQ-UI-039 — Il gestionale in inglese
-
-Daniele, 17/11/2026: dopo le pagine dei clienti, il gestionale va tradotto. Tutti i testi del banco, della cassa, delle impostazioni, del magazzino e delle altre sezioni passano dal meccanismo dei testi in due lingue (REQ-UI-038), una sezione alla volta: prima banco e cassa, poi il resto.
-
-CHI SCEGLIE (Daniele, 17/11/2026): «Chiunque può scegliere la lingua nel gestionale, qualsiasi ruolo. La lingua è legata al profilo». Quindi in «Il mio profilo» ogni persona — admin, bartender, sala — sceglie italiano o inglese, e la scelta sta sul suo account (profili_staff/{uid}, che legge e scrive solo lei): la segue su ogni tablet e telefono. Sul dispositivo ne resta una copia, perché l'app parta subito nella lingua giusta anche senza rete; all'accesso vince quella dell'account. Niente lingua di partenza del locale: si parte in italiano. Si lavora su un ramo feature/, e il selettore arriva insieme alle prime sezioni tradotte (banco e cassa): una scelta che non cambia niente non si mostra. Da decidere quando si comincia (dalla revisione di REQ-UI-038, 17/11/2026): date e importi seguono la lingua (formatPrice e le date oggi sono fissi su it-IT, serve un punto unico); i testi personalizzabili dal gestore (testo('chiave', 'predefinito') di lib/testiStile.js) e le loro versioni inglesi, insieme a REQ-MENU-046; il dizionario inglese caricato solo quando serve, se pesa sul pacchetto.
-
-**Dove**: `src/pages/BartenderPage.jsx, src/components (gestionale), Il mio profilo (src/pages/StaffProfilePage.jsx), src/lib/lingua.js, firestore.rules (profili_staff)` · **Serve**: [UR-022](#ur-022--chi-non-parla-italiano-usa-il-menù-e-il-gestionale-nella-sua-lingua)
 
 ### Come si lavora al progetto
 

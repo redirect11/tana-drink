@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react'
 import { formatPrice } from './orderStatus.js'
+import { daTradurre } from './lingua.js'
 
 // ── IL PREZZO NEL MENÙ DEI CLIENTI (REQ-MENU-038) ──────────────────────────
 //
@@ -17,11 +18,13 @@ import { formatPrice } from './orderStatus.js'
 // separate vuol dire che nessuno toglie l'euro da uno scontrino per sbaglio.
 
 // I tre formati (Daniele, 11/11/2026, alla domanda se bastano: «basta»).
-// `esempio` è quello che si legge nelle Impostazioni accanto alla scelta.
+// `esempio` è quello che si legge nelle Impostazioni accanto alla scelta:
+// resta com'è, perché il menù dei clienti è in italiano. Il nome si mostra
+// con `trSegnato` (REQ-UI-039).
 export const FORMATI_PREZZO_MENU = Object.freeze([
-  Object.freeze({ id: 'numero', label: 'Numero', esempio: '8 · 3,5' }),
-  Object.freeze({ id: 'centesimi', label: 'Numero con i centesimi', esempio: '8 · 3,50' }),
-  Object.freeze({ id: 'valuta', label: 'Importo in euro', esempio: '8,00 € · 3,50 €' }),
+  Object.freeze({ id: 'numero', label: daTradurre('Numero'), esempio: '8 · 3,5' }),
+  Object.freeze({ id: 'centesimi', label: daTradurre('Numero con i centesimi'), esempio: '8 · 3,50' }),
+  Object.freeze({ id: 'valuta', label: daTradurre('Importo in euro'), esempio: '8,00 € · 3,50 €' }),
 ])
 
 const DI_PARTENZA = 'numero'

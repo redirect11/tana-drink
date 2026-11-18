@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { tr } from '../lib/lingua.js'
 
 // SOTTOSEZIONI DI UNA PAGINA — una convenzione sola per tutto il gestionale.
 //
@@ -56,8 +57,8 @@ export default function SectionPanels({ panels = [], attivo = null, onChange = n
             <button
               className="btn ghost small"
               onClick={() => apri(corrente.id)}
-              aria-label="Chiudi"
-              title="Chiudi"
+              aria-label={tr('Chiudi')}
+              title={tr('Chiudi')}
             >
               ✕
             </button>

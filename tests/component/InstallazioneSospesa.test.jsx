@@ -48,6 +48,9 @@ describe('la schermata del titolare', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(/Bar Mario/)
     expect(screen.getByRole('alert')).toHaveTextContent(/pagamento non ricevuto/)
     expect(screen.getByRole('alert')).toHaveTextContent(/22\/10\/2026/)
+    // La frase intera: dal 17/11 quella con la data è una frase a sé (per
+    // l'inglese, REQ-UI-039), e l'italiano deve restare quello di prima.
+    expect(screen.getByRole('alert')).toHaveTextContent('L’app di Bar Mario è sospesa dal 22/10/2026. Motivo: pagamento non ricevuto.')
     expect(screen.getByRole('link', { name: 'Riattiva il locale' })).toHaveAttribute('href', 'https://drink-regia.web.app')
     expect(screen.getByText(/non sono andati persi/)).toBeInTheDocument()
     // I suoi dati si scaricano, ma il ripristino (che scrive) qui non c'è.
@@ -98,6 +101,7 @@ describe('la schermata del titolare', () => {
     )
     expect(screen.getByRole('alert')).toHaveTextContent('Licenza scaduta')
     expect(screen.getByRole('alert')).toHaveTextContent(/dal 30\/11\/2026/)
+    expect(screen.getByRole('alert')).toHaveTextContent('L’app di Bar Mario è ferma per la scadenza della licenza dal 30/11/2026.')
     expect(screen.getByRole('link', { name: 'Riattiva il locale' })).toHaveAttribute('href', 'https://drink-regia.web.app/area')
   })
 

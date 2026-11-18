@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Icona from './Icona.jsx'
+import { tr } from '../lib/lingua.js'
 
 // ── LA PASSWORD, CON L'OCCHIO PER GUARDARLA ──────────────────────────
 //
@@ -27,8 +28,8 @@ export default function CampoPassword({ id, value, onChange, autoComplete, ...re
         type="button"
         className="campo-password-occhio"
         onClick={() => setVisibile((v) => !v)}
-        aria-label={visibile ? 'Nascondi la password' : 'Mostra la password'}
-        title={visibile ? 'Nascondi la password' : 'Mostra la password'}
+        aria-label={visibile ? tr('Nascondi la password') : tr('Mostra la password')}
+        title={visibile ? tr('Nascondi la password') : tr('Mostra la password')}
         // Fuori dal giro del tabulatore: chi compila con la tastiera passa
         // da password a «entra», non da un interruttore in mezzo.
         tabIndex={-1}

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" type="image/png" href="logo.png" />
-  <title>Informativa Privacy – La Tana del Coniglio</title>
+  <title>Informativa Privacy – %VENUE_NAME%</title>
   <!-- Niente caratteri da Google (REQ-SIC-004): i titoli usano il serif del
        telefono (Georgia e simili), che per un testo legale basta. -->
   <style>
@@ -70,19 +70,17 @@
 </head>
 <body>
   <header>
-    <img class="logo" src="logo.png" alt="La Tana del Coniglio" />
+    <img class="logo" src="logo.png" alt="%VENUE_NAME%" />
     <h1>Informativa Privacy</h1>
-    <p class="sub">La Tana del Coniglio · App di ordinazione</p>
+    <p class="sub">%VENUE_NAME% · App di ordinazione</p>
   </header>
 
   <div class="content">
     <h2>1. Titolare del trattamento</h2>
     <p>
-      Titolare del trattamento è <strong>EFFEVI S.R.L.S.</strong> («La Tana del Coniglio»),
-      con sede legale in Corso Tommaso Vitale 87/89, 80035 Nola (NA)
-      <span style="color:var(--muted)">[P.IVA / C.F. — da inserire]</span>.
+      Titolare del trattamento è %VENUE_TITOLARE%.
       Per qualsiasi richiesta relativa ai tuoi dati personali puoi scrivere a
-      <a href="mailto:info@latanadelconiglio.it">info@latanadelconiglio.it</a>.
+      %VENUE_EMAIL_LINK%.
     </p>
 
     <h2>2. Quali dati trattiamo e perché</h2>
@@ -159,7 +157,7 @@
     <p>
       Hai diritto di accedere ai tuoi dati, rettificarli, cancellarli, limitarne o opporti
       al trattamento, e alla portabilità. Puoi esercitarli scrivendo a
-      <a href="mailto:info@latanadelconiglio.it">info@latanadelconiglio.it</a> o, per i dati
+      %VENUE_EMAIL_LINK% o, per i dati
       dell'account, direttamente dall'app. Hai inoltre diritto di reclamo al
       <a href="https://www.garanteprivacy.it" target="_blank" rel="noopener">Garante per la
       protezione dei dati personali</a>.
@@ -205,7 +203,7 @@
     <p>
       Questa informativa può essere aggiornata; la versione vigente è sempre disponibile a
       questo indirizzo. Per esercitare i tuoi diritti o per qualsiasi chiarimento scrivi a
-      <a href="mailto:info@latanadelconiglio.it">info@latanadelconiglio.it</a>: risponderemo
+      %VENUE_EMAIL_LINK%: risponderemo
       senza ingiustificato ritardo e comunque entro 30 giorni.
     </p>
     <p style="color:var(--muted);font-size:0.8rem;">Ultimo aggiornamento: giugno 2026.</p>
@@ -213,6 +211,6 @@
     <div class="back-link"><a href="./">← Torna al menù</a></div>
   </div>
 
-  <footer>La Tana del Coniglio — informativa privacy</footer>
+  <footer>%VENUE_NAME% — informativa privacy</footer>
 </body>
 </html>

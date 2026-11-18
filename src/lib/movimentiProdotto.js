@@ -15,19 +15,21 @@
 // Logica pura (niente Firebase), interamente testabile.
 
 import { arrotonda, gruppoMovimento, movimentoInPezzi } from './magazzinoPeriodo.js'
+import { daTradurre } from './lingua.js'
 
 // I TIPI, nell'ordine in cui li dice Flavio, più le vendite. Un motivo che
 // non c'è qui finisce fra le altre correzioni: si vede, non si perde.
+// Le etichette si traducono dove si mostrano, con `trSegnato` (REQ-UI-039).
 export const TIPI_MOVIMENTO = [
-  { id: 'ordine fornitore', label: 'Consegna ordine fornitore' },
-  { id: 'carico', label: 'Carico diretto' },
-  { id: 'fattura fornitore', label: 'Carico da fattura' },
-  { id: 'reso fornitore', label: 'Reso al fornitore' },
-  { id: 'rettifica', label: 'Contenuto reale' },
-  { id: 'conta', label: 'Chiusura inventario' },
-  { id: 'vendite', label: 'Vendite' },
-  { id: 'tiller', label: 'Vendite su Tiller' },
-  { id: 'altro', label: 'Altre correzioni' },
+  { id: 'ordine fornitore', label: daTradurre('Consegna ordine fornitore') },
+  { id: 'carico', label: daTradurre('Carico diretto') },
+  { id: 'fattura fornitore', label: daTradurre('Carico da fattura') },
+  { id: 'reso fornitore', label: daTradurre('Reso al fornitore') },
+  { id: 'rettifica', label: daTradurre('Contenuto reale') },
+  { id: 'conta', label: daTradurre('Chiusura inventario') },
+  { id: 'vendite', label: daTradurre('Vendite') },
+  { id: 'tiller', label: daTradurre('Vendite su Tiller') },
+  { id: 'altro', label: daTradurre('Altre correzioni') },
 ]
 // Le vendite sono il gruppo «consumo» dei movimenti (GRUPPO_MOTIVO, in
 // magazzinoPeriodo.js): ordini, loro modifiche e storni. Un motivo di

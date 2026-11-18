@@ -1,6 +1,7 @@
 import { formatPrice } from '../lib/orderStatus.js'
 import { qtyBtnStyle } from '../lib/posStyles.js'
 import Icona from './Icona.jsx'
+import { tr } from '../lib/lingua.js'
 
 // Mattoni condivisi dell'interfaccia POS (griglia prodotti stile SumUp):
 // usati sia dalla cassa (PosPage, nuovo ordine) sia dal dettaglio ordine
@@ -84,7 +85,11 @@ export function DrinkTile({
       {onToggleFav && (
         <button
           type="button"
-          aria-label={favorite ? `Togli ${drink.name} dai preferiti` : `Aggiungi ${drink.name} ai preferiti`}
+          aria-label={
+            favorite
+              ? tr('Togli {nome} dai preferiti', { nome: drink.name })
+              : tr('Aggiungi {nome} ai preferiti', { nome: drink.name })
+          }
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation()
@@ -115,8 +120,8 @@ export function DrinkTile({
       {onInfo && (
         <button
           type="button"
-          aria-label={`Come si fa ${drink.name}`}
-          title={`Come si fa ${drink.name}`}
+          aria-label={tr('Come si fa {nome}', { nome: drink.name })}
+          title={tr('Come si fa {nome}', { nome: drink.name })}
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation()
@@ -226,7 +231,7 @@ export function DrinkTile({
         }}
       >
         <button
-          aria-label="Riduci"
+          aria-label={tr('Riduci')}
           onClick={() => onSetQty(qty - 1)}
           tabIndex={inCart ? 0 : -1}
           style={qtyBtnStyle}
@@ -235,7 +240,7 @@ export function DrinkTile({
         </button>
         <span style={{ fontWeight: 700, fontSize: '0.95em', minWidth: '1.1em', textAlign: 'center' }}>{qty}</span>
         <button
-          aria-label="Aumenta"
+          aria-label={tr('Aumenta')}
           onClick={onAdd}
           tabIndex={inCart ? 0 : -1}
           style={qtyBtnStyle}

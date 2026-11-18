@@ -11,6 +11,7 @@ import { formatPrice } from '../lib/orderStatus.js'
 import { strutturaDi } from './stiliStrutturati.js'
 import Caricamento from './Caricamento.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
+import { tr, daTradurre, trSegnato, trDato, useLingua, conEtichetteTradotte } from '../lib/lingua.js'
 import {
   STILI_MENU,
   nomeStile,
@@ -78,11 +79,11 @@ import {
 // direbbe soltanto che esiste un servizio a pagamento.
 
 const SEZIONI = [
-  { id: 'tuoi', icona: 'preferito', label: 'I tuoi temi' },
-  { id: 'temi', icona: 'temi', label: 'Temi' },
-  { id: 'stili', icona: 'stili', label: 'Stili del menù' },
-  { id: 'installati', icona: 'fatto', label: 'Installati' },
-  { id: 'moduli', icona: 'moduli', label: 'Moduli' },
+  { id: 'tuoi', icona: 'preferito', label: daTradurre('I tuoi temi') },
+  { id: 'temi', icona: 'temi', label: daTradurre('Temi') },
+  { id: 'stili', icona: 'stili', label: daTradurre('Stili del menù') },
+  { id: 'installati', icona: 'fatto', label: daTradurre('Installati') },
+  { id: 'moduli', icona: 'moduli', label: daTradurre('Moduli') },
 ]
 
 // La sezione da aprire: quella dell'indirizzo, se esiste. Ci si arriva così
@@ -101,11 +102,13 @@ const VOCI_ESEMPIO = [
 // degli stili strutturati: la vetrina non può mostrare card che non ha.
 // Uno stile a ricetta (REQ-MENU-031) si veste col motore, come il menù, e
 // coi suoi colori sopra quelli del tema.
+// La vetrina È il menù dei clienti, e quello resta in italiano anche col
+// gestionale in inglese (REQ-CLI-010): lo dice `lang="it"`.
 function Vetrina({ colori, stile, settings }) {
   const struttura = strutturaDi(stile)
   if (struttura) {
     return (
-      <div className={`vetrina-tema stile-${stile}`} style={resolveThemeVars(colori)} aria-hidden="true">
+      <div className={`vetrina-tema stile-${stile}`} style={resolveThemeVars(colori)} aria-hidden="true" lang="it">
         <struttura.Vetrina voci={VOCI_ESEMPIO} />
       </div>
     )
@@ -117,6 +120,7 @@ function Vetrina({ colori, stile, settings }) {
       className={`vetrina-tema ${veste.className || 'stile-classico'}`}
       style={{ ...tinte, ...veste.style }}
       aria-hidden="true"
+      lang="it"
       {...veste.attributi}
     >
       <h3 className="cat-header">Cocktail</h3>
@@ -159,22 +163,27 @@ function AzioniCatalogo({ provaHref, etichetta, inUso, installato, disinstallabi
   return (
     <>
       <a className="link-inline small" href={provaHref}>
-        Prova sul menù
+        {tr('Prova sul menù')}
       </a>
       {inUso ? (
-        <span className="small">In uso</span>
+        <span className="small">{tr('In uso')}</span>
       ) : installato ? (
-        <button type="button" className="btn small" aria-label={`Usa ${etichetta}`} onClick={onUsa}>
-          Usa
+        <button type="button" className="btn small" aria-label={tr('Usa {nome}', { nome: etichetta })} onClick={onUsa}>
+          {tr('Usa')}
         </button>
       ) : (
-        <button type="button" className="btn small" aria-label={`Installa ${etichetta}`} onClick={onInstalla}>
-          Installa
+        <button type="button" className="btn small" aria-label={tr('Installa {nome}', { nome: etichetta })} onClick={onInstalla}>
+          {tr('Installa')}
         </button>
       )}
       {installato && disinstallabile && (
-        <button type="button" className="link-inline small" aria-label={`Disinstalla ${etichetta}`} onClick={onDisinstalla}>
-          Disinstalla
+        <button
+          type="button"
+          className="link-inline small"
+          aria-label={tr('Disinstalla {nome}', { nome: etichetta })}
+          onClick={onDisinstalla}
+        >
+          {tr('Disinstalla')}
         </button>
       )}
     </>
@@ -207,19 +216,19 @@ function useDallaRegia(quando, ricordato, scarica) {
 
 const AVVISI_REGIA = {
   temi: {
-    carica: 'Aggiornamento del catalogo in corso…',
-    senza_rete: 'Il catalogo della regia non risponde: si vedono i temi già noti a questo dispositivo.',
+    carica: daTradurre('Aggiornamento del catalogo in corso…'),
+    senza_rete: daTradurre('Il catalogo della regia non risponde: si vedono i temi già noti a questo dispositivo.'),
   },
   moduli: {
-    carica: 'Aggiornamento del listino in corso…',
-    senza_rete: 'Il listino della regia non risponde: prezzi e prove sono quelli già noti a questo dispositivo.',
+    carica: daTradurre('Aggiornamento del listino in corso…'),
+    senza_rete: daTradurre('Il listino della regia non risponde: prezzi e prove sono quelli già noti a questo dispositivo.'),
   },
 }
 
 function AvvisoRegia({ stato, di }) {
   if (!stato) return null
-  if (stato === 'carica') return <Caricamento piccolo testo={AVVISI_REGIA[di].carica} />
-  return <p className="muted small">{AVVISI_REGIA[di].senza_rete}</p>
+  if (stato === 'carica') return <Caricamento piccolo testo={trSegnato(AVVISI_REGIA[di].carica)} />
+  return <p className="muted small">{trSegnato(AVVISI_REGIA[di].senza_rete)}</p>
 }
 
 // ── I MODULI ──────────────────────────────────────────────────────────
@@ -229,27 +238,31 @@ function AvvisoRegia({ stato, di }) {
 // della regia (acquistiDallApp). Il pagamento si fa sulla pagina di Stripe:
 // l'app ci manda il titolare e la regia lo riporta qui, sui moduli.
 const ESITI_RITORNO = {
-  pagato: { tipo: 'ok', testo: 'Pagamento ricevuto. Il modulo si attiva appena la regia aggiorna la licenza.' },
-  annullato: { tipo: 'info', testo: 'Pagamento annullato: nessun addebito e nessuna modifica alla licenza.' },
+  pagato: { tipo: 'ok', testo: daTradurre('Pagamento ricevuto. Il modulo si attiva appena la regia aggiorna la licenza.') },
+  annullato: { tipo: 'info', testo: daTradurre('Pagamento annullato: nessun addebito e nessuna modifica alla licenza.') },
 }
 
 // Il testo di una richiesta non andata. Quello della regia, se lo manda (è
 // il caso che conosce lei: prova già usata, modulo compreso nel piano…).
 function testoErrore(r) {
   if (r.errore) return r.errore
-  if (r.status === 0) return 'La regia non risponde. Verificare la connessione e riprovare.'
-  if (r.status === 401 || r.status === 403) return 'Moduli e abbonamenti li modifica solo il titolare, con il proprio accesso.'
-  return 'Operazione non riuscita. Riprovare tra qualche minuto.'
+  if (r.status === 0) return tr('La regia non risponde. Verificare la connessione e riprovare.')
+  if (r.status === 401 || r.status === 403) return tr('Moduli e abbonamenti li modifica solo il titolare, con il proprio accesso.')
+  return tr('Operazione non riuscita. Riprovare tra qualche minuto.')
 }
 
 const STATI_MODULO = {
-  prova: (m) => `In prova fino al ${dataAvviso(m.prova_fino)}`,
-  incluso: () => 'Incluso',
-  non_incluso: () => 'Non incluso',
+  // Funzioni, non testi: si traducono quando si mostrano.
+  prova: (m) => tr('In prova fino al {data}', { data: dataAvviso(m.prova_fino) }),
+  incluso: () => tr('modulo|Incluso'),
+  non_incluso: () => tr('modulo|Non incluso'),
 }
 
 function SezioneModuli({ settings, role, listino, statoListino, esitoIniziale }) {
-  const [avviso, setAvviso] = useState(() => ESITI_RITORNO[esitoIniziale] || null)
+  const [avviso, setAvviso] = useState(() => {
+    const esito = ESITI_RITORNO[esitoIniziale]
+    return esito ? { ...esito, testo: trSegnato(esito.testo) } : null
+  })
   const [inCorso, setInCorso] = useState(null)
   const [daDisdire, setDaDisdire] = useState(null)
 
@@ -272,15 +285,16 @@ function SezioneModuli({ settings, role, listino, statoListino, esitoIniziale })
       setAvviso({ tipo: 'errore', testo: testoErrore(r) })
       return
     }
+    const modulo = trSegnato(m.nome)
     const testi = r.in_attesa ? {
-      aggiungi: `Richiesta di «${m.nome}» inviata all'assistenza: il modulo si attiva alla conferma del pagamento.`,
-      disdici: `Richiesta di disdetta di «${m.nome}» inviata all'assistenza.`,
+      aggiungi: tr("Richiesta di «{modulo}» inviata all'assistenza: il modulo si attiva alla conferma del pagamento.", { modulo }),
+      disdici: tr("Richiesta di disdetta di «{modulo}» inviata all'assistenza.", { modulo }),
     } : {
-      prova: `Prova di «${m.nome}» attivata: il modulo compare fra pochi istanti.`,
-      aggiungi: `«${m.nome}» aggiunto: il modulo compare fra pochi istanti.`,
+      prova: tr('Prova di «{modulo}» attivata: il modulo compare fra pochi istanti.', { modulo }),
+      aggiungi: tr('«{modulo}» aggiunto: il modulo compare fra pochi istanti.', { modulo }),
       disdici: r.dal
-        ? `Disdetta registrata: «${m.nome}» resta attivo fino al ${dataAvviso(r.dal)}.`
-        : `Disdetta registrata: «${m.nome}» resta attivo fino alla fine del periodo pagato.`,
+        ? tr('Disdetta registrata: «{modulo}» resta attivo fino al {data}.', { modulo, data: dataAvviso(r.dal) })
+        : tr('Disdetta registrata: «{modulo}» resta attivo fino alla fine del periodo pagato.', { modulo }),
     }
     setAvviso({ tipo: 'ok', testo: testi[azione] })
   }
@@ -288,9 +302,10 @@ function SezioneModuli({ settings, role, listino, statoListino, esitoIniziale })
   const tasti = (m) => {
     if (!titolare || !acquisti) return null
     if (!m.in_vendita) {
-      return m.stato === 'non_incluso' ? <span className="muted small">Non acquistabile singolarmente</span> : null
+      return m.stato === 'non_incluso' ? <span className="muted small">{tr('Non acquistabile singolarmente')}</span> : null
     }
     const occupato = inCorso !== null
+    const modulo = trSegnato(m.nome)
     // Senza la sua base non si vende (REQ-LIC-015): l'inventario senza il
     // magazzino non avrebbe niente da contare.
     if (m.stato === 'non_incluso' && m.richiede.length > 0) {
@@ -301,11 +316,11 @@ function SezioneModuli({ settings, role, listino, statoListino, esitoIniziale })
         <button
           type="button"
           className="link-inline small"
-          aria-label={`Disdici ${m.nome}`}
+          aria-label={tr('Disdici {modulo}', { modulo })}
           disabled={occupato}
           onClick={() => setDaDisdire(m)}
         >
-          Disdici
+          {tr('Disdici')}
         </button>
       )
     }
@@ -315,11 +330,15 @@ function SezioneModuli({ settings, role, listino, statoListino, esitoIniziale })
           <button
             type="button"
             className="link-inline small"
-            aria-label={`Prova ${m.nome} gratis per ${m.prova_giorni} giorni`}
+            aria-label={
+              m.prova_giorni === 1
+                ? tr('Prova {modulo} gratis per 1 giorno', { modulo })
+                : tr('Prova {modulo} gratis per {n} giorni', { modulo, n: m.prova_giorni })
+            }
             disabled={occupato}
             onClick={() => esegui(m, 'prova')}
           >
-            Prova gratis {m.prova_giorni} giorni
+            {m.prova_giorni === 1 ? tr('Prova gratis 1 giorno') : tr('Prova gratis {n} giorni', { n: m.prova_giorni })}
           </button>
         ) : (
           <span />
@@ -327,11 +346,11 @@ function SezioneModuli({ settings, role, listino, statoListino, esitoIniziale })
         <button
           type="button"
           className="btn small"
-          aria-label={`Aggiungi ${m.nome}`}
+          aria-label={tr('Aggiungi {modulo}', { modulo })}
           disabled={occupato}
           onClick={() => esegui(m, 'aggiungi')}
         >
-          {inCorso === m.id ? 'Attendere…' : 'Aggiungi'}
+          {inCorso === m.id ? tr('Attendere…') : tr('Aggiungi')}
         </button>
       </>
     )
@@ -339,17 +358,16 @@ function SezioneModuli({ settings, role, listino, statoListino, esitoIniziale })
 
   return (
     <section>
-      <h2>Moduli</h2>
+      <h2>{tr('Moduli')}</h2>
       <p className="muted">
-        Le funzioni oltre a menù, ordini e cassa. Si attivano sulla licenza dell'installazione, con abbonamento
-        mensile; dove previsto, una prova gratuita prima dell'acquisto.
+        {tr("Le funzioni oltre a menù, ordini e cassa. Si attivano sulla licenza dell'installazione, con abbonamento mensile; dove previsto, una prova gratuita prima dell'acquisto.")}
       </p>
       {!acquisti && (
         <p className="muted small">
-          La licenza di questa installazione si gestisce presso chi la amministra: qui si consulta soltanto.
+          {tr('La licenza di questa installazione si gestisce presso chi la amministra: qui si consulta soltanto.')}
         </p>
       )}
-      {acquisti && !titolare && <p className="muted small">Moduli e abbonamenti li gestisce il titolare.</p>}
+      {acquisti && !titolare && <p className="muted small">{tr('Moduli e abbonamenti li gestisce il titolare.')}</p>}
       <AvvisoRegia stato={statoListino} di="moduli" />
       {/* Un errore è un avviso (il banner giallo di sempre); un esito andato
           bene no: il giallo con la scritta rossa lo farebbe sembrare un guaio. */}
@@ -362,8 +380,8 @@ function SezioneModuli({ settings, role, listino, statoListino, esitoIniziale })
         {moduli.map((m) => (
           <Scheda
             key={m.id}
-            titolo={m.nome}
-            descrizione={m.descrizione}
+            titolo={trSegnato(m.nome)}
+            descrizione={trSegnato(m.descrizione)}
             sottotitolo={m.in_vendita ? prezzoAlMese(m.prezzo) : ''}
             vetrina={
               <div className={`vetrina-modulo vetrina-modulo-${m.stato}`}>
@@ -381,13 +399,17 @@ function SezioneModuli({ settings, role, listino, statoListino, esitoIniziale })
 
       {daDisdire && (
         <ConfirmDialog
-          title={`Disdire «${daDisdire.nome}»?`}
-          message={`Il modulo resta attivo fino alla fine del periodo già pagato, poi si spegne. I dati restano.${
+          title={tr('Disdire «{modulo}»?', { modulo: trSegnato(daDisdire.nome) })}
+          message={`${tr('Il modulo resta attivo fino alla fine del periodo già pagato, poi si spegne. I dati restano.')}${
             daDisdire.con_lui.length
-              ? ` Si spengono anche ${daDisdire.con_lui.map((d) => `«${MODULI_PREMIUM[d].label}»`).join(' e ')}, che lo richiedono.`
+              ? ` ${tr('Si spengono anche {moduli}, che lo richiedono.', {
+                  moduli: daDisdire.con_lui
+                    .map((d) => `«${trSegnato(MODULI_PREMIUM[d].label)}»`)
+                    .join(` ${tr('congiunzione|e')} `),
+                })}`
               : ''
           }`}
-          confirmLabel="Disdici"
+          confirmLabel={tr('Disdici')}
           danger
           onConfirm={() => esegui(daDisdire, 'disdici')}
           onCancel={() => setDaDisdire(null)}
@@ -398,6 +420,7 @@ function SezioneModuli({ settings, role, listino, statoListino, esitoIniziale })
 }
 
 export default function MarketplaceTab({ role = null }) {
+  useLingua()
   const [params, setParams] = useSearchParams()
   const [settings, setSettings] = useState(() => settingsIniziali())
   const [errore, setErrore] = useState(null)
@@ -454,22 +477,29 @@ export default function MarketplaceTab({ role = null }) {
   // Un tema su misura ritirato dalla licenza non si reinstalla: disinstallarlo
   // è definitivo, e la scheda lo dice prima.
   const ritirato = (t) => ritirati.some((r) => r.id === t.id)
+  const stileDi = (t) => tr('Stile «{nome}»', { nome: trDato(nomeStile(t.stile, settings)) })
   const sottotitoloTema = (t) =>
     t.su_misura
-      ? `Su misura${t.ricetta ? '' : ` · Stile «${nomeStile(t.stile, settings)}»`}${ritirato(t) ? ' · Non più in licenza: una volta disinstallato non si reinstalla' : ''}`
-      : `Stile «${nomeStile(t.stile, settings)}» · Gratis`
+      ? [
+          tr('Su misura'),
+          !t.ricetta && stileDi(t),
+          ritirato(t) && tr('Non più in licenza: una volta disinstallato non si reinstalla'),
+        ]
+          .filter(Boolean)
+          .join(' · ')
+      : `${stileDi(t)} · ${tr('Gratis')}`
 
   const schedaTema = (t) => (
     <Scheda
       key={t.id}
-      titolo={t.nome}
-      descrizione={t.descrizione}
+      titolo={trDato(t.nome)}
+      descrizione={trDato(t.descrizione)}
       sottotitolo={sottotitoloTema(t)}
       vetrina={<Vetrina colori={temaComeColori(t)} stile={stileDelTema(t)} settings={settings} />}
     >
       <AzioniCatalogo
         provaHref={urlProvaMenu('tema', t.id)}
-        etichetta={t.nome}
+        etichetta={trDato(t.nome)}
         inUso={inUso === t.id}
         installato={installati.some((i) => i.id === t.id)}
         disinstallabile={disinstallabile}
@@ -483,14 +513,14 @@ export default function MarketplaceTab({ role = null }) {
   const schedaStile = (s) => (
     <Scheda
       key={s.id}
-      titolo={s.nome}
-      descrizione={s.desc}
-      sottotitolo="Sui colori del menù del locale · Gratis"
+      titolo={trDato(s.nome)}
+      descrizione={trDato(s.desc)}
+      sottotitolo={`${tr('Sui colori del menù del locale')} · ${tr('Gratis')}`}
       vetrina={<Vetrina colori={coloriDelLocale} stile={s.id} settings={settings} />}
     >
       <AzioniCatalogo
         provaHref={urlProvaMenu('stile', s.id)}
-        etichetta={`lo stile ${s.nome}`}
+        etichetta={tr('lo stile {nome}', { nome: trDato(s.nome) })}
         inUso={stileInUso === s.id}
         installato={s.aRicetta ? ricettaInstallati.some((r) => r.id === s.id) : stiliDelLocale.includes(s.id)}
         disinstallabile={disinstallabile}
@@ -515,15 +545,14 @@ export default function MarketplaceTab({ role = null }) {
 
   return (
     <div className="pagina-marketplace">
-      <Sottosezioni voci={voci} attiva={aperta} scegli={scegli} />
-      {errore && <div className="banner">Errore: {errore}</div>}
+      <Sottosezioni voci={conEtichetteTradotte(voci)} attiva={aperta} scegli={scegli} />
+      {errore && <div className="banner">{tr('Errore: {messaggio}', { messaggio: errore })}</div>}
 
       {aperta === 'tuoi' && (
         <section>
-          <h2>I tuoi temi</h2>
+          <h2>{tr('I tuoi temi')}</h2>
           <p className="muted">
-            Temi realizzati su misura per questo locale e inclusi nella licenza. Si provano, si installano e si usano come
-            quelli del catalogo.
+            {tr('Temi realizzati su misura per questo locale e inclusi nella licenza. Si provano, si installano e si usano come quelli del catalogo.')}
           </p>
           <div className="griglia-marketplace">{[...suMisura, ...ritirati].map(schedaTema)}</div>
         </section>
@@ -531,10 +560,9 @@ export default function MarketplaceTab({ role = null }) {
 
       {aperta === 'temi' && (
         <section>
-          <h2>Temi</h2>
+          <h2>{tr('Temi')}</h2>
           <p className="muted">
-            Un tema è una tavolozza di colori con uno stile del menù. Vale per il menù dei clienti: i colori del
-            gestionale non cambiano.
+            {tr('Un tema è una tavolozza di colori con uno stile del menù. Vale per il menù dei clienti: i colori del gestionale non cambiano.')}
           </p>
           <AvvisoRegia stato={statoCatalogo} di="temi" />
           <div className="griglia-marketplace">{catalogo(settings, daRegia).map(schedaTema)}</div>
@@ -543,9 +571,9 @@ export default function MarketplaceTab({ role = null }) {
 
       {aperta === 'stili' && (
         <section>
-          <h2>Stili del menù</h2>
+          <h2>{tr('Stili del menù')}</h2>
           <p className="muted">
-            La forma del menù dei clienti — impaginazione, caratteri, filetti — sui colori che il locale usa già.
+            {tr('La forma del menù dei clienti — impaginazione, caratteri, filetti — sui colori che il locale usa già.')}
           </p>
           <div className="griglia-marketplace">{stiliGratis.map(schedaStile)}</div>
         </section>
@@ -553,10 +581,10 @@ export default function MarketplaceTab({ role = null }) {
 
       {aperta === 'installati' && (
         <section>
-          <h2>Installati</h2>
+          <h2>{tr('Installati')}</h2>
           {installati.length === 0 && stiliInstallatiSchede.length === 0 ? (
             <p className="muted">
-              Nessun tema né stile installato. Si scelgono in «Temi» e in «Stili del menù».
+              {tr('Nessun tema né stile installato. Si scelgono in «Temi» e in «Stili del menù».')}
             </p>
           ) : (
             <div className="griglia-marketplace">

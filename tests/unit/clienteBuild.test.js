@@ -16,7 +16,12 @@ import {
   manifestPerCliente,
   fileDelCliente,
   CLIENTE_PREDEFINITO,
+  CLIENTE_DEL_PACCHETTO,
+  inModalitaPacchetto,
+  variabiliVietateNelPacchetto,
+  pluginCliente,
 } from '../../clienti/pluginCliente.js'
+import { FILE_DEL_SET } from '../../clienti/personalizzazione.mjs'
 
 describe('leggiCliente', () => {
   it('senza CLIENTE è la Tana', () => {
@@ -151,5 +156,79 @@ describe('index.html e manifest per il cliente', () => {
     expect(m.description).toBe('Ordina i tuoi drink al Bancone 21')
     expect(m.icons).toEqual(modello.icons)
     expect(JSON.stringify(m)).not.toMatch(/%VENUE_/)
+  })
+})
+
+// IL SITO UGUALE PER TUTTI (REQ-FLOTTA-034): `PACCHETTO=1` compila senza
+// nessun cliente, e il locale lo scrive la regia al deploy.
+describe('la build del sito uguale per tutti', () => {
+  it('si accende solo con PACCHETTO=1', () => {
+    expect(inModalitaPacchetto({ PACCHETTO: '1' })).toBe(true)
+    for (const v of [undefined, '', '0', 'true', 'si']) expect(inModalitaPacchetto({ PACCHETTO: v }), String(v)).toBe(false)
+  })
+
+  it('non porta il backend, il profilo, la regia né gli emulatori di nessun locale', () => {
+    expect(
+      variabiliVietateNelPacchetto({
+        VITE_FIREBASE_API_KEY: 'k',
+        VITE_FIREBASE_PROJECT_ID: 'tana-drink',
+        VITE_RECAPTCHA_SITE_KEY: 'r',
+        VITE_PROFILO: 'leggero',
+        VITE_REGIA_PROGETTO: 'drink-regia',
+        VITE_USE_FIREBASE_EMULATOR: 'true',
+        VITE_FIREBASE_VAPID_KEY: '',
+        VITE_APP_ENV: 'production',
+        BASE_URL: '/',
+      }).sort()
+    ).toEqual(['VITE_FIREBASE_API_KEY', 'VITE_FIREBASE_PROJECT_ID', 'VITE_PROFILO', 'VITE_RECAPTCHA_SITE_KEY', 'VITE_REGIA_PROGETTO', 'VITE_USE_FIREBASE_EMULATOR'])
+  })
+
+  it('la build si ferma se trova un backend, prima di compilare', () => {
+    const plugin = pluginCliente({ pacchetto: true })
+    expect(() => plugin.configResolved({ root: '.', build: { outDir: 'dist' }, env: { VITE_FIREBASE_PROJECT_ID: 'tana-drink' } })).toThrow(/VITE_FIREBASE_PROJECT_ID/)
+    expect(() => plugin.configResolved({ root: '.', build: { outDir: 'dist' }, env: { VITE_APP_ENV: 'production' } })).not.toThrow()
+  })
+
+  it('e non accende gli strumenti di prova: l’ambiente è produzione o niente', () => {
+    expect(variabiliVietateNelPacchetto({ VITE_APP_ENV: 'test' })).toEqual(['VITE_APP_ENV'])
+    expect(variabiliVietateNelPacchetto({ VITE_APP_ENV: 'locale' })).toEqual(['VITE_APP_ENV'])
+    expect(variabiliVietateNelPacchetto({ VITE_APP_ENV: '' })).toEqual([])
+  })
+
+  it('non ha un cliente: slug vuoto, niente demo, i segnaposto restano', () => {
+    const plugin = pluginCliente({ pacchetto: true })
+    const { define } = plugin.config()
+    expect(JSON.parse(define.__CLIENTE__)).toEqual({ slug: '', venue: {} })
+    expect(define.__DEMO__).toBe('false')
+    expect(plugin.transformIndexHtml('<title>%VENUE_NAME%</title>')).toBe('<title>%VENUE_NAME%</title>')
+  })
+
+  it('il manifest e l’informativa escono coi segnaposto, da riempire al deploy', () => {
+    const emessi = new Map()
+    pluginCliente({ pacchetto: true }).generateBundle.call({ emitFile: ({ fileName, source }) => emessi.set(fileName, source) })
+    expect(JSON.parse(emessi.get('manifest.webmanifest')).name).toBe('%VENUE_NAME%')
+    for (const f of ['privacy-policy.html', 'cookie-policy.html']) {
+      expect(emessi.get(f), f).toMatch(/%VENUE_TITOLARE%/)
+      expect(emessi.get(f), f).not.toMatch(/EFFEVI|latanadelconiglio/)
+    }
+  })
+
+  it('i file grafici sono tutti quelli neutri: nessun logo della Tana', () => {
+    const file = fileDelCliente(CLIENTE_DEL_PACCHETTO)
+    for (const f of FILE_DEL_SET) {
+      expect(file.has(f), f).toBe(true)
+      expect(readFileSync(file.get(f)).equals(readFileSync(join('public', f))), `${f} è quello della Tana`).toBe(false)
+    }
+  })
+
+  it('PACCHETTO e CLIENTE insieme non si compilano', () => {
+    const prima = process.env.CLIENTE
+    process.env.CLIENTE = 'demo'
+    try {
+      expect(() => pluginCliente({ pacchetto: true })).toThrow(/non ha un cliente/)
+    } finally {
+      if (prima === undefined) delete process.env.CLIENTE
+      else process.env.CLIENTE = prima
+    }
   })
 })

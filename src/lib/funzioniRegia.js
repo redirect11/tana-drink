@@ -1,16 +1,19 @@
 // ── LE FUNCTIONS DELLA REGIA, VISTE DALL'APP ──────────────────────────
 // Presentazione, catalogo dei temi, listino e acquisto dei moduli: ognuna è
-// una Function della regia scritta nella build (VITE_REGIA_PROGETTO). Solo i
-// due progetti della regia, per intero (il perché è in aggiornamenti.js,
-// PROGETTI_REGIA): un progetto qualunque nella build non diventa un
-// indirizzo a cui l'app manda il token del titolare.
+// una Function della regia scritta nella build (VITE_REGIA_PROGETTO) o, nel
+// sito uguale per tutti, nella configurazione del locale (`regia`,
+// REQ-FLOTTA-034). Solo i due progetti della regia, per intero (il perché è
+// in aggiornamenti.js, PROGETTI_REGIA): un progetto qualunque nella build o
+// nella configurazione non diventa un indirizzo a cui l'app manda il token
+// del titolare.
 
-import { PROGETTI_REGIA } from './aggiornamenti.js'
+import { PROGETTI_REGIA } from '../porte/configurazioneLocale.mjs'
+import { regiaInUso } from '../porte/configurazione.js'
 
 // La regione delle Functions della regia (il contratto).
 const REGIONE = 'europe-west1'
 
-export function urlFunzioneRegia(nome, progetto = import.meta.env?.VITE_REGIA_PROGETTO) {
+export function urlFunzioneRegia(nome, progetto = regiaInUso()) {
   return PROGETTI_REGIA.includes(progetto) ? `https://${REGIONE}-${progetto}.cloudfunctions.net/${nome}` : null
 }
 
