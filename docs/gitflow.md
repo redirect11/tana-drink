@@ -49,6 +49,7 @@ o il **lancio a mano** del workflow.
 | lancio a mano «Deploy to Firebase» su un ramo | va **online sul test** (è così che si prova un ramo: niente tag) |
 | tag su un commit **non** in `main` | va **online sul test**, subito |
 | tag su un commit **di `main`** | parte la pipeline, e il deploy in **produzione aspetta un'approvazione** |
+| tag `vX.Y.Z-beta`, o `vX.Y.Z` su un commit di `main` | in più, i **pacchetti per i locali** si allegano alla Release di GitHub del tag (`pacchetto.yml`, REQ-FLOTTA-035). Il tag deve essere `v` + la versione di `package.json` |
 
 Il lancio a mano si fa da GitHub, *Actions → Deploy to Firebase → Run
 workflow*, scegliendo il ramo. Non serve nessun tag, e non lascia tracce
@@ -129,8 +130,8 @@ git checkout -b release/1.3.0
 Ci finisce dentro tutto quello che si fa. Un push qui non pubblica e non
 fa girare i test: sul test si arriva mergiando la release in `develop` e
 taggando quel merge (`vX.Y.Z-beta`), così si prova sempre l'insieme e non
-il pezzo singolo. Quando la versione è pronta si tagga `develop` col
-numero pieno e si va in `main`.
+il pezzo singolo. Quando la versione è pronta si va in `main`, e il numero
+pieno si tagga lì.
 
 ## Il cancello di qualità: prima di ogni merge in `develop`
 
@@ -213,9 +214,13 @@ develop  ──●(v1.4.0)────────────────●(v1
                                      release/1.5.x ─
 ```
 
+I numeri sul disegno sono le versioni che arrivano in `develop`: lì si
+taggano con la loro beta (`v1.4.0-beta`), e il numero pieno va su `main`.
+
 1. **Si rilascia su `develop`**: si allinea `package.json`, si datano le note
-   in `CHANGELOG.md`, si mergia il ramo di lavoro in `develop` e si **tagga
-   `develop`**.
+   in `CHANGELOG.md`, si mergia il ramo di lavoro in `develop`. Sul test ci
+   va con la sua beta (`vX.Y.Z-beta`); il **numero pieno non si tagga su
+   `develop`**: si tagga solo su `main` (passo 3).
 2. **Si apre subito la linea successiva** da `develop`: `release/1.4.x` per
    continuare con le correzioni, `release/1.5.x` se si sta per aggiungere una
    funzione. Su `develop` non si lavora mai: è il posto dove le cose arrivano
@@ -228,19 +233,19 @@ develop  ──●(v1.4.0)────────────────●(v1
 # 1. sul ramo di lavoro: package.json + CHANGELOG datato
 git commit -am "release: versione 1.4.0"
 
-# 2. in develop, e si tagga lì (il tag pubblica sul TEST)
-git checkout develop && git pull && git merge --no-ff release/1.4.x
-git tag -a v1.4.0 -m "Descrizione del rilascio"
-git push origin develop && git push origin v1.4.0
+# 2. in develop (con la pull request); sul TEST ci va la beta
+git tag -a v1.4.0-beta -m "Prova della 1.4.0" && git push origin v1.4.0-beta
 
 # 3. la linea successiva parte da develop
 git checkout -b release/1.4.x   # correzioni
 git checkout -b release/1.5.x   # oppure: funzione nuova
 
-# 4. quando si va in produzione: prima il merge, POI il tag su main
-git checkout main && git merge --no-ff develop && git push origin main
-git tag -a v1.4.0-prod -m "In produzione la 1.4.0" && git push origin v1.4.0-prod
-# → su GitHub, Actions: il deploy aspetta l'approvazione
+# 4. quando si va in produzione: prima il merge (pull request), POI il tag
+#    pieno sul commit di main, uguale alla versione di package.json
+git checkout main && git pull
+git tag -a v1.4.0 -m "Versione 1.4.0" && git push origin v1.4.0
+# → su GitHub, Actions: il deploy aspetta l'approvazione, e i pacchetti per
+#   i locali si allegano alla Release v1.4.0 (pacchetto.yml)
 ```
 
 **Mentre si lavora, `package.json` porta il numero della PROSSIMA versione
@@ -269,10 +274,14 @@ dichiarava una versione che non era quella che aveva davanti.
 stesso vale per i **tag**: sono loro a pubblicare. Il push di un branch
 `feature/` invece è libero — non pubblica niente, fa solo girare i test.
 
-**Un tag per la produzione non si riusa.** Se `v1.4.0` è già stato spinto
-su `develop` (e ha pubblicato sul test), per la produzione serve un tag
-nuovo sul commit di `main`: un tag esiste una volta sola, e spostarlo a
-forza vuol dire non sapere più cosa è stato pubblicato quando.
+**Il tag pieno sta solo su `main`, ed è `v` + la versione di
+`package.json`.** Un tag esiste una volta sola, e spostarlo a forza vuol
+dire non sapere più cosa è stato pubblicato quando: per questo `vX.Y.Z` non
+si mette su `develop`, dove consumerebbe il nome che serve a `main`. Il
+pacchetto per i locali (REQ-FLOTTA-035) lo pretende: un `vX.Y.Z` fuori da
+`main` non fa pacchetti, e un tag su `main` che non è la versione di
+`package.json` (`v1.4.0-prod`, come si faceva una volta) ferma il workflow
+in rosso. È già la pratica dei rilasci dalla 1.10.43 in poi.
 
 ## Urgenze in produzione
 

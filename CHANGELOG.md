@@ -1,5 +1,276 @@
 # Cosa è cambiato
 
+## 1.10.56 — 19 novembre 2026 (produzione)
+
+Provata sul test come 1.10.52-beta … 1.10.56-beta. Porta in produzione
+anche la 1.10.51, il cui deploy non era stato approvato.
+
+### Il gestionale in inglese
+
+- In «Il mio profilo» ciascuno sceglie Italiano o English, e la scelta lo
+  segue su ogni dispositivo. Restano in italiano gli scontrini e tutto ciò
+  che si stampa, le esportazioni e le pagine dei clienti, che traduce il
+  loro browser (REQ-UI-039, REQ-CLI-010).
+
+### Il conto e la coda
+
+- **Conto svuotato: si chiude da solo o resta aperto**, a scelta di chi
+  lavora, in «Il mio profilo» → «Conto vuoto» (REQ-ORD-025).
+- **«Nuovo ordine» arriva quando il conto è composto**, non al primo drink
+  (BUG-159).
+- Svuotato un conto, la sua card non ricompare più in coda per un attimo
+  (BUG-169).
+- Un esito del lettore SumUp rimandato in ritardo non cambia più un conto
+  che non lo aspetta (BUG-162).
+
+### Il menù dei clienti
+
+- **«Oscura automaticamente»** nella scheda del prodotto di magazzino: con
+  la giacenza a zero le voci che lo usano risultano non disponibili
+  (REQ-MENU-045).
+- Gli avvisi del menù prendono i colori del tema (REQ-UI-034).
+
+### Aspetto e accessibilità
+
+- Il tema «Lime» in Impostazioni → Aspetto; la Tana resta col suo
+  (REQ-UI-033). Il marchio LIME - SmartOrders nel menu laterale del
+  gestionale (REQ-UI-035).
+- La pagina si può ingrandire col pizzico, e i testi sopra il colore del
+  tema si leggono meglio (BUG-167).
+- Le descrizioni delle impostazioni dicono cosa fa ogni opzione, in una
+  frase (REQ-UI-037).
+
+### Privacy e sicurezza
+
+- L'informativa privacy e cookie prende titolare e sede dai dati del locale
+  (REQ-SIC-017); i link social accettano solo indirizzi web, email e
+  telefono.
+- Foto dei prodotti e allegati delle fatture si caricano solo se la licenza
+  li comprende, e solo da banco e admin (REQ-SIC-006, BUG-160).
+- Le Functions hanno un tetto di istanze (REQ-DEV-026); il controllo dei
+  numeri doppi legge solo i conti con lo stesso numero (BUG-161); le
+  utenze dello staff rispettano il piano anche dal server (BUG-165).
+
+### Flotta
+
+- Il sito uguale per tutti i locali e il pacchetto per versione nella
+  Release di GitHub (REQ-FLOTTA-034, REQ-FLOTTA-035). Per la Tana non
+  cambia il modo di pubblicare.
+
+## 1.10.56-beta — 18/11/2026 (test)
+
+### Aspetto
+
+- La schermata «Ti sto facendo entrare», dopo il login, e il modulo di
+  accesso del gestionale hanno subito i colori del gestionale, invece di
+  quelli del menù dei clienti (BUG-171).
+- In alto nel gestionale l'icona dell'assistente AI, e quella dello schermo
+  intero, hanno la stessa misura della campanella accanto (BUG-170).
+
+### Lingue
+
+- **Il gestionale si può usare in inglese.** In «Il mio profilo»
+  ciascuno, di qualsiasi ruolo, sceglie Italiano o English; la scelta sta
+  sull'account e lo segue su ogni dispositivo. In inglese: coda ordini,
+  accesso, menu laterale, conto, griglia dei prodotti, pagamento, apertura e
+  chiusura cassa, storico delle serate, la comanda al banco, le
+  impostazioni, il magazzino, la gestione del menù, fornitori e acquisti,
+  statistiche e bilancio, ore e paghe, utenti, buoni, marketplace e
+  assistente AI: tutto il gestionale. Date e giorni seguono la lingua; gli
+  importi restano in euro all'italiana. Restano in italiano gli scontrini e
+  tutto ciò che si stampa, gli esempi dei campi che il cliente legge, il
+  messaggio d'ordine al fornitore, le fatture ai clienti, le esportazioni,
+  e le pagine dei clienti, che traduce il loro browser (REQ-UI-039).
+- Nelle statistiche, nel bilancio e negli ordini ai fornitori un conteggio
+  di uno si legge al singolare: «1 ordine», «1 comanda», «1 prodotto
+  selezionato», invece di «1 ordini» (REQ-UI-039).
+- **Le pagine dei clienti funzionano tradotte dal browser.** Col menù
+  tradotto da Chrome o da Safari, lo stato dell'ordine ora segue il banco
+  («In preparazione», «Pronto») invece di restare su «Ordine ricevuto»;
+  così anche i minuti per rispondere a una modifica, le stime dei tempi, i
+  prezzi della scelta degli ingredienti e il tasto del pagamento. La pagina
+  non può più cadere per colpa della traduzione (REQ-CLI-010).
+- Le basi per avere l'app in italiano e inglese: il meccanismo dei testi in
+  due lingue, con una prova che boccia i testi senza traduzione inglese
+  (REQ-UI-038). Le schermate lo useranno a partire dal gestionale.
+- Con il gestionale in inglese, «Mostra al cliente» e «Vista cliente»
+  mostrano la pagina del cliente in italiano senza ridisegnare il resto
+  dell'app: il menu laterale e gli avvisi a schermo restano dove sono
+  (REQ-CLI-010).
+
+### Privacy e sicurezza
+
+- **L'informativa privacy e cookie è quella del locale.** Il titolare del
+  trattamento, la sede, la partita IVA e l'email vengono dai dati del
+  locale, invece di essere scritti nella pagina; sulla demo e sugli altri
+  locali compariva la Tana. Per la Tana ragione sociale e sede si leggono
+  come sullo scontrino. La demo ha la sua: nessun dato raccolto
+  (REQ-SIC-017).
+- I collegamenti social del locale accettano solo indirizzi web, email e
+  telefono, sia quando si salvano in Impostazioni sia nel piede del menù;
+  un indirizzo scritto senza «https://» lo prende da sé (REQ-SIC-017).
+
+### Flotta
+
+- **Un sito uguale per tutti i locali.** La versione si può compilare una
+  volta sola, senza nessun locale dentro, e la regia ci scrive i dati di
+  ogni locale quando lo pubblica (`scripts/personalizza.mjs`). Il locale
+  arriva anche dentro la pagina: un tablet che passa a questo sito riparte
+  col suo locale anche senza rete. Un sito che non sa ancora di che locale
+  è mostra «L'app non è ancora collegata al locale», non lascia lavorare
+  nessuno e si collega da solo appena può. La Tana continua a pubblicarsi
+  con la sua build: per lei cambiano solo l'informativa e i link social
+  descritti sopra (REQ-FLOTTA-034).
+- **Il pacchetto per versione nella Release di GitHub.** A ogni tag di
+  versione, oltre al deploy della Tana, si compilano due pacchetti, quello
+  per i locali e quello della demo, e si allegano alla Release del tag con
+  la loro impronta: la regia li scarica da lì per attivare e aggiornare i
+  locali senza ricompilare. Un pacchetto che non è una beta esce solo da
+  una versione già in `main`, e un file allegato non si sostituisce mai
+  (REQ-FLOTTA-035).
+
+## 1.10.55-beta — 17/11/2026 (test)
+
+### Coda ordini
+
+- Svuotato un conto, tornando alla coda la sua card non ricompare più per un
+  attimo con l'avviso «Conto ripristinato» prima di sparire (BUG-169).
+
+## 1.10.54-beta — 17/11/2026 (test)
+
+### Aspetto
+
+- **Il marchio LIME - SmartOrders sta nel menu laterale del gestionale**, in
+  cima, al posto della scritta «Gestionale». In alto nelle pagine tornano
+  il logo e il nome del locale; solo la demo e i locali col piano Free
+  hanno lì il marchio LIME (REQ-UI-035).
+- In Impostazioni → Coda ordini, «La vista del banco» dice cosa fa e se è
+  attiva, senza più un selettore con una scelta sola (BUG-168).
+- **Le descrizioni delle impostazioni dicono cosa fa ogni opzione**, in
+  una frase e in forma impersonale: via le spiegazioni lunghe, gli esempi
+  e il «tu». Riguarda anche Stampa automatica, i campi delle stampe, la
+  stampante, il backup e le informazioni (REQ-UI-037).
+
+### Demo
+
+- Nel menù della demo, dietro il nome del locale, la testata ha il fondo
+  di Lime con le fette di lime, al posto del bicchiere grigio
+  (REQ-FLOTTA-033).
+
+### Sicurezza e costi
+
+- Se lo Storage rifiuta una foto o un allegato, l'app lo dice in chiaro e
+  la scheda resta aperta per riprovare: succede per qualche minuto dopo un
+  aggiornamento che cambia i permessi (REQ-SIC-006).
+
+## 1.10.53-beta — 17/11/2026 (test)
+
+### Aspetto
+
+- **Nel gestionale, in alto, il marchio LIME - SmartOrders** col logo
+  della fetta di lime, al posto del nome del locale. Le pagine dei clienti
+  restano col logo e il nome del locale (REQ-UI-035).
+- **Gli avvisi del menù dei clienti** («Solo consultazione», «Devi essere
+  al locale per ordinare», gli errori) prendono i colori del tema invece
+  della striscia gialla, sono più grandi e si staccano dal fondo; con
+  «Carte» sono una carta del mazzo (REQ-UI-034).
+- Col tema «Lime» la categoria scelta nella colonna del conto e il numero
+  degli ordinati sulle card hanno il testo scuro: prima erano bianchi sul
+  lime e non si leggevano. Con la Tana non cambia niente (BUG-166).
+
+### Accessibilità
+
+- **Si può ingrandire la pagina** col pizzico, anche al banco: il doppio
+  tocco veloce sui tasti non ingrandisce più per sbaglio, ma lo zoom non è
+  più bloccato. Da provare sull'iPad del banco (BUG-167).
+- I testi sopra il colore del tema (la categoria scelta nel conto, il segno
+  «staff», il numero sulla campanella, l'avviso di aggiornamento) si
+  leggono meglio: col rosa della Tana il fondo è un filo più scuro. Più
+  leggibili anche i tasti azzurri del tastierino del pagamento (BUG-167).
+- Il link del marchio e la tendina della tavolozza hanno un nome per i
+  lettori di schermo; il triangolo del colore delle voci, nella gestione
+  del menù, è più grande da toccare (BUG-167).
+
+### Sicurezza e costi
+
+- Le foto dei prodotti e gli allegati delle fatture si caricano solo se la
+  licenza del locale li comprende: le foto non sul piano Free, gli allegati
+  col modulo dello scadenzario o del magazzino. Vederli e cancellarli resta
+  sempre possibile (REQ-SIC-006).
+
+### Demo
+
+- Il locale della demo si chiama «Bancone 21» invece di «Bar Demo»: un
+  nome inventato ma credibile, per le schermate del prodotto
+  (REQ-FLOTTA-033).
+- Il logo della demo è la fetta di lime di Lime - SmartOrders, al posto
+  del bicchiere: nella barra, nel menù del cliente e nelle icone da
+  installare sul telefono (REQ-FLOTTA-033).
+
+## 1.10.52-beta — 17/11/2026 (test)
+
+### Aspetto
+
+- **Il tema «Lime»**, scuro e chiaro, in Impostazioni → Aspetto: il tema di
+  Lime - SmartOrders, con gli stessi colori del sito e del pannello della
+  regia: il verde lime sui tasti, angoli tondi, titoli in Playfair. È quello
+  di partenza della demo e dei locali nuovi; la Tana resta col suo
+  (REQ-UI-033).
+- Le evidenze che erano dorate per tutti i temi (il tab al passaggio, la
+  voce attiva della barra, la ricerca nel menù, l'attesa del cliente, il
+  totale del riepilogo) e il banner dei cookie prendono il colore del tema
+  scelto. Con «Tana scuro» restano come prima; con gli altri temi seguono
+  i loro colori, e con «Chiaro» e «Crema» il banner dei cookie diventa
+  chiaro (REQ-UI-033).
+- Il testo sopra il colore d'accento (il segno «staff», il numero delle
+  notifiche, l'avviso di aggiornamento) diventa scuro quando l'accento è
+  chiaro, e resta leggibile (REQ-UI-033).
+
+### Il conto
+
+- **Conto svuotato: si chiude da solo o resta aperto**, a scelta di chi
+  lavora, in «Il mio profilo» → «Conto vuoto». Vale per l'account su quel
+  dispositivo. Acceso, come finora, togliendo l'ultima riga il conto si
+  annulla e si torna alla coda. Spento, il conto resta aperto e si può
+  continuare a battere; se all'uscita è ancora vuoto si annulla allora
+  (REQ-ORD-025).
+- Uscendo subito da un conto appena svuotato, il conto si annulla: prima
+  restava aperto e vuoto in coda (REQ-ORD-025).
+
+### Il menù dei clienti
+
+- **«Oscura automaticamente»**, nella scheda del prodotto di magazzino: con
+  la giacenza a zero o sotto (o sotto la soglia di avviso, secondo quanto
+  scelto in Impostazioni → Menù clienti), le voci del menù clienti che hanno quel
+  prodotto in ricetta risultano non disponibili. Si sceglie ingrediente per
+  ingrediente; l'opzione sulla voce resta e vale insieme (REQ-MENU-045).
+
+### Notifiche
+
+- **«Nuovo ordine» arriva quando il conto è composto**, cioè quando chi lo
+  batte esce dal conto: non più al primo drink. Vale sia per la notifica
+  sul telefono sia per il suono della coda. Battere un drink e toglierlo
+  non fa più squillare gli altri dispositivi (BUG-159).
+
+### Sicurezza e costi
+
+- Le foto dei prodotti del menù le caricano e le cancellano solo banco e
+  admin. Prima bastava un account qualunque, anche quello di un cliente
+  registrato (BUG-160).
+- Le Functions hanno un tetto di istanze: 10 ciascuna, 3 per i pagamenti
+  online che il cliente fa senza account. Il webhook del lettore non
+  interroga più SumUp per una transazione che non è del locale
+  (REQ-DEV-026).
+- Il controllo dei numeri doppi, a ogni conto nuovo, legge solo i conti
+  con lo stesso numero invece di tutta la cassa (BUG-161).
+- Un esito del lettore SumUp rimandato in ritardo non cambia più un conto
+  che non lo aspetta: un pagamento rifiutato e ripetuto ore dopo non
+  riporta a «parziale» un conto già pagato in contanti, e un pagamento
+  riuscito e ripetuto non si registra due volte (BUG-162).
+- Le utenze dello staff rispettano il numero massimo del piano anche
+  quando si creano dal server: sul piano Free non si aggiungono persone
+  oltre il titolare. Le utenze già presenti restano (BUG-165).
+
 ## 1.10.51 — 15 novembre 2026 (produzione)
 
 Provata sul test come 1.10.50-beta e 1.10.51-beta.

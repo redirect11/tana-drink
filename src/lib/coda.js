@@ -33,6 +33,7 @@ import {
 // tutta lì dentro, qui si sceglie solo QUALE data guardare.
 import { businessDayKey, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
 import { conEmoji, emojiDi } from './icone.js'
+import { tr, daTradurre, trSegnato } from './lingua.js'
 
 // Smista gli ordini negli stati di lavorazione della COMANDA ATTIVA
 // (workflow_status; esclude gli annullati).
@@ -119,7 +120,7 @@ export function autoriDeiConti(orders) {
     if (visti.has(chiave)) continue
     visti.set(chiave, {
       chiave,
-      nome: chiave === AUTORE_CLIENTE ? 'Clienti' : placedByName(o.placed_by) || chiave,
+      nome: chiave === AUTORE_CLIENTE ? tr('Clienti') : placedByName(o.placed_by) || chiave,
     })
   }
   const voci = [...visti.values()]
@@ -198,11 +199,11 @@ export function conAutori(orders, scelti, elenco = []) {
 // posto che la vuole.
 export function riassuntoAutori(scelti, elenco = []) {
   const attivi = autoriAttivi(scelti, elenco)
-  if (attivi.length === 0 || attivi.length === elenco.length) return 'Staff'
+  if (attivi.length === 0 || attivi.length === elenco.length) return tr('Staff')
   if (attivi.length === 1) {
-    return elenco.find((v) => v.chiave === attivi[0])?.nome || 'Staff'
+    return elenco.find((v) => v.chiave === attivi[0])?.nome || tr('Staff')
   }
-  return `${attivi.length} di ${elenco.length}`
+  return tr('{n} di {totale}', { n: attivi.length, totale: elenco.length })
 }
 
 // "Questo conto risponde a quello che sto cercando?" — numero, cliente,
@@ -388,8 +389,8 @@ export const SCHEDE_VUOTE = { tutti: [], attivi: [], chiusi: [], annullati: [] }
 // una colonna che non c'è.
 export function nomiDelServizio(ritiroEsiste = true) {
   return ritiroEsiste
-    ? { daServire: 'Da servire/Ritirare', serviti: 'Serviti/Ritirati' }
-    : { daServire: 'Da servire', serviti: 'Serviti' }
+    ? { daServire: tr('Da servire/Ritirare'), serviti: tr('Serviti/Ritirati') }
+    : { daServire: tr('Da servire'), serviti: tr('Serviti') }
 }
 
 // LE DUE PORZIONI DEL TASTO DEI CHIUSI, e un neutro che non si disegna.
@@ -480,19 +481,46 @@ export function passaSottofiltroChiusi(o, sotto = 'tutti') {
 //   colonna   — il titolo della colonna nella vista a schede, quando
 //               diverge dal nome del filtro (vedi sopra: lì «In corso» è
 //               il titolo di una colonna, non il nome di un filtro)
-//   aggettivo — per la coda vuota: «Nessun ordine aperto.»
+//   vuota     — le frasi della coda vuota: «Nessun ordine aperto.», e la
+//               stessa con «oggi». Era un aggettivo attaccato a «Nessun
+//               ordine»: frasi intere, perché l'inglese le costruisce in un
+//               altro ordine (REQ-UI-039)
+//
+// I testi sono segnati con `daTradurre` e si traducono quando si leggono
+// (etichettaStato, schedeCoda, frasePerCodaVuota): tradotti qui, al
+// caricamento del modulo, resterebbero nella lingua di quel momento.
 const STATI_CODA = [
-  { id: 'attivi', nome: 'Aperti', segno: '', colonna: 'In corso', aggettivo: 'aperto' },
-  { id: 'chiusi', nome: 'Chiusi', segno: emojiDi('contanti'), colonna: null, aggettivo: 'chiuso' },
+  {
+    id: 'attivi',
+    nome: daTradurre('Aperti'),
+    segno: '',
+    colonna: daTradurre('In corso'),
+    vuota: [daTradurre('Nessun ordine aperto.'), daTradurre('Nessun ordine aperto oggi.')],
+  },
+  {
+    id: 'chiusi',
+    nome: daTradurre('Chiusi'),
+    segno: emojiDi('contanti'),
+    colonna: null,
+    vuota: [daTradurre('Nessun ordine chiuso.'), daTradurre('Nessun ordine chiuso oggi.')],
+  },
   // Gli annullati hanno un filtro loro: fra i chiusi facevano numero senza
   // essere incassi, e per ritrovarne uno da riaprire si cercava in mezzo a
   // quelli buoni.
-  { id: 'annullati', nome: 'Annullati', segno: emojiDi('annullato'), colonna: null, aggettivo: 'annullato' },
+  {
+    id: 'annullati',
+    nome: daTradurre('Annullati'),
+    segno: emojiDi('annullato'),
+    colonna: null,
+    vuota: [daTradurre('Nessun ordine annullato.'), daTradurre('Nessun ordine annullato oggi.')],
+  },
 ]
 
-const etichettaStato = (s) => (s.segno ? `${s.segno} ${s.nome}` : s.nome)
+const etichettaStato = (s) => (s.segno ? `${s.segno} ${trSegnato(s.nome)}` : trSegnato(s.nome))
 
-export const FILTRI_STATO = STATI_CODA.map((s) => [s.id, etichettaStato(s)])
+// I chip dei tre stati, [id, etichetta]. Una funzione e non una tabella:
+// l'etichetta si compone nella lingua di quando si disegna.
+export const filtriStato = () => STATI_CODA.map((s) => [s.id, etichettaStato(s)])
 
 export const ID_FILTRI_STATO = STATI_CODA.map((s) => s.id)
 
@@ -589,7 +617,7 @@ export function statiDaFiltro(filtro) {
 // stessa lista, letta in un altro modo — e tenerne in piedi metà per un
 // tooltip vorrebbe dire riaprire il giro alla prima occasione.
 export function spiegaFiltri(aperti = false) {
-  return aperti ? 'Nascondi filtri' : 'Mostra filtri'
+  return aperti ? tr('Nascondi filtri') : tr('Mostra filtri')
 }
 
 // ── IL VERSO DELLA CODA, IN UNA FRECCIA E TRE PAROLE ─────────────────
@@ -612,8 +640,8 @@ export function spiegaFiltri(aperti = false) {
 // diceva «qui si ordina», non come.
 export function spiegaOrdine(desc = true) {
   return desc
-    ? { nome: 'Prima i più recenti', icona: '↓' }
-    : { nome: 'Prima i più vecchi', icona: '↑' }
+    ? { nome: tr('Prima i più recenti'), icona: '↓' }
+    : { nome: tr('Prima i più vecchi'), icona: '↑' }
 }
 
 // ── LA VOCE DELLA CASSA NEL MENU DELLA CODA ──────────────────────────
@@ -637,10 +665,17 @@ export function spiegaOrdine(desc = true) {
 // può essere già incassato e avere comande al banco — si paga in anticipo
 // tutte le sere — e sono proprio quelle che non devono sparire da nessuna
 // parte. Un conto annullato non ha lavoro: quella roba non si fa.
+// E nemmeno una comanda SENZA RIGHE (BUG-169): svuotato un conto e tornati
+// alla coda, l'uscita lo nasconde e lo annulla; finché l'annullo non
+// arriva la sua comanda vuota è ancora «ricevuto», e contava come lavoro —
+// il conto vuoto ricompariva per un attimo, «0 prodotti · 0,00 €».
 export function haLavoroDaFare(o) {
   if (annullato(o)) return false
   return (o?.comande || []).some(
-    (c) => c.status !== ORDER_STATUSES.RITIRATO && c.status !== ORDER_STATUSES.ANNULLATO
+    (c) =>
+      c.status !== ORDER_STATUSES.RITIRATO &&
+      c.status !== ORDER_STATUSES.ANNULLATO &&
+      (c.items || []).length > 0
   )
 }
 
@@ -672,8 +707,24 @@ export function comandeDaServire(ordini) {
   return quante
 }
 
-const quantiConti = (n) => `${n} cont${n === 1 ? 'o' : 'i'}`
-const quanteComande = (n) => `${n} comand${n === 1 ? 'a' : 'e'}`
+// IL PERCHÉ NON SI CHIUDE, in frasi intere: era «Chiudi » più i pezzi
+// uniti con « e », e una frase a pezzi non si traduce — l'inglese mette
+// plurali e congiunzioni a modo suo (REQ-UI-039). Se una delle due
+// quantità è zero si nomina solo l'altra.
+function perChiudere(conti, comande) {
+  if (conti > 0 && comande > 0) {
+    if (conti === 1) {
+      return comande === 1
+        ? tr('Chiudi 1 conto e 1 comanda')
+        : tr('Chiudi 1 conto e {m} comande', { m: comande })
+    }
+    return comande === 1
+      ? tr('Chiudi {n} conti e 1 comanda', { n: conti })
+      : tr('Chiudi {n} conti e {m} comande', { n: conti, m: comande })
+  }
+  if (conti > 0) return conti === 1 ? tr('Chiudi 1 conto') : tr('Chiudi {n} conti', { n: conti })
+  return comande === 1 ? tr('Chiudi 1 comanda') : tr('Chiudi {m} comande', { m: comande })
+}
 
 export function voceCassa({
   gestore = false,
@@ -686,8 +737,8 @@ export function voceCassa({
     return {
       id: 'apri-cassa',
       icon: 'verde',
-      label: 'Apri cassa',
-      hint: 'Senza cassa aperta gli ordini si battono ma non si incassano.',
+      label: tr('Apri cassa'),
+      hint: tr('Senza cassa aperta gli ordini si battono ma non si incassano.'),
       disabled: false,
     }
   }
@@ -714,15 +765,13 @@ export function voceCassa({
   // numeri e due nomi bastano. Se una delle due quantità è zero si nomina
   // solo l'altra: «Chiudi 2 comande» è l'unica cosa che manca, e scrivere
   // «0 conti» sarebbe una bugia in più da leggere.
-  const manca = []
-  if (contiAperti > 0) manca.push(quantiConti(contiAperti))
-  if (daServire > 0) manca.push(quanteComande(daServire))
+  const manca = contiAperti > 0 || daServire > 0
   return {
     id: 'chiudi-cassa',
     icon: 'licenza',
-    label: 'Chiudi cassa',
-    disabled: manca.length > 0,
-    hint: manca.length > 0 ? `Chiudi ${manca.join(' e ')}` : 'Conta il contante e chiudi la serata.',
+    label: tr('Chiudi cassa'),
+    disabled: manca,
+    hint: manca ? perChiudere(contiAperti, daServire) : tr('Conta il contante e chiudi la serata.'),
   }
 }
 
@@ -760,7 +809,7 @@ export function gruppiInCoda({ accesi = false, inCoda = false, pannelli = false 
 // un filtro — e le altre due sono le stesse etichette dei chip.
 export function schedeCoda(workflowOn) {
   if (workflowOn) return null // ci pensano gli stati di servizio
-  return STATI_CODA.map((s) => [s.id, s.colonna ?? etichettaStato(s)])
+  return STATI_CODA.map((s) => [s.id, s.colonna ? trSegnato(s.colonna) : etichettaStato(s)])
 }
 
 
@@ -840,16 +889,16 @@ export function corsieDiStato(ordini, { isChiuso = () => false, sottoChiusi = 't
 // Su un conto in corso l'unica cosa da fare è incassarlo, come sulla
 // griglia. Su uno chiuso o annullato non c'è più niente da chiedere.
 export function azioneCorsia(stato) {
-  return stato === ORDER_OPEN ? { etichetta: 'Incassa', tipo: 'incassa' } : null
+  return stato === ORDER_OPEN ? { etichetta: tr('Incassa'), tipo: 'incassa' } : null
 }
 
 // Dove va il drink e per chi: «Tavolo 4», «Bancone · Giulia». È la riga che
 // serve a riconoscere il conto quando si urla un numero da dietro il banco.
 export function destinazioneConto(o) {
   const dove = o.table_label
-    ? `Tavolo ${o.table_label}`
+    ? tr('Tavolo {t}', { t: o.table_label })
     : o.service_mode === 'banco'
-      ? 'Bancone'
+      ? tr('Bancone')
       : ''
   return [dove, o.customer_name].filter(Boolean).join(' · ')
 }
@@ -927,12 +976,12 @@ export function destinazioneConto(o) {
 const corsieDelBanco = (ritiroEsiste) => {
   const nomi = nomiDelServizio(ritiroEsiste)
   return [
-    { id: 'da-fare', titolo: 'Da fare', stato: ORDER_STATUSES.RICEVUTO },
-    { id: 'al-banco', titolo: 'In preparazione', stato: ORDER_STATUSES.IN_PREPARAZIONE },
+    { id: 'da-fare', titolo: tr('Da fare'), stato: ORDER_STATUSES.RICEVUTO },
+    { id: 'al-banco', titolo: tr('In preparazione'), stato: ORDER_STATUSES.IN_PREPARAZIONE },
     { id: 'al-ritiro', titolo: nomi.daServire, stato: ORDER_STATUSES.PRONTO },
     { id: 'ritirati', titolo: nomi.serviti, stato: ORDER_STATUSES.RITIRATO },
-    { id: 'chiusi', titolo: conEmoji('contanti', 'Chiuse'), stato: null },
-    { id: 'annullati', titolo: conEmoji('annullato', 'Annullate'), stato: null },
+    { id: 'chiusi', titolo: conEmoji('contanti', tr('Chiuse')), stato: null },
+    { id: 'annullati', titolo: conEmoji('annullato', tr('Annullate')), stato: null },
   ]
 }
 
@@ -954,8 +1003,8 @@ const corsieDelBanco = (ritiroEsiste) => {
 // e come sia uscito non cambia più niente da fare. È il traguardo, non una
 // destinazione.
 export const CORSIE_PRONTO_DIVISO = [
-  { id: 'al-ritiro', titolo: 'Da servire', modo: 'tavolo' },
-  { id: 'al-ritiro-banco', titolo: 'Da ritirare', modo: 'banco' },
+  { id: 'al-ritiro', titolo: daTradurre('Da servire'), modo: 'tavolo' },
+  { id: 'al-ritiro-banco', titolo: daTradurre('Da ritirare'), modo: 'banco' },
 ]
 
 // Le corsie del banco come vanno disegnate: la colonna del pronto resta
@@ -1102,14 +1151,14 @@ export function corsieComande(
 export function azioneComanda(comanda, order, { ruolo = null } = {}) {
   // Card del CONTO (la colonna dei soldi): lì non c'è un ticket da far
   // avanzare, c'è un conto da incassare.
-  if (!comanda) return { etichetta: 'Incassa', tipo: 'incassa' }
+  if (!comanda) return { etichetta: tr('Incassa'), tipo: 'incassa' }
   if (comanda.status === ORDER_STATUSES.ANNULLATO) return null
   if (comanda.status === ORDER_STATUSES.RITIRATO) {
     // SERVITA: quei drink sono usciti. Se il conto è ancora aperto chi li
     // ha appena portati al tavolo è spesso quello che incassa, e il tasto
     // porta in cassa senza far cercare il conto.
     const saldato = contoSaldato(order) || order?.status === ORDER_STATUSES.PAGATO
-    return saldato ? null : { etichetta: 'Incassa', tipo: 'incassa' }
+    return saldato ? null : { etichetta: tr('Incassa'), tipo: 'incassa' }
   }
   const dopo = nextComandaStatus(comanda.status)
   if (!dopo) return null
@@ -1273,9 +1322,9 @@ export function raggruppaPerGiornata(lista, { giornataDi, oggi }) {
 export function intestazioneGiornata(filtro, data) {
   const stati = statiDaFiltro(filtro)
   if (stati.length > 1) return conEmoji('calendario', data)
-  if (stati[0] === 'chiusi') return conEmoji('contanti', `Chiusi · ${data}`)
-  if (stati[0] === 'annullati') return conEmoji('annullato', `Annullati · ${data}`)
-  return conEmoji('attesa', `Da chiudere · ${data}`)
+  if (stati[0] === 'chiusi') return conEmoji('contanti', tr('Chiusi · {data}', { data }))
+  if (stati[0] === 'annullati') return conEmoji('annullato', tr('Annullati · {data}', { data }))
+  return conEmoji('attesa', tr('Da chiudere · {data}', { data }))
 }
 
 // ── LA CODA VUOTA, DETTA COME È FILTRATA ─────────────────────────────
@@ -1284,12 +1333,13 @@ export function intestazioneGiornata(filtro, data) {
 // e lo è di nuovo adesso che i tre stati si escludono. Con 'tutti' nessun
 // aggettivo è vero per tutti: lì si dice solo che non c'è niente, ed è la
 // verità intera.
-const AGGETTIVO_STATO = Object.fromEntries(STATI_CODA.map((s) => [s.id, s.aggettivo]))
+const CODA_VUOTA = Object.fromEntries(STATI_CODA.map((s) => [s.id, s.vuota]))
 
 export function frasePerCodaVuota(filtro, soloOggi = false) {
   const stati = statiDaFiltro(filtro)
-  const che = stati.length === 1 ? ` ${AGGETTIVO_STATO[stati[0]]}` : ''
-  return `Nessun ordine${che}${soloOggi ? ' oggi' : ''}.`
+  if (stati.length !== 1) return soloOggi ? tr('Nessun ordine oggi.') : tr('Nessun ordine.')
+  const [sempre, oggi] = CODA_VUOTA[stati[0]]
+  return trSegnato(soloOggi ? oggi : sempre)
 }
 
 // ── LA MEMORIA DELLE COLONNE SPENTE SI RIPULISCE ─────────────────────
@@ -1407,7 +1457,7 @@ export function daQuanto(quando, adesso = Date.now()) {
   const t = Date.parse(quando || '')
   if (!Number.isFinite(t)) return ''
   const sec = Math.max(0, Math.round((adesso - t) / 1000))
-  if (sec < 10) return 'appena ora'
+  if (sec < 10) return tr('appena ora')
   if (sec < 60) return `${sec} s`
   const min = Math.floor(sec / 60)
   if (min < 60) return `${min} min`

@@ -27,6 +27,7 @@ import { paghePerGiorno, tabellaDelMese } from '../lib/bilancioMesi.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import Didascalia from './Didascalia.jsx'
 import Soffietto from './Soffietto.jsx'
+import { tr } from '../lib/lingua.js'
 
 // BILANCIO → MESI (REQ-CASSA-011): il mese come il foglio di ANALISI DATI,
 // per settimane, con minimo, incassato e differenza giorno per giorno, e
@@ -150,23 +151,23 @@ export default function MesiBilancio() {
     })
   }, [vendite, paghe, extra, fissi, delMese, mese, oggi])
 
-  if (errore) return <div className="banner">Errore: {errore}</div>
+  if (errore) return <div className="banner">{tr('Errore: {errore}', { errore })}</div>
 
   return (
     <div>
       <div className="row between" style={{ alignItems: 'center', marginBottom: 10 }}>
-        <button className="btn ghost small" aria-label="Mese precedente" onClick={() => setDal(spostaGiorno('mese', dal, -1))}>
+        <button className="btn ghost small" aria-label={tr('Mese precedente')} onClick={() => setDal(spostaGiorno('mese', dal, -1))}>
           ←
         </button>
         <strong style={{ fontSize: '1.1rem' }}>{nomeDelPeriodo('mese', dal)}</strong>
-        <button className="btn ghost small" aria-label="Mese successivo" onClick={() => setDal(spostaGiorno('mese', dal, 1))}>
+        <button className="btn ghost small" aria-label={tr('Mese successivo')} onClick={() => setDal(spostaGiorno('mese', dal, 1))}>
           →
         </button>
       </div>
 
       <Spiegazione />
 
-      {!tabella && <div className="empty">Carico il mese…</div>}
+      {!tabella && <div className="empty">{tr('Carico il mese…')}</div>}
       {tabella && (
         <>
           {tabella.settimane.map((s) => (
@@ -197,7 +198,7 @@ function Settimana({ settimana: s, onMinimo }) {
           {s.label} <span className="muted small">{s.sotto}</span>
         </strong>
         <span className="muted small">
-          Differenza: <strong style={colore(s.tot.differenza)}>{euro(s.tot.differenza)}</strong>
+          {tr('minimo|Differenza')}: <strong style={colore(s.tot.differenza)}>{euro(s.tot.differenza)}</strong>
         </span>
       </div>
       <div className="table-scroll">
@@ -216,7 +217,7 @@ function Settimana({ settimana: s, onMinimo }) {
           </thead>
           <tbody>
             <tr>
-              <th className="rowhead">Minimo</th>
+              <th className="rowhead">{tr('Minimo')}</th>
               {s.giorni.map((g) => (
                 <td key={g.giorno}>
                   {/* Nei mesi dell'app il minimo si tocca per scriverne
@@ -225,7 +226,7 @@ function Settimana({ settimana: s, onMinimo }) {
                     <button
                       type="button"
                       className="btn ghost small"
-                      aria-label={`Extra del minimo, ${g.nome}`}
+                      aria-label={tr('Extra del minimo, {giorno}', { giorno: g.nome })}
                       onClick={() => onMinimo(g)}
                     >
                       {euro(g.minimo)}
@@ -238,14 +239,14 @@ function Settimana({ settimana: s, onMinimo }) {
               <td className="tot">{euro(s.tot.minimo)}</td>
             </tr>
             <tr className="r-inc">
-              <th className="rowhead">Incassato</th>
+              <th className="rowhead">{tr('Incassato')}</th>
               {s.giorni.map((g) => (
                 <td key={g.giorno}>{euro(g.incassato)}</td>
               ))}
               <td className="tot">{euro(s.tot.incassato)}</td>
             </tr>
             <tr className="r-mar">
-              <th className="rowhead">Differenza</th>
+              <th className="rowhead">{tr('minimo|Differenza')}</th>
               {s.giorni.map((g) => (
                 <td key={g.giorno} style={colore(g.differenza)}>
                   {euro(g.differenza)}
@@ -274,25 +275,29 @@ function Totali({ totali: t }) {
   )
   return (
     <div className="card macro-total" style={{ marginBottom: 12 }}>
-      <strong>Σ Il mese</strong>
+      <strong>Σ {tr('Il mese')}</strong>
       <div className="summary-rows" style={{ marginTop: 6 }}>
-        {riga('Incassi', euro(t.incassi))}
+        {riga(tr('Incassi'), euro(t.incassi))}
         {riga(
-          'Stipendi',
+          tr('Stipendi'),
           euro(t.stipendi),
           t.dalFoglio.stipendi
-            ? 'dal foglio'
+            ? tr('dal foglio')
             : t.stipendi == null
-              ? 'ore non registrate'
+              ? tr('ore non registrate')
               : t.stipendiParziali
-                ? 'dalle ore, parziali: manca qualche tariffa'
-                : 'dalle ore'
+                ? tr('dalle ore, parziali: manca qualche tariffa')
+                : tr('dalle ore')
         )}
-        {riga('Spese', euro(t.spese), t.dalFoglio.spese ? 'dal foglio' : t.spese == null ? 'nessuna registrata' : 'merce e altre spese')}
-        {riga('Netto', euro(t.netto), null, colore(t.netto))}
-        {riga('Differenza dal minimo', euro(t.differenza), null, colore(t.differenza))}
-        {riga('Costo del lavoro', perc(t.costoLavoroPct))}
-        {riga('Prime cost', perc(t.primeCostPct))}
+        {riga(
+          tr('Spese'),
+          euro(t.spese),
+          t.dalFoglio.spese ? tr('dal foglio') : t.spese == null ? tr('nessuna registrata') : tr('merce e altre spese')
+        )}
+        {riga(tr('Netto'), euro(t.netto), null, colore(t.netto))}
+        {riga(tr('Differenza dal minimo'), euro(t.differenza), null, colore(t.differenza))}
+        {riga(tr('Costo del lavoro'), perc(t.costoLavoroPct))}
+        {riga(tr('Prime cost'), perc(t.primeCostPct))}
       </div>
     </div>
   )
@@ -307,20 +312,25 @@ function ExtraMinimo({ giorno, onSalva, onChiudi }) {
   const paghe = giorno.composizione.paghe
   return (
     <div className="overlay confirm-overlay" onClick={onChiudi}>
-      <div className="confirm-box" role="dialog" aria-label={`Minimo di ${giorno.nome}`} onClick={(e) => e.stopPropagation()}>
-        <h3 style={{ marginTop: 0 }}>Minimo di {giorno.nome}</h3>
+      <div
+        className="confirm-box"
+        role="dialog"
+        aria-label={tr('Minimo di {giorno}', { giorno: giorno.nome })}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 style={{ marginTop: 0 }}>{tr('Minimo di {giorno}', { giorno: giorno.nome })}</h3>
         <div className="summary-rows">
           <div className="summary-row">
-            <span className="muted">Paghe del personale</span>
-            <span>{paghe == null ? 'nessuna ora registrata' : formatPrice(paghe)}</span>
+            <span className="muted">{tr('Paghe del personale')}</span>
+            <span>{paghe == null ? tr('nessuna ora registrata') : formatPrice(paghe)}</span>
           </div>
           <div className="summary-row">
-            <span className="muted">Minimo con l’extra</span>
+            <span className="muted">{tr('Minimo con l’extra')}</span>
             <strong>{formatPrice((paghe || 0) + extraOra)}</strong>
           </div>
         </div>
         <label htmlFor="extra-minimo" style={{ display: 'block', marginTop: 10 }}>
-          Extra (€)
+          {tr('Extra (€)')}
         </label>
         <input
           id="extra-minimo"
@@ -333,10 +343,10 @@ function ExtraMinimo({ giorno, onSalva, onChiudi }) {
         />
         <div className="row" style={{ gap: 8, marginTop: 12 }}>
           <button type="button" className="btn ghost grow" onClick={onChiudi}>
-            Annulla
+            {tr('Annulla')}
           </button>
           <button type="button" className="btn grow" onClick={() => onSalva(extraOra)}>
-            Salva
+            {tr('Salva')}
           </button>
         </div>
       </div>
@@ -349,26 +359,23 @@ function ExtraMinimo({ giorno, onSalva, onChiudi }) {
 // aveva, e che senza una frase non si sanno leggere (REQ-CASSA-011).
 function Spiegazione() {
   return (
-    <Soffietto titolo="Cosa misura questa tabella">
+    <Soffietto titolo={tr('Cosa misura questa tabella')}>
       <Didascalia>
-        <strong>Il mese giorno per giorno</strong>, diviso per settimane come i fogli mensili di analisi:{' '}
-        <strong>minimo</strong> (quanto il locale doveva fare quella sera), <strong>incassato</strong> (quanto ha
-        fatto: i conti dell’app e, fino all’agosto 2026, quelli di Tiller, per giornata commerciale) e{' '}
-        <strong>differenza</strong>. Sopra il giorno, le note del foglio.
+        {tr(
+          'Il mese giorno per giorno, diviso per settimane come i fogli mensili di analisi: minimo (quanto il locale doveva fare quella sera), incassato (quanto ha fatto: i conti dell’app e, fino all’agosto 2026, quelli di Tiller, per giornata commerciale) e differenza. Sopra il giorno, le note del foglio.'
+        )}
       </Didascalia>
       <Didascalia>
-        <strong>Da dove viene il minimo.</strong> Nei mesi dei fogli (gennaio 2025 – luglio 2026) è quello scritto
-        nel foglio. Nei mesi dell’app è il costo del personale di quel giorno — ore effettive per i giorni passati,
-        turni programmati per quelli a venire, alla paga in vigore — più l’extra deciso dall’admin, che si scrive
-        toccando il minimo del giorno. Un giorno senza ore e senza extra non ha minimo.
+        <strong>{tr('Da dove viene il minimo.')}</strong>{' '}
+        {tr(
+          'Nei mesi dei fogli (gennaio 2025 – luglio 2026) è quello scritto nel foglio. Nei mesi dell’app è il costo del personale di quel giorno — ore effettive per i giorni passati, turni programmati per quelli a venire, alla paga in vigore — più l’extra deciso dall’admin, che si scrive toccando il minimo del giorno. Un giorno senza ore e senza extra non ha minimo.'
+        )}
       </Didascalia>
       <Didascalia>
-        <strong>Il mese.</strong> Netto = incassi − stipendi − spese. Nei mesi dei fogli stipendi e spese sono
-        quelli del foglio, dove le spese comprendono anche la merce; nei mesi dell’app gli stipendi vengono dalle
-        ore registrate e le spese sono la merce fatturata più le altre spese del Riepilogo di Fornitori.{' '}
-        <strong>Costo del lavoro</strong>: stipendi sull’incassato al netto dell’IVA. <strong>Prime cost</strong>:
-        stipendi più costo della merce venduta (dalle ricette), sull’incassato al netto dell’IVA — il numero con
-        cui si capisce se il mese è andato.
+        <strong>{tr('Il mese.')}</strong>{' '}
+        {tr(
+          'Netto = incassi − stipendi − spese. Nei mesi dei fogli stipendi e spese sono quelli del foglio, dove le spese comprendono anche la merce; nei mesi dell’app gli stipendi vengono dalle ore registrate e le spese sono la merce fatturata più le altre spese del Riepilogo di Fornitori. Costo del lavoro: stipendi sull’incassato al netto dell’IVA. Prime cost: stipendi più costo della merce venduta (dalle ricette), sull’incassato al netto dell’IVA — il numero con cui si capisce se il mese è andato.'
+        )}
       </Didascalia>
     </Soffietto>
   )

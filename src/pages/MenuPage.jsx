@@ -679,7 +679,7 @@ export default function MenuPage({ speciali = false }) {
           locale ha spento le ordinazioni; dove il piano non le ha, dal
           telefono non si ordina proprio. */}
       {menuOnly && !staff && (
-        <div className="banner">
+        <div className="avviso-menu" role="status">
           {settings.menu_only
             ? '📖 Solo consultazione: le ordinazioni sono momentaneamente sospese. Rivolgersi allo staff per ordinare.'
             : '📖 Il menù si consulta da qui: per ordinare rivolgersi allo staff.'}
@@ -735,9 +735,11 @@ export default function MenuPage({ speciali = false }) {
       )}
 
       {etaMinutes != null && !menuOnly && (
+        // Un testo solo, tutto intero: la stima cambia con la coda, e a
+        // pezzi accostati col traduttore del browser restava ferma
+        // (REQ-CLI-010, lib/traduttoreBrowser.js).
         <p className="eta-line">
-          ⏱ {settings.service_mode === 'tavolo' ? 'Tempo di servizio' : 'Tempo di preparazione'}:
-          {' '}~{etaMinutes} min
+          {`⏱ ${settings.service_mode === 'tavolo' ? 'Tempo di servizio' : 'Tempo di preparazione'}: ~${etaMinutes} min`}
         </p>
       )}
 
@@ -771,32 +773,32 @@ export default function MenuPage({ speciali = false }) {
 
       {/* Gate geolocalizzazione: stato della verifica al caricamento */}
       {geoActive && geoGate === 'checking' && (
-        <div className="banner">📍 Verifico che sei al locale…</div>
+        <div className="avviso-menu" role="status">📍 Verifico che sei al locale…</div>
       )}
       {geoActive && geoGate === 'denied' && (
-        <div className="banner row between" style={{ alignItems: 'center', gap: 10 }}>
+        <div className="avviso-menu" role="status">
           <span>
             📍 Per ordinare serve la tua posizione: attiva la localizzazione e
             consenti l’accesso (verifichiamo solo che sei al locale).
           </span>
-          <button className="btn small" style={{ flexShrink: 0 }} onClick={runGeoCheck}>
+          <button className="btn small" onClick={runGeoCheck}>
             Riprova
           </button>
         </div>
       )}
       {geoActive && geoGate === 'out_of_range' && (
-        <div className="banner row between" style={{ alignItems: 'center', gap: 10 }}>
+        <div className="avviso-menu" role="status">
+          {/* Un testo solo: la distanza cambia a ogni «Riprova» (REQ-CLI-010). */}
           <span>
-            📍 Devi essere al locale per ordinare
-            {geoInfo ? ` (sei a ~${geoInfo.distance} m, massimo ${geoInfo.radius} m)` : ''}.
+            {`📍 Devi essere al locale per ordinare${geoInfo ? ` (sei a ~${geoInfo.distance} m, massimo ${geoInfo.radius} m)` : ''}.`}
           </span>
-          <button className="btn small" style={{ flexShrink: 0 }} onClick={runGeoCheck}>
+          <button className="btn small" onClick={runGeoCheck}>
             Riprova
           </button>
         </div>
       )}
 
-      {error && <div className="banner">Errore: {error}</div>}
+      {error && <div className="avviso-menu errore" role="alert">Errore: {error}</div>}
 
       {/* GLI ORDINI QUI NON CI STANNO, per nessuno (l'utente, 11/11/2026:
           «gli ordini non dovrebbero apparire nel menù. Dovrebbero stare in
@@ -1081,7 +1083,10 @@ export default function MenuPage({ speciali = false }) {
 function ServingBox({ icon, label, orders }) {
   return (
     <div className="card serving-box">
-      <div className="muted">{icon} {label}</div>
+      {/* Un testo solo: l'etichetta passa dal singolare al plurale a pagina
+          aperta, e a pezzi accostati col traduttore del browser restava
+          ferma (REQ-CLI-010). */}
+      <div className="muted">{`${icon} ${label}`}</div>
       <div className="serving-nums">
         {orders.map((o) => (
           <span key={o.daily_number} className="serving-num">#{o.daily_number}</span>

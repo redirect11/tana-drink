@@ -22,27 +22,30 @@
 // Le regole stanno qui, pure: la stessa striscia deve significare la
 // stessa cosa dovunque, e con la logica dentro le schermate finiva per
 // divergere (è già successo col rosso che diceva due cose opposte).
+// Nomi e descrizioni si mostrano con `trSegnato` (REQ-UI-039).
+
+import { daTradurre } from './lingua.js'
 
 export const MODI_STRISCIA = [
   {
     id: 'spenta',
-    label: 'Spenta',
-    desc: 'Sempre grigia: il colore del prodotto resta nella linguetta.',
+    label: daTradurre('Spenta'),
+    desc: daTradurre('Sempre grigia: il colore del prodotto resta nella linguetta.'),
   },
   {
     id: 'prodotto',
-    label: 'Colore del prodotto',
-    desc: 'Il suo colore; se non ne ha uno, quello della sua categoria.',
+    label: daTradurre('Colore del prodotto'),
+    desc: daTradurre('Il suo colore; se non ne ha uno, quello della sua categoria.'),
   },
   {
     id: 'categoria',
-    label: 'Colore della categoria',
-    desc: 'Sempre la categoria. Il colore del singolo prodotto lo dice la linguetta.',
+    label: daTradurre('Colore della categoria'),
+    desc: daTradurre('Sempre la categoria. Il colore del singolo prodotto lo dice la linguetta.'),
   },
   {
     id: 'scorte',
-    label: 'Scorte',
-    desc: 'Rosso: ingrediente esaurito. Arancione: sta finendo.',
+    label: daTradurre('Scorte'),
+    desc: daTradurre('Rosso: ingrediente esaurito. Arancione: sta finendo.'),
   },
 ]
 

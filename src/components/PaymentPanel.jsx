@@ -85,14 +85,15 @@ export default function PaymentPanel({ order }) {
       {(phase === 'idle' || phase === 'error') && (
         <>
           {phase === 'error' && (
+            // Testi soli, tutti interi: l'errore e il tasto cambiano dopo un
+            // pagamento fallito, e a pezzi accostati col traduttore del
+            // browser restavano quelli di prima (REQ-CLI-010).
             <div className="banner" style={{ textAlign: 'left' }}>
-              {error}
-              {!order.payment_required &&
-                ' Puoi comunque pagare al bancone al ritiro.'}
+              {`${error ?? ''}${order.payment_required ? '' : ' Puoi comunque pagare al bancone al ritiro.'}`}
             </div>
           )}
           <button className="btn block" onClick={startPayment}>
-            💳 {failed ? 'Riprova il pagamento' : `Paga ora ${formatPrice(order.total)}`}
+            {`💳 ${failed ? 'Riprova il pagamento' : `Paga ora ${formatPrice(order.total)}`}`}
           </button>
         </>
       )}

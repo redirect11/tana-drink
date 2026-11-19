@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { subscribeNotifs, segnaLetta, svuotaArchivio } from '../lib/notifyStore.js'
 import Icona, { ConIcona } from './Icona.jsx'
+import { tr, formatoAttivo } from '../lib/lingua.js'
 
 // ── LO STORICO DELLE NOTIFICHE, ANCHE NELLE IMPOSTAZIONI ─────────────
 // Stava solo dietro la campanella, dentro un pannello che si chiude al
@@ -21,9 +22,9 @@ function quando(at) {
     d.getDate() === oggi.getDate() &&
     d.getMonth() === oggi.getMonth() &&
     d.getFullYear() === oggi.getFullYear()
-  const ora = d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+  const ora = d.toLocaleTimeString(formatoAttivo(), { hour: '2-digit', minute: '2-digit' })
   // Di oggi basta l'ora: la data la si sta vivendo.
-  return stessoGiorno ? ora : `${d.toLocaleDateString('it-IT')} · ${ora}`
+  return stessoGiorno ? ora : `${d.toLocaleDateString(formatoAttivo())} · ${ora}`
 }
 
 export default function StoricoNotifiche() {
@@ -37,15 +38,14 @@ export default function StoricoNotifiche() {
 
   return (
     <div className="card settings-section">
-      <h3><Icona nome="movimenti" gruppo="tasti" /> Storico delle notifiche</h3>
+      <h3><Icona nome="movimenti" gruppo="tasti" /> {tr('Storico delle notifiche')}</h3>
       <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-        Gli avvisi arrivati <strong>su questo dispositivo</strong>, anche quelli
-        già letti. È lo stesso elenco della campanella qui in alto.
+        {tr('Gli avvisi arrivati su questo dispositivo, anche quelli già letti. È lo stesso elenco della campanella qui in alto.')}
       </p>
 
       {tutte.length === 0 ? (
         <p className="muted small" style={{ margin: 0 }}>
-          Ancora nessun avviso su questo dispositivo.
+          {tr('Ancora nessun avviso su questo dispositivo.')}
         </p>
       ) : (
         <div className="storico-notifiche">
@@ -83,7 +83,7 @@ export default function StoricoNotifiche() {
           style={{ marginTop: 10 }}
           onClick={svuotaArchivio}
         >
-          <Icona nome="pulisci" gruppo="tasti" /> Svuota lo storico
+          <Icona nome="pulisci" gruppo="tasti" /> {tr('Svuota lo storico')}
         </button>
       )}
     </div>

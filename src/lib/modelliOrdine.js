@@ -29,6 +29,7 @@
 // conti, e vanno provati senza database.
 
 import { assortimentoDi } from './inventory.js'
+import { tr } from './lingua.js'
 
 // I motivi per cui una riga del modello non arriva intera nell'ordine. Sono
 // pochi e chiusi perché a ognuno corrisponde una frase a schermo: chi applica
@@ -229,18 +230,20 @@ export function applicaModello(modello, { catalogo = [], suppliers = [], selezio
 // stessa frase che i test controllano: una riga non ripresa deve dire cosa
 // non c'è più, non «qualcosa è andato storto».
 export function testoAvviso({ nome, fornitore, motivo } = {}) {
-  const chi = nome || 'Prodotto'
+  const chi = nome || tr('Prodotto')
   switch (motivo) {
     case MOTIVI.prodotto_sparito:
-      return `${chi}: non è più in magazzino. Non ripreso.`
+      return tr('{chi}: non è più in magazzino. Non ripreso.', { chi })
     case MOTIVI.fornitore_sparito:
-      return `${chi}: il fornitore del modello non c'è più. Ripreso senza fornitore.`
+      return tr("{chi}: il fornitore del modello non c'è più. Ripreso senza fornitore.", { chi })
     case MOTIVI.fuori_listino:
-      return `${chi}: ${fornitore || 'il fornitore'} non lo ha più a listino. Ripreso, ma il prezzo non viene da lì.`
+      return fornitore
+        ? tr('{chi}: {fornitore} non lo ha più a listino. Ripreso, ma il prezzo non viene da lì.', { chi, fornitore })
+        : tr('{chi}: il fornitore non lo ha più a listino. Ripreso, ma il prezzo non viene da lì.', { chi })
     case MOTIVI.fuori_linea:
-      return `${chi}: adesso è fuori linea. Ripreso lo stesso.`
+      return tr('{chi}: adesso è fuori linea. Ripreso lo stesso.', { chi })
     case MOTIVI.doppione:
-      return `${chi}: nel modello compare due volte. Ripresa una riga sola.`
+      return tr('{chi}: nel modello compare due volte. Ripresa una riga sola.', { chi })
     default:
       return chi
   }

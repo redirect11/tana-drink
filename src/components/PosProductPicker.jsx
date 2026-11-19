@@ -54,6 +54,7 @@ import { toastError } from '../lib/toast.js'
 import DrinkForm from './DrinkForm.jsx'
 import Icona from './Icona.jsx'
 import { useTestoConIcona } from '../lib/temaIcone.js'
+import { tr } from '../lib/lingua.js'
 
 // Colonna categorie + griglia prodotti (il "centro" del POS). Oltre alle
 // categorie ci sono due raccolte speciali: ⭐ Preferiti (i drink che il
@@ -128,8 +129,8 @@ function CellaOrdinabile({ drink, qty, color, striscia, onApri }) {
     >
       <div
         className="reorder-grip"
-        title="Trascina per spostare"
-        aria-label={`Trascina ${drink.name}`}
+        title={tr('Trascina per spostare')}
+        aria-label={tr('Trascina {nome}', { nome: drink.name })}
         {...attributes}
         {...listeners}
       >
@@ -399,8 +400,8 @@ export default function PosProductPicker({
 
   // Voci della barra: Preferiti e Recenti in cima, poi le categorie.
   const specialCats = [
-    ...(favorites.length ? [{ key: '__fav__', label: 'Preferiti', icona: 'preferito', count: favorites.length }] : []),
-    ...(recentIds.length ? [{ key: '__recent__', label: 'Recenti', icona: 'orario', count: recentIds.length }] : []),
+    ...(favorites.length ? [{ key: '__fav__', label: tr('Preferiti'), icona: 'preferito', count: favorites.length }] : []),
+    ...(recentIds.length ? [{ key: '__recent__', label: tr('Recenti'), icona: 'orario', count: recentIds.length }] : []),
   ]
 
   // Etichetta categoria: una riga sola, si accorcia con l'ellissi (mai a capo).
@@ -409,13 +410,13 @@ export default function PosProductPicker({
   return (
     <>
       <aside className="posd-cats">
-        <button onClick={() => setSelectedCat('__all__')} style={catBtnStyle(selectedCat === '__all__')} title="Tutti">
+        <button onClick={() => setSelectedCat('__all__')} style={catBtnStyle(selectedCat === '__all__')} title={tr('Tutti')}>
           {categoryDisplay === 'icon' ? (
             <span aria-hidden style={{ fontSize: '1.25em' }}>▦</span>
           ) : (
             <>
               <span aria-hidden style={catDotStyle(null)} />
-              <span style={catLabel}>Tutti</span>
+              <span style={catLabel}>{tr('Tutti')}</span>
             </>
           )}
         </button>
@@ -495,8 +496,8 @@ export default function PosProductPicker({
               setQuery(e.target.value)
             }}
             onFocus={() => onInteract?.()}
-            placeholder={testoConIcona('cerca', 'Cerca prodotto…')}
-            aria-label="Cerca prodotto"
+            placeholder={testoConIcona('cerca', tr('Cerca prodotto…'))}
+            aria-label={tr('Cerca prodotto')}
             style={{ flex: 1, minWidth: 0, ...(compact ? { fontSize: '0.9rem', padding: '8px 10px' } : {}) }}
           />
           {/* CANCELLARE LA RICERCA CON UN TOCCO (Flavio, 03/09/2026: «nella
@@ -515,8 +516,8 @@ export default function PosProductPicker({
                 setQuery('')
                 cercaRef.current?.focus()
               }}
-              aria-label="Cancella la ricerca"
-              title="Cancella la ricerca"
+              aria-label={tr('Cancella la ricerca')}
+              title={tr('Cancella la ricerca')}
               style={{ flexShrink: 0 }}
             >
               ✕
@@ -526,11 +527,11 @@ export default function PosProductPicker({
             <button
               className={`chip ${reordering ? 'active' : ''}`}
               onClick={() => setReordering((v) => !v)}
-              title="Trascina dalla maniglia per spostare · tocca una card per il menu prodotto (colore)"
-              aria-label={reordering ? 'Fine organizzazione' : 'Organizza griglia'}
+              title={tr('Trascina dalla maniglia per spostare · tocca una card per il menu prodotto (colore)')}
+              aria-label={reordering ? tr('Fine organizzazione') : tr('Organizza griglia')}
               style={{ flexShrink: 0 }}
             >
-              {reordering ? (compact ? '✓' : '✓ Fine') : compact ? '↕' : '↕ Organizza'}
+              {reordering ? (compact ? '✓' : `✓ ${tr('organizza|Fine')}`) : compact ? '↕' : `↕ ${tr('Organizza')}`}
             </button>
           )}
         </div>
@@ -542,7 +543,7 @@ export default function PosProductPicker({
             className="muted small"
             style={{ margin: 0, padding: compact ? '4px 8px 0' : '6px 10px 0', flexShrink: 0 }}
           >
-            <Icona nome="cerca" gruppo="tasti" />{' '}Nessun prodotto per «{query.trim()}».
+            <Icona nome="cerca" gruppo="tasti" />{' '}{tr('Nessun prodotto per «{testo}».', { testo: query.trim() })}
           </p>
         )}
         {/* In «organizza» la griglia sta dentro il contesto di
@@ -589,16 +590,16 @@ export default function PosProductPicker({
         >
           {loading && (
             <div style={{ gridColumn: '1/-1' }}>
-              <Caricamento testo="Preparo il listino…" />
+              <Caricamento testo={tr('Preparo il listino…')} />
             </div>
           )}
           {!loading && visibleDrinks.length === 0 && (
             <div className="empty" style={{ gridColumn: '1/-1' }}>
               {selectedCat === '__fav__'
-                ? 'Nessun preferito: tocca la ☆ su un prodotto per fissarlo qui.'
+                ? tr('Nessun preferito: tocca la ☆ su un prodotto per fissarlo qui.')
                 : selectedCat === '__recent__'
-                  ? 'Ancora nessun item ordinato di recente.'
-                  : 'Nessun prodotto in questa categoria.'}
+                  ? tr('Ancora nessun item ordinato di recente.')
+                  : tr('Nessun prodotto in questa categoria.')}
             </div>
           )}
           {visibleDrinks.map((d) =>
@@ -650,7 +651,7 @@ export default function PosProductPicker({
           <div
             className="confirm-box"
             role="dialog"
-            aria-label={`Menu ${menuDrink.name}`}
+            aria-label={tr('Menu {nome}', { nome: menuDrink.name })}
             style={{ width: 'min(360px, 94vw)' }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -658,14 +659,14 @@ export default function PosProductPicker({
               <h3 style={{ margin: 0 }}>{menuDrink.name}</h3>
               <button className="btn ghost small" onClick={() => setMenuDrink(null)}>✕</button>
             </div>
-            <p className="muted small" style={{ margin: '8px 0' }}>Colore del tab</p>
+            <p className="muted small" style={{ margin: '8px 0' }}>{tr('Colore del tab')}</p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8 }}>
               {CATEGORY_PALETTE.map((c) => {
                 const active = (tileColors[menuDrink.id] || '').toLowerCase() === c.toLowerCase()
                 return (
                   <button
                     key={c}
-                    aria-label={`Colore ${c}`}
+                    aria-label={tr('Colore {colore}', { colore: c })}
                     onClick={() => setTileColor(menuDrink.id, c)}
                     style={{
                       width: '100%',
@@ -684,7 +685,7 @@ export default function PosProductPicker({
               style={{ marginTop: 12 }}
               onClick={() => setTileColor(menuDrink.id, null)}
             >
-              ↩︎ Colore della categoria (default)
+              ↩︎ {tr('Colore della categoria (default)')}
             </button>
 
             {/* Scheda prodotto completa (prezzo, ingredienti, disponibilità):
@@ -698,7 +699,7 @@ export default function PosProductPicker({
                 setMenuDrink(null)
               }}
             >
-              <Icona nome="modifica" gruppo="tasti" />{' '}Modifica prodotto (prezzo, ingredienti…)
+              <Icona nome="modifica" gruppo="tasti" />{' '}{tr('Modifica prodotto (prezzo, ingredienti…)')}
             </button>
             <button
               className="btn ghost small block"
@@ -710,13 +711,13 @@ export default function PosProductPicker({
                   await updateDrink(menuDrink.id, { available: false })
                   setMenuDrink(null)
                 } catch (e) {
-                  toastError(`Non disattivato: ${e.message}`)
+                  toastError(tr('Non disattivato: {errore}', { errore: e.message }))
                 } finally {
                   setSavingDrink(false)
                 }
               }}
             >
-              <Icona nome="vietato" gruppo="segnali" />{' '}Togli dalla griglia (non disponibile)
+              <Icona nome="vietato" gruppo="segnali" />{' '}{tr('Togli dalla griglia (non disponibile)')}
             </button>
           </div>
         </div>

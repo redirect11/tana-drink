@@ -24,43 +24,47 @@
 // colori come pigmento sui temi chiari («disegni bianchi su fondo scuro»,
 // l'utente, 29/10/2026).
 //
-// Logica pura, senza browser: la usano l'app e i test.
+// Logica pura, senza browser: la usano l'app e i test. I NOMI delle scelte
+// sono solo etichette a schermo (si salva l'id): si traducono dove si
+// mostrano, con `trSegnato` (REQ-UI-039).
+
+import { daTradurre } from './lingua.js'
 
 export const BICCHIERI = [
-  { id: 'coppa', nome: 'Coppa' },
-  { id: 'martini', nome: 'Martini' },
-  { id: 'basso', nome: 'Tumbler basso' },
-  { id: 'alto', nome: 'Tumbler alto' },
-  { id: 'flute', nome: 'Flûte' },
-  { id: 'balloon', nome: 'Balloon' },
-  { id: 'hurricane', nome: 'Hurricane' },
-  { id: 'tazza', nome: 'Tazza' },
+  { id: 'coppa', nome: daTradurre('Coppa') },
+  { id: 'martini', nome: daTradurre('Martini') },
+  { id: 'basso', nome: daTradurre('Tumbler basso') },
+  { id: 'alto', nome: daTradurre('Tumbler alto') },
+  { id: 'flute', nome: daTradurre('Flûte') },
+  { id: 'balloon', nome: daTradurre('Balloon') },
+  { id: 'hurricane', nome: daTradurre('Hurricane') },
+  { id: 'tazza', nome: daTradurre('Tazza') },
 ]
 
 export const COLORI = [
-  { id: 'rosa', nome: 'Rosa', hex: '#f2a3b6' },
-  { id: 'pesca', nome: 'Pesca', hex: '#f6bf9a' },
-  { id: 'ambra', nome: 'Ambra', hex: '#eeb65a' },
-  { id: 'giallo', nome: 'Giallo', hex: '#f6dc78' },
-  { id: 'azzurro', nome: 'Azzurro', hex: '#a9c3ea' },
-  { id: 'lilla', nome: 'Lilla', hex: '#c2acea' },
-  { id: 'viola', nome: 'Viola', hex: '#8f6fd0' },
-  { id: 'rosso', nome: 'Rosso', hex: '#e66a78' },
-  { id: 'verde', nome: 'Verde', hex: '#a9d3a0' },
-  { id: 'limpido', nome: 'Limpido', hex: '#d9e6f2' },
+  { id: 'rosa', nome: daTradurre('Rosa'), hex: '#f2a3b6' },
+  { id: 'pesca', nome: daTradurre('Pesca'), hex: '#f6bf9a' },
+  { id: 'ambra', nome: daTradurre('Ambra'), hex: '#eeb65a' },
+  { id: 'giallo', nome: daTradurre('Giallo'), hex: '#f6dc78' },
+  { id: 'azzurro', nome: daTradurre('Azzurro'), hex: '#a9c3ea' },
+  { id: 'lilla', nome: daTradurre('Lilla'), hex: '#c2acea' },
+  { id: 'viola', nome: daTradurre('Viola'), hex: '#8f6fd0' },
+  { id: 'rosso', nome: daTradurre('Rosso'), hex: '#e66a78' },
+  { id: 'verde', nome: daTradurre('Verde'), hex: '#a9d3a0' },
+  { id: 'limpido', nome: daTradurre('Limpido'), hex: '#d9e6f2' },
 ]
 
 export const DECORAZIONI = [
-  { id: 'nessuna', nome: 'Nessuna' },
-  { id: 'agrume', nome: 'Fetta di agrume' },
-  { id: 'ciliegia', nome: 'Ciliegia' },
-  { id: 'menta', nome: 'Menta' },
-  { id: 'fiore', nome: 'Fiore' },
-  { id: 'scorza', nome: 'Scorza' },
-  { id: 'cannuccia', nome: 'Cannuccia' },
-  { id: 'ombrellino', nome: 'Ombrellino' },
-  { id: 'bevimi', nome: 'Cartellino «Bevimi»' },
-  { id: 'cuori', nome: 'Carta di cuori' },
+  { id: 'nessuna', nome: daTradurre('Nessuna') },
+  { id: 'agrume', nome: daTradurre('Fetta di agrume') },
+  { id: 'ciliegia', nome: daTradurre('Ciliegia') },
+  { id: 'menta', nome: daTradurre('Menta') },
+  { id: 'fiore', nome: daTradurre('Fiore') },
+  { id: 'scorza', nome: daTradurre('Scorza') },
+  { id: 'cannuccia', nome: daTradurre('Cannuccia') },
+  { id: 'ombrellino', nome: daTradurre('Ombrellino') },
+  { id: 'bevimi', nome: daTradurre('Cartellino «Bevimi»') },
+  { id: 'cuori', nome: daTradurre('Carta di cuori') },
 ]
 
 const C = {

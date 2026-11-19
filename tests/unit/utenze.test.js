@@ -8,6 +8,8 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { createRequire } from 'node:module'
 const require = createRequire(import.meta.url)
 const { staffAdmin } = require('../../functions/lib/staff-service.js')
+const { limitiInVigore, LIMITI_FREE: LIMITI_FREE_FUNCTIONS } = require('../../functions/lib/licenza-core.js')
+import { LIMITI_FREE } from '../../src/lib/licenzaInVigore.js'
 
 // Finto Admin SDK: tiene le utenze in memoria e registra le chiamate.
 function fintoAuth(utenti) {
@@ -199,5 +201,85 @@ describe("staffAdmin — l'ultimo admin non si tocca", () => {
     await expect(
       staffAdmin(conSospeso, chiamante('z', 'admin'), { action: 'delete', uid: 'a1' })
     ).rejects.toMatchObject({ code: 'failed-precondition' })
+  })
+})
+
+// BUG-165: dal 16/11/2026 (REQ-FLOTTA-122 della regia) anche un Free nasce
+// col profilo completo, e `staffAdmin` è pubblicata. L'app nasconde la
+// gestione delle utenze sul Free, ma chiamata a mano la Function creava
+// utenze senza limite. Il tetto ferma le aggiunte; chi c'è resta.
+describe('staffAdmin — il tetto di utenze del piano', () => {
+  const FREE = { piano: 'free', stato: 'attiva', limiti: { utenti_max: 1 } }
+  const conLicenza = (licenza) => ({ leggiLicenza: async () => licenza })
+  const admin = chiamante('a1', 'admin')
+  let adminAuth
+  beforeEach(() => {
+    adminAuth = fintoAuth([
+      { uid: 'a1', email: 'titolare@x', customClaims: { role: 'admin' } },
+      { uid: 'c1', email: 'cliente@x' },
+    ])
+  })
+
+  it('sul Free il titolare c’è già: un’utenza nuova dello staff no', async () => {
+    await expect(
+      staffAdmin(adminAuth, admin, { action: 'create', email: 'b@x', password: 'segreta', role: 'bartender' }, conLicenza(FREE))
+    ).rejects.toMatchObject({ code: 'failed-precondition', message: expect.stringContaining('al massimo 1 utenza attiva dello staff') })
+    expect(adminAuth.db.has('uid-b@x')).toBe(false)
+  })
+
+  it('né un cliente promosso allo staff', async () => {
+    await expect(
+      staffAdmin(adminAuth, admin, { action: 'setRole', uid: 'c1', role: 'staff' }, conLicenza(FREE))
+    ).rejects.toMatchObject({ code: 'failed-precondition' })
+    expect(adminAuth.db.get('c1').customClaims).toBeUndefined()
+  })
+
+  it('né un’utenza dello staff spenta che si riaccende', async () => {
+    adminAuth.db.set('s1', { uid: 's1', email: 's@x', customClaims: { role: 'staff' }, disabled: true, metadata: {} })
+    await expect(
+      staffAdmin(adminAuth, admin, { action: 'setDisabled', uid: 's1', disabled: false }, conLicenza(FREE))
+    ).rejects.toMatchObject({ code: 'failed-precondition' })
+  })
+
+  it('sceso al Free con più persone, nessuno si perde: spegnere e cambiare ruolo restano possibili', async () => {
+    adminAuth.db.set('b1', { uid: 'b1', email: 'b1@x', customClaims: { role: 'bartender' }, metadata: {} })
+    adminAuth.db.set('s1', { uid: 's1', email: 's1@x', customClaims: { role: 'staff' }, metadata: {} })
+    await staffAdmin(adminAuth, admin, { action: 'setRole', uid: 'b1', role: 'staff' }, conLicenza(FREE))
+    await staffAdmin(adminAuth, admin, { action: 'setDisabled', uid: 's1', disabled: true }, conLicenza(FREE))
+    expect(adminAuth.db.get('b1').customClaims).toEqual({ role: 'staff' })
+    expect(adminAuth.db.get('s1').disabled).toBe(true)
+    expect(adminAuth.db.size).toBe(4)
+  })
+
+  it('un cliente sospeso promosso allo staff non aggiunge nessuno di attivo', async () => {
+    adminAuth.db.get('c1').disabled = true
+    await staffAdmin(adminAuth, admin, { action: 'setRole', uid: 'c1', role: 'staff' }, conLicenza(FREE))
+    expect(adminAuth.db.get('c1').customClaims).toEqual({ role: 'staff' })
+  })
+
+  it('anche con la sola `valida_fino` dell’app, scaduta vale come Free', async () => {
+    const scaduta = { piano: 'completo', stato: 'attiva', valida_fino: '2026-01-01T00:00:00.000Z' }
+    await expect(
+      staffAdmin(adminAuth, admin, { action: 'create', email: 'b@x', password: 'segreta', role: 'staff' }, conLicenza(scaduta))
+    ).rejects.toMatchObject({ code: 'failed-precondition' })
+  })
+
+  it('una licenza scaduta vale come Free', async () => {
+    const scaduta = { piano: 'completo', stato: 'attiva', valida_fino_ts: new Date('2026-01-01') }
+    await expect(
+      staffAdmin(adminAuth, admin, { action: 'create', email: 'b@x', password: 'segreta', role: 'staff' }, conLicenza(scaduta))
+    ).rejects.toMatchObject({ code: 'failed-precondition' })
+  })
+
+  it('senza limiti nella licenza (la Tana, i piani a pagamento) si crea come sempre', async () => {
+    const completa = { piano: 'completo', stato: 'attiva', limiti: null }
+    await staffAdmin(adminAuth, admin, { action: 'create', email: 'b@x', password: 'segreta', role: 'staff' }, conLicenza(completa))
+    await staffAdmin(adminAuth, admin, { action: 'create', email: 'c@x', password: 'segreta', role: 'staff' }, conLicenza(null))
+    expect(adminAuth.db.has('uid-b@x') && adminAuth.db.has('uid-c@x')).toBe(true)
+  })
+
+  it('la copia dei limiti del Free nelle Functions è uguale a quella dell’app', () => {
+    for (const [k, v] of Object.entries(LIMITI_FREE_FUNCTIONS)) expect(LIMITI_FREE[k], k).toBe(v)
+    expect(limitiInVigore({ limiti: { utenti_max: 3 } })).toEqual({ utenti_max: 3 })
   })
 })

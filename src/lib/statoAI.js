@@ -17,7 +17,7 @@
 // credito con l'ultima richiesta vede il tasto spegnersi subito.
 
 import { useEffect, useSyncExternalStore } from 'react'
-import { aiRaggiungibile, leggiCreditoAI, ascoltaRisposteAI, MESSAGGI_AI } from './aiApi.js'
+import { aiRaggiungibile, leggiCreditoAI, ascoltaRisposteAI, messaggioAI } from './aiApi.js'
 import { showToast } from './toast.js'
 
 export const STATI_AI = Object.freeze({ ASSENTE: 'assente', SENZA_CREDITO: 'senza-credito', ATTIVA: 'attiva', IGNOTO: 'ignoto' })
@@ -96,7 +96,7 @@ export function useStatoAI(chiedi = true) {
 }
 
 // Il promemoria di chi tocca l'AI senza credito.
-export const messaggioSenzaCredito = (motivo) => (motivo === 'tetto' ? MESSAGGI_AI.tetto : MESSAGGI_AI.credito)
+export const messaggioSenzaCredito = (motivo) => messaggioAI(motivo === 'tetto' ? 'tetto' : 'credito')
 
 // LA REGOLA DEI TRE STATI PER UN TASTO (REQ-AI-007), una sola per i tasti
 // AI, quello dell'assistente e la voce del ⋮: assente non si disegna;

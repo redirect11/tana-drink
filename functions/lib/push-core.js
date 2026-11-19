@@ -192,18 +192,33 @@ function comandeDaFare(o) {
 // arrivata una nuova». Si guardano gli identificativi: avvisa solo quello
 // che prima non c'era.
 // I conti vecchi non hanno l'elenco delle comande: valgono per uno solo.
-function idsDaFare(o) {
+// Una comanda SENZA RIGHE non è lavoro da fare: è quello che resta di un
+// drink battuto e tolto (BUG-159). Quelle senza l'elenco delle righe sono
+// le vecchie, e contano come prima.
+const haRighe = (c) => !Array.isArray(c.items) || c.items.length > 0
+
+function idsDaFare(o, { soloConRighe = true } = {}) {
   if (!o) return []
   if (Array.isArray(o.comande)) {
-    return o.comande
-      .filter((c) => c && DA_FARE.includes(c.status))
-      .map((c, i) => c.id || `#${i}`)
+    // L'indice si prende prima del filtro: è l'id di riserva di una comanda
+    // vecchia, e deve restare lo stesso fra il conto di prima e quello dopo.
+    return o.comande.flatMap((c, i) =>
+      c && DA_FARE.includes(c.status) && (!soloConRighe || haRighe(c)) ? [c?.id || `#${i}`] : []
+    )
   }
   return DA_FARE.includes(o.status) ? ['#legacy'] : []
 }
 
+// UN CONTO CHE SI STA ANCORA BATTENDO NON È UN ORDINE NUOVO (BUG-159). Al
+// POS il conto nasce al primo tocco (BUG-148) e resta `in_creazione` finché
+// chi lo batte non esce: la stampa aspetta quel momento per far uscire la
+// comanda completa (comandeDaStampare), e la notifica ora fa lo stesso.
+// Prima partiva al primo drink: un ripensamento — battuto e tolto — faceva
+// squillare il banco per un conto che poi si annullava. Quando il segno si
+// toglie, notifyOrderUpdate vede un conto da fare che prima non c'era, e
+// avvisa allora; annullato, non ha più niente da fare e tace.
 function isPayableReceived(o) {
-  if (!o || comandeDaFare(o) === 0) return false
+  if (!o || o.in_creazione === true || comandeDaFare(o) === 0) return false
   if (o.payment_required && o.payment_status !== 'pagato') return false
   return true
 }
@@ -224,13 +239,20 @@ function decideNewOrderStaffPush(before, after) {
   // Se prima il conto era fermo in attesa del pagamento obbligatorio, adesso
   // che e' saldato entra in coda TUTTO INSIEME: e' nuovo per il banco anche
   // se le comande sono le stesse di prima.
-  const prima = isPayableReceived(before) ? idsDaFare(before) : []
+  // Sul conto di PRIMA anche le comande svuotate (`soloConRighe: false`):
+  // una comanda svuotata è ancora quella che il banco conosce. Si toglie il
+  // Mojito e si mette un Gin Tonic nella stessa comanda, e confrontando un
+  // «prima» senza di lei col «dopo» che la riporta, il conto — annunciato
+  // ore prima — risuonava come nuovo.
+  const prima = isPayableReceived(before) ? idsDaFare(before, { soloConRighe: false }) : []
   const nuove = idsDaFare(after).filter((id) => !prima.includes(id))
   if (nuove.length === 0) return null // niente di nuovo in coda
   const tavolo = after.table_label ? ` · Tavolo ${after.table_label}` : ''
   const nome = after.customer_name ? ` — ${after.customer_name}` : ''
   // Aggiunta a un conto già esistente (seconda comanda in poi) vs primo invio.
-  const isAddition = Array.isArray(after.comande) && after.comande.length > 1
+  // Un conto appena composto è un primo invio anche con due comande: al
+  // banco non era ancora arrivato niente.
+  const isAddition = Array.isArray(after.comande) && after.comande.length > 1 && before?.in_creazione !== true
   return isAddition
     ? {
         title: '➕ Aggiunta al conto',

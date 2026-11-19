@@ -3,6 +3,7 @@ import { openCashSession, settingsIniziali, subscribeSettings } from '../lib/api
 import { toastError } from '../lib/toast.js'
 import { listStaff, staffFromCache } from '../lib/staffApi.js'
 import Icona from './Icona.jsx'
+import { tr, useLingua } from '../lib/lingua.js'
 import {
   operatoreCorrente,
   operatoriSelezionabili,
@@ -37,6 +38,7 @@ import {
 // primo gesto della serata — quindi si mostra quello che si sa già e si
 // rinfresca in sottofondo per la prossima volta.
 export default function ApriCassaBox({ cutoffHour, by, onClose }) {
+  useLingua()
   const [fondo, setFondo] = useState('')
   const [busy, setBusy] = useState(false)
   const [staff, setStaff] = useState(() => staffFromCache() || [])
@@ -75,7 +77,7 @@ export default function ApriCassaBox({ cutoffHour, by, onClose }) {
       })
       onClose()
     } catch (e) {
-      toastError(`Cassa non aperta: ${e.message}`)
+      toastError(tr('Cassa non aperta: {errore}', { errore: e.message }))
       setBusy(false)
     }
   }
@@ -83,14 +85,13 @@ export default function ApriCassaBox({ cutoffHour, by, onClose }) {
   return (
     <div className="overlay confirm-overlay" onClick={onClose}>
       <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
-        <h3 style={{ marginTop: 0 }}><Icona nome="verde" gruppo="tasti" /> Apri la cassa</h3>
+        <h3 style={{ marginTop: 0 }}><Icona nome="verde" gruppo="tasti" /> {tr('Apri la cassa')}</h3>
         <p className="muted small" style={{ marginTop: 0 }}>
-          Da qui in poi gli incassi della serata si contano da soli, fino alla
-          chiusura.
+          {tr('Da qui in poi gli incassi della serata si contano da soli, fino alla chiusura.')}
         </p>
         {chiedere && (
           <>
-            <p style={{ margin: '0 0 6px', fontWeight: 600 }}>Chi apre la cassa?</p>
+            <p style={{ margin: '0 0 6px', fontWeight: 600 }}>{tr('Chi apre la cassa?')}</p>
             <div className="chips-row" style={{ marginBottom: 12 }}>
               {scelte.map((u) => (
                 <button
@@ -106,7 +107,7 @@ export default function ApriCassaBox({ cutoffHour, by, onClose }) {
             </div>
           </>
         )}
-        <label htmlFor="fondo-cassa">Fondo cassa iniziale (€) — se ce n&apos;è</label>
+        <label htmlFor="fondo-cassa">{tr("Fondo cassa iniziale (€) — se ce n'è")}</label>
         <input
           id="fondo-cassa"
           type="number"
@@ -114,15 +115,15 @@ export default function ApriCassaBox({ cutoffHour, by, onClose }) {
           min="0"
           value={fondo}
           onChange={(e) => setFondo(e.target.value)}
-          placeholder="Es. 50"
+          placeholder={tr('Es. 50')}
           autoFocus
         />
         <div className="grid-2" style={{ marginTop: 16 }}>
           <button type="button" className="btn ghost" onClick={onClose} disabled={busy}>
-            Annulla
+            {tr('Annulla')}
           </button>
           <button type="button" className="btn" onClick={apri} disabled={busy}>
-            {busy ? 'Apro…' : 'Apri cassa'}
+            {busy ? tr('Apro…') : tr('Apri cassa')}
           </button>
         </div>
       </div>

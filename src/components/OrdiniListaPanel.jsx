@@ -29,10 +29,12 @@ import {
   fetteSenzaFattura,
   importoLeggibile,
   elencoOrdini,
+  etichettaTipoDocumento,
 } from '../lib/fatture.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { giornoEOra } from '../lib/ore.js'
 import Icona from './Icona.jsx'
+import { tr, trSegnato } from '../lib/lingua.js'
 
 // ── LISTA ORDINI (REQ-MAG-038) ───────────────────────────────────────
 //
@@ -106,10 +108,9 @@ export default function OrdiniListaPanel({
   if ((ordini || []).length === 0) {
     return (
       <div className="card">
-        <strong>Lista ordini</strong>
+        <strong>{tr('Lista ordini')}</strong>
         <p className="muted small" style={{ marginTop: 4 }}>
-          Non è ancora stato fatto nessun ordine. Si compone da{' '}
-          <strong>Nuovo ordine</strong>.
+          {tr('Non è ancora stato fatto nessun ordine. Si compone da Nuovo ordine.')}
         </p>
       </div>
     )
@@ -117,12 +118,12 @@ export default function OrdiniListaPanel({
 
   return (
     <div className="card">
-      <strong>Lista ordini</strong>
+      <strong>{tr('Lista ordini')}</strong>
       {scoperte.length > 0 && (
         <div className="muted small" style={{ marginTop: 2 }}>
           {scoperte.length === 1
-            ? '1 consegna senza documento'
-            : `${scoperte.length} consegne senza documento`}
+            ? tr('1 consegna senza documento')
+            : tr('{n} consegne senza documento', { n: scoperte.length })}
         </div>
       )}
       {/* IL FILTRO PER STATO, col numero sul chip: «quanti me ne restano da
@@ -138,14 +139,14 @@ export default function OrdiniListaPanel({
             aria-pressed={filtro === f.id}
             onClick={() => setFiltro(f.id)}
           >
-            {f.label} ({conta[f.id] ?? 0})
+            {trSegnato(f.label)} ({conta[f.id] ?? 0})
           </button>
         ))}
       </div>
 
       {visibili.length === 0 ? (
         <p className="muted small" style={{ marginTop: 10 }}>
-          Nessun ordine in questo stato.
+          {tr('Nessun ordine in questo stato.')}
         </p>
       ) : (
         <div className="inv-list" style={{ marginTop: 8 }}>
@@ -240,7 +241,12 @@ function RigaOrdine({
   // il colore si prendono dalla prima fetta quando l'ordine non li porta.
   const fette = useMemo(() => fetteFornitore(ordine, { suppliers }), [ordine, suppliers])
   const capo = fette[0] || {}
-  const nome = ordine.supplier_name || capo.supplier_name || 'Senza fornitore'
+  // Il nome del fornitore è un DATO; «Senza fornitore» è solo come lo si
+  // legge a schermo. Il modello ne riceve il dato: la parola tradotta, come
+  // testo di partenza del campo, finirebbe in Firestore come nome del modello
+  // («No supplier» in archivio, scelto da un dispositivo in inglese).
+  const fornitore = ordine.supplier_name || capo.supplier_name || ''
+  const nome = fornitore || tr('Senza fornitore')
   const stato = statoOrdineDi(ordine)
   const chiuso = ordineChiuso(ordine)
   const pagato = ordinePagato(ordine, fattura)
@@ -257,17 +263,21 @@ function RigaOrdine({
           type="button"
           className="btn ghost grow riepilogo-nome"
           aria-expanded={aperto}
-          aria-label={`L’ordine di ${nome} del ${data}`}
+          aria-label={tr('L’ordine di {nome} del {data}', { nome, data })}
           onClick={onApri}
         >
           <span className="inv-row-name">{nome}</span>
           <span className="muted small">
-            {data} · {ordine.lines.length} art. · {formatPrice(ordine.total_gross)}
+            {tr('{data} · {n} art. · {totale}', {
+              data,
+              n: ordine.lines.length,
+              totale: formatPrice(ordine.total_gross),
+            })}
           </span>
         </button>
         <span className="row ordine-stati" style={{ gap: 4 }}>
-          <span className={`pill small stato-${stato}`}>{ETICHETTA_STATO[stato]}</span>
-          {chiuso && <span className="pill small stato-chiuso">{ETICHETTA_STATO.chiuso}</span>}
+          <span className={`pill small stato-${stato}`}>{trSegnato(ETICHETTA_STATO[stato])}</span>
+          {chiuso && <span className="pill small stato-chiuso">{trSegnato(ETICHETTA_STATO.chiuso)}</span>}
           {/* IL PAGAMENTO È UN ASSE A PARTE, e il chip lo dice accanto allo
               stato della merce invece che al posto suo: un ordine pagato in
               anticipo resta «richiesto», e la merce che non è arrivata deve
@@ -276,28 +286,36 @@ function RigaOrdine({
             <button
               type="button"
               className={`chip ${pagato ? 'active' : ''}`}
-              title={pagato ? 'Segna come da pagare' : 'Segna pagato'}
+              title={pagato ? tr('Segna come da pagare') : tr('Segna pagato')}
               aria-label={
                 pagato
-                  ? `Segna da pagare il documento di ${nome}`
-                  : `Segna pagato il documento di ${nome}`
+                  ? tr('Segna da pagare il documento di {nome}', { nome })
+                  : tr('Segna pagato il documento di {nome}', { nome })
               }
               onClick={() => onPagata?.(fattura, !pagato)}
             >
-              {pagato ? <><Icona nome="fatto" gruppo="tasti" /> pagato</> : <><Icona nome="attesa" gruppo="tasti" /> da pagare</>}
+              {pagato ? (
+                <>
+                  <Icona nome="fatto" gruppo="tasti" /> {tr('pagato')}
+                </>
+              ) : (
+                <>
+                  <Icona nome="attesa" gruppo="tasti" /> {tr('da pagare')}
+                </>
+              )}
             </button>
           ) : (
             // IL BUCO SI SEGNALA SOLO DOVE C'È (REQ-MAG-031): la merce è
             // arrivata e il documento no. Su un ordine ancora richiesto lì
             // non è arrivato niente, e segnalarlo insegnerebbe a ignorare il
             // segnale; su una bozza non è mai partito niente.
-            stato === 'consegnato' && <span className="badge-low">senza documento</span>
+            stato === 'consegnato' && <span className="badge-low">{tr('senza documento')}</span>
           )}
         </span>
         <span className="row" style={{ gap: 4 }}>
           {stato === 'bozza' && (
             <button className="btn small" onClick={onConferma}>
-              Manda l’ordine
+              {tr('Manda l’ordine')}
             </button>
           )}
           {stato === 'richiesto' && (
@@ -309,35 +327,35 @@ function RigaOrdine({
               disabled={bloccato}
               title={
                 bloccato
-                  ? 'Prima va aggiornato il magazzino alla nuova gestione (Magazzino → il banner in alto).'
+                  ? tr('Prima va aggiornato il magazzino alla nuova gestione (Magazzino → il banner in alto).')
                   : undefined
               }
             >
-              <Icona nome="magazzino" gruppo="tasti" /> Consegnato
+              <Icona nome="magazzino" gruppo="tasti" /> {tr('tasto|Consegnato')}
             </button>
           )}
           {stato === 'consegnato' && !chiuso && (
             <button
               className="btn small"
               disabled={!!nonSiChiude}
-              title={nonSiChiude || 'Ordinato, ricevuto e fatturato tornano'}
+              title={nonSiChiude || tr('Ordinato, ricevuto e fatturato tornano')}
               onClick={onChiudi}
             >
-              Chiudi
+              {tr('Chiudi')}
             </button>
           )}
           <button
             className="btn ghost small"
-            aria-label={`Invia a ${nome}`}
-            title={`Invia a ${nome}`}
+            aria-label={tr('Invia a {nome}', { nome })}
+            title={tr('Invia a {nome}', { nome })}
             onClick={() => onEmail?.(capo)}
           >
             <Icona nome="email" gruppo="tasti" />
           </button>
           <button
             className="btn ghost small"
-            aria-label={`Copia l’ordine di ${nome}`}
-            title="Copia il testo"
+            aria-label={tr('Copia l’ordine di {nome}', { nome })}
+            title={tr('Copia il testo')}
             onClick={() => onCopia?.(capo)}
           >
             <Icona nome="elenco" gruppo="tasti" />
@@ -345,14 +363,14 @@ function RigaOrdine({
           {onStampa && (
             <button
               className="btn ghost small"
-              aria-label={`Stampa l’ordine di ${nome}`}
-              title="Stampa"
+              aria-label={tr('Stampa l’ordine di {nome}', { nome })}
+              title={tr('Stampa')}
               onClick={() => onStampa(capo)}
             >
               <Icona nome="stampa" gruppo="tasti" />
             </button>
           )}
-          <button className="btn ghost small" title="Elimina l’ordine" onClick={onElimina}>
+          <button className="btn ghost small" title={tr('Elimina l’ordine')} onClick={onElimina}>
             <Icona nome="elimina" gruppo="tasti" />
           </button>
         </span>
@@ -371,7 +389,7 @@ function RigaOrdine({
           <IlProspetto ordine={ordine} fattura={fattura} onAllinea={onAllinea} />
           <LeRigheAperte ordine={ordine} fette={fette} onTogliRiga={onTogliRiga} />
           <LaStoria ordine={ordine} />
-          <SalvaComeModello ordine={ordine} nome={nome} onSalva={onSalvaModello} />
+          <SalvaComeModello ordine={ordine} nome={fornitore} onSalva={onSalvaModello} />
         </div>
       )}
     </div>
@@ -386,7 +404,7 @@ function RigaOrdine({
 // marcata «Nessun documento», e la si paga — se no quei soldi sarebbero gli
 // unici a non comparire nel totale del mese.
 function IlDocumento({ ordine, fattura, fatture, onCollega, onScollega, onGenera }) {
-  const nome = ordine.supplier_name || 'questo fornitore'
+  const nome = ordine.supplier_name || tr('questo fornitore')
   const collegabili = useMemo(
     () =>
       fattureCollegabili(fatture, {
@@ -399,10 +417,10 @@ function IlDocumento({ ordine, fattura, fatture, onCollega, onScollega, onGenera
   if (fattura) {
     return (
       <div className="ordine-blocco">
-        <strong className="small">Il documento</strong>
+        <strong className="small">{tr('Il documento')}</strong>
         <div className="muted small">
-          {fattura.doc_type}
-          {fattura.number ? ` n. ${fattura.number}` : ''} · {fattura.date || '—'} ·{' '}
+          {etichettaTipoDocumento(fattura.doc_type)}
+          {fattura.number ? ` ${tr('n. {n}', { n: fattura.number })}` : ''} · {fattura.date || '—'} ·{' '}
           {/* IL SEGNO SI LEGGE ANCHE QUI (BUG-100): una nota di credito
               scala dei soldi, e la cifra nuda si leggerebbe come una
               spesa in più. */}
@@ -414,23 +432,22 @@ function IlDocumento({ ordine, fattura, fatture, onCollega, onScollega, onGenera
               seconda quanto lui chiede. Il chip lo scrive, perché la cifra
               si legge uguale. */}
           {fatturaGenerata(fattura) && (
-            <span className="pill small">Generata dall’ordine</span>
+            <span className="pill small">{tr('Generata dall’ordine')}</span>
           )}
           {!fattura.attachment && fattura.doc_type !== DOC_NESSUNO && (
-            <span className="badge-low">Senza allegato</span>
+            <span className="badge-low">{tr('Senza allegato')}</span>
           )}
           <button
             className="btn ghost small"
-            aria-label={`Scollega il documento dall’ordine di ${nome}`}
+            aria-label={tr('Scollega il documento dall’ordine di {nome}', { nome })}
             onClick={() => onScollega?.(fattura)}
           >
-            <Icona nome="unisci" gruppo="tasti" />✕ Scollega
+            <Icona nome="unisci" gruppo="tasti" />✕ {tr('Scollega')}
           </button>
         </div>
         {fatturaGenerata(fattura) && (
           <p className="muted small" style={{ marginTop: 4 }}>
-            Il documento del fornitore si allega dallo <strong>Scadenzario</strong>:
-            finché non arriva, questa cifra è quella che ci si aspetta di pagare.
+            {tr('Il documento del fornitore si allega dallo Scadenzario: finché non arriva, questa cifra è quella che ci si aspetta di pagare.')}
           </p>
         )}
       </div>
@@ -438,36 +455,35 @@ function IlDocumento({ ordine, fattura, fatture, onCollega, onScollega, onGenera
   }
   return (
     <div className="ordine-blocco">
-      <strong className="small">Il documento</strong>
+      <strong className="small">{tr('Il documento')}</strong>
       <p className="muted small" style={{ marginTop: 2 }}>
-        Senza documento collegato non si sa se questo ordine è stato pagato:
-        il pagamento sta sul documento, non sull’ordine.
+        {tr('Senza documento collegato non si sa se questo ordine è stato pagato: il pagamento sta sul documento, non sull’ordine.')}
       </p>
       <div className="row" style={{ gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
         <button
           className="btn small"
           disabled={collegabili.length === 0}
-          aria-label={`Associa un documento all’ordine di ${nome}`}
+          aria-label={tr('Associa un documento all’ordine di {nome}', { nome })}
           onClick={onCollega}
         >
-          <Icona nome="coda" gruppo="tasti" /> Associa un documento
+          <Icona nome="coda" gruppo="tasti" /> {tr('Associa un documento')}
         </button>
         <button
           className="btn secondary small"
           disabled={!ordine.supplier_id}
-          aria-label={`Genera il documento dall’ordine di ${nome}`}
+          aria-label={tr('Genera il documento dall’ordine di {nome}', { nome })}
           onClick={() => onGenera?.({})}
         >
-          Genera dall’ordine
+          {tr('Genera dall’ordine')}
         </button>
         <button
           className="btn ghost small"
           disabled={!ordine.supplier_id}
-          title="Crea la riga nello scadenzario e la segna pagata"
-          aria-label={`Registra il pagamento dell’ordine di ${nome} senza documento`}
+          title={tr('Crea la riga nello scadenzario e la segna pagata')}
+          aria-label={tr('Registra il pagamento dell’ordine di {nome} senza documento', { nome })}
           onClick={() => onGenera?.({ doc_type: DOC_NESSUNO, paid: true })}
         >
-          Pagato senza documento
+          {tr('Pagato senza documento')}
         </button>
       </div>
     </div>
@@ -488,14 +504,14 @@ function IlProspetto({ ordine, fattura, onAllinea }) {
 
   return (
     <div className="ordine-blocco">
-      <strong className="small">Ordinato, ricevuto, fatturato</strong>
+      <strong className="small">{tr('Ordinato, ricevuto, fatturato')}</strong>
       <div className="inv-list inv-table ordine-prospetto" style={{ marginTop: 4 }}>
         <div className="inv-thead">
-          <span className="inv-th">Prodotto</span>
-          <span className="inv-th inv-cell-num">Ordinato</span>
-          <span className="inv-th inv-cell-num">Ricevuto</span>
-          <span className="inv-th inv-cell-num">In fattura</span>
-          <span className="inv-th inv-cell-num">Differenza</span>
+          <span className="inv-th">{tr('Prodotto')}</span>
+          <span className="inv-th inv-cell-num">{tr('Ordinato')}</span>
+          <span className="inv-th inv-cell-num">{tr('Ricevuto')}</span>
+          <span className="inv-th inv-cell-num">{tr('In fattura')}</span>
+          <span className="inv-th inv-cell-num">{tr('Differenza')}</span>
         </div>
         {prospetto.map((r) => (
           <div className="inv-row" key={r.item_id || r.name}>
@@ -517,7 +533,7 @@ function IlProspetto({ ordine, fattura, onAllinea }) {
               <div className="muted small ordine-scarti">
                 {r.problemi.map((p) => (
                   <span className="badge-low" key={p}>
-                    {ETICHETTA_PROBLEMA[p]}
+                    {trSegnato(ETICHETTA_PROBLEMA[p])}
                   </span>
                 ))}
               </div>
@@ -526,22 +542,27 @@ function IlProspetto({ ordine, fattura, onAllinea }) {
         ))}
       </div>
       <div className="muted small" style={{ marginTop: 4 }}>
-        Netto ordinato {formatPrice(totali.ordinato)} · ricevuto{' '}
-        {formatPrice(totali.ricevuto)}
-        {totali.fatturato != null ? ` · fatturato ${formatPrice(totali.fatturato)}` : ''}
-        {totali.documento != null ? ` · documento ${formatPrice(totali.documento)}` : ''}
+        {tr('Netto ordinato {ordinato} · ricevuto {ricevuto}', {
+          ordinato: formatPrice(totali.ordinato),
+          ricevuto: formatPrice(totali.ricevuto),
+        })}
+        {totali.fatturato != null
+          ? ` · ${tr('fatturato {importo}', { importo: formatPrice(totali.fatturato) })}`
+          : ''}
+        {totali.documento != null
+          ? ` · ${tr('documento {importo}', { importo: formatPrice(totali.documento) })}`
+          : ''}
       </div>
       {fattura && !fatturaConRighe(fattura) && (
         <p className="muted small" style={{ marginTop: 4 }}>
-          Il documento non ha righe: si confrontano solo gli importi. I prodotti
-          si aggiungono dallo <strong>Scadenzario</strong>.
+          {tr('Il documento non ha righe: si confrontano solo gli importi. I prodotti si aggiungono dallo Scadenzario.')}
         </p>
       )}
       {merce.length > 0 && (
         <p className="muted small" style={{ marginTop: 4 }}>
           {merce.length === 1
-            ? '1 prodotto su cui la merce non torna.'
-            : `${merce.length} prodotti su cui la merce non torna.`}
+            ? tr('1 prodotto su cui la merce non torna.')
+            : tr('{n} prodotti su cui la merce non torna.', { n: merce.length })}
         </p>
       )}
       {/* IL CONFRONTO NON FINISCE IN UN AVVISO (REQ-MAG-035): il prezzo del
@@ -552,14 +573,13 @@ function IlProspetto({ ordine, fattura, onAllinea }) {
       {daAllineare.length > 0 && (
         <div style={{ marginTop: 6 }}>
           <button className="btn small" onClick={() => onAllinea?.(ordine, fattura)}>
-            Allinea il listino al documento ({daAllineare.length})
+            {tr('Allinea il listino al documento ({n})', { n: daAllineare.length })}
           </button>
           <p className="muted small" style={{ marginTop: 2 }}>
             {prezzi.length === 1
-              ? 'Un prezzo è cambiato rispetto all’ordine.'
-              : `${prezzi.length} prezzi sono cambiati rispetto all’ordine.`}{' '}
-            Il prezzo del documento diventa quello di questo fornitore, e la
-            variazione resta nello storico.
+              ? tr('Un prezzo è cambiato rispetto all’ordine.')
+              : tr('{n} prezzi sono cambiati rispetto all’ordine.', { n: prezzi.length })}{' '}
+            {tr('Il prezzo del documento diventa quello di questo fornitore, e la variazione resta nello storico.')}
           </p>
         </div>
       )}
@@ -581,7 +601,7 @@ function LeRigheAperte({ ordine, fette, onTogliRiga }) {
   if (aperte.length === 0) return null
   return (
     <div className="ordine-blocco">
-      <strong className="small">{bozza ? 'Le righe della bozza' : 'Ancora da ricevere'}</strong>
+      <strong className="small">{bozza ? tr('Le righe della bozza') : tr('Ancora da ricevere')}</strong>
       <div className="muted small ordine-righe-storico">
         {aperte.map(({ l, i, fetta }) => (
           <span className="ordine-riga-storico" key={`${l.item_id || 'riga'}-${i}`}>
@@ -592,8 +612,12 @@ function LeRigheAperte({ ordine, fette, onTogliRiga }) {
             <button
               type="button"
               className="btn ghost small"
-              aria-label={`Togli ${l.name} dall’ordine di ${fetta.supplier_name || 'questo fornitore'} del ${String(ordine.created_at || '').slice(0, 10)}`}
-              title="Togli dall’ordine"
+              aria-label={tr('Togli {nome} dall’ordine di {fornitore} del {data}', {
+                nome: l.name,
+                fornitore: fetta.supplier_name || tr('questo fornitore'),
+                data: String(ordine.created_at || '').slice(0, 10),
+              })}
+              title={tr('Togli dall’ordine')}
               onClick={() => onTogliRiga?.(ordine, { indice: i, riga: l, fetta })}
             >
               ✕
@@ -616,11 +640,12 @@ function LaStoria({ ordine }) {
   if (voci.length === 0) return null
   return (
     <div className="ordine-blocco">
-      <strong className="small">Cosa è successo</strong>
+      <strong className="small">{tr('Cosa è successo')}</strong>
       <ul className="ordine-storia">
         {[...voci].reverse().map((v, k) => (
           <li key={`${v.at}-${k}`}>
-            <span className="muted small">{giornoEOra(v.at)}</span> {descriviMovimento(v)}
+            <span className="muted small">{giornoEOra(v.at)}</span>{' '}
+            {descriviMovimento(v, { etichettaTipo: etichettaTipoDocumento })}
           </li>
         ))}
       </ul>
@@ -646,7 +671,7 @@ function SalvaComeModello({ ordine, nome, onSalva }) {
   if (!onSalva || (ordine.lines || []).length === 0) return null
   return (
     <div className="ordine-blocco">
-      <strong className="small">Rifarlo uguale</strong>
+      <strong className="small">{tr('Rifarlo uguale')}</strong>
       {!aperto ? (
         <p className="muted small" style={{ marginTop: 4 }}>
           <button
@@ -657,10 +682,9 @@ function SalvaComeModello({ ordine, nome, onSalva }) {
               setAperto(true)
             }}
           >
-            Salva come modello
+            {tr('Salva come modello')}
           </button>{' '}
-          Il modello conserva i prodotti, il fornitore e le quantità: i prezzi
-          restano quelli del listino.
+          {tr('Il modello conserva i prodotti, il fornitore e le quantità: i prezzi restano quelli del listino.')}
         </p>
       ) : (
         <form
@@ -675,7 +699,7 @@ function SalvaComeModello({ ordine, nome, onSalva }) {
           }}
         >
           <label htmlFor={`modello-${ordine.id}`} className="muted small">
-            Nome del modello
+            {tr('Nome del modello')}
           </label>
           <input
             id={`modello-${ordine.id}`}
@@ -685,10 +709,10 @@ function SalvaComeModello({ ordine, nome, onSalva }) {
             onChange={(e) => setTesto(e.target.value)}
           />
           <button type="submit" className="btn small" disabled={!testo.trim()}>
-            Salva
+            {tr('Salva')}
           </button>
           <button type="button" className="btn ghost small" onClick={() => setAperto(false)}>
-            Annulla
+            {tr('Annulla')}
           </button>
         </form>
       )}
@@ -704,7 +728,7 @@ function SalvaComeModello({ ordine, nome, onSalva }) {
 // è non farla comparire, non spiegarlo dopo (REQ-MAG-031).
 function DialogoFattura({ ordine, fatture, onCancel, onConfirm }) {
   const [scelta, setScelta] = useState('')
-  const nome = ordine.supplier_name || 'questo fornitore'
+  const nome = ordine.supplier_name || tr('questo fornitore')
   const candidate = useMemo(
     () =>
       fattureCollegabili(fatture, {
@@ -717,21 +741,21 @@ function DialogoFattura({ ordine, fatture, onCancel, onConfirm }) {
   return (
     <div className="overlay confirm-overlay" onClick={onCancel}>
       <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
-        <h3 style={{ marginTop: 0 }}><Icona nome="coda" gruppo="tasti" /> Il documento di {nome}</h3>
+        <h3 style={{ marginTop: 0 }}>
+          <Icona nome="coda" gruppo="tasti" /> {tr('Il documento di {nome}', { nome })}
+        </h3>
         <p className="muted">
-          Si collega un documento di {nome} a questo ordine: quello che ha
-          mandato lui, per la merce che ha portato lui.
+          {tr('Si collega un documento di {nome} a questo ordine: quello che ha mandato lui, per la merce che ha portato lui.', { nome })}
         </p>
         {candidate.length === 0 ? (
           <p className="muted small">
-            Nessun documento di {nome} da collegare. Si scrive nello{' '}
-            <strong>Scadenzario</strong>, oppure si genera dall’ordine.
+            {tr('Nessun documento di {nome} da collegare. Si scrive nello Scadenzario, oppure si genera dall’ordine.', { nome })}
           </p>
         ) : (
           <>
-            <label htmlFor="pf-fattura">Documento</label>
+            <label htmlFor="pf-fattura">{tr('Documento')}</label>
             <select id="pf-fattura" value={scelta} onChange={(e) => setScelta(e.target.value)}>
-              <option value="">— Scegli un documento —</option>
+              <option value="">{tr('— Scegli un documento —')}</option>
               {candidate.map((f) => (
                 <option key={f.id} value={f.id}>
                   {f.number ? `#${f.number} · ` : ''}
@@ -742,9 +766,11 @@ function DialogoFattura({ ordine, fatture, onCancel, onConfirm }) {
           </>
         )}
         <div className="row" style={{ gap: 10, marginTop: 16 }}>
-          <button className="btn ghost grow" onClick={onCancel}>Annulla</button>
+          <button className="btn ghost grow" onClick={onCancel}>
+            {tr('Annulla')}
+          </button>
           <button className="btn grow" disabled={!scelta} onClick={() => onConfirm(scelta)}>
-            Collega
+            {tr('Collega')}
           </button>
         </div>
       </div>
@@ -787,7 +813,7 @@ function DialogoConsegna({ ordine, suppliers, onCancel, onConfirm }) {
   const [prezzi, setPrezzi] = useState({})
   const [quantita, setQuantita] = useState({})
   const fette = useMemo(() => fetteFornitore(ordine, { suppliers }), [ordine, suppliers])
-  const nome = ordine.supplier_name || fette[0]?.supplier_name || 'questo fornitore'
+  const nome = ordine.supplier_name || fette[0]?.supplier_name || tr('questo fornitore')
   const righe = useMemo(
     () =>
       fette.flatMap((f) =>
@@ -816,12 +842,11 @@ function DialogoConsegna({ ordine, suppliers, onCancel, onConfirm }) {
   return (
     <div className="overlay confirm-overlay" onClick={onCancel}>
       <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
-        <h3 style={{ marginTop: 0 }}><Icona nome="magazzino" gruppo="tasti" /> Merce arrivata da {nome}?</h3>
+        <h3 style={{ marginTop: 0 }}>
+          <Icona nome="magazzino" gruppo="tasti" /> {tr('Merce arrivata da {nome}?', { nome })}
+        </h3>
         <p className="muted">
-          Correggi i pezzi con quelli che sono arrivati davvero: il magazzino
-          si carica su quelli. Togli la spunta a quello che non è arrivato
-          per niente — resta in attesa e si carica quando arriva. I prezzi
-          come sono sul documento diventano il prezzo di questo fornitore.
+          {tr('Correggi i pezzi con quelli che sono arrivati davvero: il magazzino si carica su quelli. Togli la spunta a quello che non è arrivato per niente — resta in attesa e si carica quando arriva. I prezzi come sono sul documento diventano il prezzo di questo fornitore.')}
         </p>
         {righe.length > 1 && (
           <button
@@ -829,7 +854,7 @@ function DialogoConsegna({ ordine, suppliers, onCancel, onConfirm }) {
             className="btn ghost small"
             onClick={() => setScelti(tutte ? new Set() : new Set(righe.map((r) => r.i)))}
           >
-            {tutte ? 'Togli tutte le spunte' : 'Spunta tutte'}
+            {tutte ? tr('Togli tutte le spunte') : tr('Spunta tutte')}
           </button>
         )}
         {righe.map(({ l, i }) => (
@@ -837,29 +862,29 @@ function DialogoConsegna({ ordine, suppliers, onCancel, onConfirm }) {
             <input
               type="checkbox"
               checked={scelti.has(i)}
-              aria-label={`Carica ${l.name}`}
+              aria-label={tr('Carica {nome}', { nome: l.name })}
               onChange={(e) => spunta(i, e.target.checked)}
             />
             <span className="consegna-nome">{l.name}</span>
-            <strong className="consegna-totale" aria-label={`Totale di ${l.name}`}>
+            <strong className="consegna-totale" aria-label={tr('Totale di {nome}', { nome: l.name })}>
               {formatPrice((Number(qta(i, l)) || 0) * (Number(prezzo(i, l)) || 0))}
             </strong>
             <span className="consegna-campi">
-              <span className="muted small">chiesti {l.qty_packages}</span>
+              <span className="muted small">{tr('chiesti {n}', { n: l.qty_packages })}</span>
               <input
                 type="number"
                 step="1"
                 min="0"
-                aria-label={`Pezzi ricevuti di ${l.name}`}
+                aria-label={tr('Pezzi ricevuti di {nome}', { nome: l.name })}
                 value={qta(i, l)}
                 onChange={(e) => setQuantita((q) => ({ ...q, [i]: e.target.value }))}
               />
-              <span className="muted small">pz ×</span>
+              <span className="muted small">{tr('pz ×')}</span>
               <input
                 type="number"
                 step="0.01"
                 min="0"
-                aria-label={`Prezzo di ${l.name}`}
+                aria-label={tr('Prezzo di {nome}', { nome: l.name })}
                 value={prezzo(i, l)}
                 onChange={(e) => setPrezzi((p) => ({ ...p, [i]: e.target.value }))}
               />
@@ -868,17 +893,21 @@ function DialogoConsegna({ ordine, suppliers, onCancel, onConfirm }) {
           </div>
         ))}
         <div className="row between" style={{ marginTop: 10 }}>
-          <span className="muted">Totale netto</span>
+          <span className="muted">{tr('Totale netto')}</span>
           <strong>{formatPrice(totale)}</strong>
         </div>
         <div className="row" style={{ gap: 10, marginTop: 16 }}>
-          <button className="btn ghost grow" onClick={onCancel}>Annulla</button>
+          <button className="btn ghost grow" onClick={onCancel}>
+            {tr('Annulla')}
+          </button>
           <button
             className="btn grow"
             disabled={scelti.size === 0}
             onClick={() => onConfirm({ indici: [...scelti], prezzi, quantita })}
           >
-            {tutte ? `Carica tutti (${scelti.size})` : `Carica i selezionati (${scelti.size})`}
+            {tutte
+              ? tr('Carica tutti ({n})', { n: scelti.size })
+              : tr('Carica i selezionati ({n})', { n: scelti.size })}
           </button>
         </div>
       </div>

@@ -43,6 +43,7 @@ import ConfirmDialog from './ConfirmDialog.jsx'
 import Icona from './Icona.jsx'
 import AiutoCampo from './AiutoCampo.jsx'
 import IngredientiVoce from './IngredientiVoce.jsx'
+import { tr, trSegnato } from '../lib/lingua.js'
 
 // LA STRUTTURA DEL MENÙ DEI CLIENTI, DAL GESTIONALE (REQ-MENU-025): il
 // menù del tavolo com'è, sezione per sezione, coi testi modificabili dove
@@ -112,15 +113,17 @@ function Testo({ etichetta, origine, ripristina, proprio, base = '', salva, area
 }
 
 // Il tasto che toglie un ritocco e torna al testo della scheda.
-function Ripristina({ cosa, onClick }) {
+// L'etichetta arriva intera, una frase per campo: «Riporta il nome come la
+// scheda» composto a pezzi non si tradurrebbe.
+function Ripristina({ etichetta, onClick }) {
   return (
     <button
       type="button"
       className="btn ghost small wys-ripristina"
-      aria-label={`Riporta ${cosa} come la scheda`}
+      aria-label={etichetta}
       onClick={onClick}
     >
-      ↺ come la scheda
+      ↺ {tr('come la scheda')}
     </button>
   )
 }
@@ -129,7 +132,7 @@ function Ripristina({ cosa, onClick }) {
 // (strutturaMenu.js, perCategoria): sono centinaia, e chi cerca «Gin Mare»
 // lo cerca fra i gin. Calcolati una volta per tutto l'editor.
 const gruppiCassa = (drinks, categories) =>
-  perCategoria(drinks, categories, NON_CATEGORIZZATI).map((g) => ({ nome: g.nome, prodotti: [...g.prodotti].sort(perNome) }))
+  perCategoria(drinks, categories, trSegnato(NON_CATEGORIZZATI)).map((g) => ({ nome: g.nome, prodotti: [...g.prodotti].sort(perNome) }))
 
 // La scelta vuota è un invito («+ Aggiungi…», «Scegliere un prodotto»), non
 // un valore: una voce senza prodotto non si può fare (REQ-MENU-025).
@@ -138,7 +141,7 @@ function TendinaCassa({ valore, gruppi, onChange, vuota, ...props }) {
     <select value={valore || ''} onChange={(e) => e.target.value && onChange(e.target.value)} {...props}>
       {(vuota || !valore) && (
         <option value="" disabled={Boolean(valore)}>
-          {vuota || '— Scegliere un prodotto della cassa —'}
+          {vuota || tr('— Scegliere un prodotto della cassa —')}
         </option>
       )}
       {gruppi.map((g) => (
@@ -146,7 +149,7 @@ function TendinaCassa({ valore, gruppi, onChange, vuota, ...props }) {
           {g.prodotti.map((d) => (
             <option key={d.id} value={d.id}>
               {d.name} · {formatPrice(d.price)}
-              {d.available ? '' : ' (fuori menù)'}
+              {d.available ? '' : ` (${tr('fuori menù')})`}
             </option>
           ))}
         </optgroup>
@@ -174,9 +177,9 @@ function AggiungiA({ drink, carta, sezioni, ...props }) {
   return (
     <SceltaSezione
       sezioni={sezioni}
-      invito="Aggiungi a una sezione…"
+      invito={tr('Aggiungi a una sezione…')}
       onScegli={(sezione_id) => creaVoceCarta({ sezione_id, drink_id: drink.id, ordine: inFondo(carta, sezione_id) })}
-      aria-label={`Aggiungi ${drink.name} a una sezione`}
+      aria-label={tr('Aggiungi {nome} a una sezione', { nome: drink.name })}
       {...props}
     />
   )
@@ -196,15 +199,15 @@ export function InStruttura({ drink, carta }) {
   const mie = (carta.voci || []).filter((v) => v.drink_id === drink.id && nomeDi.has(v.sezione_id))
   return (
     <div style={{ margin: '6px 0' }}>
-      <span className="muted small">Menù dei clienti:</span>{' '}
-      {!mie.length && <span className="small struttura-avviso-in-linea">non compare</span>}
+      <span className="muted small">{tr('Menù dei clienti:')}</span>{' '}
+      {!mie.length && <span className="small struttura-avviso-in-linea">{tr('non compare')}</span>}
       {mie.map((v) => (
         <span className="chip" key={v.id} style={{ marginRight: 4 }}>
           {nomeDi.get(v.sezione_id)}
           <button
             type="button"
             className="btn ghost small"
-            aria-label={`Togli ${drink.name} da ${nomeDi.get(v.sezione_id)}`}
+            aria-label={tr('Togli {nome} da {sezione}', { nome: drink.name, sezione: nomeDi.get(v.sezione_id) })}
             onClick={() => eliminaVoceCarta(v.id)}
           >
             ✕
@@ -229,8 +232,8 @@ function CategoriaVoce({ voce, drink, categorieCassa = [], categorieMagazzino = 
   return (
     <div className="wys-campo">
       <div className="wys-etichetta">
-        <label htmlFor={id}>Categoria</label>
-        <span className={`wys-origine${scritta ? ' proprio' : ''}`}>{scritta ? 'solo in questa voce' : 'dal prodotto della cassa'}</span>
+        <label htmlFor={id}>{tr('Categoria')}</label>
+        <span className={`wys-origine${scritta ? ' proprio' : ''}`}>{scritta ? tr('solo in questa voce') : tr('dal prodotto della cassa')}</span>
       </div>
       <select
         id={id}
@@ -246,29 +249,29 @@ function CategoriaVoce({ voce, drink, categorieCassa = [], categorieMagazzino = 
           if (c) salva({ tipo, id: c.id, nome: c.name })
         }}
       >
-        <option value="">{dalProdotto ? `Dal prodotto: ${dalProdotto}` : 'Nessuna'}</option>
-        <optgroup label="Categorie della cassa">
+        <option value="">{dalProdotto ? tr('Dal prodotto: {categoria}', { categoria: dalProdotto }) : tr('categoria|Nessuna')}</option>
+        <optgroup label={tr('Categorie della cassa')}>
           {categorieCassa.map((c) => (
             <option key={c.id} value={`categoria_cassa:${c.id}`}>
               {c.name}
             </option>
           ))}
         </optgroup>
-        <optgroup label="Categorie di magazzino">
+        <optgroup label={tr('Categorie di magazzino')}>
           {categorieMagazzino.map((c) => (
             <option key={c.id} value={`categoria:${c.id}`}>
               {c.name}
             </option>
           ))}
         </optgroup>
-        <option value="testo">Scritta a mano…</option>
+        <option value="testo">{tr('Scritta a mano…')}</option>
       </select>
       {libera && (
         <input
           className="wys"
           defaultValue={scritta?.tipo === 'testo' ? scritta.nome : ''}
-          placeholder="Nome della categoria"
-          aria-label="Categoria scritta a mano"
+          placeholder={tr('Nome della categoria')}
+          aria-label={tr('Categoria scritta a mano')}
           onBlur={(e) => {
             const nome = e.target.value.trim()
             salva(nome ? { tipo: 'testo', id: null, nome } : null)
@@ -301,60 +304,63 @@ function RigaVoce({ voce, drink, snella, gruppi, sezioni, aperta, onApri, scelta
   const nome = nomeVoce(voce, cliente)
   const altre = sezioni.filter((s) => s.id !== voce.sezione_id)
   const avviso = !drink
-    ? 'Nessun prodotto della cassa collegato: la voce non compare al tavolo.'
+    ? tr('Nessun prodotto della cassa collegato: la voce non compare al tavolo.')
     : !drink.available
-      ? 'Prodotto fuori menù: la voce non compare al tavolo finché non torna disponibile.'
+      ? tr('Prodotto fuori menù: la voce non compare al tavolo finché non torna disponibile.')
       : null
   const dettaglio = aperta || !drink
-  const campo = (chiave, etichetta, cosa, base, extra) => (
+  // Le etichette arrivano già intere (etichetta del campo, del campo nella
+  // sezione e del tasto che lo riporta come la scheda): composte a pezzi non
+  // si tradurrebbero.
+  const campo = (chiave, { etichetta, nellaSezione, riporta }, base, extra) => (
     <Testo
       etichetta={etichetta}
-      origine={testo(voce[chiave]) ? 'solo in questa sezione' : drink ? 'dalla scheda prodotto' : ''}
+      origine={testo(voce[chiave]) ? tr('solo in questa sezione') : drink ? tr('dalla scheda prodotto') : ''}
       ripristina={
-        testo(voce[chiave]) ? <Ripristina cosa={cosa} onClick={() => aggiornaVoceCarta(voce.id, { [chiave]: '' })} /> : null
+        testo(voce[chiave]) ? <Ripristina etichetta={riporta} onClick={() => aggiornaVoceCarta(voce.id, { [chiave]: '' })} /> : null
       }
       proprio={voce[chiave]}
       base={base}
       salva={(v) => aggiornaVoceCarta(voce.id, { [chiave]: v })}
-      aria-label={`${etichetta} nella sezione`}
+      aria-label={nellaSezione}
       {...extra}
     />
   )
   return (
     <div className={`inv-row struttura-riga${dettaglio ? ' open' : ''}${avviso ? ' da-guardare' : ''}`}>
       <div className="inv-row-main statica struttura-riga-main">
-        <input type="checkbox" checked={scelta} onChange={onScegli} aria-label={`Seleziona ${nome}`} />
+        <input type="checkbox" checked={scelta} onChange={onScegli} aria-label={tr('Seleziona {nome}', { nome })} />
         <button
           type="button"
           className="struttura-riga-nome"
           aria-expanded={dettaglio}
-          aria-label={`${dettaglio ? 'Chiudi' : 'Apri'} ${nome}`}
+          aria-label={dettaglio ? tr('Chiudi {nome}', { nome }) : tr('Apri {nome}', { nome })}
           onClick={onApri}
           disabled={!drink}
         >
-          <span className="inv-row-name">{nome || 'Senza nome'}</span>
+          <span className="inv-row-name">{nome || tr('Senza nome')}</span>
           {/* Il nome della cassa, quando al tavolo se ne legge un altro: è
               quello con cui la voce si cerca e arriva al banco. */}
           {drink && nome !== drink.name && <span className="muted small inv-row-cat">{drink.name}</span>}
-          {avviso && <span className="small struttura-avviso-in-linea">{drink ? 'fuori menù' : 'senza prodotto'}</span>}
+          {avviso && <span className="small struttura-avviso-in-linea">{drink ? tr('fuori menù') : tr('senza prodotto')}</span>}
         </button>
         <span className="inv-row-price">{drink ? formatPrice(drink.price) : '—'}</span>
         <div className="struttura-tasti">
           {altre.length > 0 && (
             <SceltaSezione
               sezioni={altre}
-              invito="Sposta in…"
+              invito={tr('Sposta in…')}
               onScegli={spostaIn}
-              aria-label={`Sposta ${nome} in un’altra sezione`}
+              aria-label={tr('Sposta {nome} in un’altra sezione', { nome })}
             />
           )}
-          <button className="btn ghost small" aria-label="Voce su" disabled={primo} onClick={() => sposta(-1)}>
+          <button className="btn ghost small" aria-label={tr('Voce su')} disabled={primo} onClick={() => sposta(-1)}>
             ↑
           </button>
-          <button className="btn ghost small" aria-label="Voce giù" disabled={ultimo} onClick={() => sposta(1)}>
+          <button className="btn ghost small" aria-label={tr('Voce giù')} disabled={ultimo} onClick={() => sposta(1)}>
             ↓
           </button>
-          <button className="btn ghost small" aria-label={`Togli ${nome} dalla sezione`} onClick={() => eliminaVoceCarta(voce.id)}>
+          <button className="btn ghost small" aria-label={tr('Togli {nome} dalla sezione', { nome })} onClick={() => eliminaVoceCarta(voce.id)}>
             <Icona nome="elimina" gruppo="tasti" />
           </button>
         </div>
@@ -362,30 +368,41 @@ function RigaVoce({ voce, drink, snella, gruppi, sezioni, aperta, onApri, scelta
       {dettaglio && (
         <div className="inv-row-dettaglio">
           {avviso && <p className="struttura-avviso small">{avviso}</p>}
-          {campo('nome', 'Nome', 'il nome', cliente?.name, { placeholder: 'Nome letto dal cliente', className: 'wys-nome' })}
+          {campo(
+            'nome',
+            { etichetta: tr('Nome'), nellaSezione: tr('Nome nella sezione'), riporta: tr('Riporta il nome come la scheda') },
+            cliente?.name,
+            { placeholder: tr('Nome letto dal cliente'), className: 'wys-nome' }
+          )}
           {!snella && (
             <>
-              {campo('descrizione', 'Descrizione', 'la descrizione', drink?.description, {
-                area: true,
-                placeholder: 'Provenienza, carattere, servizio',
-              })}
+              {campo(
+                'descrizione',
+                {
+                  etichetta: tr('Descrizione'),
+                  nellaSezione: tr('Descrizione nella sezione'),
+                  riporta: tr('Riporta la descrizione come la scheda'),
+                },
+                drink?.description,
+                { area: true, placeholder: tr('Provenienza, carattere, servizio') }
+              )}
               {/* A etichette (REQ-MENU-040): la ricetta propone, non decide. */}
               <IngredientiVoce voce={voce} drink={drink} {...magazzino} />
             </>
           )}
           <CategoriaVoce voce={voce} drink={drink} categorieCassa={magazzino.categorieCassa} categorieMagazzino={magazzino.categorieMagazzino} />
           <div className="struttura-collegamento">
-            <span className="wys-etichetta"><Icona nome="unisci" gruppo="tasti" /> Prodotto della cassa</span>
+            <span className="wys-etichetta"><Icona nome="unisci" gruppo="tasti" /> {tr('Prodotto della cassa')}</span>
             {drink && !cambia ? (
               <div className="struttura-prodotto">
                 <span className="small">
                   {drink.name} · {formatPrice(drink.price)}
                 </span>
-                <button className="btn ghost small" aria-label={`Cambia il prodotto della cassa di ${nome}`} onClick={() => setCambia(true)}>
-                  Cambia
+                <button className="btn ghost small" aria-label={tr('Cambia il prodotto della cassa di {nome}', { nome })} onClick={() => setCambia(true)}>
+                  {tr('Cambia')}
                 </button>
-                <button className="btn ghost small" aria-label={`Apri la scheda di ${drink.name}`} onClick={() => onApriScheda?.(drink, voce.sezione_id)}>
-                  Scheda
+                <button className="btn ghost small" aria-label={tr('Apri la scheda di {nome}', { nome: drink.name })} onClick={() => onApriScheda?.(drink, voce.sezione_id)}>
+                  {tr('Scheda')}
                 </button>
               </div>
             ) : (
@@ -398,7 +415,7 @@ function RigaVoce({ voce, drink, snella, gruppi, sezioni, aperta, onApri, scelta
                 }}
                 onBlur={() => setCambia(false)}
                 autoFocus={cambia}
-                aria-label="Prodotto della cassa"
+                aria-label={tr('Prodotto della cassa')}
               />
             )}
           </div>
@@ -416,10 +433,10 @@ function FuoriDalMenu({ prodotti, carta, sezioni, categorieCassa = [] }) {
   return (
     <details className="card struttura-fuori" open={prodotti.length <= 8}>
       <summary>
-        <strong>Prodotti della cassa non presenti nel menù dei clienti ({prodotti.length})</strong>
+        <strong>{tr('Prodotti della cassa non presenti nel menù dei clienti ({n})', { n: prodotti.length })}</strong>
       </summary>
       <p className="muted small" style={{ margin: '6px 0' }}>
-        Al tavolo non si vedono. Un prodotto aggiunto in cassa dopo la personalizzazione compare qui.
+        {tr('Al tavolo non si vedono. Un prodotto aggiunto in cassa dopo la personalizzazione compare qui.')}
       </p>
       {prodotti.map((d) => (
         <div className="struttura-fuori-riga" key={d.id}>
@@ -427,7 +444,7 @@ function FuoriDalMenu({ prodotti, carta, sezioni, categorieCassa = [] }) {
             {d.name}{' '}
             <span className="muted small">
               · {formatPrice(d.price)}
-              {d.available ? '' : ' · fuori menù'}
+              {d.available ? '' : ` · ${tr('fuori menù')}`}
             </span>
           </span>
           {/* LA SEZIONE DELLA SUA CATEGORIA, se c'è (REQ-MENU-041): un tocco. */}
@@ -439,7 +456,7 @@ function FuoriDalMenu({ prodotti, carta, sezioni, categorieCassa = [] }) {
                 className="btn ghost small"
                 onClick={() => creaVoceCarta({ sezione_id: sua.id, drink_id: d.id, ordine: inFondo(carta, sua.id) })}
               >
-                In «{nomeSezione(sua)}»
+                {tr('In «{sezione}»', { sezione: nomeSezione(sua) })}
               </button>
             ) : null
           })()}
@@ -465,7 +482,7 @@ function NuovaSezione({ carta }) {
   return (
     <div className="card" style={{ marginTop: 8 }}>
       <div className="wys-etichetta">
-        <label htmlFor="struttura-nuova">Nuova sezione</label>
+        <label htmlFor="struttura-nuova">{tr('Nuova sezione')}</label>
       </div>
       <div className="row" style={{ gap: 8 }}>
         <input
@@ -473,14 +490,14 @@ function NuovaSezione({ carta }) {
           value={nuova}
           onChange={(e) => setNuova(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && aggiungi()}
-          placeholder="Signature, Suggeriti dallo staff, Gin…"
-          aria-label="Nome della nuova sezione"
+          placeholder={tr('Signature, Suggeriti dallo staff, Gin…')}
+          aria-label={tr('Nome della nuova sezione')}
         />
         <button className="btn small" onClick={aggiungi}>
-          Aggiungi
+          {tr('Aggiungi')}
         </button>
       </div>
-      <AiutoCampo style={{ margin: '4px 0 0' }}>Si aggiunge in cima al menù.</AiutoCampo>
+      <AiutoCampo style={{ margin: '4px 0 0' }}>{tr('Si aggiunge in cima al menù.')}</AiutoCampo>
     </div>
   )
 }
@@ -508,9 +525,9 @@ function GruppoSezione({ sezione }) {
         if ((nuovo || '') !== scritto) aggiornaSezioneCarta(sezione.id, { gruppo: nuovo })
       }}
       onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-      placeholder="Gruppo"
+      placeholder={tr('Gruppo')}
       maxLength={40}
-      aria-label={`Gruppo della sezione ${nomeSezione(sezione)}`}
+      aria-label={tr('Gruppo della sezione {nome}', { nome: nomeSezione(sezione) })}
     />
   )
 }
@@ -582,20 +599,24 @@ export default function StrutturaMenu({ carta, drinks, categories, inventory = [
     const copia = prepopolazione(drinks, categories)
     if (!personalizzata) return prepopolaStruttura(copia)
     setConferma({
-      titolo: 'Ripartire dalle voci della cassa?',
-      messaggio: 'Tutte le sezioni e le voci si sostituiscono con una copia del menù della cassa. Sezioni, spostamenti e testi ritoccati andranno persi.',
-      etichetta: 'Riparti',
+      titolo: tr('Ripartire dalle voci della cassa?'),
+      messaggio: tr('Tutte le sezioni e le voci si sostituiscono con una copia del menù della cassa. Sezioni, spostamenti e testi ritoccati andranno persi.'),
+      etichetta: tr('Riparti'),
       azione: () => prepopolaStruttura(copia, { sostituisci: carta }),
     })
   }
 
   function eliminaSezione(s) {
     const voci = vociPer.get(s.id) || []
-    const conVoci = voci.length ? ` e le sue ${voci.length === 1 ? 'voce' : `${voci.length} voci`}` : ''
+    const nome = nomeSezione(s)
     setConferma({
-      titolo: `Eliminare la sezione «${nomeSezione(s)}»${conVoci}?`,
-      messaggio: 'I prodotti della cassa restano.',
-      etichetta: 'Elimina',
+      titolo: !voci.length
+        ? tr('Eliminare la sezione «{nome}»?', { nome })
+        : voci.length === 1
+          ? tr('Eliminare la sezione «{nome}» e la sua voce?', { nome })
+          : tr('Eliminare la sezione «{nome}» e le sue {n} voci?', { nome, n: voci.length }),
+      messaggio: tr('I prodotti della cassa restano.'),
+      etichetta: tr('Elimina'),
       azione: () =>
         eliminaSezioneCarta(
           s.id,
@@ -606,9 +627,9 @@ export default function StrutturaMenu({ carta, drinks, categories, inventory = [
 
   function tornaAlleCategorie() {
     setConferma({
-      titolo: 'Tornare al menù per categorie?',
-      messaggio: 'Si eliminano tutte le sezioni e le voci: il menù dei clienti torna a dividersi per le categorie della cassa.',
-      etichetta: 'Elimina tutto',
+      titolo: tr('Tornare al menù per categorie?'),
+      messaggio: tr('Si eliminano tutte le sezioni e le voci: il menù dei clienti torna a dividersi per le categorie della cassa.'),
+      etichetta: tr('Elimina tutto'),
       azione: () => eliminaStruttura(carta),
     })
   }
@@ -638,64 +659,79 @@ export default function StrutturaMenu({ carta, drinks, categories, inventory = [
   return (
     <div className="struttura-menu">
       <div className="card">
-        <h3 style={{ marginTop: 0 }}><Icona nome="ordina-dal-menu" gruppo="tasti" /> Menù dei clienti</h3>
+        <h3 style={{ marginTop: 0 }}><Icona nome="ordina-dal-menu" gruppo="tasti" /> {tr('Menù dei clienti')}</h3>
         {personalizzata ? (
           <>
             <p className="muted small" style={{ margin: '0 0 8px' }}>
-              Il menù consultato al tavolo, nell'ordine in cui compare. Ogni sezione si apre sulle sue voci; ogni voce si
-              sposta, si riordina o si toglie dalla sua riga, e si apre sui suoi testi. Più voci selezionate si spostano
-              insieme in un'altra sezione. Il personale ordina sempre dal menù della cassa.
+              {tr(
+                "Il menù consultato al tavolo, nell'ordine in cui compare. Ogni sezione si apre sulle sue voci; ogni voce si sposta, si riordina o si toglie dalla sua riga, e si apre sui suoi testi. Più voci selezionate si spostano insieme in un'altra sezione. Il personale ordina sempre dal menù della cassa."
+              )}
             </p>
             <dl className="struttura-legenda small">
-              <dt><Icona nome="unisci" gruppo="tasti" /> Prodotto della cassa</dt>
+              <dt><Icona nome="unisci" gruppo="tasti" /> {tr('Prodotto della cassa')}</dt>
               <dd>
-                Ogni voce è collegata a un prodotto della cassa, da cui prende prezzo e disponibilità; l'ordine arriva al
-                banco con quel prodotto, col nome letto dal cliente nella nota. Lo stesso prodotto può stare in più
-                sezioni.
+                {tr(
+                  "Ogni voce è collegata a un prodotto della cassa, da cui prende prezzo e disponibilità; l'ordine arriva al banco con quel prodotto, col nome letto dal cliente nella nota. Lo stesso prodotto può stare in più sezioni."
+                )}
               </dd>
-              <dt>Sopra ogni campo</dt>
+              <dt>{tr('Sopra ogni campo')}</dt>
               <dd>
-                Da dove viene il testo: dalla scheda prodotto, valido in tutto il menù, o solo da questa sezione.
-                Svuotando il campo, o con «↺», si torna al testo della scheda.
+                {tr(
+                  'Da dove viene il testo: dalla scheda prodotto, valido in tutto il menù, o solo da questa sezione. Svuotando il campo, o con «↺», si torna al testo della scheda.'
+                )}
               </dd>
             </dl>
           </>
         ) : (
+          // IL NOME DELLA SEZIONE È UN DATO, in italiano: è quello che l'app
+          // scriverà davvero e che i clienti leggeranno (NON_CATEGORIZZATI).
+          // Sta in un pezzo suo, dichiarato italiano, dentro la frase tradotta.
           <p className="muted small" style={{ margin: '0 0 8px' }}>
-            Il menù dei clienti è diviso come le categorie della cassa, con tutti i prodotti disponibili. Per
-            personalizzarlo si parte da una copia: una sezione per categoria, con dentro i suoi prodotti già collegati, e
-            una sezione «{NON_CATEGORIZZATI}» per i prodotti senza categoria. Da lì sezioni e voci si aggiungono, si
-            spostano, si rinominano e si nascondono liberamente. Un prodotto aggiunto in cassa in seguito non entra da
-            solo: compare nell'elenco dei prodotti non presenti, da cui si aggiunge.
+            {(() => {
+              const [prima, dopo] = tr(
+                "Il menù dei clienti è diviso come le categorie della cassa, con tutti i prodotti disponibili. Per personalizzarlo si parte da una copia: una sezione per categoria, con dentro i suoi prodotti già collegati, e una sezione «{nome}» per i prodotti senza categoria. Da lì sezioni e voci si aggiungono, si spostano, si rinominano e si nascondono liberamente. Un prodotto aggiunto in cassa in seguito non entra da solo: compare nell'elenco dei prodotti non presenti, da cui si aggiunge."
+              ).split('{nome}')
+              return (
+                <>
+                  {prima}
+                  <span lang="it">{NON_CATEGORIZZATI}</span>
+                  {dopo}
+                </>
+              )
+            })()}
           </p>
         )}
         <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
           <button className={`btn small${personalizzata ? ' secondary' : ''}`} onClick={prepopola}>
-            {personalizzata ? 'Riparti dalle voci della cassa' : 'Prepopola con le voci della cassa'}
+            {personalizzata ? tr('Riparti dalle voci della cassa') : tr('Prepopola con le voci della cassa')}
           </button>
           {personalizzata && (
             <button className="btn ghost small" onClick={() => setRaggruppa(raggruppamentoPerCategoria(carta, drinks, categories))}>
-              Raggruppa per categoria
+              {tr('Raggruppa per categoria')}
             </button>
           )}
           <a className="btn ghost small" href={PERCORSO_ANTEPRIMA} target="_blank" rel="noreferrer">
-            <Icona nome="mostra" gruppo="tasti" /> Anteprima del menù dei clienti
+            <Icona nome="mostra" gruppo="tasti" /> {tr('Anteprima del menù dei clienti')}
           </a>
         </div>
       </div>
 
       {raggruppa && (
         <ConfirmDialog
-          title="Raggruppare per categoria?"
+          title={tr('Raggruppare per categoria?')}
           message={
             raggruppa.spostamenti.length === 0
-              ? 'Ogni voce è già nella sezione della sua categoria: non c’è niente da spostare.'
-              : `${raggruppa.nuove.length ? `Nuove sezioni: ${raggruppa.nuove.map((n) => n.nome).join(', ')}. ` : ''}` +
-                `Voci spostate nella sezione della loro categoria: ${raggruppa.spostamenti.length}. ` +
-                'Le voci senza categoria restano dove sono; testi e ritocchi non cambiano.'
+              ? tr('Ogni voce è già nella sezione della sua categoria: non c’è niente da spostare.')
+              : [
+                  raggruppa.nuove.length ? tr('Nuove sezioni: {nomi}.', { nomi: raggruppa.nuove.map((n) => n.nome).join(', ') }) : null,
+                  tr('Voci spostate nella sezione della loro categoria: {n}.', { n: raggruppa.spostamenti.length }),
+                  tr('Le voci senza categoria restano dove sono; testi e ritocchi non cambiano.'),
+                ]
+                  .filter(Boolean)
+                  .join(' ')
           }
-          confirmLabel="Raggruppa"
-          cancelLabel="Annulla"
+          confirmLabel={tr('Raggruppa')}
+          cancelLabel={tr('Annulla')}
           onCancel={() => setRaggruppa(null)}
           onConfirm={raggruppa.spostamenti.length ? eseguiRaggruppamento : () => setRaggruppa(null)}
         />
@@ -721,32 +757,32 @@ export default function StrutturaMenu({ carta, drinks, categories, inventory = [
               className="struttura-cerca"
               value={cerca}
               onChange={(e) => setCerca(e.target.value)}
-              placeholder="Cerca una voce"
-              aria-label="Cerca una voce nel menù dei clienti"
+              placeholder={tr('Cerca una voce')}
+              aria-label={tr('Cerca una voce nel menù dei clienti')}
             />
             {!cerca && (
               <>
                 <button className="btn ghost small" onClick={() => setAperte(new Set(sezioni.map((s) => s.id)))}>
-                  Apri tutte
+                  {tr('Apri tutte')}
                 </button>
                 <button className="btn ghost small" onClick={() => setAperte(new Set())}>
-                  Chiudi tutte
+                  {tr('Chiudi tutte')}
                 </button>
               </>
             )}
             {scelteValide.length > 0 && (
-              <div className="struttura-scelte" role="group" aria-label="Voci selezionate">
+              <div className="struttura-scelte" role="group" aria-label={tr('Voci selezionate')}>
                 <strong className="small">
-                  {scelteValide.length === 1 ? '1 voce selezionata' : `${scelteValide.length} voci selezionate`}
+                  {scelteValide.length === 1 ? tr('1 voce selezionata') : tr('{n} voci selezionate', { n: scelteValide.length })}
                 </strong>
                 <SceltaSezione
                   sezioni={sezioni}
-                  invito="Sposta in…"
+                  invito={tr('Sposta in…')}
                   onScegli={spostaScelte}
-                  aria-label="Sposta le voci selezionate in un’altra sezione"
+                  aria-label={tr('Sposta le voci selezionate in un’altra sezione')}
                 />
                 <button className="btn ghost small" onClick={() => setScelte(new Set())}>
-                  Deseleziona tutte
+                  {tr('Deseleziona tutte')}
                 </button>
               </div>
             )}
@@ -765,28 +801,28 @@ export default function StrutturaMenu({ carta, drinks, categories, inventory = [
             const tutteScelte = voci.length > 0 && voci.every((v) => scelte.has(v.id))
             const gruppo = nomeGruppo(s)
             return (
-              <section className={`struttura-sezione${s.nascosta ? ' nascosta' : ''}`} key={s.id} aria-label={`Sezione ${nome}`}>
+              <section className={`struttura-sezione${s.nascosta ? ' nascosta' : ''}`} key={s.id} aria-label={tr('Sezione {nome}', { nome })}>
                 <div className="struttura-testa">
                   <button
                     type="button"
                     className="struttura-apri"
                     aria-expanded={aperta}
-                    aria-label={`${aperta ? 'Chiudi' : 'Apri'} la sezione ${nome}`}
+                    aria-label={aperta ? tr('Chiudi la sezione {nome}', { nome }) : tr('Apri la sezione {nome}', { nome })}
                     onClick={() => setAperte((a) => alterna(a, s.id))}
                     disabled={Boolean(trovate)}
                   >
                     <span aria-hidden="true" className="struttura-freccia">{aperta ? '▾' : '▸'}</span>
                     <strong>{nome}</strong>
                     <span className="muted small">
-                      {tutte.length === 1 ? '1 voce' : `${tutte.length} voci`}
-                      {s.nascosta ? ' · nascosta' : ''}
-                      {snella ? ' · snella' : ''}
+                      {tutte.length === 1 ? tr('1 voce') : tr('{n} voci', { n: tutte.length })}
+                      {s.nascosta ? ` · ${tr('nascosta')}` : ''}
+                      {snella ? ` · ${tr('snella')}` : ''}
                       {gruppo ? ` · ${gruppo}` : ''}
                     </span>
                   </button>
                   <button
                     className="btn ghost small"
-                    aria-label="Sezione su"
+                    aria-label={tr('Sezione su')}
                     disabled={idx === 0}
                     onClick={() => riordinaSezioniCarta(riordino(sezioni, idx, -1))}
                   >
@@ -794,7 +830,7 @@ export default function StrutturaMenu({ carta, drinks, categories, inventory = [
                   </button>
                   <button
                     className="btn ghost small"
-                    aria-label="Sezione giù"
+                    aria-label={tr('Sezione giù')}
                     disabled={idx === sezioni.length - 1}
                     onClick={() => riordinaSezioniCarta(riordino(sezioni, idx, 1))}
                   >
@@ -808,11 +844,11 @@ export default function StrutturaMenu({ carta, drinks, categories, inventory = [
                       <select
                         value={s.vista}
                         onChange={(e) => aggiornaSezioneCarta(s.id, { vista: e.target.value })}
-                        aria-label="Visualizzazione della sezione"
+                        aria-label={tr('Visualizzazione della sezione')}
                       >
                         {VISTE_SEZIONE.map((v) => (
                           <option key={v.id} value={v.id}>
-                            {v.label}
+                            {trSegnato(v.label)}
                           </option>
                         ))}
                       </select>
@@ -822,34 +858,38 @@ export default function StrutturaMenu({ carta, drinks, categories, inventory = [
                           checked={s.nascosta}
                           onChange={(e) => aggiornaSezioneCarta(s.id, { nascosta: e.target.checked })}
                         />
-                        Nascosta
+                        {tr('Nascosta')}
                       </label>
                       <GruppoSezione sezione={s} />
                       <span className="grow" />
                       {voci.length > 0 && (
                         <button className="btn ghost small" onClick={() => scegliTutte(voci, tutteScelte)}>
-                          {tutteScelte ? 'Deseleziona tutte' : 'Seleziona tutte'}
+                          {tutteScelte ? tr('Deseleziona tutte') : tr('Seleziona tutte')}
                         </button>
                       )}
-                      <button className="btn ghost small" aria-label={`Elimina la sezione ${nome}`} onClick={() => eliminaSezione(s)}>
+                      <button className="btn ghost small" aria-label={tr('Elimina la sezione {nome}', { nome })} onClick={() => eliminaSezione(s)}>
                         <Icona nome="elimina" gruppo="tasti" />
                       </button>
                     </div>
 
                     <Testo
-                      etichetta="Titolo della sezione"
+                      etichetta={tr('Titolo della sezione')}
                       proprio={s.nome}
                       obbligatorio
                       salva={(valore) => aggiornaSezioneCarta(s.id, { nome: valore })}
-                      aria-label="Titolo della sezione"
+                      aria-label={tr('Titolo della sezione')}
                       className="wys-titolo"
                     />
                     <p className="muted small struttura-nota">
                       {s.nascosta
-                        ? 'Nascosta: al tavolo la sezione non compare.'
-                        : `${visibili} ${visibili === 1 ? 'voce visibile' : 'voci visibili'} al tavolo${
-                            snella ? '; snella: nome e prezzo su una riga, senza immagine, descrizione e ingredienti' : ''
-                          }.`}
+                        ? tr('Nascosta: al tavolo la sezione non compare.')
+                        : snella
+                          ? visibili === 1
+                            ? tr('1 voce visibile al tavolo; snella: nome e prezzo su una riga, senza immagine, descrizione e ingredienti.')
+                            : tr('{n} voci visibili al tavolo; snella: nome e prezzo su una riga, senza immagine, descrizione e ingredienti.', { n: visibili })
+                          : visibili === 1
+                            ? tr('1 voce visibile al tavolo.')
+                            : tr('{n} voci visibili al tavolo.', { n: visibili })}
                     </p>
 
                     {voci.length > 0 && (
@@ -885,17 +925,17 @@ export default function StrutturaMenu({ carta, drinks, categories, inventory = [
                       <TendinaCassa
                         valore=""
                         gruppi={gruppi}
-                        vuota="+ Aggiungi un prodotto della cassa a questa sezione…"
+                        vuota={tr('+ Aggiungi un prodotto della cassa a questa sezione…')}
                         onChange={(drink_id) => creaVoceCarta({ sezione_id: s.id, drink_id, ordine: tutte.length })}
-                        aria-label={`Aggiungi un prodotto a ${nome}`}
+                        aria-label={tr('Aggiungi un prodotto a {nome}', { nome })}
                       />
                       {onNuovoProdotto && (
                         <button
                           className="btn ghost small"
-                          aria-label={`Nuovo prodotto della cassa in ${nome}`}
+                          aria-label={tr('Nuovo prodotto della cassa in {nome}', { nome })}
                           onClick={() => onNuovoProdotto(s)}
                         >
-                          + Nuovo prodotto della cassa
+                          + {tr('Nuovo prodotto della cassa')}
                         </button>
                       )}
                     </div>
@@ -905,12 +945,12 @@ export default function StrutturaMenu({ carta, drinks, categories, inventory = [
             )
           })}
           {trovate && ![...trovate.values()].some((l) => l.length) && (
-            <p className="muted small">Nessuna voce trovata per «{cerca}».</p>
+            <p className="muted small">{tr('Nessuna voce trovata per «{testo}».', { testo: cerca })}</p>
           )}
 
           <div className="struttura-fine">
             <button className="btn ghost small" onClick={tornaAlleCategorie}>
-              Torna al menù per categorie
+              {tr('Torna al menù per categorie')}
             </button>
           </div>
         </>

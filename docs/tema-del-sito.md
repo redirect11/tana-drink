@@ -85,7 +85,16 @@ Le pagine scritte dal locale (titolo, testo, immagini) sono un passo in più, co
 
 Proposta: non adesso. Prima le pagine predefinite e i due temi; le pagine libere, se servono, come una pagina di un tipo solo («testo e immagini»), vestita dal tema.
 
-## Cosa serve decidere
+## Deciso il 17/11/2026
+
+Daniele ha risposto a una parte delle domande qui sotto. Ogni punto ha il suo requisito sotto UR-018.
+
+- **Le sezioni del sito** (Chi siamo, Contatti, Menù, altre da decidere) sono sempre raggiungibili dal menu laterale della vista cliente. Il personale le vede solo dalla vista cliente (REQ-SITO-001).
+- **L'editor della home** mostra o nasconde le sezioni fisse che diamo noi. Niente pagine libere (REQ-SITO-005).
+- **Il tema del menù si propaga alle pagine del sito.** La Tana ha «Carte» anche in Chi siamo e Contatti (REQ-SITO-002). Il tema del sito come scelta separata resta per dopo.
+- **La foto del banner della home** la sceglie il locale (REQ-SITO-003).
+- **La home è un modulo.** Senza il modulo, l'indirizzo del locale apre il menù, se il locale lo sceglie; altrimenti una pagina di cortesia col nome e le informazioni di base (REQ-SITO-004). Il modulo passa dalla regia.
+
 
 1. **Le pagine predefinite:** va bene l'elenco qui sopra? Ne manca qualcuna, per esempio prenotazioni o galleria?
 2. **Un tema, due parti, o due scelte indipendenti:** un tema che porta sito e menù si sceglie una volta sola, e il locale può separarli. Va bene così?

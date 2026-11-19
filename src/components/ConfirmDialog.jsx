@@ -1,9 +1,10 @@
 import Icona from './Icona.jsx'
+import { tr } from '../lib/lingua.js'
 
 // Conferma in-app: sostituisce window.confirm, che in alcuni contesti
 // (browser embedded, PWA standalone) viene bloccato silenziosamente.
 // `icona`: un nome del vocabolario, davanti al titolo, nel tema dei segnali.
-export default function ConfirmDialog({ title, icona, message, confirmLabel = 'Conferma', cancelLabel = 'Annulla', danger, onConfirm, onCancel }) {
+export default function ConfirmDialog({ title, icona, message, confirmLabel = tr('Conferma'), cancelLabel = tr('Annulla'), danger, onConfirm, onCancel }) {
   return (
     <div className="overlay confirm-overlay" onClick={onCancel}>
       <div className="confirm-box" onClick={(e) => e.stopPropagation()}>

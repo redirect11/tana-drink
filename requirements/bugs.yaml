@@ -6429,3 +6429,499 @@ bugs:
     priority: P3
     requisiti: [REQ-VENUE-001]
     test_cases: []
+
+  - id: BUG-159
+    title: "«Nuovo ordine» squilla al primo drink battuto, anche se poi il conto si svuota e si annulla"
+    area: "functions/lib/push-core.js (decideNewOrderStaffPush), src/pages/BartenderPage.jsx (avviso in coda)"
+    description: >
+      Daniele, 15/11/2026: «io l'ordine ricevuto, la notifica la vedo»,
+      battendo un drink e togliendolo subito. Dal 14/11 (BUG-148) il conto
+      nasce al primo tocco, e `notifyNewOrder` avvisa gli altri dispositivi
+      appena il documento esiste, senza guardare `in_creazione`. La stampa
+      quel segno lo rispetta: la comanda esce quando chi batte esce dal
+      conto, completa. La notifica no: partiva a metà composizione, e
+      annullare dopo non la ritira. Un ripensamento faceva squillare il
+      banco per un conto che non esiste.
+      ORA un conto `in_creazione` non è un ordine nuovo: l'avviso parte
+      quando il segno si toglie (notifyOrderUpdate), cioè all'uscita di chi
+      lo batte, nello stesso momento in cui esce la comanda; un conto
+      annullato non ha più niente da fare e tace. Una comanda senza righe
+      non conta come lavoro da fare, ma solo nel conto dopo: svuotata e
+      riempita, la stessa comanda non riavvisa. Lo stesso per l'avviso in
+      pagina della coda (suono e notifica del browser), che suonava anch'esso
+      al primo drink e, con la sola push corretta, avrebbe suonato due volte:
+      il conto in composizione si mette da parte e si annuncia quando il
+      segno cade.
+      IL PREZZO, dalla revisione: gli altri dispositivi sanno del conto
+      quando è composto, non al primo drink. Un conto il cui segno non cade
+      mai — telefono bloccato o app chiusa prima di uscire dal conto — non
+      si annuncia, come già non stampa da solo. E un conto battuto e
+      incassato senza uscire, con «Riscuoti e servi» o col servizio spento,
+      quando il segno cade ha le comande già servite: non avvisa. Da
+      confermare con chi lavora al banco.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, notifiche, pos]
+    severity: media
+    priority: P2
+    requisiti: [REQ-NOTIF-002]
+    test_cases: [tests/bdd/notify-order.test.js, tests/component/AvvisiRipristino.test.jsx]
+  - id: BUG-160
+    title: "Le foto del menù le può caricare e cancellare qualunque account, anche un cliente registrato"
+    area: "storage.rules (drinks/)"
+    description: >
+      Trovato nel controllo dei costi del 16/11/2026 (REQ-DEV-026). La
+      cartella `drinks/` di Storage chiedeva solo di aver fatto l'accesso
+      (`request.auth != null`), e i clienti possono registrarsi
+      (src/lib/customerAuth.js): un cliente registrato poteva caricare file
+      da 5 MB senza limite di numero, a spese del locale, e cancellare le
+      foto dei prodotti del menù. Nessun flusso del cliente carica lì: la
+      foto la mette la scheda prodotto (src/lib/saveDrink.js), e scrivere
+      un prodotto richiede già banco o admin nelle regole del database.
+      ORA creare e cancellare in `drinks/` vuole banco o admin, come le
+      fatture; restano il tetto di 5 MB e il solo tipo immagine. La
+      lettura resta libera: il menù del cliente le mostra.
+      IL TEST GIRA ANCHE IN CI dal 17/11/2026: il job delle regole accende
+      anche lo Storage (REQ-SIC-006).
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, sicurezza, costi]
+    severity: alta
+    priority: P1
+    requisiti: [REQ-SIC-001, REQ-DEV-026]
+    test_cases: [tests/regole/storage.test.js]
+  - id: BUG-161
+    title: "A ogni conto nuovo il server rilegge tutti i conti della cassa per cercare un numero doppio"
+    area: "functions/index.js (risolviNumeroDuplicato), functions/lib/numerazione.js"
+    description: >
+      Trovato nel controllo dei costi del 16/11/2026 (REQ-DEV-026).
+      `risolviNumeroDuplicato` scatta a ogni conto creato e, per sapere se
+      il suo numero è conteso, leggeva tutti i conti della sessione di
+      cassa: la spesa cresce col quadrato dei conti, e con 200 conti in una
+      sera sono circa 20.000 letture solo per questo.
+      ORA si chiedono prima i soli conti della cassa con lo stesso numero —
+      di solito uno, il conto stesso. Tutta la cassa si legge solo quando
+      il numero è conteso E il conto nuovo ha perso, perché serve il più
+      alto per dargli il primo libero. Se la query stretta fallisce (un
+      indice che manca o non è ancora costruito), si torna alla lettura
+      completa di prima: un numero doppio non risolto costa più di qualche
+      lettura (regia, 16/11/2026).
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, functions, costi]
+    severity: media
+    priority: P2
+    requisiti: [REQ-ORD-016, REQ-DEV-026]
+    test_cases: [tests/bdd/numerazione.test.js]
+  - id: BUG-162
+    title: "Un esito del lettore che SumUp rimanda in ritardo può riportare a «parziale» un conto già pagato"
+    area: "functions/lib/payment-service.js (handleReaderWebhook), functions/lib/payment-core.js"
+    description: >
+      Dalla regia, 16/11/2026, nel controllo dei costi (REQ-DEV-026): SumUp
+      ritenta una notifica non riuscita (risposta diversa da 2xx, o troppo
+      lenta) dopo 1 minuto, 5 minuti, 20 minuti e 2 ore. Lo stesso esito
+      può quindi arrivare più volte, anche ore dopo. Per il webhook del
+      checkout online la pagina di SumUp lo dice; per quello del lettore
+      non è scritto, e si tratta allo stesso modo.
+      Il webhook del lettore applicava ogni esito che arrivava. Il conto
+      tiene `sumup_client_transaction_id` anche dopo l'esito, e un incasso
+      in contanti non lo toglie: un «fallito» ripetuto dopo che il conto
+      era stato pagato in contanti lo riportava a «parziale» (o
+      «fallito»), con i soldi già in cassa. Un «pagato» ripetuto riscriveva
+      ora e stato del pagamento.
+      ORA un esito del lettore si applica solo se il conto lo aspetta
+      ancora. Un «fallito» vale solo per un conto in attesa del lettore. Un
+      «pagato» non si riapplica se quella transazione è già fra gli incassi
+      del conto (o, senza un id della transazione, se il conto risulta già
+      pagato e non c'è un importo in volo). Il «pagato» che arriva dopo un
+      annullo dal banco si applica ancora: i soldi sono stati presi.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, pagamenti, sumup]
+    severity: alta
+    priority: P1
+    requisiti: [REQ-PAG-004, REQ-DEV-026]
+    test_cases: [tests/bdd/payment-reader.test.js]
+  - id: BUG-163
+    title: "Un rifiuto del pagamento online che SumUp rimanda in ritardo segna «fallito» un conto passato nel frattempo al lettore"
+    area: "functions/lib/payment-service.js (verifyCheckoutStatus, handleOnlineWebhook)"
+    description: >
+      Trovato dal revisore il 16/11/2026, correggendo BUG-162: è lo stesso
+      difetto, sul checkout online. Il cliente paga online e la carta viene
+      rifiutata; il conto passa al lettore del banco (`in_attesa`, metodo
+      `lettore`). Se SumUp rimanda il rifiuto online (ritenta dopo 1, 5,
+      20 minuti e 2 ore), `verifyCheckoutStatus` vede uno stato diverso da
+      quello del conto, scrive «fallito» e azzera l'importo in volo del
+      lettore: il pagamento al banco, se poi riesce, arriva su un conto che
+      non lo aspetta più. Da correggere come BUG-162: l'esito online si
+      applica solo a un conto che aspetta ancora quel checkout.
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, pagamenti, sumup]
+    severity: media
+    priority: P2
+    requisiti: [REQ-PAG-005, REQ-DEV-026]
+    test_cases: []
+  - id: BUG-164
+    title: "Il tempo di lavorazione in ricetta non entra nel costo del drink: 57 righe lo dosano in grammi"
+    area: "dati: drinks.recipe_items del «Tempo di Lavorazione»; scripts/lavorazione-in-u.js, scripts/lib-lavorazione.js"
+    description: >
+      Daniele, 16/11/2026: «tempo di lavorazione quando è presente in
+      ricetta va calcolato come un normale ingrediente quindi deve comparire
+      nei costi, ricordando che il tempo di lavorazione si calcola in U
+      ovvero 1 pz corrisponde a 60 U ed 1 pz costa 10€».
+      L'articolo è già così, in produzione e sul test (pezzo da 60 U, 10 €,
+      IVA 0), e il costo per U lo sa fare costPerUnit. Ma 57 righe di
+      ricetta su 59 lo dosano in GRAMMI («0,5 g», «1,5 g»…), scritte quando
+      il grammo era l'unica unità possibile: un grammo di un articolo che
+      si conta a U non ha un costo, la riga finisce fra quelle senza costo
+      e il costo del drink resta parziale. Le altre due sono già in U.
+      CORREZIONE: uno script riscrive in U quelle righe, con la stessa
+      quantità («1,5 g» → 1,5 U, 0,25 €). Prima sul test, poi in
+      produzione col via libera e dopo il backup. Da quel momento quelle
+      righe scaricano anche il magazzino (U/60 di pezzo per drink), come
+      tutto quello che sta in magazzino dal 12/09/2026.
+      SUL TEST (16/11/2026): riscritte 57 ricette, tutte del «Tempo di
+      Lavorazione»; rilanciato, lo script non trova più niente.
+      IN PRODUZIONE (17/11/2026, via libera di Daniele): backup
+      (backup/tana-drink-prima-lavorazione-in-u.json, 18.589 documenti),
+      anteprima, poi 57 ricette riscritte; riletto, le 59 righe sono tutte
+      in U e lo script non trova più niente. La giacenza del «Tempo di
+      Lavorazione» (151 pz, cioè 9.060 U) da qui scende a ogni drink.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, magazzino, costi]
+    severity: media
+    priority: P2
+    requisiti: [REQ-MENU-034]
+    test_cases: [tests/unit/lavorazioneInU.test.js]
+  - id: BUG-165
+    title: "Su un Free col profilo completo, `staffAdmin` crea utenze oltre il limite del piano"
+    area: "functions/lib/staff-service.js, functions/lib/licenza-core.js, functions/index.js (staffAdmin)"
+    description: >
+      Dalla regia, 16/11/2026 (REQ-FLOTTA-122): ogni locale nuovo nasce col
+      profilo completo anche se è Free, e chi paga può scendere al Free a
+      fine periodo. Fino a ieri il Free era leggero — niente Functions — e
+      il limite `utenti_max: 1` reggeva da sé: `staffAdmin` non c'era.
+      L'app nasconde la gestione delle utenze sul Free (limiti.js,
+      `staffConsentito`), ma la Function, ora pubblicata, non guardava la
+      licenza: chiamata a mano dalla console del browser, un admin di un
+      Free creava quante utenze voleva.
+      ORA `staffAdmin` legge la licenza e non porta le utenze attive dello
+      staff oltre `utenti_max`: niente utenze nuove, nessun cliente
+      promosso a un ruolo dello staff, nessuna utenza dello staff
+      riattivata oltre il tetto. Una licenza scaduta vale come Free. Le
+      utenze che ci sono già NON si toccano: chi scende al Free con più
+      persone le tiene, e il limite ferma solo le aggiunte, come per i
+      prodotti (limiti.js, puoCreareProdotto). La copia dei limiti del Free
+      nelle Functions (licenza-core.js) si confronta con quella dell'app.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, licenza, staff]
+    severity: media
+    priority: P2
+    requisiti: [REQ-LIC-003]
+    test_cases: [tests/unit/utenze.test.js]
+
+  - id: BUG-166
+    title: "Col tema Lime la categoria scelta nel conto e il numero sulle card hanno il testo bianco sul lime"
+    area: "src/lib/posStyles.js (catBtnStyle), src/components/PosBits.jsx (il numero degli ordinati)"
+    description: >
+      Daniele, 17/11/2026: «sulla palette lime scuro stavo vedendo quanto
+      il bianco sul verde lime che abbiamo scelto non è il massimo».
+      Misurato sulla demo col tema Lime scuro, schermata per schermata: la
+      categoria scelta nella colonna del conto («Tutti») ha il testo
+      bianco sul lime, 1,4:1 contro i 4,5:1 di DESIGN.md; lo stesso il
+      numero degli ordinati sulla card di un prodotto. Tutto il resto del
+      lime (tasti, opzioni attive, la fascia della demo) ha già il testo
+      scuro, fra 11,9 e 14,9:1.
+      CAUSA: i due stili scrivono `#fff` a mano sopra `var(--accent)`.
+      Andava bene finché l'accento era scuro (il rosa della Tana); su un
+      accento chiaro sparisce. Il tema ha già l'inchiostro giusto,
+      `--accent-ink`, che applyTheme calcola dal colore dell'accento
+      (bianco su quelli scuri, scuro su quelli chiari) e che quattro regole
+      del foglio usano già.
+      CORREZIONE: i due stili prendono `var(--accent-ink, #fff)`. Con la
+      Tana non cambia niente; con Lime e con ogni accento chiaro il testo
+      diventa scuro. Il test del tema, che controllava già il foglio, ora
+      controlla anche gli stili scritti nei componenti.
+    in_produzione: false
+    status: fixed
+    generate_issue: true
+    labels: [bug, ui]
+    severity: lieve
+    priority: P1
+    requisiti: [REQ-UI-033]
+    test_cases: [tests/unit/temaLime.test.js]
+  - id: BUG-167
+    title: "La prova di accessibilità trova lo zoom bloccato, testi poco contrastati, comandi senza nome e tasti troppo piccoli"
+    area: "index.html (viewport), src/index.css, src/lib/themes.js (accentoPieno), src/lib/posStyles.js, src/components/PosBits.jsx, src/components/ThemeSettings.jsx, src/App.jsx (link del marchio), src/index.css (.menu-colore-spia)"
+    description: >
+      La misura con axe del 17/11/2026 (REQ-UI-036; WCAG 2.0, 2.1 e 2.2 A e
+      AA, a 1280 e a 320 px), prima di ogni correzione:
+      LO ZOOM BLOCCATO (1.4.4), su tutte le pagine: il viewport diceva
+      `maximum-scale=1.0, user-scalable=no`, per non ingrandire la cassa
+      battendo. Ora il pizzico c'è, e il doppio tocco lo ferma
+      `touch-action: manipulation` sugli elementi che si toccano (i campi
+      restano a 16 px, se no Safari ingrandisce toccandoli). Da provare
+      sull'iPad del banco.
+      IL CONTRASTO (1.4.3): sul rosa della Tana (#e52e71) né il bianco
+      (4,2:1) né il bruno (4,35:1) arrivano a 4,5, e la categoria scelta
+      nel conto, il segno «staff», il numero sulla campanella, l'avviso di
+      aggiornamento e gli estremi del periodo ci scrivono sopra. Ora quei
+      fondi usano `--accent-pieno`, che applyTheme calcola: l'accento
+      scurito (o schiarito) quanto basta. I tasti azzurri del tastierino del
+      pagamento avevano un azzurro fisso: ora è mescolato col testo del
+      tema. La scritta «test version» era attenuata a mezza opacità.
+      I NOMI (2.4.4, 4.1.2): sul telefono il link del marchio restava senza
+      testo (logo e nome nascosti); la tendina della tavolozza nelle
+      impostazioni non aveva nome.
+      I TASTI PICCOLI (2.5.8, WCAG 2.2): il triangolo del colore delle voci
+      nella gestione del menù scendeva sotto i 24 px.
+      DOPO: 34 misure, nessuna violazione; la prova è un cancello.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, accessibilita, ui]
+    severity: media
+    priority: P2
+    requisiti: [REQ-UI-036]
+    test_cases: [tests/sistema/accessibilita.spec.js, tests/unit/contrastoAccento.test.js]
+  - id: BUG-168
+    title: "«La vista del banco» nelle impostazioni: un selettore con una voce sola e un testo che non dice cosa fa"
+    area: "src/components/SettingsTab.jsx (Coda ordini → La vista del banco)"
+    description: >
+      Daniele, 17/11/2026: «nelle opzioni delle impostazioni, puoi
+      semplicemente spiegare che cosa fa un'opzione invece di scrivere cose
+      inutili … e poi proprio questa opzione si può selezionare ed è
+      selezionata solo corsie di stato, perché?». Il testo raccontava il
+      perché di una scelta di progetto («chi sta al banco non guarda i
+      conti, guarda il lavoro…»), e sotto c'era un selettore con una voce
+      sola, «Corsie di stato»: l'unico modo di disegnare la vista che
+      esiste, messo come segnaposto per quelli futuri, e spento quando gli
+      stati del servizio sono spenti.
+      ORA niente selettore: una frase su cosa fa («a chi ha il ruolo
+      bartender la coda mostra le comande, una card per ticket, divise per
+      stato di preparazione») e se è attiva o cosa serve per averla.
+      `bartender_view` resta nei dati. La regola vale per tutte le
+      didascalie (CLAUDE.md, «il tono resta professionale»: dicono cosa fa
+      una cosa e a cosa serve, in una frase piana).
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, ui, impostazioni]
+    severity: lieve
+    priority: P2
+    requisiti: [REQ-UI-032]
+    test_cases: [tests/component/SettingsTab.test.jsx]
+
+  - id: BUG-169
+    title: "Svuotato un conto, in coda la card sparisce, ricompare con «Conto ripristinato» e sparisce di nuovo"
+    area: "src/lib/coda.js (haLavoroDaFare), src/lib/ordiniNascosti.js (nascondiPerAnnullo), src/lib/api.js (subscribeActiveOrders, dallaCache)"
+    description: >
+      Daniele, 17/11/2026: con «Conto vuoto» acceso, tolta l'ultima riga il
+      conto esce e si torna alla coda; lì la card «prima scompare, poi
+      riappare, esce la notifica ripristinato e poi scompare di nuovo».
+      L'uscita nasconde il conto e lo annulla (REQ-ORD-025), e due cose lo
+      rimettevano a schermo per un attimo. La prima: il conto nascosto
+      restava visibile se aveva «lavoro da fare» (BUG-023), e la sua
+      comanda, ormai senza righe, era ancora «ricevuto» finché l'annullo
+      non arrivava — la card «0 prodotti · 0,00 €». La seconda: la coda si
+      dipinge prima con una lettura dalla cache, applicata se le liste
+      erano ancora vuote; ma l'ascolto degli aperti, arrivato dopo
+      l'annullo, era vuoto davvero, e la lettura partita un attimo prima
+      rimetteva il conto aperto — da qui il passaggio annullato → aperto e
+      l'avviso «Conto ripristinato».
+      ORA una comanda senza righe non è lavoro da fare; un conto nascosto
+      perché lo si sta annullando resta nascosto anche se la coda lo vede
+      ancora col suo ultimo drink (la rimozione parte all'uscita insieme
+      all'annullo); la lettura dalla cache si applica solo se nessun
+      ascolto ha ancora risposto. La prova
+      di sistema guarda la coda con un osservatore nella pagina, dal tocco
+      a tre secondi dopo: senza le correzioni vede la card ricomparire.
+    in_produzione: false
+    status: fixed
+    generate_issue: true
+    labels: [bug, coda, local-first]
+    severity: media
+    priority: P1
+    requisiti: [REQ-ORD-025]
+    test_cases:
+      - tests/sistema/contoSvuotato.spec.js
+      - tests/unit/ordiniNascosti.test.js
+      - tests/unit/codaCache.test.js
+
+  - id: BUG-170
+    title: "In alto nel gestionale, l'icona dell'assistente AI è più piccola della campanella accanto"
+    area: "src/index.css (.btn.topbar-chat, .btn.topbar-schermo), src/components/TastoAssistente.jsx, src/App.jsx (FullscreenButton)"
+    description: >
+      Daniele, 17/11/2026: «quando siamo in coda ordini, la chat AI appare
+      un po' più piccola vicino all'icona delle notifiche». I tasti
+      dell'assistente e dello schermo intero sono tasti «piccoli» (.btn.small,
+      testo a 0,9rem), la campanella ha il testo a 1,15rem, e l'icona è
+      grande 1,1 volte il testo del suo tasto: quella dell'assistente usciva
+      più piccola di un quinto, in fila con la campanella (la zona destra
+      della barra, docs/navigazione.md).
+      ORA i due tasti di sole icone hanno il testo della campanella; il tasto
+      resta piccolo, si allinea il disegno.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, ui, barra]
+    severity: lieve
+    priority: P3
+    requisiti: [REQ-AI-006]
+    test_cases: [tests/unit/css.test.js]
+
+  - id: BUG-171
+    title: "«Ti sto facendo entrare», dopo il login, ha i colori dei clienti invece del tema del gestionale"
+    area: "src/App.jsx (il tema: vesteGestionale, ruoloInLettura)"
+    description: >
+      Daniele, 17/11/2026: la schermata dopo il login, «Ti sto facendo
+      entrare» coi tre pallini, non applicava il tema. Il tema segue chi
+      guarda (REQ-STAFF-017): il gestionale a chi lavora, il menù a tutti
+      gli altri. Ma il ruolo si legge dal token, e finché il token non torna
+      lo staff non è ancora «staff»: la schermata d'attesa — e prima il
+      modulo di accesso su /bar — prendeva i colori dei clienti, e quelli
+      del gestionale arrivavano un attimo dopo.
+      ORA sulle pagine del gestionale (/bar, /pos, Il mio profilo) vale il
+      suo tema finché non si sa che chi è entrato è un cliente: durante la
+      lettura del ruolo, e sul modulo di accesso.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, ui, temi]
+    severity: lieve
+    priority: P3
+    requisiti: [REQ-STAFF-017]
+    test_cases: [tests/component/AppHeader.test.jsx]
+  - id: BUG-172
+    title: "Il test di sistema del mazzo agganciato fallisce una volta su tre: scorrendo, il mazzo non risulta «incollato»"
+    area: "tests/sistema/carteAgganciate.spec.js:41, src/lib/useIncollata.js, src/components/MenuCarte.jsx"
+    description: >
+      Visto il 18/11/2026 nel cancello della 1.10.56-beta verso develop.
+      Il test «scorrendo, il mazzo resta sotto la barra; il tasto per
+      tornarci non c'è» (REQ-MENU-029) porta la pagina in fondo con
+      `window.scrollTo` e si aspetta il mazzo con la classe `incollata`:
+      una volta su tre il mazzo resta `k-mazzo` per tutta l'attesa
+      (`toHaveClass(/incollata/)`, «Received string: "k-mazzo"»). Rilanciato
+      con `--repeat-each=3`: 1 rosso e 8 verdi, uguale su release/1.10.x
+      senza le modifiche del giro di /simplify, quindi c'era già.
+      PESA SUL CANCELLO: «Sistema (Playwright)» è obbligatorio per il merge
+      in develop, e un rosso che non c'entra ferma una pull request finché
+      non si rilancia.
+      DA CAPIRE se è il test o il menù [ipotesi, non provate]: la classe la
+      decide useIncollata con un IntersectionObserver, e la linea a cui il
+      mazzo si ferma si misura una volta, quando si comincia a osservare
+      (`fondoDellaBarra`): se in quell'istante la barra in alto non ha
+      ancora la sua altezza, la linea è sbagliata e il salto in fondo alla
+      pagina può non far scattare il cambio. Se è così il difetto è del menù,
+      e al banco si vedrebbe come il mazzo agganciato senza il suo fondo
+      pieno; non è stato segnalato da nessuno.
+    in_produzione: false
+    status: todo
+    generate_issue: true
+    labels: [bug, test, menu]
+    severity: lieve
+    priority: P2
+    requisiti: [REQ-MENU-029]
+    test_cases: []
+  - id: BUG-173
+    title: "La nota dell'ordine del cliente suggerisce di scrivere le allergie, un dato sulla salute"
+    area: "src/components/OrderSummary.jsx:376, firestore.rules (orders), la comanda stampata"
+    description: >
+      Dall'analisi dei dati personali per la regia (17/11/2026, punto 5
+      «categorie particolari»), registrato su via libera di Daniele il
+      19/11/2026. Il segnaposto della nota dell'ordine dal telefono dice
+      «Note per il bancone (facoltative): allergie, ghiaccio, varianti…»:
+      un'allergia è un dato sulla salute (art. 9 GDPR), e l'app la chiede
+      senza consenso esplicito. Quella nota si legge col `get` aperto a chi
+      ha l'id del conto, col `list` anonimo del tabellone finché il conto è
+      in lavorazione (BUG-174), si stampa sulla comanda e resta per sempre.
+      LA PROPOSTA [da verificare col legale]: togliere «allergie» dal
+      segnaposto, oppure chiedere il consenso esplicito; dire
+      nell'informativa che i campi liberi non vanno usati per dati sulla
+      salute. Il testo a schermo segue il registro di chi ordina.
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, sicurezza, clienti]
+    severity: media
+    priority: P2
+    requisiti: [REQ-CLI-001]
+    test_cases: []
+  - id: BUG-174
+    title: "I conti in lavorazione si leggono senza accesso interi, con l'email di chi li ha battuti, il token delle notifiche e le note (terzo passo di BUG-093)"
+    area: "firestore.rules (orders: list anonimo del tabellone), src/lib/api.js, coda.js, printer.js, storiaOrdine, cassa.js"
+    description: >
+      Il «terzo passo» lasciato fuori da BUG-093 (fixed), registrato a parte
+      su via libera di Daniele il 19/11/2026. Il tabellone dei clienti legge
+      senza accesso (`list` anonimo) i conti con `comande_statuses` in
+      lavorazione, e le regole non sanno proiettare i campi: i documenti
+      tornano INTERI, con `placed_by` (l'email di chi ha battuto il conto),
+      `push_token`, `customer_uid`, il nome e le note. Il recinto è stretto
+      (solo i conti in lavorazione, non l'archivio), ma quei campi si
+      leggono da chiunque.
+      LA CORREZIONE: spostare `placed_by`, `push_token`, `customer_uid` e le
+      note in un sottodocumento a lettura ristretta; `placed_by` è letto in
+      mezza app, quindi tocca coda, conto e stampa (test di sistema
+      obbligatorio, local-first). Insieme va imposto App Check (BUG-092).
+      Stima dell'analisi del 17/11: 3-5 giorni insieme a BUG-092.
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, sicurezza]
+    severity: media
+    priority: P2
+    requisiti: [REQ-SIC-001]
+    test_cases: []
+  - id: BUG-175
+    title: "Le paghe dello staff le legge ogni bartender, non solo l'admin"
+    area: "firestore.rules:669-672 (staff_rates), src/lib/api.js"
+    description: >
+      Dall'analisi dei dati personali per la regia (17/11/2026), registrato
+      su via libera di Daniele il 19/11/2026. `staff_rates` (nome e tariffa
+      oraria storicizzata di ogni persona) ha `allow read: if isBartender()`,
+      e `isBartender` comprende tutti i bartender, non solo chi gestisce le
+      paghe: ogni bartender può leggere quanto prende ogni collega. È un dato
+      sulla retribuzione. La stessa lettura passa anche da «Esporta tutto»
+      (BUG-176).
+      LA CORREZIONE: lettura all'admin (e a ciascuno la propria riga, se
+      serve a «Le mie ore»), con i test delle regole che lo provano.
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, sicurezza]
+    severity: media
+    priority: P2
+    requisiti: [REQ-STAFF-006, REQ-SIC-001]
+    test_cases: []
+  - id: BUG-176
+    title: "«Esporta tutto» lo può fare anche il bartender, e non resta traccia di chi ha esportato"
+    area: "src/components/BackupPanel.jsx, src/lib/backup.js, src/lib/sezioni.js:65"
+    description: >
+      Dall'analisi dei dati personali per la regia (17/11/2026, punto 8),
+      registrato su via libera di Daniele il 19/11/2026. «Esporta tutto», in
+      Impostazioni → Backup e ripristino, scarica 33 raccolte (conti,
+      clienti, ore, paghe, buoni, pagamenti…). La voce Impostazioni non è
+      riservata all'admin e il pannello riserva all'admin solo il
+      ripristino: l'esportazione la fa anche il bartender, e non resta
+      nessuna traccia di chi l'ha fatta e quando.
+      LA CORREZIONE: esportazione all'admin, con una riga di registro (chi,
+      quando) che l'admin vede. È il pezzo che REQ-SIC-014 (l'esportazione
+      completa del titolare) dà per scontato.
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, sicurezza]
+    severity: media
+    priority: P2
+    requisiti: [REQ-DATI-001, REQ-SIC-014]
+    test_cases: []

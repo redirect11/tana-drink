@@ -9,8 +9,8 @@
 // chi è arrivato prima, chi arriva dopo prende il primo libero — automatico,
 // perché al banco non si ferma una serata per un numero.
 
-import { describe, it, expect } from 'vitest'
-import { numeroDaRiassegnare, primoArrivato } from '../../functions/lib/numerazione.js'
+import { describe, it, expect, vi } from 'vitest'
+import { numeroDaRiassegnare, numeroDaRiassegnareInCassa, primoArrivato } from '../../functions/lib/numerazione.js'
 
 const banco = { id: 'ord-banco', created_at: 1000, daily_number: 15 }
 const sala = { id: 'ord-sala', created_at: 1200, daily_number: 15 }
@@ -87,5 +87,55 @@ describe('due conti con lo stesso numero', () => {
   it('un conto senza numero fra gli altri non sposta il primo libero', () => {
     const senzaNumero = { id: 'cliente', created_at: 1100 }
     expect(numeroDaRiassegnare(sala, [banco, sala, senzaNumero])).toBe(16)
+  })
+})
+
+// BUG-161: per decidere si leggeva TUTTA la cassa a ogni conto nuovo, e la
+// spesa cresceva col quadrato dei conti (circa 20.000 letture in una sera
+// da 200). Si prova quanto si legge, oltre a cosa si decide.
+describe('quanto si legge per decidere', () => {
+  const cassa = [
+    { id: 'a', created_at: 500, daily_number: 12 },
+    { id: 'b', created_at: 600, daily_number: 20 },
+    banco,
+    sala,
+  ]
+  const letture = (stessoNumero) => ({
+    stessoNumero: vi.fn(stessoNumero),
+    tuttaLaCassa: vi.fn(async () => cassa),
+  })
+
+  it('il numero non è conteso: bastano i conti con lo stesso numero', async () => {
+    const solo = { id: 'x', created_at: 900, daily_number: 7 }
+    const l = letture(async () => [solo])
+    expect(await numeroDaRiassegnareInCassa(solo, l)).toBe(null)
+    expect(l.tuttaLaCassa).not.toHaveBeenCalled()
+  })
+
+  it('conteso, ma il primo è lui: non si legge altro', async () => {
+    const l = letture(async () => [banco, sala])
+    expect(await numeroDaRiassegnareInCassa(banco, l)).toBe(null)
+    expect(l.tuttaLaCassa).not.toHaveBeenCalled()
+  })
+
+  it('conteso e perso: si legge la cassa per il primo libero dopo il più alto', async () => {
+    const l = letture(async () => [banco, sala])
+    expect(await numeroDaRiassegnareInCassa(sala, l)).toBe(21)
+    expect(l.tuttaLaCassa).toHaveBeenCalledTimes(1)
+  })
+
+  it('la domanda stretta fallisce: si legge tutta la cassa, come prima', async () => {
+    // Un indice che manca o non è ancora costruito dopo un deploy: un
+    // numero doppio non risolto costa più di qualche lettura.
+    const avviso = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const l = letture(async () => {
+      throw new Error('FAILED_PRECONDITION: The query requires an index')
+    })
+    expect(await numeroDaRiassegnareInCassa(sala, l)).toBe(21)
+    expect(await numeroDaRiassegnareInCassa(banco, l)).toBe(null)
+    // E lo dice nei log: un ripiego silenzioso riporterebbe BUG-161 di
+    // nascosto.
+    expect(avviso).toHaveBeenCalledWith(expect.stringContaining('[numerazione]'), expect.stringContaining('index'))
+    avviso.mockRestore()
   })
 })

@@ -38,8 +38,13 @@ export default function ModificaDaConfermare({ order, onRispondi, inCorso = fals
         </p>
       ) : (
         <>
+          {/* UN TESTO SOLO, TUTTO INTERO: il conto alla rovescia cambia a
+              pagina aperta, e a pezzi accostati col traduttore del browser
+              i minuti restavano fermi (REQ-CLI-010). */}
           <p className="muted small" style={{ margin: '0 0 10px' }}>
-            {minuti === 1 ? 'Resta 1 minuto' : `Restano ${minuti} minuti`} per rispondere; poi l’ordine si annulla.
+            {minuti === 1
+              ? 'Resta 1 minuto per rispondere; poi l’ordine si annulla.'
+              : `Restano ${minuti} minuti per rispondere; poi l’ordine si annulla.`}
           </p>
           <div className="grid-2">
             <button className="btn ghost" disabled={inCorso} onClick={() => setChiediRifiuto(true)}>

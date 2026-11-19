@@ -23,6 +23,13 @@
 // queste voci, e la carta che esce deve essere IDENTICA a prima —
 // nessuna migrazione da far girare, nessuna sera in cui gli scontrini
 // cambiano da soli.
+//
+// DUE LINGUE, MA LA CARTA NE HA UNA (REQ-UI-039). Etichette, descrizioni e
+// suggerimenti delle impostazioni sono segnati con `daTradurre` e si
+// mostrano nella lingua di chi lavora (`trSegnato`); `valore` è quello che
+// esce STAMPATO, e resta com'è.
+
+import { daTradurre, tr } from './lingua.js'
 
 // ── I CAMPI DELLO SCONTRINO ──────────────────────────────────────────
 //
@@ -33,70 +40,70 @@
 export const CAMPI_SCONTRINO = [
   {
     id: 'nome_locale',
-    label: 'Nome del locale',
-    desc: 'In cima, grande. Le parole si cambiano in «Dati del locale», qui sopra.',
+    label: daTradurre('Nome del locale'),
+    desc: daTradurre('In cima, grande. Le parole si cambiano in «Dati del locale», qui sopra.'),
     acceso: true,
   },
-  { id: 'indirizzo', label: 'Indirizzo', desc: 'La via, sotto al nome.', acceso: true },
-  { id: 'citta', label: 'CAP e città', acceso: true },
+  { id: 'indirizzo', label: daTradurre('Indirizzo'), desc: daTradurre('La via, sotto al nome.'), acceso: true },
+  { id: 'citta', label: daTradurre('CAP e città'), acceso: true },
   {
     id: 'numero',
-    label: 'Numero dello scontrino e data',
-    desc: 'La riga «SCONTRINO - 12» con giorno e ora.',
+    label: daTradurre('Numero dello scontrino e data'),
+    desc: daTradurre('La riga «SCONTRINO - 12» con giorno e ora.'),
     acceso: true,
   },
   {
     id: 'operatore',
-    label: 'Chi stampa lo scontrino',
-    desc: 'Il nome di chi è collegato a questo terminale. Se non si sa chi è, la riga non esce.',
+    label: daTradurre('Chi stampa lo scontrino'),
+    desc: daTradurre('Il nome di chi è collegato a questo terminale. Se non si sa chi è, la riga non esce.'),
     acceso: true,
   },
-  { id: 'persone', label: 'Quante persone', desc: 'La riga «2 clienti».', acceso: true },
+  { id: 'persone', label: daTradurre('Quante persone'), desc: daTradurre('La riga «2 clienti».'), acceso: true },
   {
     id: 'riga_vendita',
-    label: 'Tavolo o nome del cliente',
-    desc: 'La riga «Vendita - Tavolo 4». Senza tavolo e senza nome non esce: il numero è già in cima.',
+    label: daTradurre('Tavolo o nome del cliente'),
+    desc: daTradurre('La riga «Vendita - Tavolo 4». Senza tavolo e senza nome non esce: il numero è già in cima.'),
     acceso: true,
   },
   {
     id: 'intestazione_colonne',
-    label: 'Intestazione delle colonne',
-    desc: 'La riga «QTA Prodotto — PU Prezzo» sopra ai prodotti.',
+    label: daTradurre('Intestazione delle colonne'),
+    desc: daTradurre('La riga «QTA Prodotto — PU Prezzo» sopra ai prodotti.'),
     acceso: true,
   },
-  { id: 'coperto', label: 'Coperto', desc: 'Solo quando c’è.', acceso: true },
+  { id: 'coperto', label: daTradurre('Coperto'), desc: daTradurre('Solo quando c’è.'), acceso: true },
   {
     id: 'sconto',
-    label: 'Sconto',
-    desc: 'Subtotale e sconto, quando ne è stato fatto uno.',
+    label: daTradurre('Sconto'),
+    desc: daTradurre('Subtotale e sconto, quando ne è stato fatto uno.'),
     acceso: true,
   },
-  { id: 'iva', label: 'IVA e imponibile', acceso: true },
+  { id: 'iva', label: daTradurre('IVA e imponibile'), acceso: true },
   {
     id: 'pagamenti',
-    label: 'Come è stato pagato',
-    desc: 'Contante, carta, e quanto per ognuno.',
+    label: daTradurre('Come è stato pagato'),
+    desc: daTradurre('Contante, carta, e quanto per ognuno.'),
     acceso: true,
   },
-  { id: 'lotteria', label: 'Codice lotteria', desc: 'Solo quando il cliente lo dà.', acceso: true },
+  { id: 'lotteria', label: daTradurre('Codice lotteria'), desc: daTradurre('Solo quando il cliente lo dà.'), acceso: true },
   {
     id: 'codice_conto',
-    label: 'Codice del conto',
-    desc: 'La riga lunga in fondo: serve a noi per ritrovarlo, al cliente non dice niente.',
+    label: daTradurre('Codice del conto'),
+    desc: daTradurre('L’identificativo del conto, in fondo: serve a risalire al conto.'),
     acceso: true,
   },
   {
     id: 'ragione_sociale',
-    label: 'Ragione sociale in fondo',
-    desc: 'Con la partita IVA, se è scritta in Impostazioni → Il locale. Le parole si cambiano in «Dati del locale», qui sopra.',
+    label: daTradurre('Ragione sociale in fondo'),
+    desc: daTradurre('Con la partita IVA, se è scritta in Impostazioni → Il locale. Le parole si cambiano in «Dati del locale», qui sopra.'),
     acceso: true,
   },
   {
     id: 'riga_cortesia',
-    label: 'Riga di saluto',
-    desc: 'Una riga tua, in fondo allo scontrino.',
+    label: daTradurre('Riga di saluto'),
+    desc: daTradurre('Una riga di testo libero, in fondo allo scontrino.'),
     acceso: false,
-    testo: { valore: '', label: 'Cosa c’è scritto', placeholder: 'Grazie e a presto!' },
+    testo: { valore: '', label: daTradurre('Cosa c’è scritto'), placeholder: 'Grazie e a presto!' },
   },
 ]
 
@@ -120,53 +127,53 @@ export const CAMPI_SCONTRINO = [
 export const CAMPI_COMANDA = [
   {
     id: 'fascia',
-    label: 'Fascia nera in cima',
-    desc: 'La riga bianco-su-nero che si vede da lontano: «COMANDA 2 - ORDINE 28».',
+    label: daTradurre('Fascia nera in cima'),
+    desc: daTradurre('La riga bianco-su-nero che si vede da lontano: «COMANDA 2 - ORDINE 28».'),
     acceso: true,
   },
   {
     id: 'ora',
-    label: 'Ora nella fascia',
-    desc: 'Quando è stata battuta: sta sotto al numero, dentro il nero.',
+    label: daTradurre('Ora nella fascia'),
+    desc: daTradurre('Quando è stata battuta: sta sotto al numero, dentro il nero.'),
     acceso: true,
   },
   {
     id: 'conteggio',
-    label: 'Riga del conteggio',
-    desc: 'A sinistra la scritta, a destra quanti pezzi.',
+    label: daTradurre('Riga del conteggio'),
+    desc: daTradurre('A sinistra la scritta, a destra quanti pezzi.'),
     acceso: true,
-    testo: { valore: 'CONTATORIE', label: 'Come si chiama il conteggio' },
+    testo: { valore: 'CONTATORIE', label: daTradurre('Come si chiama il conteggio') },
   },
   {
     id: 'reparto',
-    label: 'Riga del reparto',
+    label: daTradurre('Riga del reparto'),
     acceso: true,
-    testo: { valore: 'BAR', label: 'Come si chiama il reparto' },
+    testo: { valore: 'BAR', label: daTradurre('Come si chiama il reparto') },
   },
   {
     id: 'titolo',
-    label: 'Nome o tavolo, grande',
-    desc: 'Chi ha ordinato: il nome, il tavolo, o il numero del conto.',
+    label: daTradurre('Nome o tavolo, grande'),
+    desc: daTradurre('Chi ha ordinato: il nome, il tavolo, o il numero del conto.'),
     acceso: true,
   },
   {
     id: 'sottotitolo',
-    label: 'Riga sotto al nome',
+    label: daTradurre('Riga sotto al nome'),
     acceso: true,
-    testo: { valore: 'Il tuo menu', label: 'Cosa c’è scritto' },
+    testo: { valore: 'Il tuo menu', label: daTradurre('Cosa c’è scritto') },
   },
   {
     id: 'note_riga',
-    label: 'Note dei singoli prodotti',
-    desc: '«poco ghiaccio», «per Anna»: sotto al prodotto a cui appartengono.',
+    label: daTradurre('Note dei singoli prodotti'),
+    desc: daTradurre('«poco ghiaccio», «per Anna»: sotto al prodotto a cui appartengono.'),
     acceso: true,
   },
-  { id: 'nota_conto', label: 'Nota del conto', desc: 'In fondo, quando c’è.', acceso: true },
+  { id: 'nota_conto', label: daTradurre('Nota del conto'), desc: daTradurre('In fondo, quando c’è.'), acceso: true },
   {
     id: 'riga_cortesia',
-    label: 'Riga tua in fondo',
+    label: daTradurre('Riga libera in fondo'),
     acceso: false,
-    testo: { valore: '', label: 'Cosa c’è scritto', placeholder: 'Turno di sala' },
+    testo: { valore: '', label: daTradurre('Cosa c’è scritto'), placeholder: 'Turno di sala' },
   },
 ]
 
@@ -190,71 +197,71 @@ export const CAMPI_COMANDA = [
 export const CAMPI_ACCONTO = [
   {
     id: 'nome_locale',
-    label: 'Nome del locale',
-    desc: 'In cima, grande. Le parole si cambiano in «Dati del locale».',
+    label: daTradurre('Nome del locale'),
+    desc: daTradurre('In cima, grande. Le parole si cambiano in «Dati del locale».'),
     acceso: true,
   },
-  { id: 'indirizzo', label: 'Indirizzo', acceso: true },
-  { id: 'citta', label: 'CAP e città', acceso: true },
+  { id: 'indirizzo', label: daTradurre('Indirizzo'), acceso: true },
+  { id: 'citta', label: daTradurre('CAP e città'), acceso: true },
   {
     id: 'numero',
-    label: 'Numero del conto e data',
-    desc: 'La riga «ACCONTO - 12» con giorno e ora.',
+    label: daTradurre('Numero del conto e data'),
+    desc: daTradurre('La riga «ACCONTO - 12» con giorno e ora.'),
     acceso: true,
   },
   {
     id: 'operatore',
-    label: 'Chi stampa la ricevuta',
-    desc: 'Il nome di chi è collegato a questo terminale: al banco è chi ha appena preso i soldi.',
+    label: daTradurre('Chi stampa la ricevuta'),
+    desc: daTradurre('Il nome di chi è collegato a questo terminale.'),
     acceso: true,
   },
   {
     id: 'riga_vendita',
-    label: 'Tavolo o nome del cliente',
-    desc: 'Di che conto è questo acconto. Senza tavolo e senza nome non esce.',
+    label: daTradurre('Tavolo o nome del cliente'),
+    desc: daTradurre('Di che conto è questo acconto. Senza tavolo e senza nome non esce.'),
     acceso: true,
   },
   {
     id: 'intestazione_colonne',
-    label: 'Intestazione delle colonne',
-    desc: 'La riga «QTA Prodotto — PU Prezzo» sopra alle righe riscosse.',
+    label: daTradurre('Intestazione delle colonne'),
+    desc: daTradurre('La riga «QTA Prodotto — PU Prezzo» sopra alle righe riscosse.'),
     acceso: true,
   },
   {
     id: 'sconto',
-    label: 'Sconto di questa riscossione',
-    desc: 'Solo quando chi versa si è fatto scontare le sue righe.',
+    label: daTradurre('Sconto di questa riscossione'),
+    desc: daTradurre('Solo quando chi versa si è fatto scontare le sue righe.'),
     acceso: true,
   },
   {
     id: 'metodo',
-    label: 'Come è stato pagato',
-    desc: 'Contante, carta, lettore: sotto all’importo versato.',
+    label: daTradurre('Come è stato pagato'),
+    desc: daTradurre('Contante, carta, lettore: sotto all’importo versato.'),
     acceso: true,
   },
   {
     id: 'riepilogo_conto',
-    label: 'Come sta il conto',
-    desc: 'Totale, quanto è stato versato in tutto e quanto resta da pagare. È la domanda che fa chi resta al tavolo.',
+    label: daTradurre('Come sta il conto'),
+    desc: daTradurre('Totale, quanto è stato versato in tutto e quanto resta da pagare.'),
     acceso: true,
   },
   {
     id: 'codice_conto',
-    label: 'Codice del conto',
-    desc: 'La riga lunga in fondo: serve a noi per ritrovarlo.',
+    label: daTradurre('Codice del conto'),
+    desc: daTradurre('L’identificativo del conto, in fondo: serve a risalire al conto.'),
     acceso: true,
   },
   {
     id: 'ragione_sociale',
-    label: 'Ragione sociale in fondo',
+    label: daTradurre('Ragione sociale in fondo'),
     acceso: true,
   },
   {
     id: 'riga_cortesia',
-    label: 'Riga di saluto',
-    desc: 'Una riga tua, in fondo.',
+    label: daTradurre('Riga di saluto'),
+    desc: daTradurre('Una riga di testo libero, in fondo.'),
     acceso: false,
-    testo: { valore: '', label: 'Cosa c’è scritto', placeholder: 'A dopo!' },
+    testo: { valore: '', label: daTradurre('Cosa c’è scritto'), placeholder: 'A dopo!' },
   },
 ]
 
@@ -356,35 +363,35 @@ export function rigaPersone(persone) {
 // Lo scontrino d'acconto nasce con il logo acceso per la stessa ragione
 // del preconto: è carta che se ne va in mano al cliente.
 export const TIPI_LOGO = [
-  { id: 'scontrino', label: 'Scontrino', desc: 'Quello che si dà a conto pagato.', acceso: true },
+  { id: 'scontrino', label: daTradurre('Scontrino'), desc: daTradurre('Quello che si dà a conto pagato.'), acceso: true },
   {
     id: 'preconto',
-    label: 'Preconto',
-    desc: 'Il conto portato al tavolo, prima di pagare.',
+    label: daTradurre('Preconto'),
+    desc: daTradurre('Il conto portato al tavolo, prima di pagare.'),
     acceso: true,
   },
   {
     id: 'acconto',
-    label: 'Scontrino d’acconto',
-    desc: 'La carta di chi versa una parte e se ne va: resta in mano al cliente come il preconto.',
+    label: daTradurre('Scontrino d’acconto'),
+    desc: daTradurre('La ricevuta di un pagamento parziale, che resta al cliente.'),
     acceso: true,
   },
   {
     id: 'comanda',
-    label: 'Comanda',
+    label: daTradurre('Comanda'),
     // PARTE SPENTO, e il perché sta qui e non a schermo: la comanda resta al
     // banco, non la vede nessun cliente, e il logo su ogni ticket è solo
     // carta e inchiostro. Detto in didascalia — «al banco non serve a
     // nessuno» — sembrava un giudizio sulla COMANDA invece che sul logo, e
     // faceva pensare a una funzione inutile. Le altre righe di questo
     // elenco descrivono il documento: questa fa lo stesso.
-    desc: 'Il ticket con cui il banco prepara.',
+    desc: daTradurre('Il ticket con cui il banco prepara.'),
     acceso: false,
   },
   {
     id: 'chiusura',
-    label: 'Chiusura di cassa',
-    desc: 'Il riepilogo di fine serata.',
+    label: daTradurre('Chiusura di cassa'),
+    desc: daTradurre('Il riepilogo di fine serata.'),
     acceso: false,
   },
 ]
@@ -447,41 +454,37 @@ export function problemiLogo({ larghezza, altezza, quotaScura: scura = 0, peso =
   if (!larghezza || !altezza) {
     return {
       grave: true,
-      testo: 'Questa immagine non si riesce ad aprire. Prova con un PNG o un JPG.',
+      testo: tr('Questa immagine non si riesce ad aprire. Servono un PNG o un JPG.'),
     }
   }
   if (peso > PESO_MASSIMO_LOGO) {
     return {
       grave: true,
-      testo:
-        'L’immagine resta troppo pesante anche dopo la riduzione. Serve un logo semplice, a pochi colori.',
+      testo: tr('L’immagine resta troppo pesante anche dopo la riduzione. Serve un logo semplice, a pochi colori.'),
     }
   }
   if (altezza > larghezza * 1.5) {
     return {
       grave: true,
-      testo:
-        'L’immagine è molto più alta che larga: sulla carta si mangerebbe mezzo scontrino. Ritagliala più bassa.',
+      testo: tr('L’immagine è molto più alta che larga: sulla carta si mangerebbe mezzo scontrino. Ritagliala più bassa.'),
     }
   }
   if (scura > 0.75) {
     return {
       grave: true,
-      testo:
-        'L’immagine è quasi tutta scura: la stampante la farebbe uscire come un rettangolo nero. Serve un logo su fondo chiaro.',
+      testo: tr('L’immagine è quasi tutta scura: la stampante la farebbe uscire come un rettangolo nero. Serve un logo su fondo chiaro.'),
     }
   }
   if (scura < 0.01) {
     return {
       grave: true,
-      testo: 'L’immagine è quasi tutta chiara: sulla carta non si vedrebbe niente.',
+      testo: tr('L’immagine è quasi tutta chiara: sulla carta non si vedrebbe niente.'),
     }
   }
   if (larghezza < LARGHEZZA_LOGO / 2) {
     return {
       grave: false,
-      testo:
-        'L’immagine è piccola: sulla carta uscirà un po’ sgranata. Se ne hai una più grande, meglio quella.',
+      testo: tr('L’immagine è piccola: sulla carta uscirà un po’ sgranata. Un’immagine più grande stampa più nitida.'),
     }
   }
   return null

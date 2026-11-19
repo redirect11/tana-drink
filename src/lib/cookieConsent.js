@@ -9,47 +9,51 @@ import * as CookieConsent from 'vanilla-cookieconsent'
 import 'vanilla-cookieconsent/dist/cookieconsent.css'
 import { enableAnalytics, disableAnalytics } from './analytics.js'
 
-// Tema scuro/oro del sito applicato alle variabili CSS di CookieConsent.
+// Il banner prende i colori del tema in uso (REQ-UI-033): era scritto a mano
+// con la notte e l'oro della Tana, e un locale con Lime lo vedeva dorato al
+// primo avvio, prima ancora del menù. Con «Tana scuro» i valori sono quelli
+// di prima: --btn-1/--btn-2 sono l'oro di casa, i separatori un grigio
+// mescolato dal testo.
 const theme = `
 #cc-main {
   --cc-font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --cc-modal-border-radius: 16px;
   --cc-btn-border-radius: 999px;
-  --cc-bg: #1a1a26;
-  --cc-secondary-color: #f5f5f7;
-  --cc-primary-color: #f5b94a;
-  --cc-link-color: #f5b94a;
-  --cc-btn-primary-bg: #e8a32e;
-  --cc-btn-primary-border-color: #e8a32e;
-  --cc-btn-primary-color: #1c1305;
-  --cc-btn-primary-hover-bg: #f7c45e;
-  --cc-btn-primary-hover-border-color: #f7c45e;
-  --cc-btn-primary-hover-color: #1c1305;
-  --cc-btn-secondary-bg: #15151f;
-  --cc-btn-secondary-color: #f5f5f7;
-  --cc-btn-secondary-border-color: #33333f;
-  --cc-btn-secondary-hover-bg: #1a1a26;
-  --cc-btn-secondary-hover-border-color: #33333f;
-  --cc-btn-secondary-hover-color: #f5f5f7;
-  --cc-separator-border-color: #33333f;
-  --cc-footer-bg: #15151f;
-  --cc-footer-color: #9b9ba8;
-  --cc-footer-border-color: #33333f;
-  --cc-cookie-category-block-bg: #15151f;
-  --cc-cookie-category-block-border: 1px solid #33333f;
+  --cc-bg: var(--card);
+  --cc-secondary-color: var(--text);
+  --cc-primary-color: var(--accent-2);
+  --cc-link-color: var(--accent-2);
+  --cc-btn-primary-bg: var(--btn-2);
+  --cc-btn-primary-border-color: var(--btn-2);
+  --cc-btn-primary-color: var(--btn-ink);
+  --cc-btn-primary-hover-bg: var(--btn-1);
+  --cc-btn-primary-hover-border-color: var(--btn-1);
+  --cc-btn-primary-hover-color: var(--btn-ink);
+  --cc-btn-secondary-bg: var(--bg-2);
+  --cc-btn-secondary-color: var(--text);
+  --cc-btn-secondary-border-color: color-mix(in srgb, var(--text) 14%, var(--card));
+  --cc-btn-secondary-hover-bg: var(--card);
+  --cc-btn-secondary-hover-border-color: color-mix(in srgb, var(--text) 14%, var(--card));
+  --cc-btn-secondary-hover-color: var(--text);
+  --cc-separator-border-color: color-mix(in srgb, var(--text) 14%, var(--card));
+  --cc-footer-bg: var(--bg-2);
+  --cc-footer-color: var(--muted);
+  --cc-footer-border-color: color-mix(in srgb, var(--text) 14%, var(--card));
+  --cc-cookie-category-block-bg: var(--bg-2);
+  --cc-cookie-category-block-border: 1px solid color-mix(in srgb, var(--text) 14%, var(--card));
   --cc-overlay-bg: rgba(0, 0, 0, 0.55);
-  --cc-toggle-readonly-bg: #6b5a35;
-  --cc-toggle-on-bg: #e8a32e;
-  --cc-toggle-off-bg: #33333f;
+  --cc-toggle-readonly-bg: color-mix(in srgb, var(--btn) 40%, var(--card));
+  --cc-toggle-on-bg: var(--btn-2);
+  --cc-toggle-off-bg: color-mix(in srgb, var(--text) 14%, var(--card));
 }
 #cc-main .cm,
 #cc-main .cm__body,
 #cc-main .cm__btns {
-  background: #1a1a26;
+  background: var(--card);
 }
 #cc-main .cm__footer {
-  background: #15151f;
-  border-top-color: #33333f;
+  background: var(--bg-2);
+  border-top-color: color-mix(in srgb, var(--text) 14%, var(--card));
 }
 `
 

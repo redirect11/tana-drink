@@ -19,7 +19,11 @@ Il preset di riferimento per il gestionale è **Catppuccin** — palette
 ufficiale — sopra la struttura a tre livelli di profondità che l'app già
 usa: **Mocha** per lo scuro, **Latte** per il chiaro, stessi ruoli e
 stessa gerarchia. Il preset storico `tana-scuro` resta disponibile e
-predefinito finché il locale non sceglie diversamente dalle impostazioni.
+predefinito **per la Tana** finché il locale non sceglie diversamente dalle
+impostazioni. La demo e i locali che genera la regia partono invece da
+**`lime-scuro`**, il tema del prodotto Lime - SmartOrders (REQ-UI-033): il
+tema di partenza si decide dal cliente della build (`temaDiPartenza` in
+`src/lib/themes.js`). Vedi «Lime, il tema del prodotto» più sotto.
 
 ## Palette (ruoli semantici)
 
@@ -91,9 +95,10 @@ da lontano: `--raggio-card`, `--raggio-btn`, `--raggio-pill`,
 | `tana` | 16/12px, pillole tonde | gradiente | alone sotto il tasto | serif Playfair |
 | `catppuccin` | 10/8px | campitura piatta | ombra tenue | come il testo |
 | `pico` | 4px ovunque | campitura piatta | nessuna | come il testo |
+| `lime` | 14/10px, pillole tonde | campitura piatta | ombra tenue | serif Playfair, come il marchio della regia |
 
 Il segno del colore sulle card (`--segno-prodotto`) è `nastro` per `tana`,
-`pastiglia` per `catppuccin`, `pallino` per `pico`. `applyTheme` lo scrive anche come
+`pastiglia` per `catppuccin`, `pallino` per `pico` e per `lime`. `applyTheme` lo scrive anche come
 `data-segno` sul documento, perché una variabile CSS non basta a scegliere
 fra due geometrie: serve un aggancio nel selettore.
 
@@ -114,6 +119,13 @@ Regole:
   dozzina di posti (il tab acceso, il «+», i tasti dei pannelli) e quelli
   ignoravano il tema: c'è un test in `tests/unit/css.test.js` che boccia
   `#f7c45e`, `#e8a32e` e `#1c1305` fuori dalla dichiarazione dei token.
+  Lo stesso per le **velature dorate** (`rgba(245, 185, 74, …)`: bordi al
+  passaggio, voce attiva, evidenze) e per il **banner dei cookie**: si
+  scrivono `color-mix(in srgb, var(--btn) N%, transparent)` e i token del
+  tema, così arrivano anche a Lime (REQ-UI-033). Restano fissi solo i colori
+  di stato e di marchio — la pill «pagato», il conto pagato, la campanella
+  che sincronizza, i raggi del riquadro Ceres — e lo controlla
+  `tests/unit/temaLime.test.js`.
 
 Oltre alla coppia Catppuccin esiste la coppia **Pico** (`pico-scuro` /
 `pico-chiaro`): la palette di Pico CSS v2 — ardesia blu, azzurro tecnico
@@ -121,6 +133,57 @@ Oltre alla coppia Catppuccin esiste la coppia **Pico** (`pico-scuro` /
 nostri token. Dei design system esterni si importano i **colori nei
 preset**, mai i fogli di stile: un CSS estraneo si sovrapporrebbe al
 nostro e i guardrail smetterebbero di valere.
+
+### Lime, il tema del prodotto
+
+La coppia **Lime** (`lime-scuro` / `lime-chiaro`, famiglia di forme `lime`)
+è il vestito di Lime - SmartOrders per i locali che non hanno il loro, e il
+tema di partenza della demo e dei locali nuovi (REQ-UI-033). La Tana non lo
+usa di partenza: la demo che si mostra a un locale nuovo non deve avere i
+colori di un locale vero (UR-014).
+
+**I colori sono quelli della regia**, non dell'app: la palette Lime del sito
+e del backoffice (drink-regia `DESIGN.md` §4 e `src/index.css`, «LA PALETTE
+LIME», 11/11/2026). Il marchio è uno solo (Daniele, 15/11/2026): se la
+regia cambia la palette, si cambia qui nello stesso modo (REQ-DEV-025).
+
+| Variabile | Lime scuro | Lime chiaro | Nella regia |
+|---|---|---|---|
+| `--bg` | `#0c0f0a` | `#f7f9f1` | `--bg` (scuro), `--bg` della vetrina chiara |
+| `--bg-2` | `#141911` | `#fefffa` | `--bg-2` |
+| `--card` | `#1c2318` | `#fefffa` | `--bg-3` (scuro), `--bg-2` (chiaro) |
+| `--accent` | `#b4ec2b` | `#2f6b0f` | il lime pieno; sul chiaro `--accent` |
+| `--accent-2` | `#c6f25a` | `#2f6b0f` | il lime per il testo |
+| `--btn` | `#b4ec2b` | `#b4ec2b` | `--lime` |
+| `--btn-ink` | `#16210a` | `#16210a` | `--su-lime` |
+| `--text` | `#eef2e6` | `#161b10` | `--text` |
+| `--muted` | `#9aa38e` | `#525c47` | `--muted` |
+
+Regole:
+
+- **Un colore solo, il lime**, per identità e azione, come Pico fa col suo
+  azzurro: si riconosce di corsa. I tasti sono campiture piatte, perché un
+  gradiente sporca il colore del marchio.
+- **Sul chiaro il lime non si scrive.** Come testo sul bianco sta a 1,4:1:
+  è un riempimento (i tasti), e il testo in colore è il verde profondo
+  `#2f6b0f` (6,1:1 sul fondo), come nella regia.
+- **Sopra il lime l'inchiostro è `#16210a`**, il `--su-lime` della regia
+  (12:1), non il bruno `#1c1305` nato per l'oro: un preset può dichiarare
+  `--btn-ink` e `--accent-ink`, e `applyTheme` li rispetta.
+- **Titoli in Playfair**, come il marchio nella barra della regia: è nel
+  pacchetto dell'app, quindi c'è anche senza rete.
+- I temi del catalogo che descrivono i colori della Tana («Classico»,
+  «Notte», «Carte») restano su `tana-scuro` (`DEFAULT_THEME`, il tema di
+  casa) anche nelle build degli altri locali.
+
+Le soglie di contrasto le controlla `tests/unit/temaLime.test.js` su tutti
+e tre i livelli di fondo.
+
+**L'inchiostro sopra l'accento pieno è `--accent-ink`**, come `--btn-ink`
+per i tasti: `applyTheme` lo decide dal colore dell'accento, scuro sul lime
+e bianco sul rosa della Tana. Il segno «staff», il numero sulla campanella,
+l'avviso di aggiornamento e gli estremi del periodo avevano il bianco fisso,
+che sul lime stava a 1,5:1.
 
 Colori di stato (fissi, fuori tema): `--ok #2ecc71`, `--warn #f39c12`;
 gli stati degli ordini hanno le loro pill (ricevuto/in preparazione/
@@ -556,6 +619,13 @@ dei clienti stanno in cima, in un riquadro richiudibile col filo sinistro in
   `tests/unit/css.test.js`.
   Il colore non informa mai da solo: il numero del conto è sulla stessa
   card. Le regole in `src/lib/coloriConto.js`.
+- **Gli avvisi del menù dei clienti** (`.avviso-menu`, REQ-UI-034) non
+  sono la striscia gialla del gestionale (`.banner`): il fondo del tema
+  tinto d'accento al 14% (opaco), un filo d'accento a sinistra di 5px, il
+  testo del tema a 1rem, un'ombra che lo stacca dal fondo; l'errore ha il
+  filo rosso. In «Carte» è un biglietto del mazzo: `--k-carta`,
+  `--k-inchiostro`, il filo `--k-rosso`, la scrittura IM Fell. Si
+  annunciano: `role="status"`, `role="alert"` per gli errori.
 - **Il riquadro di una sezione** (`.card`, e in impostazioni e menù
   `card settings-section`) non dà per scontato il tema scuro: bordo
   `--line` e rilievo `--velo-superficie`. Sullo scuro quel velo è la luce
@@ -648,6 +718,14 @@ dei clienti stanno in cima, in un riquadro richiudibile col filo sinistro in
   restava appesa da sola sotto il resto.
 - La topbar è sticky, traslucida sul tema (`color-mix` su `--bg-2`),
   e rispetta le safe-area dei tablet.
+- **Il marchio del prodotto sta nel menu laterale del gestionale**, in
+  cima, al posto di «Gestionale»: il logo della regia (la fetta di lime),
+  «Lime» nei titoli e «SmartOrders» piccolo in maiuscolo in `--muted`,
+  come nella barra della regia (REQ-UI-035, `MarchioLime.jsx`). **In alto
+  nelle pagine c'è il locale**, col suo logo e il suo nome; solo la demo e
+  i locali Free (`marchioDelProdottoInAlto` in `lib/limiti.js`) hanno lì
+  il marchio LIME. Nel gestionale (`nelGestionale` in `lib/sezioni.js`) il
+  logo in alto porta alla coda, altrove alla home del locale.
 
 ## Profondità
 
@@ -673,7 +751,7 @@ superfici delle sezioni.
 |---|---|
 | normale (< 24px, o < 19px se in grassetto) | **4,5:1** |
 | grande (≥ 24px, o ≥ 19px in grassetto) | **3:1** |
-| `--muted`, che è testo **secondario** | **3:1**, e mai da solo su un'informazione che conta |
+| `--muted`, che è testo **secondario** | **4,5:1** su `--bg`, `--bg-2` e `--card` (col velo sui temi scuri): è testo piccolo, e il 3:1 vale solo per il testo grande. Deciso con la regia il 17/11/2026 (REQ-UI-036; nella regia REQ-FLOTTA-126). Pico scuro e Catppuccin chiaro, temi base dell'app, sulla card stanno ancora a 3,5:1: da sistemare |
 
 **Un inchiostro chiaro cablato non sta su un fondo tinto.** Un pastello —
 `#c8f7da`, `#9ff5c0`, `#ffd54f` — nasce per il fondo scuro, dove si stacca
@@ -694,6 +772,20 @@ Le due vie ammesse:
   tratta le pill degli stati da sempre. Se il selettore è un elenco, di
   sotto vanno elencati **tutti**: è accodandone uno a un elenco già
   coperto che si dimentica la variante.
+
+**Il testo sopra l'accento pieno sta su `--accent-pieno`**, non su
+`--accent` (REQ-UI-036, BUG-167): `applyTheme` lo calcola con
+`accentoPieno` — l'accento scurito sotto un inchiostro chiaro, o
+schiarito sotto uno scuro, quanto basta per 4,5:1. Il rosa della Tana col
+bianco stava a 4,2:1; il lime col suo inchiostro passa già e non cambia.
+Un fondo d'accento **senza testo** (un pallino, una striscia) resta
+`--accent`.
+
+**Lo zoom non si blocca**: il viewport non ha `user-scalable=no` né
+`maximum-scale` (WCAG 1.4.4). A non ingrandire la cassa per sbaglio ci
+pensa `touch-action: manipulation`, che toglie il doppio tocco e lascia il
+pizzico. I campi restano a 1rem: sotto i 16 px Safari ingrandisce da solo
+toccandoli.
 
 Un fondo **opaco** — il blu pieno del tasto «Riscuotere», la campitura del
 riquadro Ceres — non c'entra: lì il tema non traspare e un bianco fisso è

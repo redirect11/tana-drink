@@ -9,10 +9,11 @@
 //
 // Il cliente non legge il magazzino (le regole lo vietano): il segno sta
 // sul prodotto della cassa, `non_disponibile_cliente`, e lo scrive questa
-// Function. Vale solo per i prodotti che SEGUONO LE GIACENZE (opzione sul
-// prodotto, spenta di partenza): lime, sciroppi e ghiaccio spesso non
-// hanno una giacenza tenuta bene, e con una regola per tutti sparirebbero
-// cocktail interi per un numero sbagliato.
+// Function. Vale per le voci che SEGUONO LE GIACENZE (opzione sulla voce,
+// spenta di partenza) e per gli ingredienti con «OSCURA AUTOMATICAMENTE»
+// (opzione sul prodotto di magazzino, REQ-MENU-045): lime, sciroppi e
+// ghiaccio spesso non hanno una giacenza tenuta bene, e con una regola per
+// tutti sparirebbero cocktail interi per un numero sbagliato.
 //
 // Logica pura: chi chiama legge e scrive.
 
@@ -39,12 +40,51 @@ function manca(item, soglia) {
   return minima > 0 && stock <= minima
 }
 
-// Il prodotto della cassa è disponibile per il cliente? Solo se segue le
-// giacenze conta; e allora manca se manca uno dei suoi ingredienti.
+// «OSCURA AUTOMATICAMENTE» SUL PRODOTTO DI MAGAZZINO (REQ-MENU-045). Flavio,
+// 16/11/2026, la vuole per ingrediente: il gin sì, il lime e il ghiaccio no.
+const oscura = (item) => item?.oscura_automaticamente === true
+
+// Il prodotto della cassa è disponibile per il cliente? Due strade, che si
+// sommano (Daniele, 16/11/2026: l'opzione sulla voce resta):
+//   · la voce SEGUE LE GIACENZE: manca se manca uno qualunque dei suoi
+//     ingredienti, tolti quelli di servizio;
+//   · un ingrediente ha «Oscura automaticamente»: se manca lui, la voce
+//     esce — anche se è di servizio, perché la spunta è una scelta.
+// La soglia è la stessa per tutte e due, quella delle Impostazioni.
 function nonDisponibile(drink, itemsById, impostazioni) {
-  if (drink?.segue_giacenze !== true) return false
+  const segue = drink?.segue_giacenze === true
   const soglia = sogliaDi(impostazioni)
-  return (drink.recipe_items || []).some((r) => !rigaDiServizio(r) && r.inventory_item_id && manca(itemsById.get(r.inventory_item_id), soglia))
+  return (drink?.recipe_items || []).some((r) => {
+    if (!r?.inventory_item_id) return false
+    const item = itemsById.get(r.inventory_item_id)
+    const conta = oscura(item) || (segue && !rigaDiServizio(r))
+    return conta && manca(item, soglia)
+  })
+}
+
+const oscuraCambiata = (prima, dopo) => oscura(prima) !== oscura(dopo)
+
+// QUALI VOCI RICALCOLARE dopo il cambio di un prodotto di magazzino:
+//   null       niente (una vendita che non attraversa la soglia: quasi sempre);
+//   'seguono'  le voci che seguono le giacenze, le sole che possono cambiare
+//              se il prodotto non ha la spunta;
+//   'tutte'    tutte le voci che lo usano: con la spunta (prima o dopo)
+//              conta anche chi non segue le giacenze.
+function vociDaRicalcolare(prima, dopo, impostazioni) {
+  // Un prodotto appena creato non sta ancora in nessuna ricetta: nato già
+  // spuntato e a giacenza zero (i nuovi partono quasi sempre da lì), farebbe
+  // leggere tutte le voci per niente.
+  if (!prima) return null
+  const soglia = sogliaDi(impostazioni)
+  const mancaPrima = manca(prima, soglia)
+  const mancaDopo = manca(dopo, soglia)
+  // La spunta che si accende o si spegne conta solo su un prodotto che
+  // manca: su uno ben fornito non cambia nessuna voce, e alla prima
+  // configurazione — venti distillati spuntati di fila — si leggerebbe
+  // tutto il catalogo venti volte per niente.
+  const spuntaCheConta = oscuraCambiata(prima, dopo) && (mancaPrima || mancaDopo)
+  if (mancaPrima === mancaDopo && !spuntaCheConta) return null
+  return oscura(prima) || oscura(dopo) ? 'tutte' : 'seguono'
 }
 
 // Il cambio di un prodotto di magazzino ha attraversato la soglia? Solo
@@ -95,6 +135,7 @@ function soloGiacenza(prima, dopo) {
 // scala due-quattro prodotti, e quasi sempre non cambia niente.
 function contaPerIlMenu(prima, dopo) {
   if (prima?.scelta_cliente === true || dopo?.scelta_cliente === true) return true
+  if (oscuraCambiata(prima, dopo)) return true
   return SOGLIE.some((s) => manca(prima, s) !== manca(dopo, s))
 }
 
@@ -139,6 +180,9 @@ function scelteRiallineate(etichette, ricetta, categoriaDi) {
 
 module.exports = {
   manca,
+  oscura,
+  oscuraCambiata,
+  vociDaRicalcolare,
   nonDisponibile,
   haAttraversato,
   cambiDiDisponibilita,

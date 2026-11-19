@@ -9,6 +9,7 @@
 // incolla e basta, senza trascriverla a mano da uno schermo.
 import { useState } from 'react'
 import { etichettaVersione } from '../lib/versione.js'
+import { tr } from '../lib/lingua.js'
 
 const BRANCH = typeof __GIT_BRANCH__ !== 'undefined' ? __GIT_BRANCH__ : ''
 const COMMIT = typeof __GIT_COMMIT__ !== 'undefined' ? __GIT_COMMIT__ : ''
@@ -39,9 +40,9 @@ export default function VersionBadge({ className = '' }) {
       type="button"
       className={`version-badge ${className}`.trim()}
       onClick={copia}
-      title={`Versione pubblicata · build ${BUILD}\nTocca per copiare`}
+      title={`${tr('Versione pubblicata · build {build}', { build: BUILD })}\n${tr('Tocca per copiare')}`}
     >
-      {copiato ? '✓ copiato' : etichetta}
+      {copiato ? `✓ ${tr('copiato')}` : etichetta}
     </button>
   )
 }

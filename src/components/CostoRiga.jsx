@@ -1,5 +1,6 @@
 import { costoRiga } from '../lib/pricing.js'
 import { formatPrice } from '../lib/orderStatus.js'
+import { tr } from '../lib/lingua.js'
 
 // Il costo di una riga di ricetta, accanto alla sua quantità (REQ-MENU-034).
 // Condiviso dal prodotto modificato al POS e dalla scheda del drink, come
@@ -13,7 +14,7 @@ export default function CostoRiga({ row, item, name }) {
   return (
     <span
       className="muted small"
-      aria-label={qty > 0 ? `Costo ${name || ''}`.trim() : undefined}
+      aria-label={qty > 0 ? (name ? tr('Costo {nome}', { nome: name }) : tr('Costo')) : undefined}
       style={{ width: 58, flex: 'none', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}
     >
       {qty > 0 ? (costo == null ? '—' : formatPrice(costo)) : ''}

@@ -24,6 +24,7 @@ import Tendina from './Tendina.jsx'
 import FiltroAssortimento from './FiltroAssortimento.jsx'
 import Icona from './Icona.jsx'
 import { conEmoji } from '../lib/icone.js'
+import { tr } from '../lib/lingua.js'
 
 // L'INVENTARIO periodico, come il foglio INV di Flavio: per ogni prodotto
 // DEP · ACQ · CONS · RIM, con CONS = DEP + ACQ − RIM. La RIM è quanto c'è
@@ -188,7 +189,7 @@ export default function StockCountPanel() {
     try {
       const articoli = await fetchInventoryItems()
       if (articoli.length === 0) {
-        setError('Nessun prodotto in magazzino: aggiungili prima di aprire l’inventario.')
+        setError(tr('Nessun prodotto in magazzino: aggiungili prima di aprire l’inventario.'))
         return
       }
       await startStockCount(articoli)
@@ -251,39 +252,38 @@ export default function StockCountPanel() {
     }
   }
 
-  if (open === undefined) return <div className="empty">Carico l’inventario…</div>
+  if (open === undefined) return <div className="empty">{tr('Carico l’inventario…')}</div>
 
   return (
     <div>
-      {error && <div className="banner">Errore: {error}</div>}
+      {error && <div className="banner">{tr('Errore: {errore}', { errore: error })}</div>}
 
       {!open ? (
         <>
           <button className="btn block" onClick={start} disabled={busy}>
-            <Icona nome="avvia" gruppo="tasti" /> Apri l’inventario
+            <Icona nome="avvia" gruppo="tasti" /> {tr('Apri l’inventario')}
           </button>
           <p className="muted small" style={{ margin: '8px 0 0' }}>
             {riapreDaSola
-              ? 'Da qui in poi c’è sempre un inventario in corso: quando lo chiudi scrivendo le rimanenze, ne parte subito un altro. Il consumo si legge fra una chiusura e l’altra.'
-              : 'Quando lo chiudi scrivendo le rimanenze, il prossimo lo apri tu da qui. Il consumo si legge fra l’apertura e la chiusura dello stesso inventario. (Si cambia in Impostazioni → Licenza, tra le funzioni premium.)'}
+              ? tr('Da qui in poi c’è sempre un inventario in corso: quando lo chiudi scrivendo le rimanenze, ne parte subito un altro. Il consumo si legge fra una chiusura e l’altra.')
+              : tr('Quando lo chiudi scrivendo le rimanenze, il prossimo lo apri tu da qui. Il consumo si legge fra l’apertura e la chiusura dello stesso inventario. (Si cambia in Impostazioni → Licenza, tra le funzioni premium.)')}
           </p>
         </>
       ) : (
         <>
           <TestataInventario
-            titolo={`Inventario in corso dal ${dataBreve(open.started_at)}`}
+            titolo={tr('Inventario in corso dal {data}', { data: dataBreve(open.started_at) })}
             giorni={computed.giorni}
             contati={computed.totals.counted}
             totale={righeConta.length}
             totals={computed.totals}
           >
-            RIM: giacenza registrata. Nella casella si inserisce la rimanenza rilevata, oppure si conferma la
-            RIM con ✓. CONS = DEP + ACQ − RIM.
+            {tr('RIM: giacenza registrata. Nella casella si inserisce la rimanenza rilevata, oppure si conferma la RIM con ✓. CONS = DEP + ACQ − RIM.')}
           </TestataInventario>
 
           <div className="inv-testa" style={{ marginTop: 8 }}>
             <Tendina
-              etichetta="Filtra i prodotti"
+              etichetta={tr('Filtra i prodotti')}
               attivo={assortimenti.length > 0}
               riassunto={conEmoji('filtra', riassuntoAssortimento(assortimenti))}
             >
@@ -299,15 +299,14 @@ export default function StockCountPanel() {
                   style={{ marginTop: 6 }}
                   onClick={() => setAssortimenti([])}
                 >
-                  ✕ Togli i filtri
+                  ✕ {tr('Togli i filtri')}
                 </button>
               )}
             </Tendina>
           </div>
           {assortimenti.length > 0 && (
             <p className="muted small" style={{ margin: '6px 0 0' }}>
-              I prodotti esclusi dal filtro restano nell’inventario: senza rimanenza inserita, alla chiusura
-              mantengono la giacenza registrata.
+              {tr('I prodotti esclusi dal filtro restano nell’inventario: senza rimanenza inserita, alla chiusura mantengono la giacenza registrata.')}
             </p>
           )}
 
@@ -331,10 +330,10 @@ export default function StockCountPanel() {
           </div>
 
           <p className="muted small" style={{ margin: '10px 0 6px' }}>
-            Le rimanenze si salvano mentre le scrivi: si può smettere e riprendere più tardi.
+            {tr('Le rimanenze si salvano mentre le scrivi: si può smettere e riprendere più tardi.')}
           </p>
           <button className="btn block" onClick={chiediConferma} disabled={busy}>
-            <Icona nome="fatto" gruppo="segnali" /> Chiudi l’inventario
+            <Icona nome="fatto" gruppo="segnali" /> {tr('Chiudi l’inventario')}
           </button>
         </>
       )}
@@ -342,9 +341,16 @@ export default function StockCountPanel() {
       {confirmClose && computed && (
         <ConfirmDialog
           icona="fatto"
-          title="Chiudere l’inventario?"
-          message={`Prodotti contati: ${computed.totals.counted}/${righeConta.length}.\nLe giacenze dei prodotti contati diventano il numero contato (differenza: ${formatPrice(computed.totals.diff_value)}).\nConsumo del periodo: ${formatPrice(computed.totals.cons_value)}.${riapreDaSola ? '\nNe parte subito uno nuovo, da oggi.' : ''}`}
-          confirmLabel="Chiudi l’inventario"
+          title={tr('Chiudere l’inventario?')}
+          message={[
+            tr('Prodotti contati: {contati}/{totale}.', { contati: computed.totals.counted, totale: righeConta.length }),
+            tr('Le giacenze dei prodotti contati diventano il numero contato (differenza: {importo}).', {
+              importo: formatPrice(computed.totals.diff_value),
+            }),
+            tr('Consumo del periodo: {importo}.', { importo: formatPrice(computed.totals.cons_value) }),
+            ...(riapreDaSola ? [tr('Ne parte subito uno nuovo, da oggi.')] : []),
+          ].join('\n')}
+          confirmLabel={tr('Chiudi l’inventario')}
           onCancel={() => setConfirmClose(false)}
           onConfirm={doClose}
         />

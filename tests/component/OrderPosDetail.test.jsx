@@ -55,7 +55,9 @@ vi.mock('../../src/lib/api.js', () => ({
   }),
 }))
 vi.mock('../../src/lib/pendingOrders.js', () => ({ submitPosOrder: vi.fn() }))
-vi.mock('../../src/lib/firebaseClient.js', () => ({ auth: {} }))
+// L'account che ha fatto l'accesso: lo stesso `u1` del finto
+// onAuthStateChanged qui sotto (le scelte del conto vuoto sono sue, REQ-ORD-025).
+vi.mock('../../src/lib/firebaseClient.js', () => ({ auth: { currentUser: { uid: 'u1' } } }))
 // CHI GUARDA IL CONTO lo decide il singolo test. Di suo è il banco, che è
 // il caso di quasi tutti i test qui sotto; la sala ha una schermata più
 // stretta (REQ-STAFF-014) e ha il suo blocco in fondo.
@@ -855,9 +857,24 @@ describe('tasti sempre presenti, spenti se non servono', () => {
 // rientrando (per esempio chiudendo il box del nome) il conto non era più
 // "creato qui", e togliendo l'ultima riga restava aperto e vuoto in coda.
 describe('conto rimasto senza righe', () => {
+  // Qui la coda è una rotta vera: tornarci SMONTA il conto, ed è l'uscita a
+  // annullarlo (il timer torna alla coda e basta, senza aspettare niente).
+  async function mountConCoda(order) {
+    const utils = render(
+      <MemoryRouter>
+        <Routes>
+          <Route path="/" element={<OrderPosDetail order={order} />} />
+          <Route path="/bar" element={<p>La coda</p>} />
+        </Routes>
+      </MemoryRouter>
+    )
+    await avvioDelConto()
+    return utils
+  }
+
   it('si annulla da solo e si torna alla lista', async () => {
     const user = userEvent.setup()
-    await mount(
+    await mountConCoda(
       baseOrder({
         comande: [
           {
@@ -875,6 +892,7 @@ describe('conto rimasto senza righe', () => {
     await waitFor(() => expect(cancelOrder).toHaveBeenCalledWith('ord1', { by: 'bartender' }), {
       timeout: 3000,
     })
+    expect(screen.getByText('La coda')).toBeInTheDocument()
   })
 
   it('ma non se qualcosa è già stato incassato', async () => {
@@ -898,7 +916,125 @@ describe('conto rimasto senza righe', () => {
     await new Promise((r) => setTimeout(r, 700))
     expect(cancelOrder).not.toHaveBeenCalled()
   })
+
+  // L'annullo da solo e l'uscita che segue sono lo stesso gesto: l'uscita
+  // non deve annullare una seconda volta.
+  it('annullato da solo, uscendo non si annulla di nuovo', async () => {
+    const user = userEvent.setup()
+    const { unmount } = await mountConCoda(contoConUnaRiga())
+    await user.click(screen.getByRole('button', { name: 'Riduci Mojito' }))
+    await waitFor(() => expect(cancelOrder).toHaveBeenCalledTimes(1), { timeout: 3000 })
+    unmount()
+    await new Promise((r) => setTimeout(r, 50))
+    expect(cancelOrder).toHaveBeenCalledTimes(1)
+  })
+
+  // ── CHI LO VUOLE APERTO (REQ-ORD-025) ──────────────────────────────
+  // Daniele, 15/11/2026: «a Flavio piace a Vittorio no». Vittorio
+  // sostituisce un drink con calma e la schermata gli si chiudeva in mano.
+  // La scelta è sua, su questo dispositivo (Il mio profilo).
+  describe('per chi lo vuole aperto', () => {
+    // L'account del test è `u1` (il finto onAuthStateChanged qui sopra).
+    beforeEach(() => localStorage.setItem('drink:conto:vuoto-si-chiude:u1', '0'))
+
+    it('togliendo l’ultima riga il conto resta aperto, e si continua a battere', async () => {
+      const user = userEvent.setup()
+      await mount(contoConUnaRiga())
+      await user.click(screen.getByRole('button', { name: 'Riduci Mojito' }))
+      await new Promise((r) => setTimeout(r, 900))
+      expect(cancelOrder).not.toHaveBeenCalled()
+      expect(screen.getByText(/Tocca i prodotti per aggiungerli/)).toBeInTheDocument()
+    })
+
+    it('uscendo col conto ancora vuoto, si annulla allora', async () => {
+      const user = userEvent.setup()
+      const { unmount } = await mount(contoConUnaRiga())
+      await user.click(screen.getByRole('button', { name: 'Riduci Mojito' }))
+      await new Promise((r) => setTimeout(r, 500))
+      unmount()
+      await waitFor(() => expect(cancelOrder).toHaveBeenCalledWith('ord1', { by: 'bartender' }))
+      expect(cancelOrder).toHaveBeenCalledTimes(1)
+      // Prima la rimozione, poi l'annullo: sono nel turno dello stesso conto.
+      const tolta = bartenderUpdateComanda.mock.calls.at(-1)
+      expect(tolta[2].items).toEqual([])
+      expect(bartenderUpdateComanda.mock.invocationCallOrder.at(-1)).toBeLessThan(
+        cancelOrder.mock.invocationCallOrder[0]
+      )
+    })
+
+    it('sostituito il drink, uscendo non si annulla niente', async () => {
+      const user = userEvent.setup()
+      const { unmount } = await mount(contoConUnaRiga())
+      await user.click(screen.getByRole('button', { name: 'Riduci Mojito' }))
+      await new Promise((r) => setTimeout(r, 900))
+      await user.click(screen.getAllByText('Gin Tonic')[0])
+      unmount()
+      await new Promise((r) => setTimeout(r, 50))
+      expect(cancelOrder).not.toHaveBeenCalled()
+    })
+
+    // Il conto appena battuto è ancora «in creazione»: l'uscita di solito
+    // toglie quel segno, che è il cancello della stampa e della notifica.
+    // Su un conto che sta per essere annullato, toglierlo da solo lo
+    // farebbe sembrare composto e da stampare (BUG-071): lo chiude
+    // l'annullo, nella stessa scrittura.
+    // E SENZA CHIEDERE IL NOME: un conto senza nome chiede come chiamarlo
+    // uscendo, ma questo sta per essere annullato (dalla revisione).
+    it('nato qui e svuotato, all’uscita si annulla senza aprire il cancello della stampa', async () => {
+      const user = userEvent.setup()
+      chiudiCreazione.mockClear()
+      createOrder.mockImplementationOnce(async () => ({
+        ...contoConUnaRiga(),
+        id: 'ord-nuovo',
+        customer_name: null,
+        table_label: null,
+        in_creazione: true,
+      }))
+      const { unmount } = render(
+        <MemoryRouter>
+          <OrderPosDetail order={null} />
+        </MemoryRouter>
+      )
+      await user.click(screen.getAllByText('Mojito')[0])
+      await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1), { timeout: 2000 })
+      await user.click(await screen.findByRole('button', { name: 'Riduci Mojito' }))
+      await new Promise((r) => setTimeout(r, 900))
+      expect(cancelOrder).not.toHaveBeenCalled()
+      await user.click(screen.getByRole('button', { name: 'Torna agli ordini' }))
+      expect(screen.queryByRole('dialog', { name: 'Nome del conto' })).toBeNull()
+      unmount()
+      await waitFor(() => expect(cancelOrder).toHaveBeenCalledWith('ord-nuovo', { by: 'bartender' }))
+      expect(chiudiCreazione).not.toHaveBeenCalled()
+    })
+  })
+
+  // Con la scelta accesa, chi esce PRIMA dei 400 ms del respiro trovava il
+  // conto ancora aperto e vuoto in coda: il timer moriva con la schermata.
+  it('uscendo prima che si annulli da solo, lo annulla l’uscita', async () => {
+    const user = userEvent.setup()
+    const { unmount } = await mount(contoConUnaRiga())
+    await user.click(screen.getByRole('button', { name: 'Riduci Mojito' }))
+    unmount()
+    await waitFor(() => expect(cancelOrder).toHaveBeenCalledWith('ord1', { by: 'bartender' }))
+    await new Promise((r) => setTimeout(r, 700))
+    expect(cancelOrder).toHaveBeenCalledTimes(1)
+  })
 })
+
+function contoConUnaRiga() {
+  return baseOrder({
+    comande: [
+      {
+        id: 'c1',
+        seq: 1,
+        status: 'in_preparazione',
+        status_times: {},
+        items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
+      },
+    ],
+    payments: [],
+  })
+}
 
 // ── TELEFONO: le azioni stanno in un menu, non in pagina ──────────────
 // Su uno schermo stretto i tasti secondari (unisci, gruppi, dati conto,

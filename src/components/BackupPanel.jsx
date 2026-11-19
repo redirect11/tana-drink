@@ -11,6 +11,7 @@ import {
 import { isAdmin } from '../lib/ruoli.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import Icona from './Icona.jsx'
+import { tr, trSegnato } from '../lib/lingua.js'
 
 // BACKUP E RIPRISTINO dal gestionale. Scarica tutto il database in un file
 // e lo rimette da un file. Serve prima di ogni operazione grossa (importi,
@@ -34,7 +35,7 @@ export default function BackupPanel({ role = null, soloEsporta = false }) {
     try {
       const backup = await esportaDatabase((nome, n) => setPasso(`${nome}: ${n}`))
       scarica(backup)
-      setEsito(`✓ Scaricato ${nomeFile(backup)} — ${backup.documenti} documenti.`)
+      setEsito(tr('✓ Scaricato {file} — {n} documenti.', { file: nomeFile(backup), n: backup.documenti }))
     } catch (e) {
       setErrore(e.message)
     } finally {
@@ -52,10 +53,10 @@ export default function BackupPanel({ role = null, soloEsporta = false }) {
     try {
       const backup = JSON.parse(await file.text())
       const problema = validaBackup(backup)
-      if (problema) return setErrore(problema)
+      if (problema) return setErrore(trSegnato(problema))
       setDaImportare(backup)
     } catch (err) {
-      setErrore(`File illeggibile: ${err.message}`)
+      setErrore(tr('File illeggibile: {errore}', { errore: err.message }))
     }
   }
 
@@ -69,14 +70,20 @@ export default function BackupPanel({ role = null, soloEsporta = false }) {
         setPasso(`${nome}: ${fatti}/${tot}`)
       )
       setEsito(
-        `✓ Ripristinati ${scritti} documenti.` +
-          (saltate.length ? ` Saltate (sconosciute a questa versione): ${saltate.join(', ')}.` : '') +
-          (fuoriLicenza.length
-            ? ` Non ripristinate perché di moduli non inclusi nella licenza: ${fuoriLicenza.join(', ')}.`
-            : '') +
-          (soloScript.length
-            ? ` Lo storico importato (${soloScript.join(', ')}) è nel file, e si ripristina con lo script di manutenzione.`
-            : '')
+        [
+          tr('✓ Ripristinati {n} documenti.', { n: scritti }),
+          saltate.length && tr('Saltate (sconosciute a questa versione): {elenco}.', { elenco: saltate.join(', ') }),
+          fuoriLicenza.length &&
+            tr('Non ripristinate perché di moduli non inclusi nella licenza: {elenco}.', {
+              elenco: fuoriLicenza.join(', '),
+            }),
+          soloScript.length &&
+            tr('Lo storico importato ({elenco}) è nel file, e si ripristina con lo script di manutenzione.', {
+              elenco: soloScript.join(', '),
+            }),
+        ]
+          .filter(Boolean)
+          .join(' ')
       )
     } catch (e) {
       setErrore(e.message)
@@ -88,16 +95,24 @@ export default function BackupPanel({ role = null, soloEsporta = false }) {
 
   return (
     <div className="card settings-section">
-      <h3>{soloEsporta ? 'I dati del locale' : 'Backup e ripristino'}</h3>
+      <h3>{soloEsporta ? tr('I dati del locale') : tr('Backup e ripristino')}</h3>
       <p className="muted small" style={{ margin: '0 0 10px' }}>
         {soloEsporta
-          ? 'Scarica in un file tutto quello che c’è nel database: ordini, incassi, fatture, clienti, magazzino, menù.'
-          : 'Scarica in un file tutto quello che c’è nel database: ordini, incassi, magazzino, menù, ore del personale. Fallo prima di ogni operazione grossa — e ogni tanto anche senza motivo.'}
+          ? tr('Scarica in un file tutto quello che c’è nel database: ordini, incassi, fatture, clienti, magazzino, menù.')
+          : tr(
+              'Scarica in un file tutto quello che c’è nel database: ordini, incassi, magazzino, menù, ore del personale.'
+            )}
       </p>
 
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
         <button className="btn grow" onClick={esporta} disabled={!!busy}>
-          {busy === 'export' ? 'Scarico…' : <><Icona nome="esporta" gruppo="tasti" /> Esporta tutto</>}
+          {busy === 'export' ? (
+            tr('Scarico…')
+          ) : (
+            <>
+              <Icona nome="esporta" gruppo="tasti" /> {tr('Esporta tutto')}
+            </>
+          )}
         </button>
         {admin && (
           <>
@@ -106,7 +121,13 @@ export default function BackupPanel({ role = null, soloEsporta = false }) {
               onClick={() => fileRef.current?.click()}
               disabled={!!busy}
             >
-              {busy === 'import' ? 'Ripristino…' : <><Icona nome="importa" gruppo="tasti" /> Ripristina da file</>}
+              {busy === 'import' ? (
+                tr('Ripristino…')
+              ) : (
+                <>
+                  <Icona nome="importa" gruppo="tasti" /> {tr('Ripristina da file')}
+                </>
+              )}
             </button>
             <input
               ref={fileRef}
@@ -137,28 +158,34 @@ export default function BackupPanel({ role = null, soloEsporta = false }) {
 
       {!soloEsporta && (
         <p className="muted small" style={{ margin: '10px 0 0' }}>
-          Il ripristino <strong>riscrive</strong> quello che c’è nel file e lascia
-          stare il resto: non cancella nulla.{' '}
+          {tr('Il ripristino riscrive quello che c’è nel file e lascia stare il resto: non cancella nulla.')}{' '}
           {admin
-            ? 'Per rimettere il database esattamente com’era — cancellando anche quello che è arrivato dopo — si usa lo script ripristina-db.js.'
-            : 'Il ripristino è riservato all’admin.'}{' '}
-          Le utenze non sono nel backup: stanno in Firebase Auth, con i loro ruoli.
+            ? tr(
+                'Per rimettere il database esattamente com’era — cancellando anche quello che è arrivato dopo — si usa lo script ripristina-db.js.'
+              )
+            : tr('Il ripristino è riservato all’admin.')}{' '}
+          {tr('Le utenze non sono nel backup: stanno in Firebase Auth, con i loro ruoli.')}
         </p>
       )}
 
       {daImportare && (
         <ConfirmDialog
-          title="Ripristinare da questo file?"
+          title={tr('Ripristinare da questo file?')}
           message={
-            `Backup del ${(daImportare.creato_il || '').slice(0, 16).replace('T', ' ')}` +
+            tr('Backup del {data}', { data: (daImportare.creato_il || '').slice(0, 16).replace('T', ' ') }) +
             `${daImportare.progetto ? ` · ${daImportare.progetto}` : ''}\n` +
-            `${totaleRighe(daImportare)} documenti in ${riassunto(daImportare).length} collezioni:\n` +
+            tr('{n} documenti in {m} collezioni:', {
+              n: totaleRighe(daImportare),
+              m: riassunto(daImportare).length,
+            }) +
+            '\n' +
             riassunto(daImportare)
               .map((r) => `· ${r.nome}: ${r.righe}`)
               .join('\n') +
-            `\n\nI documenti con lo stesso identificativo verranno SOVRASCRITTI.`
+            '\n\n' +
+            tr('I documenti con lo stesso identificativo verranno SOVRASCRITTI.')
           }
-          confirmLabel="Ripristina"
+          confirmLabel={tr('Ripristina')}
           danger
           onCancel={() => setDaImportare(null)}
           onConfirm={importa}

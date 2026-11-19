@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { dividiComanda } from '../lib/comande.js'
 import Icona from './Icona.jsx'
+import { tr } from '../lib/lingua.js'
 
 // ── QUANTI NE PREPARI ADESSO ─────────────────────────────────────────
 //
@@ -37,18 +38,18 @@ export default function PreparazioneParziale({ comanda, onAnnulla, onConferma })
   return (
     <div className="comanda-parziale">
       <div className="muted small" style={{ marginBottom: 4 }}>
-        Quanti ne prepari adesso?
+        {tr('Quanti ne prepari adesso?')}
       </div>
       {righe.map((i, idx) => (
         <div className="row between comanda-parziale-riga" key={i.line_id ?? `${i.drink_id}-${idx}`}>
           <span className="small">
             {i.custom && <><Icona nome="special" gruppo="tasti" />{' '}</>}
-            {i.name} <span className="muted">di {i.qty}</span>
+            {i.name} <span className="muted">{tr('di {n}', { n: i.qty })}</span>
           </span>
           <span className="row" style={{ gap: 6, alignItems: 'center' }}>
             <button
               className="btn ghost small"
-              aria-label={`Uno in meno di ${i.name}`}
+              aria-label={tr('Uno in meno di {nome}', { nome: i.name })}
               disabled={quante(idx) === 0}
               onClick={() => cambia(idx, -1, i.qty)}
             >
@@ -57,7 +58,7 @@ export default function PreparazioneParziale({ comanda, onAnnulla, onConferma })
             <strong style={{ minWidth: '1.5em', textAlign: 'center' }}>{quante(idx)}</strong>
             <button
               className="btn ghost small"
-              aria-label={`Uno in più di ${i.name}`}
+              aria-label={tr('Uno in più di {nome}', { nome: i.name })}
               disabled={quante(idx) >= i.qty}
               onClick={() => cambia(idx, +1, i.qty)}
             >
@@ -68,7 +69,7 @@ export default function PreparazioneParziale({ comanda, onAnnulla, onConferma })
       ))}
       <div className="grid-2" style={{ marginTop: 8, gap: 6 }}>
         <button className="btn ghost small" onClick={onAnnulla}>
-          Lascia stare
+          {tr('Lascia stare')}
         </button>
         <button
           className="btn small"
@@ -81,7 +82,7 @@ export default function PreparazioneParziale({ comanda, onAnnulla, onConferma })
             onConferma?.(scelto)
           }}
         >
-          Preparo questi
+          {tr('Preparo questi')}
         </button>
       </div>
     </div>

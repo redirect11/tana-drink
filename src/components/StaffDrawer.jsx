@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom'
 import { auth } from '../lib/firebaseClient.js'
 import { logoutStaff } from '../lib/logout.js'
 import { devToolsEnabled } from '../dev/devActions.js'
-import { isAdmin, isGestore, isSala, RUOLO_ETICHETTA } from '../lib/ruoli.js'
+import { isAdmin, isGestore, isSala, etichettaRuolo } from '../lib/ruoli.js'
 import { areaClientiVisibile, indirizzoAreaClienti } from '../lib/passaggioRegia.js'
 import { useSchermoLargo } from '../lib/useTelefono.js'
 import { usePaginaPiena } from '../lib/paginaPiena.js'
@@ -28,7 +28,9 @@ import { toastSuccess } from '../lib/toast.js'
 import { vociPerRuolo } from '../lib/sezioni.js'
 import { menuDigitaleAttivo } from '../lib/licenza.js'
 import Icona from './Icona.jsx'
+import MarchioLime from './MarchioLime.jsx'
 import { subscribeSottosezioni } from '../lib/sottosezioni.js'
+import { tr, trSegnato } from '../lib/lingua.js'
 
 // Menu laterale dello staff: usato nel gestionale (onSelect cambia tab)
 // e nella vista menu per l'ordinazione manuale (naviga a /bar?tab=…).
@@ -69,7 +71,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
   const agganciabile = largo && sotto.voci.length > 0
   const navigate = useNavigate()
   const utente = auth.currentUser
-  const nomeUtente = utente?.displayName || String(utente?.email || '').split('@')[0] || 'Il mio profilo'
+  const nomeUtente = utente?.displayName || String(utente?.email || '').split('@')[0] || tr('Il mio profilo')
 
   useEffect(() => {
     try {
@@ -242,7 +244,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
   return (
     <>
       {flottante && (
-        <button className="bar-burger" aria-label="Menu" onClick={() => setOpen(true)}>
+        <button className="bar-burger" aria-label={tr('Menu')} onClick={() => setOpen(true)}>
           <Icona nome="menu_laterale" />
         </button>
       )}
@@ -255,9 +257,11 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
         // «em», quindi basta questa.
         style={dock ? { width: largh, fontSize: `${(0.85 * largh) / MENU_DEFAULT}rem` } : undefined}
       >
+        {/* IL MARCHIO DEL PRODOTTO STA QUI (REQ-UI-035, Daniele 17/11/2026:
+            «dove sta scritto Gestionale in alto nel menu»): le pagine, in
+            alto, tengono il logo e il nome del locale. */}
         <div className="brand-mini">
-          <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
-          Gestionale
+          <MarchioLime />
         </div>
         {/* IL SECONDO LIVELLO STA QUI DENTRO, sotto la pagina in cui ci si
             trova. È il modo in cui si fa di solito con un menu a scomparsa:
@@ -272,7 +276,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
               className={`bar-nav-item${active === id ? ' active' : ''}`}
               onClick={() => go(id)}
             >
-              <Icona nome={icon} /> {label}
+              <Icona nome={icon} /> {trSegnato(label)}
             </div>
             {active === id && sotto.voci.length > 0 && (
               <div className="bar-nav-sotto">
@@ -287,7 +291,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
                       setOpen(false)
                     }}
                   >
-                    <Icona nome={v.icona} /> {v.label}
+                    <Icona nome={v.icona} /> {trSegnato(v.label)}
                   </div>
                 ))}
               </div>
@@ -297,7 +301,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
         <div className="bar-nav-sep" />
         {isGestore(role) && (
           <div className="bar-nav-item" onClick={() => vaiA('/pos')}>
-            <Icona nome="nuovo-ordine" /> Nuovo ordine
+            <Icona nome="nuovo-ordine" /> {tr('Nuovo ordine')}
           </div>
         )}
         {/* SEGUE IL MENÙ DIGITALE (BUG-132, decisione dell'utente del
@@ -308,7 +312,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
             className={`bar-nav-item${active === 'ordine' ? ' active' : ''}`}
             onClick={() => vaiA('/menu')}
           >
-            <Icona nome="ordina-dal-menu" /> Ordina dal menù
+            <Icona nome="ordina-dal-menu" /> {tr('Ordina dal menù')}
           </div>
         )}
         {isSala(role) && <ChiamaIlBancone />}
@@ -325,7 +329,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
               aria-expanded={gruppiAperti}
             >
               <span className="drawer-groups-freccia">▸</span>
-              Gruppi
+              {tr('Gruppi')}
               {groupTiles.length > 0 && <span className="drawer-groups-conto">{groupTiles.length}</span>}
             </button>
             {gruppiAperti && (
@@ -348,7 +352,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
                 <div className="row" style={{ gap: 6, padding: '0 14px', marginTop: 8 }}>
                   <input
                     type="text"
-                    placeholder="+ Nuovo gruppo"
+                    placeholder={tr('+ Nuovo gruppo')}
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && creaGruppo()}
@@ -359,7 +363,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
                     onClick={creaGruppo}
                     disabled={!newName.trim()}
                   >
-                    Crea
+                    {tr('Crea')}
                   </button>
                 </div>
               </>
@@ -378,17 +382,17 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
             navigate('/profilo-staff')
           }}
         >
-          <Icona nome={RUOLO_ETICHETTA[role]?.split(' ')[0] ?? 'clienti'} />
+          <Icona nome={etichettaRuolo(role)?.split(' ')[0] ?? 'clienti'} />
           <span className="drawer-io-testo">
             <span className="drawer-io-nome">{nomeUtente}</span>
             <span className="drawer-io-ruolo">
-              {(RUOLO_ETICHETTA[role] ?? 'Utente').replace(/^\S+\s/, '')}
+              {(etichettaRuolo(role) ?? tr('Utente')).replace(/^\S+\s/, '')}
             </span>
           </span>
         </div>
         {areaClientiVisibile({ admin: isAdmin(role), settings }) && <AreaClienti settings={settings} />}
         <div className="bar-nav-item" onClick={() => logoutStaff()}>
-          <Icona nome="esci" /> Esci
+          <Icona nome="esci" /> {tr('Esci')}
         </div>
         {/* Ramo e commit del deploy: con più branch che passano a turno
             sullo stesso ambiente di test, serve sapere cosa si sta
@@ -403,8 +407,8 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
         <div
           className="bar-sidebar-maniglia"
           role="separator"
-          aria-label="Larghezza del menu"
-          title="Trascina per allargare · doppio clic per rimetterlo com'era"
+          aria-label={tr('Larghezza del menu')}
+          title={tr("Trascina per allargare · doppio clic per rimetterlo com'era")}
           onPointerDown={tira}
           onPointerMove={muovi}
           onPointerUp={lascia}
@@ -444,7 +448,7 @@ function ChiamaIlBancone() {
     const u = auth.currentUser
     chiamaIlBancone({ from_uid: uid, from_email: u?.email ?? null, from_name: u?.displayName ?? null })
     setInAttesa(true)
-    toastSuccess('Chiamata inviata al bancone', { icona: 'chiama-bancone' })
+    toastSuccess(tr('Chiamata inviata al bancone'), { icona: 'chiama-bancone' })
   }
   return (
     <div
@@ -455,7 +459,7 @@ function ChiamaIlBancone() {
       onClick={chiama}
       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && chiama()}
     >
-      <Icona nome="chiama-bancone" /> {inAttesa ? 'In attesa del bancone…' : 'Chiama il bancone'}
+      <Icona nome="chiama-bancone" /> {inAttesa ? tr('In attesa del bancone…') : tr('Chiama il bancone')}
     </div>
   )
 }
@@ -466,7 +470,7 @@ function ChiamaIlBancone() {
 function AreaClienti({ settings }) {
   return (
     <a className="bar-nav-item" href={indirizzoAreaClienti(settings)} target="_blank" rel="noopener noreferrer">
-      <Icona nome="area-clienti" /> Area clienti
+      <Icona nome="area-clienti" /> {tr('Area clienti')}
     </a>
   )
 }

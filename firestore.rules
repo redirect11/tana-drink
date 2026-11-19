@@ -599,6 +599,21 @@ service cloud.firestore {
       allow delete: if isBartender() || (isSignedIn() && request.auth.uid == uid);
     }
 
+    // IL PROFILO DI CHI LAVORA (REQ-UI-039): le sue scelte che lo seguono su
+    // ogni dispositivo — per ora la lingua del gestionale. Daniele,
+    // 17/11/2026: «chiunque può scegliere la lingua, qualsiasi ruolo; la
+    // lingua è legata al profilo». Quindi ognuno legge e scrive SOLO il suo,
+    // e solo i campi che si conoscono: un profilo non è un posto dove
+    // mettere altro.
+    match /profili_staff/{uid} {
+      function profiloValido() {
+        return request.resource.data.keys().hasOnly(['lingua', 'aggiornato'])
+          && request.resource.data.lingua in ['it', 'en'];
+      }
+      allow read: if isStaffMember() && request.auth.uid == uid;
+      allow create, update: if licenzaValida() && (isStaffMember() && request.auth.uid == uid && profiloValido());
+    }
+
     // CUSTOMERS — profilo del cliente registrato: solo il proprietario
     // (e il bartender in lettura).
     match /customers/{uid} {

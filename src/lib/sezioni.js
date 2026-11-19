@@ -7,6 +7,7 @@
 import { isAdmin, isGestore } from './ruoli.js'
 import { voceVisibile } from './licenza.js'
 import { stampaConsentita, comandeConsentite } from './limiti.js'
+import { daTradurre } from './lingua.js'
 
 // Le voci che il piano può togliere (REQ-LIC-016, REQ-LIC-005): la
 // stampante senza la stampa, «Da servire» senza le comande. Senza
@@ -18,26 +19,29 @@ const nelPiano = (impostazioni, id) => PIANO_DELLA_VOCE[id]?.(impostazioni) ?? t
 // `ruoli.js`: dove manca, la voce è di tutto il gestionale. Un flag di
 // testo («solo admin») avrebbe rimesso il confronto sul ruolo qui dentro,
 // che è la cosa che ruoli.js esiste per evitare.
+//
+// I NOMI SONO SEGNATI DA TRADURRE (REQ-UI-039): il menu laterale e la barra
+// in alto li mostrano con `trSegnato`, nella lingua di chi guarda.
 export const NAV_GESTIONALE = [
-  ['coda', 'coda', 'Coda ordini'],
+  ['coda', 'coda', daTradurre('Coda ordini')],
   // La cassa è una sola: dentro ci sono flusso, lista ordini e chiusure
   // (vedi CassaTab). «Lista ordini» aveva una voce sua qui accanto, come
   // se fosse un altro mestiere.
-  ['pagamenti', 'cassa', 'Cassa'],
+  ['pagamenti', 'cassa', daTradurre('Cassa')],
   // FATTURE AI CLIENTI: funzione premium (REQ-LIC-001), non inclusa per la
   // Tana. Il filtro non è qui accanto al ruolo perché non è una domanda sul
   // ruolo: la voce c'è o non c'è per tutto il locale, e a deciderlo sono le
   // impostazioni — vedi `vociPerRuolo`.
-  ['fatture', 'fatture', 'Fatture'],
-  ['stats', 'statistiche', 'Statistiche'],
+  ['fatture', 'fatture', daTradurre('Fatture')],
+  ['stats', 'statistiche', daTradurre('Statistiche')],
   // BILANCIO: i conti del locale — incassi, stipendi, spese, netto del
   // mese. Li guarda chi il locale lo paga, non chi ci lavora: è la prima
   // voce che non basta essere gestori per vedere. Si TOGLIE dal menu, non
   // si nasconde dentro la pagina — una pagina che si apre e poi dice «non
   // puoi» si è già fatta vedere.
-  ['bilancio', 'bilancio', 'Bilancio', isAdmin],
-  ['menu', 'menu', 'Menù'],
-  ['inventario', 'magazzino', 'Magazzino'],
+  ['bilancio', 'bilancio', daTradurre('Bilancio'), isAdmin],
+  ['menu', 'menu', daTradurre('Menù')],
+  ['inventario', 'magazzino', daTradurre('Magazzino')],
   // FORNITORI: chi ci vende, cosa gli abbiamo ordinato, cosa gli dobbiamo
   // (anagrafica, ordini, scadenzario). Chiesta dall'utente il 26/08/2026:
   // stavano nel magazzino, che però risponde a «cosa ho sullo scaffale»,
@@ -48,17 +52,17 @@ export const NAV_GESTIONALE = [
   // magazzino li vedeva ogni gestore, ma per contiguità, non per una
   // scelta. Chi lavora al banco non perde niente di quello che gli serve:
   // un fornitore nuovo si crea ancora dalla tendina del modulo prodotto.
-  ['fornitori', 'fornitori', 'Fornitori', isAdmin],
-  ['staff', 'staff', 'Staff'],
-  ['utenti', 'utenti', 'Utenti e ruoli'],
-  ['vista-cliente', 'vista-cliente', 'Vista cliente'],
+  ['fornitori', 'fornitori', daTradurre('Fornitori'), isAdmin],
+  ['staff', 'staff', daTradurre('Staff')],
+  ['utenti', 'utenti', daTradurre('Utenti e ruoli')],
+  ['vista-cliente', 'vista-cliente', daTradurre('Vista cliente')],
   // IL MARKETPLACE DEI TEMI (REQ-MENU-023): una pagina sua, non un
   // riquadro delle Impostazioni. L'utente, 02/11/2026: «una finestra/pagina
   // nuova che apro per navigare i temi come se fosse un catalogo». Risponde
   // a «che aspetto potrebbe avere il mio menù», non a «come è regolato»
   // (docs/navigazione.md, quando un gruppo diventa una pagina sua).
-  ['marketplace', 'marketplace', 'Marketplace'],
-  ['impostazioni', 'impostazioni', 'Impostazioni'],
+  ['marketplace', 'marketplace', daTradurre('Marketplace')],
+  ['impostazioni', 'impostazioni', daTradurre('Impostazioni')],
 ]
 
 // La sala parte dalla STESSA coda del banco; «I miei ordini» non è più una
@@ -72,17 +76,30 @@ export const NAV_GESTIONALE = [
 // banco». Lo staff vede la parte del collegamento; i dati del locale
 // sulla carta restano dei gestori (PrinterSetup, `gestore`).
 export const NAV_SALA = [
-  ['coda', 'coda', 'Coda ordini'],
-  ['servizio', 'servizio', 'Da servire'],
-  ['stampante', 'stampante', 'Stampante'],
+  ['coda', 'coda', daTradurre('Coda ordini')],
+  ['servizio', 'servizio', daTradurre('Da servire')],
+  ['stampante', 'stampante', daTradurre('Stampante')],
 ]
 
 // Dove sono finite le sezioni che non ci sono più.
 const VECCHI_INDIRIZZI = { storico: 'pagamenti' }
 
-// Le pagine fuori dal gestionale che hanno comunque una testata visibile.
+// SIAMO NEL GESTIONALE? Lì in alto c'è il marchio del prodotto, non il nome
+// del locale, e il marchio porta alla coda (REQ-UI-035): la coda e le
+// sezioni (/bar), il conto al banco (/pos) e il profilo di chi lavora. Le
+// pagine dei clienti — la home, il menù anche quando lo apre il personale,
+// lo stato di un ordine — restano del locale. Il profilo di chi lavora sta
+// qui E fra le pagine con la testata qui sotto: quell'elenco dice chi ha un
+// titolo in barra, non chi è del gestionale.
+const DEL_GESTIONALE = ['/bar', '/pos', '/profilo-staff']
+const sotto = (pathname, p) => pathname === p || String(pathname || '').startsWith(`${p}/`)
+export const nelGestionale = (pathname) => DEL_GESTIONALE.some((p) => sotto(pathname, p))
+
+// Le pagine fuori dalle sezioni del gestionale che hanno comunque una
+// testata visibile. È segnata da tradurre quella del gestionale; le altre
+// sono pagine dei clienti, dove traduce il browser (REQ-CLI-010).
 const FUORI = [
-  ['/profilo-staff', 'profilo', 'Il mio profilo'],
+  ['/profilo-staff', 'profilo', daTradurre('Il mio profilo')],
   ['/profilo', 'profilo', 'Il mio profilo'],
   ['/ordini', 'miei-ordini', 'I miei ordini'],
   ['/accedi', 'accedi', 'Accesso'],
@@ -107,7 +124,7 @@ export function titoloPagina(pathname = '', search = '') {
       NAV_SALA.find(([id]) => id === effettivo)
     return voce ? { icona: voce[1], titolo: voce[2] } : null
   }
-  const voce = FUORI.find(([p]) => pathname === p || pathname.startsWith(`${p}/`))
+  const voce = FUORI.find(([p]) => sotto(pathname, p))
   return voce ? { icona: voce[1], titolo: voce[2] } : null
 }
 

@@ -1,5 +1,6 @@
 import { kpiSummary } from './stats.js'
 import { businessDayKey, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
+import { formatoAttivo, daTradurre, tr } from './lingua.js'
 
 // ── L'ELENCO DELLE SERATE (chiusure di cassa) ────────────────────────
 //
@@ -21,7 +22,7 @@ const fmt = (iso, opt) => {
   if (!iso) return '—'
   try {
     const d = new Date(iso)
-    return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString('it-IT', opt)
+    return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString(formatoAttivo(), opt)
   } catch {
     return '—'
   }
@@ -48,7 +49,7 @@ export function durataSerata(da, a) {
 export function etichettaSerata(s) {
   if (!s?.opened_at) return '—'
   return `${giornoSerata(s.opened_at)} · ${oraSerata(s.opened_at)}→${
-    s.closed_at ? oraSerata(s.closed_at) : 'in corso'
+    s.closed_at ? oraSerata(s.closed_at) : tr('in corso')
   }`
 }
 
@@ -103,7 +104,7 @@ export function elencoSerate(sessions = [], orders = [], { adesso } = {}) {
         session: s,
         inCorso: inCorso(s),
         giorno: giornoSerata(s.opened_at),
-        orario: `${oraSerata(s.opened_at)} → ${s.closed_at ? oraSerata(s.closed_at) : 'in corso'}`,
+        orario: `${oraSerata(s.opened_at)} → ${s.closed_at ? oraSerata(s.closed_at) : tr('in corso')}`,
         durata: durataSerata(s.opened_at, fine),
         incasso,
         conti,
@@ -180,9 +181,9 @@ export const RAGGRUPPAMENTI = ['serata', 'settimana', 'mese']
 // un raggruppamento aggiunge la voce accanto alla chiave, e non se ne
 // dimentica una in un altro file.
 export const ETICHETTA_RAGGRUPPAMENTO = {
-  serata: 'Serata',
-  settimana: 'Settimana',
-  mese: 'Mese',
+  serata: daTradurre('Serata'),
+  settimana: daTradurre('Settimana'),
+  mese: daTradurre('Mese'),
 }
 
 // LA SETTIMANA COMINCIA DI LUNEDÌ. È l'uso italiano (e lo standard ISO), ma
@@ -231,7 +232,7 @@ export function etichettaPeriodo(chiave, raggruppamento) {
   if (!chiave) return '—'
   const opzioni = { timeZone: 'UTC' }
   if (raggruppamento === 'mese') {
-    return dataDaChiave(`${chiave}-01`).toLocaleDateString('it-IT', {
+    return dataDaChiave(`${chiave}-01`).toLocaleDateString(formatoAttivo(), {
       ...opzioni,
       month: 'long',
       year: 'numeric',
@@ -241,8 +242,8 @@ export function etichettaPeriodo(chiave, raggruppamento) {
     const lun = dataDaChiave(chiave)
     const dom = dataDaChiave(chiave)
     dom.setUTCDate(dom.getUTCDate() + 6)
-    const mese = (d) => d.toLocaleDateString('it-IT', { ...opzioni, month: 'short' })
-    const giorno = (d) => d.toLocaleDateString('it-IT', { ...opzioni, day: 'numeric' })
+    const mese = (d) => d.toLocaleDateString(formatoAttivo(), { ...opzioni, month: 'short' })
+    const giorno = (d) => d.toLocaleDateString(formatoAttivo(), { ...opzioni, day: 'numeric' })
     // Dentro lo stesso mese il mese si scrive una volta sola: «10–16 ago».
     // A cavallo di due mesi ci vanno tutti e due, o «27–2 ago» sarebbe falso.
     return mese(lun) === mese(dom)

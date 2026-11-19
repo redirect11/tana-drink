@@ -1736,3 +1736,27 @@ describe('sotto la barra in alto, alla sua altezza misurata', () => {
     expect(regola('.cat-nav')).not.toMatch(/top: \d+px/)
   })
 })
+
+// LE ICONE DELLA ZONA DESTRA, UNA MISURA SOLA (BUG-170). Daniele,
+// 17/11/2026: «quando siamo in coda ordini, la chat AI appare un po' più
+// piccola vicino all'icona delle notifiche». I tasti dell'assistente e dello
+// schermo intero erano «piccoli» (testo a 0,9rem) e la campanella a
+// 1,15rem: l'icona segue il testo del suo tasto. La misura dei due tasti è
+// quella della campanella, e la regola viene DOPO .btn.small, con la stessa
+// forza, o perderebbe.
+describe('assistente, campanella e schermo intero hanno icone della stessa misura', () => {
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8').replace(/\r\n/g, '\n')
+  const misura = (blocco) => blocco.match(/font-size:\s*([\d.]+rem)/)?.[1]
+  const dopo = (sel) => css.slice(css.indexOf(`\n${sel}`))
+  const campanella = misura(dopo('.status-bell {').slice(0, 300))
+  const tasti = dopo('.btn.topbar-chat,\n.btn.topbar-schermo {').slice(0, 120)
+
+  it('la misura è quella della campanella', () => {
+    expect(campanella).toBe('1.15rem')
+    expect(misura(tasti)).toBe(campanella)
+  })
+
+  it('e vince sul testo dei tasti piccoli', () => {
+    expect(css.indexOf('\n.btn.topbar-chat,')).toBeGreaterThan(css.indexOf('\n.btn.small {'))
+  })
+})

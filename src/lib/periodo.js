@@ -14,12 +14,15 @@
 // che questa dice.
 
 import { businessDayKey } from './businessDay.js'
+import { daTradurre, formatoAttivo, tr, trSegnato } from './lingua.js'
 
-const MESI = [
-  'gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno',
-  'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre',
+// I mesi corti sono segnati: `etichettaPeriodo` li traduce quando scrive il
+// periodo (REQ-UI-039). Il valore resta italiano per chi lo usa così com'è.
+export const MESI_CORTI = [
+  daTradurre('gen'), daTradurre('feb'), daTradurre('mar'), daTradurre('apr'),
+  daTradurre('mag'), daTradurre('giu'), daTradurre('lug'), daTradurre('ago'),
+  daTradurre('set'), daTradurre('ott'), daTradurre('nov'), daTradurre('dic'),
 ]
-export const MESI_CORTI = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic']
 
 export const chiaveGiorno = (d) => new Date(d).toISOString().slice(0, 10)
 
@@ -64,15 +67,15 @@ export function ordineNelPeriodo(o, periodo, cutoffHour) {
 // Come si legge il periodo scelto, in poche parole: «oggi», «ieri»,
 // «12 ago», «12 – 18 ago», «28 dic – 3 gen».
 export function etichettaPeriodo({ da, a } = {}, oggi = null) {
-  if (!da) return 'Sempre'
+  if (!da) return tr('Sempre')
   const fine = a || da
   const giorno = (k, conAnno = false) => {
     const [y, m, d] = k.split('-')
-    return `${Number(d)} ${MESI_CORTI[Number(m) - 1]}${conAnno ? ` ${y}` : ''}`
+    return `${Number(d)} ${trSegnato(MESI_CORTI[Number(m) - 1])}${conAnno ? ` ${y}` : ''}`
   }
   if (da === fine) {
-    if (oggi && da === oggi) return 'Oggi'
-    if (oggi && da === piuGiorni(oggi, -1)) return 'Ieri'
+    if (oggi && da === oggi) return tr('Oggi')
+    if (oggi && da === piuGiorni(oggi, -1)) return tr('Ieri')
     return giorno(da)
   }
   // Stesso mese: il mese si scrive una volta sola («12 – 18 ago»).
@@ -82,8 +85,14 @@ export function etichettaPeriodo({ da, a } = {}, oggi = null) {
   return `${giorno(da)} – ${giorno(fine)}`
 }
 
+// La testata del calendario, «novembre 2026» / «November 2026»: la scrive
+// Intl nella lingua in uso, come le altre date del gestionale.
 export function nomeMese(anno, mese) {
-  return `${MESI[mese]} ${anno}`
+  return new Date(Date.UTC(anno, mese, 1)).toLocaleDateString(formatoAttivo(), {
+    timeZone: 'UTC',
+    month: 'long',
+    year: 'numeric',
+  })
 }
 
 // La griglia del mese come si disegna: sei righe da sette, lunedì per
@@ -107,22 +116,22 @@ export function grigliaMese(anno, mese) {
 // calendario.
 export function periodiRapidi(oggi) {
   return [
-    { id: 'oggi', label: 'Oggi', periodo: { da: oggi, a: oggi, completo: true } },
+    { id: 'oggi', label: tr('Oggi'), periodo: { da: oggi, a: oggi, completo: true } },
     {
       id: 'ieri',
-      label: 'Ieri',
+      label: tr('Ieri'),
       periodo: { da: piuGiorni(oggi, -1), a: piuGiorni(oggi, -1), completo: true },
     },
     {
       id: 'settimana',
-      label: 'Ultimi 7 giorni',
+      label: tr('Ultimi 7 giorni'),
       periodo: { da: piuGiorni(oggi, -6), a: oggi, completo: true },
     },
     {
       id: 'mese',
-      label: 'Ultimi 30 giorni',
+      label: tr('Ultimi 30 giorni'),
       periodo: { da: piuGiorni(oggi, -29), a: oggi, completo: true },
     },
-    { id: 'sempre', label: 'Sempre', periodo: { da: null, a: null, completo: true } },
+    { id: 'sempre', label: tr('Sempre'), periodo: { da: null, a: null, completo: true } },
   ]
 }

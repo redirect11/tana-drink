@@ -6,19 +6,31 @@
 
 import { shiftDay, weekDays } from './ore.js'
 import { chiaveMese, chiaveSettimana, etichettaPeriodo } from './serate.js'
+import { daTradurre, formatoAttivo, trSegnato } from './lingua.js'
 
 // `incidenza` è come si chiama, sotto i totali, la quota di una colonna sul
-// periodo intero.
+// periodo intero. Etichette segnate: le traduce chi le mostra (REQ-UI-039).
 export const VISTE = [
-  { id: 'anno', label: 'Anno', incidenza: 'Incidenza sull’anno' },
-  { id: 'mese', label: 'Mese', incidenza: 'Incidenza sul mese' },
-  { id: 'settimana', label: 'Settimana', incidenza: 'Incidenza sulla settimana' },
-  { id: 'giorno', label: 'Giorno', incidenza: 'Incidenza sul giorno' },
+  { id: 'anno', label: daTradurre('Anno'), incidenza: daTradurre('Incidenza sull’anno') },
+  { id: 'mese', label: daTradurre('Mese'), incidenza: daTradurre('Incidenza sul mese') },
+  { id: 'settimana', label: daTradurre('Settimana'), incidenza: daTradurre('Incidenza sulla settimana') },
+  { id: 'giorno', label: daTradurre('Giorno'), incidenza: daTradurre('Incidenza sul giorno') },
 ]
 
-const MESI = ['GEN', 'FEB', 'MAR', 'APR', 'MAG', 'GIU', 'LUG', 'AGO', 'SET', 'OTT', 'NOV', 'DIC']
-const GIORNI = ['DOM', 'LUN', 'MAR', 'MER', 'GIO', 'VEN', 'SAB']
-const SETTIMANE = ['I SETT', 'II SETT', 'III SETT', 'IV SETT']
+// Le intestazioni delle colonne si traducono QUI, quando le colonne si
+// calcolano (a ogni disegno), e non da chi le mostra: «MAR» è marzo fra i
+// mesi e martedì fra i giorni, e solo qui si sa quale dei due è. Il giorno
+// porta il suo contesto; in italiano si legge «MAR» in tutti e due i casi.
+const MESI = [
+  daTradurre('GEN'), daTradurre('FEB'), daTradurre('MAR'), daTradurre('APR'),
+  daTradurre('MAG'), daTradurre('GIU'), daTradurre('LUG'), daTradurre('AGO'),
+  daTradurre('SET'), daTradurre('OTT'), daTradurre('NOV'), daTradurre('DIC'),
+]
+const GIORNI = [
+  daTradurre('DOM'), daTradurre('LUN'), daTradurre('giorno|MAR'), daTradurre('MER'),
+  daTradurre('GIO'), daTradurre('VEN'), daTradurre('SAB'),
+]
+const SETTIMANE = [daTradurre('I SETT'), daTradurre('II SETT'), daTradurre('III SETT'), daTradurre('IV SETT')]
 
 const pad = (n) => String(n).padStart(2, '0')
 const ultimoDelMese = (ym) => {
@@ -39,9 +51,9 @@ const ultimoDelMese = (ym) => {
 export function colonneDelBilancio(vista, giorno) {
   if (vista === 'anno') {
     const y = giorno.slice(0, 4)
-    return MESI.map((label, i) => {
+    return MESI.map((mese, i) => {
       const ym = `${y}-${pad(i + 1)}`
-      return { key: ym, label, dal: `${ym}-01`, al: `${ym}-${pad(ultimoDelMese(ym))}` }
+      return { key: ym, label: trSegnato(mese), dal: `${ym}-01`, al: `${ym}-${pad(ultimoDelMese(ym))}` }
     })
   }
   if (vista === 'mese') {
@@ -52,7 +64,7 @@ export function colonneDelBilancio(vista, giorno) {
       const a = Math.min(d + 6, fine)
       colonne.push({
         key: `${ym}-${pad(d)}`,
-        label: SETTIMANE[(d - 1) / 7] || 'EXTRA',
+        label: trSegnato(SETTIMANE[(d - 1) / 7]) || 'EXTRA',
         sotto: d === a ? `${d}` : `${d}–${a}`,
         dal: `${ym}-${pad(d)}`,
         al: `${ym}-${pad(a)}`,
@@ -62,7 +74,7 @@ export function colonneDelBilancio(vista, giorno) {
   }
   return (vista === 'settimana' ? weekDays(giorno) : [giorno]).map((k) => ({
     key: k,
-    label: GIORNI[new Date(`${k}T00:00:00Z`).getUTCDay()],
+    label: trSegnato(GIORNI[new Date(`${k}T00:00:00Z`).getUTCDay()]),
     sotto: `${Number(k.slice(8))}/${Number(k.slice(5, 7))}`,
     dal: k,
     al: k,
@@ -88,7 +100,7 @@ export function nomeDelPeriodo(vista, giorno) {
     const lunedi = chiaveSettimana(giorno)
     return `${etichettaPeriodo(lunedi, 'settimana')} ${shiftDay(lunedi, 6).slice(0, 4)}`
   }
-  return new Date(`${giorno}T12:00:00Z`).toLocaleDateString('it-IT', {
+  return new Date(`${giorno}T12:00:00Z`).toLocaleDateString(formatoAttivo(), {
     timeZone: 'UTC',
     weekday: 'long',
     day: 'numeric',

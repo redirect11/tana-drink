@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/png" href="logo.png" />
+  <title>Cookie Policy – %VENUE_NAME%</title>
+  <!-- Niente caratteri da Google (REQ-SIC-004): i titoli usano il serif del
+       telefono (Georgia e simili), che per un testo legale basta. -->
+  <style>
+    :root {
+      --bg: #0e0e15;
+      --bg2: #15151f;
+      --card: #1a1a26;
+      --gold: #e8a32e;
+      --gold-soft: #f5b94a;
+      --text: #f5f5f7;
+      --muted: #9b9ba8;
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      background:
+        radial-gradient(900px 500px at 85% -10%, rgba(245, 185, 74, 0.07), transparent 60%),
+        linear-gradient(170deg, var(--bg), var(--bg2));
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 16px 64px;
+    }
+
+    header { text-align: center; margin-bottom: 32px; }
+    header img.logo {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      margin-bottom: 12px;
+      box-shadow: 0 0 0 2px rgba(245, 185, 74, 0.6), 0 4px 18px rgba(0, 0, 0, 0.55);
+    }
+    header h1 {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--gold-soft);
+      letter-spacing: 0.03em;
+    }
+    header p.sub { font-size: 0.82rem; color: var(--muted); margin-top: 4px; }
+
+    .content {
+      width: 100%;
+      max-width: 680px;
+      background: var(--card);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: var(--radius);
+      padding: 32px 28px;
+      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+      line-height: 1.65;
+    }
+
+    h2 {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 1.05rem;
+      color: var(--gold-soft);
+      margin: 28px 0 10px;
+    }
+    h2:first-child { margin-top: 0; }
+
+    p { font-size: 0.88rem; color: var(--text); margin-bottom: 12px; }
+    p:last-child { margin-bottom: 0; }
+
+    code {
+      background: rgba(255, 255, 255, 0.07);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 0.82em;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 20px;
+      font-size: 0.83rem;
+    }
+    th {
+      text-align: left;
+      padding: 8px 10px;
+      background: var(--bg2);
+      color: var(--gold-soft);
+      font-weight: 600;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    td {
+      padding: 8px 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      color: var(--text);
+      vertical-align: top;
+    }
+    tr:last-child td { border-bottom: none; }
+
+    a { color: var(--gold-soft); text-decoration: underline; }
+    a:hover { color: var(--gold); }
+
+    .back-link { margin-top: 28px; font-size: 0.85rem; }
+    .back-link a { color: var(--muted); text-decoration: none; }
+    .back-link a:hover { color: var(--text); }
+
+    footer {
+      margin-top: 40px;
+      margin-bottom: 24px;
+      font-size: 0.72rem;
+      color: var(--muted);
+      text-align: center;
+      opacity: 0.6;
+    }
+  </style>
+</head>
+<body>
+  <!-- LA DEMO NON RACCOGLIE NIENTE (REQ-SIC-017, docs/sicurezza-demo.md
+       punto 4). Prima finiva qui l'informativa della Tana, col suo
+       titolare e la sua email: chi provava la demo leggeva i dati di un
+       locale vero. La demo non ha server, account veri né statistiche, e
+       tutto quello che si prova resta nel browser. -->
+  <header>
+    <img class="logo" src="logo.png" alt="%VENUE_NAME%" />
+    <h1>Cookie Policy</h1>
+    <p class="sub">%VENUE_NAME% · Demo</p>
+  </header>
+
+  <div class="content">
+    <h2>1. Niente cookie di terzi</h2>
+    <p>
+      La demo non usa cookie di statistica né di profilazione, e non carica servizi di terzi.
+    </p>
+
+    <h2>2. Quello che resta nel browser</h2>
+    <p>
+      Per funzionare senza server, la demo salva nel browser (<em>localStorage</em> e
+      <em>IndexedDB</em>) i dati di prova e le preferenze di chi la usa. Restano su questo
+      dispositivo, non arrivano a nessuno, e si cancellano cancellando i dati del sito dalle
+      impostazioni del browser.
+    </p>
+
+    <div class="back-link"><a href="./">← Torna alla demo</a></div>
+  </div>
+
+  <footer>%VENUE_NAME% — demo, nessun cookie di terzi</footer>
+</body>
+</html>

@@ -95,6 +95,12 @@ gcloud iam service-accounts add-iam-policy-binding "$COMPUTE_SA" \
   --member="serviceAccount:$SA_EMAIL" --role="roles/iam.serviceAccountUser" \
   --project "$PROJECT_ID" >/dev/null
 
+# 8b) Lo Storage legge la licenza da Firestore (storage.rules, REQ-SIC-006):
+#     il suo service agent vuole questo ruolo, se no nessuno carica più foto.
+#     Il deploy non interattivo di firebase-tools lo salta senza dirlo.
+say "Concedo allo Storage la lettura di Firestore nelle regole"
+gcloud projects add-iam-policy-binding "$PROJECT_ID"   --member="serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-firebasestorage.iam.gserviceaccount.com"   --role="roles/firebaserules.firestoreServiceAgent" --condition=None >/dev/null
+
 # 9) Web app + config (valori VITE_FIREBASE_*)
 say "Creo la web app e leggo la config"
 firebase apps:create WEB "tana-drink ($PROJECT_ID)" --project "$PROJECT_ID" >/dev/null 2>&1 \

@@ -31,7 +31,10 @@ lasciando sul ramo `feature/flotta` tutto quello che era della regia.
    `cliente: tana`. I progetti `drinkpos-*` li pubblica la regia, con le
    sue credenziali: nei segreti di tana-drink c'è solo l'account di deploy
    della Tana, e da qui un'istanza non si può pubblicare nemmeno per
-   sbaglio. Un test legge i workflow (`tests/unit/flottaCi.test.js`).
+   sbaglio. Il pacchetto per versione (REQ-FLOTTA-035) non cambia la
+   regola: `pacchetto.yml` lo allega alla Release di GitHub del tag, in
+   questo repository, e la regia lo scarica da lì. Un test legge i
+   workflow (`tests/unit/flottaCi.test.js`).
 3. **Niente fork dell'app.** Un solo codice per tutti i locali; il locale
    è configurazione (`clienti/<slug>/` e le impostazioni nel suo
    database), la licenza è un dato, il marchio è un dato. Una richiesta
@@ -58,6 +61,97 @@ e poi scrive la licenza nel Firestore dell'istanza, nel documento
 `licenza/attuale` (piano, moduli, stato, `regia_url`; BUG-125). Questi comandi e questi nomi sono un
 contratto: se cambiano qui, si dice là. Un tag `vX.Y.Z` ha `package.json`
 a `X.Y.Z`: i rilasci a ondate della regia confrontano le due cose.
+
+### Il sito uguale per tutti (REQ-FLOTTA-034, dal 18/11/2026)
+
+La strada nuova, per l'interfaccia 16 del contratto della regia
+(`docs/contratto-regia-app.md` in drink-regia). Il sito si compila **una
+volta per versione**, senza nessun locale dentro, e la regia ci scrive i
+dati di ogni locale al deploy, senza ricompilare. **A compilare siamo
+noi, al tag** (REQ-FLOTTA-035), e il pacchetto va nella **Release di GitHub
+del tag**: Daniele, 18/11/2026, «tana drink compila il pacchetto,
+provisiona istanza e aggiorna istanza aggiornano con il pacchetto di
+release di tana-drink». La regola 2 qui sopra resta: scriviamo solo nel
+nostro repository, e la regia scarica. La Tana continua a pubblicarsi da
+GitHub con la sua build, e la regia tiene la compilazione di oggi come
+ripiego (interfaccia 12, `scripts/genera-cliente.mjs`).
+
+```sh
+# il pacchetto, una volta per versione, SENZA .env nella radice
+npm ci
+node scripts/crea-pacchetto.mjs --tipo locali    # oppure --tipo demo
+#  -> pacchetti/pacchetto-locali-vX.Y.Z.tgz e pacchetti/pacchetto-locali-vX.Y.Z.tgz.sha256
+
+# per ogni locale, dalla radice del pacchetto aperto, su una COPIA del dist/
+node personalizza.mjs --dist dist --configurazione <locale.json> [--pubblica <cartella>]
+```
+
+- **`.github/workflows/pacchetto.yml`**, a ogni tag `v*`: lint e test,
+  poi i due pacchetti, poi la Release del tag (in bozza finché non ha tutti
+  i file, «pre-release» se è una beta). Un pacchetto **non beta** esce solo
+  se il commit del tag sta in `main`; un tag che non è `v` + la versione
+  di `package.json` non fa pacchetti (sul commit di `main` è un errore,
+  non un avviso: sarebbe un rilascio senza pacchetto). **Un file allegato
+  non si sostituisce**: una versione corretta è una versione nuova (la
+  regia ricorda l'impronta del primo pacchetto di ogni versione e rifiuta
+  un archivio diverso). Il workflow non sovrascrive mai; che non lo faccia
+  nemmeno una persona a mano lo garantiscono solo le «release immutabili»
+  di GitHub, un'impostazione del repository (spenta al 18/11/2026: la
+  decide Daniele). Nessun segreto: solo il permesso di scrivere nella
+  Release, nel job che allega.
+- **Se «Allega alla Release» si ferma a metà**, la Release resta in bozza
+  (la regia non la vede) con una parte dei file, e rilanciarlo si ferma sul
+  primo file già presente. Si cancella la bozza a mano (*Releases → la
+  bozza → Delete*: il tag resta) e si rilancia il workflow intero.
+- **`scripts/crea-pacchetto.mjs`** compila (i locali con `PACCHETTO=1`,
+  la demo con `CLIENTE=demo` e il progetto finto, come la compilava la
+  regia), controlla la build (nei locali niente demo, nella demo niente
+  progetto vero) e mette insieme `dist/`, `firebase.json`, le regole e
+  gli indici; per i locali anche `functions/` con le sole dipendenze di
+  produzione (senza i `.env.<progetto>` della Tana) e `personalizza.mjs`
+  in un file solo, che gira senza il repository. Scrive `pacchetto.json`
+  nel formato 1 (versione, `tag`, `beta`, commit, `strumenti` con
+  firebase-tools 15.36.0 e Node 22, `personalizzabili`, `campiVenue`
+  sempre presente e l'impronta di ogni file) e si ferma se la regia lo
+  rifiuterebbe: `problemiDelManifesto` è una copia dei controlli di
+  `scripts/lib-pacchetto.js` della regia, da tenere allineata a mano. Rifiuta anche un `.env` nella radice e i file tracciati
+  modificati (`--anche-modificato` per una prova in locale).
+- **Quando il repository diventerà privato** la regia non potrà più
+  scaricare senza un accesso: se ne parla allora (la regia propone una
+  GitHub App in sola lettura).
+
+- **`PACCHETTO=1`** (clienti/pluginCliente.js): nessun cliente nella build,
+  i segnaposto `%VENUE_*%` restano in `index.html`, nel manifest e
+  nell'informativa, e il set neutro di `clienti/demo/public` prende il
+  posto dei file della Tana. Si ferma se trova `VITE_FIREBASE_*`,
+  `VITE_RECAPTCHA_SITE_KEY`, `VITE_PROFILO`, `VITE_REGIA_PROGETTO` o gli
+  emulatori: un sito per tutti col backend di un locale manderebbe gli
+  ordini di tutti a quel locale. Non va insieme a `CLIENTE`.
+- **`personalizza.mjs`** riempie index.html, il manifest e l'informativa
+  privacy e cookie, scrive `configurazione.json` e lo stesso contenuto come
+  blocco in `index.html`, e con `--pubblica` mette sopra i file del locale
+  (solo `logo.png`, `favicon.svg`, le icone, `apple-touch-icon.png`,
+  `cocktail-hero.jpg`). Rifiuta una configurazione che l'app non
+  seguirebbe, un `dist/` già personalizzato e un file del locale con un
+  altro nome, ed esce con errore se resta un segnaposto: in quei casi non
+  scrive niente.
+- **La configurazione del locale**: la forma è in
+  [porte-e-adattatori.md](porte-e-adattatori.md#il-sito-uguale-per-tutti-i-locali-req-flotta-034-18112026).
+  Per pubblicare un locale servono `locale` (lo slug), `firebase` con
+  `apiKey`, `authDomain`, `projectId` e `appId`, e `venue` con almeno
+  `venue_name`. Per l'informativa servono anche `venue_legal_name`,
+  `venue_legal_address` (o `venue_address` e `venue_postal_city`),
+  `venue_vat_number` e `venue_email`: quelli che mancano si leggono «da
+  inserire» nella pagina.
+- **L'informativa si scrive al deploy, ed è voluto.** Se il titolare cambia
+  i suoi dati in Impostazioni (`settings/bar`), le due pagine restano
+  quelle di prima finché la regia non lancia un aggiornamento, anche alla
+  stessa versione. Le pagine sono statiche apposta: si aprono anche quando
+  l'app non parte, e non chiamano nessun servizio, Firebase compreso.
+  Leggere `settings/bar` da lì vorrebbe dire caricare l'SDK in una pagina
+  che parla proprio di quali dati partono verso chi.
+- **La demo** non si personalizza: il suo pacchetto (`--tipo demo`) è
+  la demo intera, sempre col profilo leggero, senza Functions.
 
 ## Il titolare (REQ-FLOTTA-029)
 

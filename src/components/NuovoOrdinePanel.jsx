@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { tr, trSegnato } from '../lib/lingua.js'
 import {
   catalogoOrdinabile,
   filtraCatalogo,
@@ -289,11 +290,9 @@ export default function NuovoOrdinePanel({
 
   return (
     <div className="card ordine-composizione">
-      <strong>Nuovo ordine</strong>
+      <strong>{tr('Nuovo ordine')}</strong>
       <p className="muted small" style={{ marginTop: 4 }}>
-        Spunta i prodotti da ordinare, o scrivi quanti pezzi ne servono. Il
-        fornitore e i pezzi si cambiano sulla riga; a destra l’ordine in
-        composizione, diviso per fornitore.
+        {tr('Spunta i prodotti da ordinare, o scrivi quanti pezzi ne servono. Il fornitore e i pezzi si cambiano sulla riga; a destra l’ordine in composizione, diviso per fornitore.')}
       </p>
 
       <ModelliOrdine
@@ -306,33 +305,33 @@ export default function NuovoOrdinePanel({
 
       <div className="ordine-filtri">
         <span className="grow">
-          <label htmlFor="po-cerca">Cerca un prodotto</label>
+          <label htmlFor="po-cerca">{tr('Cerca un prodotto')}</label>
           <input
             id="po-cerca"
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Es. Campari"
+            placeholder={tr('Es. Campari')}
           />
         </span>
         <span className="grow">
-          <label htmlFor="po-filtro">Filtra per fornitore</label>
+          <label htmlFor="po-filtro">{tr('Filtra per fornitore')}</label>
           <select
             id="po-filtro"
             value={filtroFornitore}
             onChange={(e) => setFiltroFornitore(e.target.value)}
           >
-            <option value="all">Tutti i fornitori</option>
-            <option value="none">Senza fornitore</option>
+            <option value="all">{tr('Tutti i fornitori')}</option>
+            <option value="none">{tr('Senza fornitore')}</option>
             {suppliers.map((s) => (
               <option key={s.id} value={s.id}>{s.name}</option>
             ))}
           </select>
         </span>
         <span>
-          <label>Assortimento</label>
+          <label>{tr('Assortimento')}</label>
           <Tendina
-            etichetta="Filtra per assortimento"
+            etichetta={tr('Filtra per assortimento')}
             attivo={assortimenti.length > 0}
             riassunto={conEmoji('filtra', riassuntoAssortimento(assortimenti))}
           >
@@ -344,21 +343,22 @@ export default function NuovoOrdinePanel({
                 style={{ marginTop: 6 }}
                 onClick={() => setAssortimenti([])}
               >
-                ✕ Togli il filtro
+                ✕ {tr('Togli il filtro')}
               </button>
             )}
           </Tendina>
         </span>
         <span>
-          <label>Quello che manca</label>
+          <label>{tr('Quello che manca')}</label>
           <button
             type="button"
             className="btn ghost small"
             onClick={spuntaQuelloCheManca}
             disabled={daSpuntare.size === 0}
-            title="Spunta i prodotti esauriti o sotto la soglia di riordino, e quelli in assortimento senza un ordine"
+            title={tr('Spunta i prodotti esauriti o sotto la soglia di riordino, e quelli in assortimento senza un ordine')}
           >
-            <Icona nome="spunta" gruppo="tasti" />{' '}Spunta quello che manca ({daSpuntare.size})
+            <Icona nome="spunta" gruppo="tasti" />{' '}
+            {tr('Spunta quello che manca ({n})', { n: daSpuntare.size })}
           </button>
         </span>
       </div>
@@ -369,20 +369,24 @@ export default function NuovoOrdinePanel({
               motivo diverso da «non c'è niente che corrisponda»: dirlo
               sbagliato manda a cercare un prodotto che c'è. */}
           {items.length === 0 ? (
-            <div className="empty">Carico il magazzino…</div>
+            <div className="empty">{tr('Carico il magazzino…')}</div>
           ) : visibili.length === 0 ? (
-            <p className="muted small">Nessun prodotto corrisponde alla ricerca.</p>
+            <p className="muted small">{tr('Nessun prodotto corrisponde alla ricerca.')}</p>
           ) : (
             <>
               <div className="inv-list inv-table ordine-tabella" onScroll={scorre}>
                 <div className="inv-thead">
                   <span aria-hidden />
-                  <SortTh label="Prodotto" col="nome" sort={sort} onSort={toggleSort} />
-                  <SortTh label="Disponibilità" col="scorta" sort={sort} onSort={toggleSort} />
-                  <SortTh label="Fornitore" col="fornitore" sort={sort} onSort={toggleSort} />
-                  <SortTh label="€/pz" col="prezzo" sort={sort} onSort={toggleSort} num />
-                  <span className="inv-th inv-cell-num" aria-hidden>Pezzi</span>
-                  <span className="inv-th inv-cell-num" aria-hidden>Totale</span>
+                  <SortTh label={tr('Prodotto')} col="nome" sort={sort} onSort={toggleSort} />
+                  <SortTh label={tr('Disponibilità')} col="scorta" sort={sort} onSort={toggleSort} />
+                  <SortTh label={tr('Fornitore')} col="fornitore" sort={sort} onSort={toggleSort} />
+                  <SortTh label={tr('€/pz')} col="prezzo" sort={sort} onSort={toggleSort} num />
+                  <span className="inv-th inv-cell-num" aria-hidden>
+                    {tr('Pezzi')}
+                  </span>
+                  <span className="inv-th inv-cell-num" aria-hidden>
+                    {tr('Totale')}
+                  </span>
                   <span aria-hidden />
                 </div>
                 {finestra.map((riga) => (
@@ -405,35 +409,42 @@ export default function NuovoOrdinePanel({
               <p className="muted small ordine-conta">
                 {mostrate < visibili.length ? (
                   <>
-                    Mostrate {finestra.length} righe su {visibili.length}.{' '}
+                    {tr('Mostrate {n} righe su {totale}.', { n: finestra.length, totale: visibili.length })}{' '}
                     {/* Scorrendo si caricano da sole; il tasto serve a chi
                         arriva qui con la tastiera, che scorrendo col tabulatore
                         non fa scorrere niente. */}
                     <button type="button" className="btn ghost small" onClick={altreRighe}>
-                      Mostra altre righe
+                      {tr('Mostra altre righe')}
                     </button>
                   </>
                 ) : (
-                  <>{visibili.length} righe, tutte in elenco.</>
+                  <>
+                    {visibili.length === 1
+                      ? tr('Una riga, in elenco.')
+                      : tr('{n} righe, tutte in elenco.', { n: visibili.length })}
+                  </>
                 )}
               </p>
             </>
           )}
         </div>
 
-        <aside className="ordine-carrello" aria-label="Ordine in composizione">
-          <strong>Ordine in composizione</strong>
+        <aside className="ordine-carrello" aria-label={tr('Ordine in composizione')}>
+          <strong>{tr('Ordine in composizione')}</strong>
           {gruppi.length === 0 ? (
             <p className="muted small" style={{ marginTop: 6 }}>
-              Nessun prodotto selezionato. Spunta una riga della tabella, o
-              scrivi quanti pezzi ne servono.
+              {tr('Nessun prodotto selezionato. Spunta una riga della tabella, o scrivi quanti pezzi ne servono.')}
             </p>
           ) : (
             <>
               <p className="muted small" style={{ marginTop: 2 }}>
-                {preselezionati === 0
-                  ? `${scelte.length} prodotti selezionati.`
-                  : `${scelte.length} prodotti selezionati, ${preselezionati} sotto scorta.`}
+                {scelte.length === 1
+                  ? preselezionati === 0
+                    ? tr('1 prodotto selezionato.')
+                    : tr('1 prodotto selezionato, sotto scorta.')
+                  : preselezionati === 0
+                    ? tr('{n} prodotti selezionati.', { n: scelte.length })
+                    : tr('{n} prodotti selezionati, {m} sotto scorta.', { n: scelte.length, m: preselezionati })}
               </p>
               {gruppi.map((g) => (
                 <div
@@ -442,7 +453,7 @@ export default function NuovoOrdinePanel({
                   style={{ borderLeftColor: g.colore || undefined }}
                 >
                   <div className="row between">
-                    <strong className="small">{g.supplier_name || 'Senza fornitore'}</strong>
+                    <strong className="small">{g.supplier_name || tr('Senza fornitore')}</strong>
                     <span className="muted small">{formatPrice(g.totale)}</span>
                   </div>
                   {g.righe.map((r) => (
@@ -458,8 +469,8 @@ export default function NuovoOrdinePanel({
                       <button
                         type="button"
                         className="btn ghost small"
-                        aria-label={`Togli ${r.item_name} dall’ordine`}
-                        title="Togli dall’ordine"
+                        aria-label={tr('Togli {nome} dall’ordine', { nome: r.item_name })}
+                        title={tr('Togli dall’ordine')}
                         onClick={() => togli(r.key)}
                       >
                         ✕
@@ -470,10 +481,10 @@ export default function NuovoOrdinePanel({
               ))}
               <div className="row between ordine-totale">
                 <span className="muted small">
-                  {totals.pieces} pezzi · netto {formatPrice(totals.net)}
+                  {tr('{n} pezzi · netto {netto}', { n: totals.pieces, netto: formatPrice(totals.net) })}
                 </span>
                 <strong>
-                  {formatPrice(totals.gross)} <span className="muted small">+IVA</span>
+                  {formatPrice(totals.gross)} <span className="muted small">{tr('+IVA')}</span>
                 </strong>
               </div>
               <button
@@ -482,7 +493,7 @@ export default function NuovoOrdinePanel({
                 onClick={rivedi}
                 disabled={lines.length === 0}
               >
-                Rivedi e conferma
+                {tr('Rivedi e conferma')}
               </button>
             </>
           )}
@@ -495,7 +506,7 @@ export default function NuovoOrdinePanel({
 // Come si chiama una riga quando bisogna nominarla a voce (screen reader) o
 // in un test: il prodotto DA CHI. Col solo nome due righe dello stesso
 // Campari sarebbero indistinguibili, ed è esattamente il caso normale.
-const nomeRiga = (r) => `${r.item_name} (${r.supplier_name || 'senza fornitore'})`
+const nomeRiga = (r) => `${r.item_name} (${r.supplier_name || tr('senza fornitore')})`
 
 function RigaCatalogo({
   riga,
@@ -555,14 +566,17 @@ function RigaCatalogo({
 
   const campoFornitore = (dettaglio) => (
     <select
-      aria-label={`Fornitore per ${nome}${dettaglio ? ' nella scheda' : ''}`}
+      aria-label={
+        dettaglio ? tr('Fornitore per {nome} nella scheda', { nome }) : tr('Fornitore per {nome}', { nome })
+      }
       value={supplierId || ''}
       onChange={(e) => onFornitore(riga, e.target.value)}
     >
-      <option value="">— Nessun fornitore —</option>
+      <option value="">{tr('— Nessun fornitore —')}</option>
       {suppliers.map((s) => (
         <option key={s.id} value={s.id} disabled={usati.has(s.id)}>
-          {s.name}{usati.has(s.id) ? ' (già in questo ordine)' : ''}
+          {s.name}
+          {usati.has(s.id) ? ` ${tr('(già in questo ordine)')}` : ''}
         </option>
       ))}
     </select>
@@ -577,9 +591,17 @@ function RigaCatalogo({
       step="1"
       min="0"
       inputMode="numeric"
-      aria-label={`${aCollo ? 'Colli' : 'Pezzi'} di ${nome}${dettaglio ? ' nella scheda' : ''}`}
+      aria-label={
+        aCollo
+          ? dettaglio
+            ? tr('Colli di {nome} nella scheda', { nome })
+            : tr('Colli di {nome}', { nome })
+          : dettaglio
+            ? tr('Pezzi di {nome} nella scheda', { nome })
+            : tr('Pezzi di {nome}', { nome })
+      }
       value={sel?.qty ?? ''}
-      placeholder={aCollo ? 'colli' : 'pz'}
+      placeholder={aCollo ? tr('colli') : tr('pz')}
       onChange={(e) => onQta(riga, e.target.value)}
     />
   )
@@ -589,7 +611,7 @@ function RigaCatalogo({
       step="0.01"
       min="0"
       inputMode="decimal"
-      aria-label={`Totale di ${nome}${dettaglio ? ' nella scheda' : ''}`}
+      aria-label={dettaglio ? tr('Totale di {nome} nella scheda', { nome }) : tr('Totale di {nome}', { nome })}
       value={totale}
       placeholder="€"
       onChange={(e) => onTotale(riga, e.target.value)}
@@ -617,7 +639,7 @@ function RigaCatalogo({
         <label className="ordine-spunta">
           <input
             type="checkbox"
-            aria-label={`Ordina ${nome}`}
+            aria-label={tr('Ordina {nome}', { nome })}
             checked={!!sel}
             onChange={(e) => onSpunta(riga, e.target.checked)}
           />
@@ -625,17 +647,17 @@ function RigaCatalogo({
         <span className="inv-row-name">
           {riga.item_name}
           {assortimentoDi(item) === 'out' && (
-            <span className="muted small"> fuori linea</span>
+            <span className="muted small"> {tr('fuori linea')}</span>
           )}
           {/* Il fornitore accanto al nome si vede solo dove la sua colonna
               non c'è (telefono): due righe dello stesso Campari, senza,
               sarebbero identiche. */}
           <span className="muted small ordine-nome-fornitore" aria-hidden>
-            {riga.supplier_name || 'senza fornitore'}
+            {riga.supplier_name || tr('senza fornitore')}
           </span>
         </span>
         <span className="muted small ordine-scorta">
-          <span className={`dot dot-${st}`} aria-hidden /> {ETICHETTA_SCORTA[st]}
+          <span className={`dot dot-${st}`} aria-hidden /> {trSegnato(ETICHETTA_SCORTA[st])}
         </span>
         {campoFornitore(false)}
         {/* IL PREZZO DEL PEZZO STA SEMPRE IN COLONNA, ed è la difesa che vale
@@ -650,7 +672,7 @@ function RigaCatalogo({
           {daDove && <span className="small ordine-collo">{daDove}</span>}
           {problema && (
             <span className="small ordine-collo ordine-prezzo-guasto" title={problema}>
-              prezzo da sistemare
+              {tr('prezzo da sistemare')}
             </span>
           )}
         </span>
@@ -659,14 +681,16 @@ function RigaCatalogo({
           {/* I pezzi che entrano davvero in magazzino: due cartoni non sono
               due bottiglie, e la moltiplicazione non si fa a mente. */}
           {aCollo && Number(sel?.qty) > 0 && (
-            <span className="muted small ordine-collo">= {Number(sel.qty) * perCollo} pz</span>
+            <span className="muted small ordine-collo">
+              = {tr('{n} pz', { n: Number(sel.qty) * perCollo })}
+            </span>
           )}
         </span>
         {campoTotale(false)}
         <button
           type="button"
           className="btn ghost small ordine-apri"
-          aria-label={`Apri la scheda di ${nome}`}
+          aria-label={tr('Apri la scheda di {nome}', { nome })}
           aria-expanded={aperta}
           onClick={onApri}
         >
@@ -683,33 +707,38 @@ function RigaCatalogo({
       {aperta && (
         <div className="inv-row-dettaglio">
           <div className="muted small">
-            {ETICHETTA_ASSORTIMENTO[assortimentoDi(item)]} · {ETICHETTA_SCORTA[st]}
+            {trSegnato(ETICHETTA_ASSORTIMENTO[assortimentoDi(item)])} · {trSegnato(ETICHETTA_SCORTA[st])}
           </div>
           <div className="muted small">
-            In casa: {formatQty(item.stock, item.unit)}
+            {tr('In casa: {qta}', { qta: formatQty(item.stock, item.unit) })}
             {Number(item.low_threshold) > 0
-              ? ` · soglia ${formatQty(item.low_threshold, item.unit)}`
+              ? ` · ${tr('soglia {qta}', { qta: formatQty(item.low_threshold, item.unit) })}`
               : ''}
-            {contenutoDelPezzo(item) ? ` · 1 pz = ${contenutoDelPezzo(item)}` : ''}
+            {contenutoDelPezzo(item) ? ` · ${tr('1 pz = {contenuto}', { contenuto: contenutoDelPezzo(item) })}` : ''}
           </div>
           <div className="muted small">
             {prezzoPezzo != null
-              ? `Listino ${formatPrice(prezzoPezzo)}/pz`
-              : 'Nessun prezzo di listino'}
+              ? tr('Listino {prezzo}/pz', { prezzo: formatPrice(prezzoPezzo) })
+              : tr('Nessun prezzo di listino')}
             {/* Per esteso: com'è scritto il listino di quel fornitore. Chi
                 controlla la bolla cerca la cifra che c'è sul documento, non
                 quella che l'app ha ricavato (REQ-MAG-040). */}
             {daDove ? ` · ${daDove}` : ''}
             {riga.package_label ? ` · ${riga.package_label}` : ''}
-            {riga.code ? ` · codice ${riga.code}` : ''}
+            {riga.code ? ` · ${tr('codice {codice}', { codice: riga.code })}` : ''}
           </div>
-          {problema && <div className="muted small">Prezzo da sistemare: {problema}</div>}
+          {problema && (
+            <div className="muted small">{tr('Prezzo da sistemare: {problema}', { problema })}</div>
+          )}
           {/* La riga scelta si rilegge per intero: quanti colli, quanti pezzi
               ne escono, quanto costa. È il conto che va sbagliato di venti
               volte se si moltiplicano i pezzi per il prezzo del collo. */}
           {scelta && scelta.qty > 0 && (
             <div className="muted small">
-              In ordine: {etichettaQuantita(scelta)} · {formatPrice(scelta.totale)}
+              {tr('In ordine: {quanti} · {totale}', {
+                quanti: etichettaQuantita(scelta),
+                totale: formatPrice(scelta.totale),
+              })}
             </div>
           )}
           {/* CHI LO VENDE, E A QUANTO (REQ-MAG-029). Il fornitore proposto è
@@ -720,27 +749,30 @@ function RigaCatalogo({
               stanno qui, che è dove si guarda prima di decidere. */}
           {altriListini.length > 1 && (
             <div className="muted small">
-              Su {altriListini.length} listini
-              {ultimo ? ` · ultimo acquisto ${nomeFornitore(ultimo.supplier_id)}` : ''}
+              {tr('Su {n} listini', { n: altriListini.length })}
+              {ultimo ? ` · ${tr('ultimo acquisto {nome}', { nome: nomeFornitore(ultimo.supplier_id) })}` : ''}
               {/* Al pezzo, sempre: fra 1,23 a bottiglia e 25,05 al cartone da
                   24 il più economico è il cartone, e confrontando i due
                   numeri come sono scritti sembrerebbe il contrario. */}
               {economica
-                ? ` · più economico ${nomeFornitore(economica.supplier_id)} a ${formatPrice(prezzoAlPezzo(economica, item))}/pz`
+                ? ` · ${tr('più economico {nome} a {prezzo}/pz', {
+                    nome: nomeFornitore(economica.supplier_id),
+                    prezzo: formatPrice(prezzoAlPezzo(economica, item)),
+                  })}`
                 : ''}
             </div>
           )}
           <div className="ordine-campi-scheda">
             <span className="grow">
-              <label>Fornitore</label>
+              <label>{tr('Fornitore')}</label>
               {campoFornitore(true)}
             </span>
             <span>
-              <label>{aCollo ? 'Colli' : 'Pezzi'}</label>
+              <label>{aCollo ? tr('Colli') : tr('Pezzi')}</label>
               {campoPezzi(true)}
             </span>
             <span>
-              <label>Totale</label>
+              <label>{tr('Totale')}</label>
               {campoTotale(true)}
             </span>
           </div>

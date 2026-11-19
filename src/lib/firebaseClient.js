@@ -17,15 +17,17 @@ import { getStorage, connectStorageEmulator } from 'firebase/storage'
 // loro. Un controllo della CI lo verifica sul pacchetto della Tana.
 import { nomeSessione } from '../demo/sessione.js'
 import { creaAuthDemo } from '../demo/accesso.js'
-import { configurazione, haBackend } from '../porte/configurazione.js'
+import { configurazione, senzaBackend } from '../porte/configurazione.js'
 
 // LA DEMO NON PARLA CON NESSUN SERVER (REQ-FLOTTA-019, docs/modalita-demo.md):
 // niente emulatori, niente App Check, rete del database spenta, accesso
 // finto. Lo decide la build (`clienti/demo`), mai qualcosa a runtime.
 const suEmulatore = !__DEMO__ && import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true'
 
-// Il progetto lo dice la porta della configurazione (REQ-FLOTTA-021): il
-// file `configurazione.json` scritto dalla regia, o le `VITE_*` della build.
+// Il progetto lo dice la porta della configurazione (REQ-FLOTTA-021,
+// REQ-FLOTTA-034): il file `configurazione.json` scritto dalla regia, il
+// blocco con la stessa configurazione dentro index.html, o le `VITE_*`
+// della build.
 // Il `measurementId` serve a Google Analytics, attivato solo dietro
 // consenso (vedi lib/analytics.js).
 const firebaseConfig = configurazione().firebase
@@ -34,11 +36,11 @@ const firebaseConfig = configurazione().firebase
 // non fallisce in modo silenzioso quando le variabili non sono impostate.
 // La demo non ha bisogno di nessuna configurazione: non parla con nessun
 // progetto, e i dati se li porta da sé (REQ-FLOTTA-019).
-export const isFirebaseConfigured = Boolean(__DEMO__) || haBackend(configurazione())
+export const isFirebaseConfigured = !senzaBackend()
 
 if (!isFirebaseConfigured) {
   console.warn(
-    '[Firebase] Variabili VITE_FIREBASE_API_KEY / VITE_FIREBASE_PROJECT_ID mancanti, e nessun configurazione.json. ' +
+    '[Firebase] Variabili VITE_FIREBASE_API_KEY / VITE_FIREBASE_PROJECT_ID mancanti, e nessuna configurazione del locale (configurazione.json o blocco in index.html). ' +
       'Copia .env.example in .env e inserisci i valori del tuo progetto.'
   )
 }

@@ -105,8 +105,24 @@ computer e conosce solo quello che arriva nei rapporti.
 
 ## La lingua
 
-**Tutto in italiano**: interfaccia, commenti, messaggi di commit, titoli
-delle PR, risposte nelle issue. Chi legge questo codice parla italiano.
+**Tutto in italiano**: commenti, messaggi di commit, titoli delle PR,
+risposte nelle issue. Chi legge questo codice parla italiano.
+
+**L'interfaccia invece è in italiano E in inglese** (Daniele, 17/11/2026:
+«da oggi tutte le funzioni dovranno avere testi in italiano ed inglese»).
+Ogni testo a schermo di una funzione nuova o toccata si scrive in
+italiano, che resta la lingua di partenza, e porta la sua traduzione
+inglese nello stesso commit: `tr('…')` di `src/lib/lingua.js` (le regole
+sono scritte in testa al file) e una riga nel dizionario della sua area in
+`src/lib/testi/en/`; una prova boccia i testi senza traduzione. Il
+meccanismo e il piano (prima le pagine dei clienti, poi il gestionale)
+stanno in UR-022 e nei suoi requisiti. L'inglese segue le stesse regole di
+tono dell'italiano.
+
+Le pagine dei clienti invece le traduce il browser (REQ-CLI-010): lì un
+testo che cambia davanti al cliente (stato, tempi, prezzi, avvisi) è
+l'**unico figlio del suo elemento**, scritto tutto intero, o col traduttore
+acceso resta fermo al valore di prima (`src/lib/traduttoreBrowser.js`).
 
 ## Come si lavora: GitFlow
 
@@ -128,9 +144,12 @@ Regole non negoziabili, per intero in [docs/gitflow.md](docs/gitflow.md).
   build, tranne sui rami `release/**`: lì si spinge dieci volte al giorno, e
   i test si fanno girare in locale. Un **tag su un commit non in `main`** va sul **test**;
   un **tag su un commit di `main`** manda in **produzione**, e quel deploy
-  aspetta un'approvazione a mano su GitHub.
-- La versione `x.y.z` si tagga su `develop` subito prima del merge su
-  `main`.
+  aspetta un'approvazione a mano su GitHub. Un tag `v*` allega anche i
+  **pacchetti per i locali** alla Release di GitHub (`pacchetto.yml`):
+  per una versione non beta, solo se il commit sta in `main`.
+- La versione piena `vX.Y.Z` si tagga **sul commit di `main`**, uguale
+  alla versione di `package.json`; su `develop` vanno solo le `-beta`
+  (il pacchetto per i locali lo pretende: docs/gitflow.md).
 - **Appena una versione esce, `package.json` sul ramo di lavoro torna
   subito alla PROSSIMA col `-beta`** (1.5.5 uscita -> `1.5.6-beta`). E'
   il primo commit della linea nuova, non una cosa da ricordarsi dopo:
@@ -368,7 +387,11 @@ tana drink o regia usino api vecchie».
   del `CHANGELOG.md` (`## X.Y.Z — data`), che la regia legge per le note
   degli aggiornamenti; gli script che i workflow della regia chiamano qui
   dentro (`scripts/genera-cliente.mjs`, `scripts/controlla-build-senza-demo.mjs`)
-  coi loro argomenti; le copie da tenere allineate a mano (`LIMITI_FREE` in
+  coi loro argomenti; il pacchetto per versione (REQ-FLOTTA-035):
+  `scripts/crea-pacchetto.mjs --tipo`, `personalizza.mjs` coi suoi
+  argomenti, il formato 1 di `pacchetto.json` (i controlli della regia sono
+  copiati in `problemiDelManifesto`) e i nomi dei file allegati alla
+  Release; le copie da tenere allineate a mano (`LIMITI_FREE` in
   `licenzaInVigore.js` con i piani della regia, `MODULI_PREMIUM`, il
   vocabolario di temi e stili, `lib-titolare.js`, l'ora del taglio).
   Cambiarne una senza l'altra è un cambio di interfaccia.
@@ -416,6 +439,7 @@ scarta l'updater e la cancellazione non avviene. Si salva in modo sincrono.
 | `src/lib/comande.js` | conti e comande, logica pura |
 | `src/lib/inventory.js` | magazzino, unità, consumi |
 | `src/lib/ruoli.js` | chi può fare cosa |
+| `src/lib/lingua.js`, `src/lib/testi/en/` | i testi in due lingue: `tr('…')` e il dizionario inglese, un file per area |
 | `functions/lib/` | logica delle Cloud Functions (pura e testabile) |
 | `scripts/` | manutenzione: backup, travasi, ruoli, diagnostica |
 

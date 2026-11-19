@@ -203,3 +203,22 @@ export const [prontoDiviso, ricordaProntoDiviso] = flagLocale('drink:corsie:pron
 // ricarico, e chi non la usa non se la ritrova.
 
 export const [filtriAperti, ricordaFiltriAperti] = flagLocale('drink:coda:filtri-aperti')
+
+// ── IL CONTO SVUOTATO: SI CHIUDE DA SOLO O RESTA APERTO (REQ-ORD-025) ─
+//
+// Togliendo l'ultima riga il conto si annulla e si torna alla coda: a
+// Flavio piace così, a Vittorio no — sostituendo un drink con calma la
+// schermata gli si chiudeva in mano (Daniele, 15/11/2026). Non è una regola
+// del locale: è il modo di lavorare di una persona.
+//
+// Quindi PER PERSONA E PER DISPOSITIVO, come gli avvisi
+// (preferenzeNotifiche.js): la chiave porta l'account, e due persone che si
+// passano lo stesso tablet nei cambi turno non si cambiano la scelta a
+// vicenda. Di suo ACCESA, che è il comportamento di sempre; lo spento è una
+// scelta e si scrive ('0'), il resto lo fa `flagLocale`.
+const contoVuotoDi = (uid) =>
+  flagLocale(`drink:conto:vuoto-si-chiude:${uid || 'anonimo'}`, { seNonSiSa: true, scriviIlFalso: true })
+
+export const contoVuotoSiChiude = (uid) => contoVuotoDi(uid)[0]()
+
+export const ricordaContoVuotoSiChiude = (uid, acceso) => contoVuotoDi(uid)[1](acceso)

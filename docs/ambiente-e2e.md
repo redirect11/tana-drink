@@ -28,6 +28,17 @@ giro il workflow:
 Un giro alla volta (`concurrency: e2e`): due giri svuoterebbero lo stesso
 database uno sotto l'altro.
 
+**La regia sa quando il giro gira** (REQ-FLOTTA-032, interfaccia 15 del
+contratto): all'inizio, prima del deploy, e alla fine, sempre e prima dello
+smontaggio, `scripts/istanza-di-prova.mjs` manda `{ attiva: true | false }`
+a `istanzaDiProva` della regia di test. Chiama l'account di deploy, col
+gettone d'identità di Google preso dalla chiave del giro (destinatario
+`regia-prova:drink-regia-test`): nessun utente del locale chiama la regia.
+Così nel backoffice il progetto risulta «Disattivato» quando le prove sono
+ferme. Non ferma mai il giro: un rifiuto è un avviso nel log. Finché il
+progetto non è segnato come istanza di prova nel backoffice della regia la
+risposta è 403.
+
 ### Perché un progetto fisso e non uno nuovo a ogni giro
 
 L'utente, 09/11/2026, ha scelto questa strada. Un progetto nuovo per

@@ -19,8 +19,9 @@
 //     l'accesso. La licenza c'è prima dell'app (la scrive l'attivazione
 //     della regia, o, per la Tana, il deploy); questo è il caso di riserva.
 // Un errore di rete non blocca niente e non segna niente: si riprova alla
-// prossima apertura. Senza `VITE_REGIA_PROGETTO`, o con un progetto che non
-// è della regia, nessuna chiamata: il token di chi ha fatto l'accesso non
+// prossima apertura. Senza una regia (nella configurazione del locale o in
+// `VITE_REGIA_PROGETTO`), o con un progetto che non è della regia, nessuna
+// chiamata: il token di chi ha fatto l'accesso non
 // parte verso un indirizzo qualunque (come `scelta_url`, aggiornamenti.js).
 //
 // Logica pura più la memoria del dispositivo; la chiamata vera è in api.js.

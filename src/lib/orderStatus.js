@@ -1,5 +1,6 @@
 import { isPersonale } from './ruoli.js'
 import { conEmoji, emojiDi } from './icone.js'
+import { tr, daTradurre, trSegnato } from './lingua.js'
 
 // Stati dell'ordine, in ordine di avanzamento.
 // "tipo salumeria": ogni ordine ha un numero progressivo giornaliero.
@@ -23,14 +24,17 @@ export const STATUS_FLOW = [
   ORDER_STATUSES.PAGATO,
 ]
 
+// Segnate da tradurre (REQ-UI-039): il gestionale le mostra con
+// trSegnato(STATUS_LABELS[s]). Le pagine dei clienti le mostrano così come
+// sono, in italiano: lì traduce il browser (REQ-CLI-010).
 export const STATUS_LABELS = {
-  [ORDER_STATUSES.APERTO]: 'Conto aperto',
-  [ORDER_STATUSES.RICEVUTO]: 'Ordine ricevuto',
-  [ORDER_STATUSES.IN_PREPARAZIONE]: 'In preparazione',
-  [ORDER_STATUSES.PRONTO]: 'Pronto al servizio',
-  [ORDER_STATUSES.RITIRATO]: 'Ritirato/Servito',
-  [ORDER_STATUSES.PAGATO]: 'Pagato',
-  [ORDER_STATUSES.ANNULLATO]: 'Annullato',
+  [ORDER_STATUSES.APERTO]: daTradurre('Conto aperto'),
+  [ORDER_STATUSES.RICEVUTO]: daTradurre('Ordine ricevuto'),
+  [ORDER_STATUSES.IN_PREPARAZIONE]: daTradurre('In preparazione'),
+  [ORDER_STATUSES.PRONTO]: daTradurre('Pronto al servizio'),
+  [ORDER_STATUSES.RITIRATO]: daTradurre('Ritirato/Servito'),
+  [ORDER_STATUSES.PAGATO]: daTradurre('Pagato'),
+  [ORDER_STATUSES.ANNULLATO]: daTradurre('Annullato'),
 }
 
 // ── LE PAROLE DEL BANCO E QUELLE DEL CLIENTE ───────────────────
@@ -50,7 +54,7 @@ export const STATUS_LABELS = {
 // Quindi due etichette, non una sola «corretta»: chi scrive per il banco
 // passa di qui, chi scrive per il cliente usa STATUS_LABELS.
 export function statoAlBanco(stato, serviceMode) {
-  if (stato === ORDER_STATUSES.RICEVUTO) return 'Da fare'
+  if (stato === ORDER_STATUSES.RICEVUTO) return tr('Da fare')
   // UNA PAROLA SOLA PER IL PRONTO. Lo stesso passo si chiamava in tre modi a
   // seconda di dove lo si leggeva: «Pronto» nella tabella del servizio,
   // «Pronto al servizio» sull'etichetta di stato, «Ritiro/Servizio» in testa
@@ -65,16 +69,16 @@ export function statoAlBanco(stato, serviceMode) {
   //
   // Al CLIENTE resta «Pronto al servizio» (STATUS_LABELS): a lui «Pronto»
   // da solo non dice se deve alzarsi o aspettare.
-  if (stato === ORDER_STATUSES.PRONTO) return 'Pronto'
+  if (stato === ORDER_STATUSES.PRONTO) return tr('banco|Pronto')
   if (stato === ORDER_STATUSES.RITIRATO) return ritiratoLabel(serviceMode)
-  return STATUS_LABELS[stato]
+  return trSegnato(STATUS_LABELS[stato])
 }
 
 // Etichetta specifica per lo stato finale, in base alla modalità di consegna.
 export function ritiratoLabel(serviceMode) {
-  if (serviceMode === 'banco') return 'Ritirato'
-  if (serviceMode === 'tavolo') return 'Servito'
-  return 'Ritirato/Servito'
+  if (serviceMode === 'banco') return tr('Ritirato')
+  if (serviceMode === 'tavolo') return tr('Servito')
+  return tr('Ritirato/Servito')
 }
 
 // Frasi mostrate al cliente quando il bartender annulla un ordine.
@@ -144,15 +148,6 @@ export const PAYMENT_METHOD_PRINT = {
   buono: 'Buono VIP',
 }
 
-export const PAYMENT_METHOD_LABELS = {
-  online: conEmoji('carta', 'Online'),
-  lettore: conEmoji('lettore', 'SumUp (lettore)'),
-  banco: conEmoji('contanti', 'Contante'),
-  carta: conEmoji('carta', 'Carta di credito'),
-  buono: conEmoji('buono', 'Buono VIP'),
-  misto: `${emojiDi('contanti')}+${emojiDi('carta')} Misto`,
-}
-
 // Ordine in cui i metodi compaiono nei riepiloghi di cassa. Chi NON è in
 // questa lista viene comunque mostrato, in coda: il riepilogo si costruisce
 // da quello che è stato battuto davvero, non da un elenco fisso. Un metodo
@@ -162,8 +157,7 @@ export const CASH_METHOD_ORDER = ['banco', 'carta', 'lettore', 'online', 'buono'
 
 // IL METODO A SCHERMO, DIVISO IN ICONA E NOME (REQ-UI-031): l'icona la
 // disegna il tema del gestionale (components/MetodoPagamento.jsx), il nome
-// resta quello di sempre. Le etichette con l'emoji qui sopra restano per
-// chi scrive testo semplice (un messaggio, un'esportazione).
+// resta quello di sempre. Dove serve tutto in un testo, `etichettaMetodo`.
 export const PAYMENT_METHOD_ICONA = {
   online: 'carta',
   lettore: 'lettore',
@@ -173,8 +167,25 @@ export const PAYMENT_METHOD_ICONA = {
   misto: 'contanti',
 }
 
+// IL NOME DEL METODO A SCHERMO, nella lingua di chi guarda (REQ-UI-039).
+const NOMI_METODO = {
+  online: daTradurre('Online'),
+  lettore: daTradurre('SumUp (lettore)'),
+  banco: daTradurre('Contante'),
+  carta: daTradurre('Carta di credito'),
+  buono: daTradurre('Buono VIP'),
+  misto: daTradurre('Misto'),
+}
+
 export function paymentMethodNome(method) {
-  return (PAYMENT_METHOD_LABELS[method] || '').replace(/^\S+\s/, '') || method || 'non indicato'
+  return trSegnato(NOMI_METODO[method]) || method || tr('non indicato')
+}
+
+// Icona e nome in un testo solo, per chi scrive testo semplice (la storia
+// del conto, un messaggio). «Misto» tiene le sue due icone, contanti e carta.
+export function etichettaMetodo(method) {
+  if (method === 'misto') return `${emojiDi('contanti')}+${emojiDi('carta')} ${paymentMethodNome(method)}`
+  return PAYMENT_METHOD_ICONA[method] ? conEmoji(PAYMENT_METHOD_ICONA[method], paymentMethodNome(method)) : method
 }
 
 // Metodi da mostrare in un riepilogo: i noti sempre (anche a zero, così le

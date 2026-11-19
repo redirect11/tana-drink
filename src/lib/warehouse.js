@@ -3,6 +3,7 @@
 // della Tana (INV / GENERATORE ORDINI / FORNITORI REC).
 
 import { costWithVat } from './inventory.js'
+import { formatoAttivo, tr } from './lingua.js'
 
 // ── Conta periodica: valori e consumo a settimana ─────────────────────
 // Le righe dell'inventario in corso le compone lib/inventarioInCorso.js.
@@ -66,11 +67,12 @@ export function consumoSettimanale(cons, giorni) {
 // «tre settimane e mezzo» invece di «24,5 giorni»: al banco si ragiona a
 // settimane, ed è la misura in cui si legge il consumo. Lo dicono
 // l'inventario in corso e lo storico (REQ-MAG-052), nello stesso modo.
+// Nella lingua di chi guarda, virgola o punto compresi (REQ-UI-039).
 export function giorniScritti(giorni) {
   const g = Math.round(giorni)
-  if (g < 14) return `${g} ${g === 1 ? 'giorno' : 'giorni'}`
+  if (g < 14) return g === 1 ? tr('1 giorno') : tr('{n} giorni', { n: g })
   const settimane = Math.round((giorni / 7) * 10) / 10
-  return `${String(settimane).replace('.', ',')} settimane`
+  return tr('{n} settimane', { n: settimane.toLocaleString(formatoAttivo(), { maximumFractionDigits: 1 }) })
 }
 
 // ── Ordini fornitore (GENERATORE ORDINI) ──────────────────────────────

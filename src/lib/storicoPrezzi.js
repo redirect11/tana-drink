@@ -13,6 +13,8 @@
 // Firebase non c'è apposta: chi decide se un prezzo è cambiato e come si
 // chiama quella variazione sono conti, e vanno provati senza database.
 
+import { daTradurre } from './lingua.js'
+
 // DA DOVE VIENE UN PREZZO, e non è un dettaglio: un numero battuto a mano
 // è un'aspettativa, un numero preso da un documento fiscale è quello che si
 // è pagato davvero. Mescolarli in un grafico racconterebbe una storia
@@ -20,10 +22,11 @@
 // dopo.
 export const ORIGINI_PREZZO = ['manuale', 'consegna', 'fattura']
 
+// Si mostrano con `trSegnato`, nella lingua di chi guarda (REQ-UI-039).
 export const ETICHETTA_ORIGINE = {
-  manuale: 'compilato a mano',
-  consegna: 'corretto alla consegna',
-  fattura: 'allineato da una fattura',
+  manuale: daTradurre('compilato a mano'),
+  consegna: daTradurre('corretto alla consegna'),
+  fattura: daTradurre('allineato da una fattura'),
 }
 
 // Un'origine sconosciuta vale «manuale»: è la più debole delle tre, e

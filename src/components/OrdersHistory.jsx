@@ -21,18 +21,20 @@ import { visibiliNelloStorico, giorniDiStorico, MESSAGGI_PIANO, stampaNelPiano }
 import AvvisoPiano from './AvvisoPiano.jsx'
 import Icona, { ConIcona } from './Icona.jsx'
 import { useTestoConIcona } from '../lib/temaIcone.js'
-import { conEmoji } from '../lib/icone.js'
 import { MetodiPagamento } from './MetodoPagamento.jsx'
+import { tr, daTradurre, trSegnato, useLingua } from '../lib/lingua.js'
 
 // STORICO ORDINI (nel Flusso cassa): la lista CRONOLOGICA di tutti i conti —
 // aperti, chiusi, annullati — col nome se gliene è stato dato uno, altrimenti
 // il solo progressivo. Diversa dalla coda, che mostra il lavoro in corso.
 
+// Le etichette si segnano qui e si traducono dove si mostrano (trSegnato):
+// un `tr` al caricamento del modulo fisserebbe la lingua di quel momento.
 const FILTRI = [
-  ['tutti', 'Tutti'],
-  ['aperti', 'Aperti'],
-  ['chiusi', 'Chiusi'],
-  ['annullati', 'Annullati'],
+  ['tutti', daTradurre('conti|Tutti')],
+  ['aperti', daTradurre('conti|Aperti')],
+  ['chiusi', daTradurre('conti|Chiusi')],
+  ['annullati', daTradurre('conti|Annullati')],
 ]
 
 // CHI HA APERTO IL CONTO: il locale (banco o sala) o il cliente dal suo
@@ -41,10 +43,12 @@ const FILTRI = [
 // I conti di Tiller (REQ-STAT-006) li batteva il locale.
 const dalCliente = (o) => !daTiller(o) && !isPersonale(o?.placed_by?.role)
 
+// [id, icona, etichetta]: l'icona a parte, così il testo resta una chiave
+// del dizionario e il tema delle icone la disegna come prima.
 const ORIGINI = [
-  ['tutte', 'Tutti'],
-  ['locale', conEmoji('menu', 'Dal locale')],
-  ['clienti', conEmoji('telefono', 'Dai clienti')],
+  ['tutte', null, daTradurre('conti|Tutti')],
+  ['locale', 'menu', daTradurre('Dal locale')],
+  ['clienti', 'telefono', daTradurre('Dai clienti')],
 ]
 
 const statoDi = (o) => {
@@ -78,6 +82,7 @@ const quando = (iso) => {
 }
 
 export default function OrdersHistory() {
+  useLingua()
   const testoConIcona = useTestoConIcona()
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
@@ -212,7 +217,7 @@ export default function OrdersHistory() {
         type="search"
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder={testoConIcona('cerca', 'Cerca numero, nome, tavolo…')}
+        placeholder={testoConIcona('cerca', tr('Cerca numero, nome, tavolo…'))}
       />
       <div className="chips-row" style={{ margin: '8px 0' }}>
         {FILTRI.map(([id, label]) => (
@@ -221,28 +226,28 @@ export default function OrdersHistory() {
             className={`chip ${filtro === id ? 'active' : ''}`}
             onClick={() => setFiltro(id)}
           >
-            {label}
+            {trSegnato(label)}
           </button>
         ))}
       </div>
       {ciSonoOrdiniCliente && (
         <div className="chips-row" style={{ margin: '0 0 8px' }}>
-          {ORIGINI.map(([id, label]) => (
+          {ORIGINI.map(([id, icona, label]) => (
             <button
               key={id}
               className={`chip ${origine === id ? 'active' : ''}`}
               onClick={() => setOrigine(id)}
             >
-              <ConIcona testo={label} />
+              {icona ? <ConIcona nome={icona} testo={trSegnato(label)} /> : trSegnato(label)}
             </button>
           ))}
         </div>
       )}
 
-      {error && <div className="banner">Errore: {error}</div>}
-      {(loading || cercando) && <Caricamento piccolo testo="Cerco i conti…" />}
+      {error && <div className="banner">{tr('Errore: {errore}', { errore: error })}</div>}
+      {(loading || cercando) && <Caricamento piccolo testo={tr('Cerco i conti…')} />}
       {!loading && !cercando && visibili.length === 0 && (
-        <p className="muted small">Nessun ordine con questi filtri.</p>
+        <p className="muted small">{tr('Nessun ordine con questi filtri.')}</p>
       )}
 
       <div className="ordhist">
@@ -262,8 +267,8 @@ export default function OrdersHistory() {
             >
               <span className="ordhist-num">{tiller ? 'Tiller' : `#${o.daily_number ?? '—'}`}</span>
               <span className="ordhist-name">
-                {o.customer_name || <span className="muted">senza nome</span>}
-                {o.table_label && <span className="muted small"> · Tavolo {o.table_label}</span>}
+                {o.customer_name || <span className="muted">{tr('senza nome')}</span>}
+                {o.table_label && <span className="muted small"> · {tr('Tavolo {tavolo}', { tavolo: o.table_label })}</span>}
               </span>
               <span className="muted small ordhist-when">
                 {quando(o.created_at)}
@@ -273,7 +278,13 @@ export default function OrdersHistory() {
                 )}
               </span>
               <span className={`pill small ordhist-state ${st === 'chiusi' ? 'pagato' : st === 'annullati' ? 'ritirato' : 'ricevuto'}`}>
-                {st === 'chiusi' ? 'pagato' : st === 'annullati' ? 'annullato' : acconto ? 'acconto' : 'aperto'}
+                {st === 'chiusi'
+                  ? tr('conto|pagato')
+                  : st === 'annullati'
+                    ? tr('conto|annullato')
+                    : acconto
+                      ? tr('conto|acconto')
+                      : tr('conto|aperto')}
               </span>
               {/* Ristampa dello scontrino (anche di conti vecchi): riporta
                   articoli, sconto, totale reale e come è stato incassato.
@@ -282,12 +293,12 @@ export default function OrdersHistory() {
                 role="button"
                 tabIndex={0}
                 className="ordhist-print"
-                title="Ristampa scontrino"
+                title={tr('Ristampa scontrino')}
                 onClick={(e) => {
                   e.stopPropagation()
                   printScontrino(o)
-                    .then(() => toastSuccess(`Scontrino #${o.daily_number ?? ''} ristampato`))
-                    .catch((err) => toastError(`Stampa: ${err.message}`))
+                    .then(() => toastSuccess(tr('Scontrino #{n} ristampato', { n: o.daily_number ?? '' })))
+                    .catch((err) => toastError(tr('Stampa: {errore}', { errore: err.message })))
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') e.currentTarget.click()
@@ -318,8 +329,8 @@ function RigheTiller({ conto }) {
   return (
     <div className="card" style={{ margin: '4px 0 8px' }}>
       <div className="muted small" style={{ marginBottom: 6 }}>
-        Battuto su Tiller · aperto {quando(conto.created_at)}
-        {conto.paid_at ? ` · chiuso ${quando(conto.paid_at)}` : ''}
+        {tr('Battuto su Tiller · aperto {quando}', { quando: quando(conto.created_at) })}
+        {conto.paid_at ? ` · ${tr('chiuso {quando}', { quando: quando(conto.paid_at) })}` : ''}
       </div>
       {conto.order_items.map((r, i) => (
         <div className="row between small" key={i}>

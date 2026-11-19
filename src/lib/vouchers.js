@@ -1,6 +1,8 @@
 // Buoni VIP: credito ricaricabile associato a una persona. Logica pura.
 // Un buono ha un saldo in € che si scala al pagamento e si ricarica.
 
+import { formatoAttivo, tr } from './lingua.js'
+
 export const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100
 
 // Importo effettivamente scalabile da un buono per coprire `amount`:
@@ -53,13 +55,12 @@ export function activeVouchers(vouchers, now = new Date()) {
 // Etichetta breve della scadenza per la UI.
 export function expiryLabel(voucher, now = new Date()) {
   const type = voucher?.expiry_type || 'none'
-  if (type === 'none') return 'nessuna scadenza'
+  if (type === 'none') return tr('nessuna scadenza')
   const exp = voucherExpiresAt(voucher, now)
-  if (!exp) return 'nessuna scadenza'
-  const d = exp.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })
-  const renew = voucher?.auto_renew ? ' · si rinnova' : ''
-  if (isVoucherExpired(voucher, now)) return `scaduto il ${d}`
-  return `scade il ${d}${renew}`
+  if (!exp) return tr('nessuna scadenza')
+  const d = exp.toLocaleDateString(formatoAttivo(), { day: '2-digit', month: '2-digit', year: 'numeric' })
+  if (isVoucherExpired(voucher, now)) return tr('scaduto il {data}', { data: d })
+  return voucher?.auto_renew ? tr('scade il {data} · si rinnova', { data: d }) : tr('scade il {data}', { data: d })
 }
 
 // Totale del credito in circolazione.

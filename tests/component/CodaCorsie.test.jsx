@@ -1614,9 +1614,11 @@ describe('le corsie del banco: una card per comanda', () => {
       daily_number: 90,
       payment_status: pagato ? 'pagato' : 'non_richiesto',
       workflow_status: 'ricevuto',
+      // Comande CON dei drink: una comanda senza righe non è lavoro da fare
+      // (BUG-169), e nascosta giustamente non tornerebbe.
       comande: [
-        { id: 'c1', seq: 1, status: 'ricevuto', created_at: ORA, items: [] },
-        { id: 'c2', seq: 2, status: 'in_preparazione', created_at: ORA, items: [] },
+        { id: 'c1', seq: 1, status: 'ricevuto', created_at: ORA, items: [{ drink_id: 'd1', name: 'Negroni', qty: 1, unit_price: 8 }] },
+        { id: 'c2', seq: 2, status: 'in_preparazione', created_at: ORA, items: [{ drink_id: 'd2', name: 'Spritz', qty: 1, unit_price: 7 }] },
       ],
     })
     ordini = [conDueComande(false)]

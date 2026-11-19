@@ -1,6 +1,7 @@
 import { profiloLeggero, limitiInChiaro, urlRegia } from './limiti.js'
 import { licenzaDi, SCADUTA } from './licenzaInVigore.js'
 import { STILI_MENU, temiInLicenza } from './stileMenu.js'
+import { daTradurre, tr, trSegnato } from './lingua.js'
 
 // ── LE FUNZIONI PREMIUM: un posto solo che dice se sono accese ────────
 // Decisione dell'utente del 26/08/2026: la conta di magazzino e le fatture
@@ -73,8 +74,8 @@ export const MODULI_PREMIUM = {
     chiave: 'modulo_menu_tavoli_enabled',
     sezioni: ['vista-cliente'],
     icona: 'telefono',
-    label: 'Menù digitale e tavoli',
-    descrizione: 'Il menù sul telefono del cliente, con il QR al tavolo e la vista cliente nel gestionale.',
+    label: daTradurre('Menù digitale e tavoli'),
+    descrizione: daTradurre('Il menù sul telefono del cliente, con il QR al tavolo e la vista cliente nel gestionale.'),
   },
   ordini_cliente: {
     chiave: 'modulo_ordini_cliente_enabled',
@@ -82,14 +83,14 @@ export const MODULI_PREMIUM = {
     // farlo (decisione dell'utente, 07/11/2026).
     richiede: ['menu_tavoli'],
     icona: 'campanello',
-    label: 'Ordini dal telefono del cliente',
-    descrizione: 'Il cliente ordina dal menù digitale e segue lo stato dell’ordine; senza, il menù si legge e basta.',
+    label: daTradurre('Ordini dal telefono del cliente'),
+    descrizione: daTradurre('Il cliente ordina dal menù digitale e segue lo stato dell’ordine; senza, il menù si legge e basta.'),
   },
   clienti: {
     chiave: 'modulo_clienti_enabled',
     icona: 'staff',
-    label: 'Gestione clienti',
-    descrizione: 'Account dei clienti, i loro ordini, i gruppi di conti.',
+    label: daTradurre('Gestione clienti'),
+    descrizione: daTradurre('Account dei clienti, i loro ordini, i gruppi di conti.'),
   },
   magazzino: {
     chiave: 'modulo_magazzino_enabled',
@@ -99,15 +100,15 @@ export const MODULI_PREMIUM = {
     // scritture).
     sezioni: ['inventario', 'fornitori', 'nuovo-ordine', 'lista-ordini', 'spese', 'listino'],
     icona: 'magazzino',
-    label: 'Magazzino e fornitori',
-    descrizione: 'Giacenze, scarico automatico dalle ricette, ordini ai fornitori e altre spese. L’inventario è un suo modulo.',
+    label: daTradurre('Magazzino e fornitori'),
+    descrizione: daTradurre('Giacenze, scarico automatico dalle ricette, ordini ai fornitori e altre spese. L’inventario è un suo modulo.'),
   },
   statistiche: {
     chiave: 'modulo_statistiche_enabled',
     sezioni: ['stats', 'bilancio'],
     icona: 'statistiche',
-    label: 'Statistiche e bilancio',
-    descrizione: 'Incassi per serata e periodo, venduto per fascia oraria, bilancio per macro-categorie.',
+    label: daTradurre('Statistiche e bilancio'),
+    descrizione: daTradurre('Incassi per serata e periodo, venduto per fascia oraria, bilancio per macro-categorie.'),
   },
   staff: {
     chiave: 'modulo_staff_enabled',
@@ -115,17 +116,17 @@ export const MODULI_PREMIUM = {
     // senza questa riga la apriva anche chi il modulo non ce l'ha.
     sezioni: ['ore'],
     icona: 'cuoco',
-    label: 'Personale e ore',
+    label: daTradurre('Personale e ore'),
     // Non «chiamate allo staff» (BUG-136): il cerca-persone e le timbrature
     // funzionano anche senza il modulo, apposta (COLLEZIONI_DEI_MODULI).
-    descrizione: 'Ore lavorate, turni e paghe del personale.',
+    descrizione: daTradurre('Ore lavorate, turni e paghe del personale.'),
   },
   // `sumup` e non `pagamenti`: la cassa del gestionale ha già quella sezione.
   sumup: {
     chiave: 'modulo_sumup_enabled',
     icona: 'carta',
-    label: 'Pagamenti con lettore SumUp',
-    descrizione: 'Il conto va al lettore di carte e torna pagato da solo.',
+    label: daTradurre('Pagamenti con lettore SumUp'),
+    descrizione: daTradurre('Il conto va al lettore di carte e torna pagato da solo.'),
   },
   conta: {
     chiave: 'modulo_conta_enabled',
@@ -134,9 +135,10 @@ export const MODULI_PREMIUM = {
     // riallinea: senza magazzino non c'è niente da contare.
     richiede: ['magazzino'],
     icona: 'elenco',
-    label: 'Inventario di magazzino',
-    descrizione:
-      'Inventario periodico: si contano le rimanenze, l’app calcola il consumo del periodo e allinea le giacenze.',
+    label: daTradurre('Inventario di magazzino'),
+    descrizione: daTradurre(
+      'Inventario periodico: si contano le rimanenze, l’app calcola il consumo del periodo e allinea le giacenze.'
+    ),
   },
   fatture: {
     // Le fatture di cortesia al CLIENTE (collezione `invoices`), da non
@@ -146,9 +148,10 @@ export const MODULI_PREMIUM = {
     // a schermo, perché stanno una sotto l'altra nelle impostazioni.
     chiave: 'modulo_fatture_enabled',
     icona: 'fatture',
-    label: 'Fatture ai clienti',
-    descrizione:
-      'Fattura di cortesia per il cliente che la chiede: dati di fatturazione, numero progressivo, stampa e invio per email.',
+    label: daTradurre('Fatture ai clienti'),
+    descrizione: daTradurre(
+      'Fattura di cortesia per il cliente che la chiede: dati di fatturazione, numero progressivo, stampa e invio per email.'
+    ),
   },
   scadenzario: {
     // Riacceso il 26/08/2026 su richiesta dell'utente: la Tana lo usa
@@ -159,9 +162,10 @@ export const MODULI_PREMIUM = {
     // scadenzario.
     sezioni: ['fornitori'],
     icona: 'calendario',
-    label: 'Fatture ai fornitori',
-    descrizione:
-      'Registro delle fatture di acquisto con importi, scadenze e stato dei pagamenti.',
+    label: daTradurre('Fatture ai fornitori'),
+    descrizione: daTradurre(
+      'Registro delle fatture di acquisto con importi, scadenze e stato dei pagamenti.'
+    ),
   },
 }
 
@@ -213,8 +217,10 @@ export function scritturaConsentita(stato, collezione) {
 // Quello che si legge al tocco dell'interruttore di un modulo NON INCLUSO.
 // Dice il perché senza promettere niente: l'inclusione è una faccenda della
 // licenza dell'installazione, non di questa schermata.
-export const MOTIVO_PREMIUM =
+// Si mostra con `trSegnato` (REQ-UI-039).
+export const MOTIVO_PREMIUM = daTradurre(
   'Funzione premium: fa parte della licenza dell’installazione e non si attiva da questa schermata.'
+)
 
 // L'elenco dei moduli come lo mostra un pannello: id davanti, il resto
 // dietro, nell'ordine in cui sono scritti qui sopra.
@@ -289,9 +295,15 @@ export const dipendentiDi = (id) =>
     .filter(([, m]) => m.richiede?.includes(id))
     .map(([dip]) => dip)
 
-// «Richiede «Magazzino e fornitori».» — la frase per una lista di basi.
-export const fraseRichiede = (ids) =>
-  ids.length ? `Richiede ${ids.map((r) => `«${MODULI_PREMIUM[r]?.label ?? r}»`).join(' e ')}.` : ''
+// «Richiede «Magazzino e fornitori».» — la frase per una lista di basi,
+// nella lingua di chi guarda: frase intera coi segnaposti, perché un pezzo
+// di frase non si traduce (REQ-UI-039).
+export function fraseRichiede(ids) {
+  const nomi = ids.map((r) => `«${trSegnato(MODULI_PREMIUM[r]?.label ?? r)}»`)
+  if (!nomi.length) return ''
+  if (nomi.length === 1) return tr('Richiede {modulo}.', { modulo: nomi[0] })
+  return tr('Richiede {moduli} e {ultimo}.', { moduli: nomi.slice(0, -1).join(', '), ultimo: nomi.at(-1) })
+}
 
 // ── QUALE LICENZA VALE (BUG-125) ──────────────────────────────────────
 // Fino alla 1.10.x la licenza stava in `settings/bar.licenza`, che ogni
@@ -435,7 +447,7 @@ export function riepilogoLicenza(stato, adesso = new Date()) {
     esclusi: moduli.filter((m) => !m.incluso),
     limiti: limitiInChiaro(stato),
     // Gli stili del menù che la licenza dà (REQ-LIC-010), col loro nome.
-    temi: temiInLicenza(stato).map((id) => STILI_MENU.find((s) => s.id === id)?.nome || id),
+    temi: temiInLicenza(stato).map((id) => trSegnato(STILI_MENU.find((s) => s.id === id)?.nome) || id),
     gestione: urlRegia(stato),
   }
 }

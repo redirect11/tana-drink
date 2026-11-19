@@ -136,6 +136,36 @@ describe('coda: prima la cache, poi il server', () => {
     await new Promise((r) => setTimeout(r, 10))
     expect(visti[visti.length - 1].map((o) => o.customer_name)).toEqual(['dal server'])
   })
+
+  // UNA RISPOSTA VUOTA È UNA RISPOSTA (BUG-169). La lettura dalla cache si
+  // applicava se le due liste erano ancora vuote, come dire «gli ascolti non
+  // hanno ancora risposto». Ma vuoto può essere la risposta: si svuota un
+  // conto, si torna alla coda, l'uscita lo annulla — e l'ascolto degli
+  // aperti, arrivato dopo l'annullo, non ne ha più nessuno. La lettura dalla
+  // cache, partita un attimo prima, aveva ancora il conto aperto e lo
+  // rimetteva a schermo: il conto ricompariva, con l'avviso «Conto
+  // ripristinato», e spariva di nuovo all'ascolto dopo.
+  it('una lista vuota del server non viene ricoperta dalla cache che arriva tardi', async () => {
+    stato.cache.aperti = [docFinto('z', ordine('z', 'aperto un attimo fa'))]
+    const visti = []
+    subscribeActiveOrders((list) => visti.push(list))
+    stato.listeners.find((x) => x.tipo === 'aperti').cb({ docs: [] })
+    stato.listeners.find((x) => x.tipo === 'recenti').cb({ docs: [] })
+    await new Promise((r) => setTimeout(r, 10))
+    expect(visti.map((l) => l.map((o) => o.customer_name))).toEqual([[], []])
+  })
+
+  // Anche se a rispondere per primo è l'ascolto dei conti chiusi in questa
+  // cassa: la lista di oggi letta dalla cache ha il conto com'era un attimo
+  // fa, e da sola lo rimetterebbe aperto accanto alla sua versione annullata.
+  it('risponde per primo l’ascolto dei chiusi: la cache non ricopre niente', async () => {
+    stato.cache.recenti = [docFinto('z', ordine('z', 'aperto un attimo fa'))]
+    const visti = []
+    subscribeActiveOrders((list) => visti.push(list), null, { cashSessionId: 'cassa' })
+    stato.listeners.find((x) => x.tipo === 'chiusi-qui').cb({ docs: [] })
+    await new Promise((r) => setTimeout(r, 10))
+    expect(visti.map((l) => l.map((o) => o.customer_name))).toEqual([[]])
+  })
 })
 
 // ANNULLO UN CONTO E LO DEVO RITROVARE SOTTO «ANNULLATI». Sembra ovvio, e

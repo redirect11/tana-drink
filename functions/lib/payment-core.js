@@ -105,6 +105,16 @@ function orderDue(order) {
   return Math.max(0, Math.round(due * 100) / 100)
 }
 
+// L'IMPORTO IN VOLO SUL LETTORE, azzerato: importo, righe e sconto della
+// riscossione partita. Viaggiano sempre insieme — lo sconto è arrivato
+// dopo, e ogni posto che li azzera va tenuto uguale: chi ne salta uno lascia
+// uno sconto o delle righe «in volo» su un conto chiuso.
+const NIENTE_IN_VOLO = Object.freeze({
+  sumup_pending_amount: null,
+  sumup_pending_items: null,
+  sumup_pending_sconto: null,
+})
+
 // Patch Firestore da applicare all'ordine per un esito di pagamento.
 // - pagato su ordine "ritirato" → chiude anche lo status (auto-avanzamento)
 // - pagato su ordine "annullato" → NON tocca lo status: segna
@@ -115,9 +125,7 @@ function decidePaymentPatch(order, { status, transactionId = null, now }) {
   if (status === 'fallito') {
     return {
       payment_status: (order?.payments || []).length ? 'parziale' : 'fallito',
-      sumup_pending_amount: null,
-      sumup_pending_items: null,
-      sumup_pending_sconto: null,
+      ...NIENTE_IN_VOLO,
     }
   }
   if (status !== 'pagato') return null
@@ -151,9 +159,7 @@ function decidePaymentPatch(order, { status, transactionId = null, now }) {
         payments,
         ...scontoConsumatoOra,
         payment_status: 'parziale',
-        sumup_pending_amount: null,
-        sumup_pending_items: null,
-        sumup_pending_sconto: null,
+        ...NIENTE_IN_VOLO,
         sumup_client_transaction_id: null,
       }
     }
@@ -163,9 +169,7 @@ function decidePaymentPatch(order, { status, transactionId = null, now }) {
       payment_status: 'pagato',
       payment_method: payments.every((p) => p.method === 'lettore') ? 'lettore' : 'misto',
       paid_at: now,
-      sumup_pending_amount: null,
-      sumup_pending_items: null,
-      sumup_pending_sconto: null,
+      ...NIENTE_IN_VOLO,
     }
     if (transactionId) patch.sumup_transaction_id = transactionId
     if (order?.status === 'annullato') {
@@ -246,6 +250,36 @@ function parseCheckoutWebhookBody(body) {
   }
 }
 
+// UN ESITO DEL LETTORE SI APPLICA UNA VOLTA SOLA (BUG-162). SumUp ritenta
+// una notifica non riuscita dopo 1, 5, 20 minuti e 2 ore, e una Function
+// lenta o un'istanza piena bastano a farla rimandare: lo stesso esito può
+// arrivare più volte, anche ore dopo. E il conto tiene il suo
+// `sumup_client_transaction_id` anche dopo, perché un incasso in contanti
+// non lo toglie: un «fallito» rimandato ritrovava il conto già pagato in
+// contanti e lo riportava a «parziale».
+//   · «fallito» vale solo per un conto che aspetta ancora il lettore;
+//   · «pagato» non si riapplica se quella transazione è già fra gli
+//     incassi del conto — ma si applica anche dopo un annullo dal banco:
+//     se SumUp dice che i soldi sono stati presi, il conto risulta pagato.
+//     (Con acconti già presi, in quel caso l'importo non entra negli
+//     incassi: l'annullo ha azzerato quello in volo. Limite di prima.)
+function esitoLettoreDaApplicare(order, { status, transactionId = null } = {}) {
+  if (!order) return false
+  if (status === 'fallito') {
+    return order.payment_status === 'in_attesa' && order.payment_method === 'lettore'
+  }
+  if (status !== 'pagato') return false
+  if (transactionId) {
+    const giaIncassata =
+      order.sumup_transaction_id === transactionId ||
+      (order.payments || []).some((p) => p?.transaction_id === transactionId)
+    return !giaIncassata
+  }
+  // Senza l'id della transazione: un conto già pagato e senza importo in
+  // volo non ha niente da ricevere.
+  return order.payment_status !== 'pagato' || Number(order.sumup_pending_amount) > 0
+}
+
 module.exports = {
   isServed,
   orderDue,
@@ -256,6 +290,8 @@ module.exports = {
   mapCheckoutStatus,
   mapTransactionStatus,
   decidePaymentPatch,
+  esitoLettoreDaApplicare,
+  NIENTE_IN_VOLO,
   groupOrderPaidPatch,
   decideAutoAdvance,
   parseReaderWebhookBody,

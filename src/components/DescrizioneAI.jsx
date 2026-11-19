@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { chiediAI, messaggioAI, aiRaggiungibile, costoAI as costoInEuro } from '../lib/aiApi.js'
 import TastoAI from './TastoAI.jsx'
 import { useStatoAI, STATI_AI } from '../lib/statoAI.js'
+import { tr } from '../lib/lingua.js'
 
 // Il costo di una descrizione è di qualche millesimo: coi centesimi si
 // leggerebbe «0,00 €», che non è vero. Fino a quattro decimali.
@@ -38,7 +39,7 @@ export default function DescrizioneAI({ nome, categoria, attuale, onUsa, subito 
     } else {
       const codice = r.ok ? 'non-usabile' : r.codice
       // Anche quando il risultato non serve il costo resta: si dice.
-      const costo = r.costo_eur != null ? ` Costo ${costoInEuro(r.costo_eur)}.` : ''
+      const costo = r.costo_eur != null ? ` ${tr('Costo {importo}.', { importo: costoInEuro(r.costo_eur) })}` : ''
       setStato({ fase: 'errore', messaggio: messaggioAI(codice) + costo })
     }
   }
@@ -49,7 +50,7 @@ export default function DescrizioneAI({ nome, categoria, attuale, onUsa, subito 
     <div className="descrizione-ai">
       {stato.fase !== 'proposta' && (
         <TastoAI onClick={chiedi} disabled={senzaNome || stato.fase === 'attesa'}>
-          {stato.fase === 'attesa' ? 'Scrivo la proposta…' : 'Proponi una descrizione con l’AI'}
+          {stato.fase === 'attesa' ? tr('Scrivo la proposta…') : tr('Proponi una descrizione con l’AI')}
         </TastoAI>
       )}
       {stato.fase === 'errore' && (
@@ -58,15 +59,17 @@ export default function DescrizioneAI({ nome, categoria, attuale, onUsa, subito 
         </p>
       )}
       {stato.fase === 'proposta' && (
-        <div className="descrizione-ai-proposta" role="group" aria-label="Descrizione proposta dall’AI">
-          <p className="small muted" style={{ margin: 0 }}>Proposta dell’AI</p>
+        <div className="descrizione-ai-proposta" role="group" aria-label={tr('Descrizione proposta dall’AI')}>
+          <p className="small muted" style={{ margin: 0 }}>{tr('Proposta dell’AI')}</p>
           <p style={{ margin: '4px 0 6px' }}>{stato.descrizione}</p>
           {stato.daVerificare.length > 0 && (
-            <p className="small" style={{ margin: '0 0 6px' }}>Da verificare: {stato.daVerificare.join(', ')}</p>
+            <p className="small" style={{ margin: '0 0 6px' }}>
+              {tr('Da verificare: {elenco}', { elenco: stato.daVerificare.join(', ') })}
+            </p>
           )}
           {attuale && (
             <p className="small muted" style={{ margin: '0 0 6px' }}>
-              Quella di adesso: {attuale}
+              {tr('Quella di adesso: {testo}', { testo: attuale })}
             </p>
           )}
           <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
@@ -78,19 +81,19 @@ export default function DescrizioneAI({ nome, categoria, attuale, onUsa, subito 
                 setStato({ fase: 'ferma' })
               }}
             >
-              Usa questa
+              {tr('Usa questa')}
             </button>
             <button type="button" className="btn ghost small" onClick={() => setStato({ fase: 'ferma' })}>
-              Scarta
+              {tr('Scarta')}
             </button>
             <button type="button" className="btn ghost small" onClick={chiedi}>
-              Un’altra proposta
+              {tr('Un’altra proposta')}
             </button>
           </div>
           {stato.costo != null && (
             <p className="small muted" style={{ margin: '6px 0 0' }}>
-              Costo {costoInEuro(stato.costo)}
-              {stato.credito != null ? ` · credito rimasto ${costoInEuro(stato.credito)}` : ''}
+              {tr('Costo {importo}', { importo: costoInEuro(stato.costo) })}
+              {stato.credito != null ? ` · ${tr('credito rimasto {importo}', { importo: costoInEuro(stato.credito) })}` : ''}
             </p>
           )}
         </div>

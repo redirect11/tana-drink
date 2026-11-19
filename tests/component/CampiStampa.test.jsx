@@ -42,7 +42,7 @@ describe('cosa si può togliere dallo scontrino', () => {
   it('la lista dei prodotti e il totale non sono fra le scelte', () => {
     pannello('scontrino')
     expect(screen.queryByLabelText(/prodotti|righe|totale/i)).toBeNull()
-    expect(screen.getByText(/prodotti e il totale ci sono sempre/i)).toBeInTheDocument()
+    expect(screen.getByText(/prodotti e totale si stampano sempre/i)).toBeInTheDocument()
   })
 
   it('di suo è tutto acceso: è la carta di oggi', () => {

@@ -14,8 +14,8 @@
 // perché a chi sta lavorando arrivassero i colori pensati per il cliente,
 // in mezzo alla serata. Ora segue il ruolo.
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, waitFor, within, act, cleanup } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from '../helpers/router.jsx'
 import '@testing-library/jest-dom/vitest'
@@ -24,6 +24,10 @@ import { CON_LICENZA } from '../helpers/licenza.js'
 // Chi è collegato: lo decide ogni test prima di montare.
 let ruoloClaim = null
 let clienteLoggato = null
+// Il token che non torna: il ruolo resta «in lettura» (BUG-171).
+let tokenAppeso = false
+// L'ascolto dell'accesso, per far entrare qualcuno DOPO il montaggio.
+let ascoltoAccesso = null
 
 // Le impostazioni che una prova aggiunge a quelle di sempre (vedi il mock).
 const inPiu = vi.hoisted(() => ({ impostazioni: {} }))
@@ -34,13 +38,15 @@ vi.mock('../../src/lib/firebaseClient.js', () => ({
 }))
 vi.mock('firebase/auth', () => ({
   onAuthStateChanged: (_auth, cb) => {
+    ascoltoAccesso = cb
     cb(
       ruoloClaim
         ? {
             uid: 'u1',
             email: 'capo@bar.it',
             displayName: 'Capo Bar',
-            getIdTokenResult: async () => ({ claims: { role: ruoloClaim } }),
+            getIdTokenResult: () =>
+              tokenAppeso ? new Promise(() => {}) : Promise.resolve({ claims: { role: ruoloClaim } }),
           }
         : null
     )
@@ -59,6 +65,8 @@ vi.mock('../../src/lib/customerAuth.js', () => ({
 const TEMA_STAFF = { preset: 'notte-blu', custom: null }
 const TEMA_CLIENTE = { preset: 'crema', custom: null }
 vi.mock('../../src/lib/api.js', () => ({
+  // La lingua del profilo (REQ-UI-039): l'account non ne ha una sua.
+  leggiLinguaDelProfilo: vi.fn(() => Promise.resolve(null)),
   // La presentazione alla regia (REQ-FLOTTA-026) qui non parte: nei test
   // non c'è VITE_REGIA_PROGETTO, ma l'app la importa comunque.
   presentaAllaRegia: vi.fn(() => Promise.resolve({ ok: false, status: 0, errore: null })),
@@ -127,6 +135,7 @@ vi.mock('../../src/pages/AccountPages.jsx', () => ({
 
 import App from '../../src/App.jsx'
 import { THEME_PRESETS } from '../../src/lib/themes.js'
+import { impostaLingua, linguaInUso } from '../../src/lib/lingua.js'
 
 function apri(percorso) {
   return render(
@@ -143,6 +152,7 @@ beforeEach(() => {
   inPiu.impostazioni = {}
   ruoloClaim = null
   clienteLoggato = null
+  tokenAppeso = false
   document.documentElement.removeAttribute('style')
   localStorage.clear()
 })
@@ -157,7 +167,12 @@ describe('la barra in cima è la stessa su tutte le schermate', () => {
     // nome si trovava due volte, ogni tanto: una prova ballerina è peggio di
     // una prova che manca, perché la si impara a ignorare.
     await waitFor(() => expect(document.querySelector('.topbar-io')).not.toBeNull())
-    expect(screen.getByText('La Tana del Coniglio')).toBeInTheDocument()
+    // In alto il locale, col suo nome; il marchio del prodotto, LIME -
+    // SmartOrders, sta nel menu laterale del gestionale, al posto di
+    // «Gestionale» (REQ-UI-035, Daniele 17/11/2026).
+    expect(document.querySelector('.topbar .brand')).toHaveTextContent('La Tana del Coniglio')
+    expect(document.querySelector('.topbar .marchio-lime')).toBeNull()
+    expect(document.querySelector('nav.bar-sidebar .brand-mini .marchio-lime')).toHaveTextContent('SmartOrders')
     // A destra una cosa sola: chi è collegato, che apre il suo profilo.
     const io = document.querySelector('.topbar-io')
     expect(io).toHaveAttribute('href', '/profilo-staff')
@@ -165,6 +180,17 @@ describe('la barra in cima è la stessa su tutte le schermate', () => {
     // Le vecchie varianti sono voci del menu laterale, non della barra.
     expect(screen.queryByText(/Ciao, Capo Bar/)).toBeNull()
     expect(screen.queryByText('Torna al servizio')).toBeNull()
+  })
+
+  // REQ-UI-035: solo la demo e i locali Free hanno in alto il marchio del
+  // prodotto al posto del locale.
+  it('un locale Free ha in alto il marchio LIME al posto del suo', async () => {
+    ruoloClaim = 'admin'
+    inPiu.impostazioni = { licenza: { ...CON_LICENZA.licenza, piano: 'free' } }
+    apri('/profilo-staff')
+    await waitFor(() => expect(document.querySelector('.topbar-io')).not.toBeNull())
+    expect(document.querySelector('.topbar .brand .marchio-lime')).toHaveTextContent('SmartOrders')
+    expect(document.querySelector('.topbar .brand')).toHaveAttribute('aria-label', 'Lime SmartOrders, coda ordini')
   })
 
   it('la stessa barra nel menù usato per gli ordini manuali', async () => {
@@ -273,6 +299,43 @@ describe('il menu laterale risponde anche al cliente', () => {
   })
 })
 
+// LA LINGUA È DI CHI LAVORA, LE PAGINE DEI CLIENTI RESTANO ITALIANE
+// (REQ-UI-039, REQ-CLI-010). Dalla revisione del 17/11: un tablet dello
+// staff in inglese, girato verso il cliente, gli mostrava pezzi d'inglese
+// in mezzo all'italiano. L'attributo lang dice in che lingua è la pagina:
+// «en» nel gestionale, «it» dove guarda il cliente.
+describe('la lingua della pagina segue chi guarda', () => {
+  // Si smonta PRIMA di rimettere l'italiano: con l'app ancora a schermo, il
+  // cambio di lingua la ridisegnerebbe da capo fuori dalla prova.
+  afterEach(() => {
+    cleanup()
+    impostaLingua('it')
+  })
+
+  it('al banco, in inglese', async () => {
+    ruoloClaim = 'admin'
+    impostaLingua('en')
+    apri('/bar')
+    await waitFor(() => expect(document.documentElement.lang).toBe('en'))
+    await screen.findByText('PAGINA CODA')
+    expect(document.documentElement.lang).toBe('en')
+  })
+
+  it('«Mostra al cliente» resta italiana, anche girata dal tablet dello staff', async () => {
+    ruoloClaim = 'admin'
+    impostaLingua('en')
+    apri('/ordine/o1?cliente=1')
+    await waitFor(() => expect(document.documentElement.lang).toBe('it'))
+    expect(linguaInUso()).toBe('it')
+  })
+
+  it('e il menù dei clienti anche', async () => {
+    impostaLingua('en')
+    apri('/menu')
+    await waitFor(() => expect(document.documentElement.lang).toBe('it'))
+  })
+})
+
 describe('il tema segue chi guarda, non l’indirizzo', () => {
   it('a chi lavora il gestionale, anche sul proprio profilo', async () => {
     ruoloClaim = 'admin'
@@ -288,6 +351,42 @@ describe('il tema segue chi guarda, non l’indirizzo', () => {
 
   it('al cliente il suo, sempre', async () => {
     apri('/menu')
+    await waitFor(() => expect(accento()).toBe(THEME_PRESETS[TEMA_CLIENTE.preset].vars['--accent']))
+  })
+
+  // BUG-171. Daniele, 17/11/2026: «Ti sto facendo entrare», la schermata
+  // d'attesa dopo il login, non aveva il tema. Il ruolo si legge dal token,
+  // e finché non torna la porta del gestionale prendeva i colori dei
+  // clienti; quelli giusti arrivavano un attimo dopo.
+  // Il giro vero: il modulo di accesso su /bar (l'accesso ha già risposto
+  // «nessuno»), poi il login, col ruolo ancora in lettura.
+  it('sulla porta del gestionale, mentre si legge il ruolo, il tema è già il suo', async () => {
+    apri('/bar')
+    await waitFor(() => expect(accento()).toBe(THEME_PRESETS[TEMA_STAFF.preset].vars['--accent']))
+    tokenAppeso = true
+    // La callback dell'accesso non finisce mai (il token è appeso): si
+    // aspetta il giro di React, non lei.
+    await act(async () => {
+      ascoltoAccesso({
+        uid: 'u1',
+        email: 'capo@bar.it',
+        displayName: 'Capo Bar',
+        getIdTokenResult: () => new Promise(() => {}),
+      })
+    })
+    // Un giro di disegno dopo: il tema non è passato a quello dei clienti.
+    await new Promise((r) => setTimeout(r, 50))
+    expect(accento()).toBe(THEME_PRESETS[TEMA_STAFF.preset].vars['--accent'])
+  })
+
+  it('e anche il modulo di accesso su /bar, prima che entri qualcuno', async () => {
+    apri('/bar')
+    await waitFor(() => expect(accento()).toBe(THEME_PRESETS[TEMA_STAFF.preset].vars['--accent']))
+  })
+
+  it('ma un cliente entrato su /bar ha i suoi colori', async () => {
+    ruoloClaim = 'cliente'
+    apri('/bar')
     await waitFor(() => expect(accento()).toBe(THEME_PRESETS[TEMA_CLIENTE.preset].vars['--accent']))
   })
 

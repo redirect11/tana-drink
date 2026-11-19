@@ -1,5 +1,6 @@
 import { memo } from 'react'
 import { formatQty } from '../lib/inventory.js'
+import { tr } from '../lib/lingua.js'
 
 // «+0,4 pz», «-1,9 pz»: una differenza si legge col suo segno.
 const conSegno = (n, unit) => `${n > 0 ? '+' : ''}${formatQty(n, unit)}`
@@ -22,18 +23,18 @@ const RigaInventario = memo(
           <div className="grow">
             <div className="inv-name">{l.name}</div>
             <div className="muted small">
-              DEP {q(l.dep)} · ACQ {q(l.acq)}
-              {l.cons != null && ` · CONS ${q(l.cons)}`}
+              {tr('DEP')} {q(l.dep)} · {tr('ACQ')} {q(l.acq)}
+              {l.cons != null && ` · ${tr('CONS')} ${q(l.cons)}`}
               {rim != null && (
                 <>
-                  {' · RIM '}
+                  {` · ${tr('RIM')} `}
                   <strong>{q(rim)}</strong>
                 </>
               )}
-              {soloLettura && l.diff ? ` · differenza ${conSegno(l.diff, l.unit)}` : ''}
+              {soloLettura && l.diff ? ` · ${tr('differenza {quantita}', { quantita: conSegno(l.diff, l.unit) })}` : ''}
               {/* Il consumo a settimana (REQ-MAG-024) resta: è il numero su
                   cui si decide quanto ordinare. */}
-              {l.cons_week != null && ` · ${q(l.cons_week)} a settimana`}
+              {l.cons_week != null && ` · ${tr('{quantita} a settimana', { quantita: q(l.cons_week) })}`}
             </div>
           </div>
           <input
@@ -41,8 +42,8 @@ const RigaInventario = memo(
             step="any"
             min="0"
             value={valore}
-            placeholder={`RIM ${l.unit}`}
-            aria-label={`Rimanenza di ${l.name}`}
+            placeholder={`${tr('RIM')} ${l.unit}`}
+            aria-label={tr('Rimanenza di {nome}', { nome: l.name })}
             disabled={soloLettura}
             onChange={soloLettura ? undefined : (e) => onScrivi(l.item_id, e.target.value)}
             onBlur={soloLettura ? undefined : () => onEsci(l.item_id)}
@@ -55,7 +56,7 @@ const RigaInventario = memo(
             <button
               type="button"
               className="btn ghost small"
-              aria-label={`Conferma la rimanenza di ${l.name}`}
+              aria-label={tr('Conferma la rimanenza di {nome}', { nome: l.name })}
               onClick={() => {
                 onScrivi(l.item_id, String(l.atteso))
                 onEsci(l.item_id)

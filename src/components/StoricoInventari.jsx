@@ -8,6 +8,7 @@ import { giorniScritti } from '../lib/warehouse.js'
 import ListaPerScaffale from './ListaPerScaffale.jsx'
 import RigaInventario from './RigaInventario.jsx'
 import TestataInventario from './TestataInventario.jsx'
+import { tr } from '../lib/lingua.js'
 
 // ── STORICO INVENTARI (REQ-MAG-052) ────────────────────────────────────
 //
@@ -27,7 +28,9 @@ import TestataInventario from './TestataInventario.jsx'
 
 const PAGINA = 20
 
-const periodo = (conta) => `dal ${dataBreve(conta.started_at, '—')} al ${dataBreve(conta.closed_at, '—')}`
+// Si chiama al disegno, quindi `tr` qui parla la lingua di quel momento.
+const periodo = (conta) =>
+  tr('dal {da} al {a}', { da: dataBreve(conta.started_at, '—'), a: dataBreve(conta.closed_at, '—') })
 
 export default function StoricoInventari() {
   const [lista, setLista] = useState(undefined) // undefined = caricamento
@@ -57,7 +60,7 @@ export default function StoricoInventari() {
 
   const righe = useMemo(() => (lista || []).map((conta) => ({ conta, ...riassuntoInventarioChiuso(conta) })), [lista])
 
-  if (lista === undefined) return <div className="empty">Carico lo storico…</div>
+  if (lista === undefined) return <div className="empty">{tr('Carico lo storico…')}</div>
 
   if (scelto) {
     return <InventarioChiuso conta={scelto} items={items} categorie={categorie} onIndietro={() => setScelto(null)} />
@@ -65,14 +68,14 @@ export default function StoricoInventari() {
 
   return (
     <div>
-      {error && <div className="banner">Errore: {error}</div>}
+      {error && <div className="banner">{tr('Errore: {errore}', { errore: error })}</div>}
       {righe.length === 0 ? (
-        <div className="empty">Nessun inventario chiuso.</div>
+        <div className="empty">{tr('Nessun inventario chiuso.')}</div>
       ) : (
         <div className="card">
-          <strong>Inventari chiusi</strong>
+          <strong>{tr('Inventari chiusi')}</strong>
           <p className="muted small" style={{ margin: '4px 0 6px' }}>
-            Dal più recente. Si apre toccando la riga: rimanenze e consumi del periodo, in sola lettura.
+            {tr('Dal più recente. Si apre toccando la riga: rimanenze e consumi del periodo, in sola lettura.')}
           </p>
           {righe.map(({ conta, giorni, totals, righe: n }) => (
             <button type="button" className="storico-inventario-riga" key={conta.id} onClick={() => setScelto(conta)}>
@@ -80,12 +83,14 @@ export default function StoricoInventari() {
                 <strong>{periodo(conta)}</strong>
                 <span className="muted small" style={{ display: 'block' }}>
                   {giorni != null && `${giorniScritti(giorni)} · `}
-                  contati {totals.counted}/{n}
+                  {tr('contati {contati}/{totale}', { contati: totals.counted, totale: n })}
                 </span>
               </span>
               <span className="muted small" style={{ textAlign: 'right' }}>
-                rimanenze <strong>{formatPrice(totals.rim_value)}</strong>
-                <span style={{ display: 'block' }}>consumo {formatPrice(totals.cons_value)}</span>
+                {tr('rimanenze')} <strong>{formatPrice(totals.rim_value)}</strong>
+                <span style={{ display: 'block' }}>
+                  {tr('consumo {importo}', { importo: formatPrice(totals.cons_value) })}
+                </span>
               </span>
             </button>
           ))}
@@ -96,7 +101,7 @@ export default function StoricoInventari() {
               style={{ marginTop: 6 }}
               onClick={() => carica(lista[lista.length - 1]?.started_at)}
             >
-              Mostra altri
+              {tr('Mostra altri')}
             </button>
           )}
         </div>
@@ -116,18 +121,19 @@ function InventarioChiuso({ conta, items, categorie, onIndietro }) {
   return (
     <div>
       <button type="button" className="btn ghost small" onClick={onIndietro}>
-        ← Tutti gli inventari
+        ← {tr('Tutti gli inventari')}
       </button>
       <div style={{ marginTop: 8 }}>
         <TestataInventario
-          titolo={`Inventario ${periodo(conta)}`}
+          titolo={tr('Inventario {periodo}', { periodo: periodo(conta) })}
           giorni={giorni}
           contati={totals.counted}
           totale={lines.length}
           totals={totals}
         >
-          Inventario chiuso: RIM è la rimanenza alla chiusura e non si modifica. CONS = DEP + ACQ − RIM
-          {giorni != null && '; il consumo a settimana è diviso per i giorni del periodo'}.
+          {giorni != null
+            ? tr('Inventario chiuso: RIM è la rimanenza alla chiusura e non si modifica. CONS = DEP + ACQ − RIM; il consumo a settimana è diviso per i giorni del periodo.')
+            : tr('Inventario chiuso: RIM è la rimanenza alla chiusura e non si modifica. CONS = DEP + ACQ − RIM.')}
         </TestataInventario>
       </div>
       <div style={{ marginTop: 8 }}>

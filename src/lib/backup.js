@@ -3,6 +3,7 @@ import { db, collection, getDocs, doc, writeBatch } from '../porte/dati.js'
 import { configurazione } from '../porte/configurazione.js'
 import { scritturaConsentita, conLicenzaAttuale, COLLEZIONE_LICENZA } from './licenza.js'
 import { licenzaRicordata } from './impostazioniLocali.js'
+import { tr } from './lingua.js'
 
 // ── BACKUP E RIPRISTINO DEL DATABASE, dal gestionale ──────────────────
 //
@@ -87,6 +88,11 @@ export const FUORI_DAL_BACKUP = Object.freeze([
   // minuti. Una copia di ieri non dice niente, e il titolare non potrebbe
   // rimettere quella degli altri.
   'presenze',
+  // Le scelte personali di chi lavora (la lingua del gestionale,
+  // REQ-UI-039): ognuno scrive solo il suo profilo, quindi il titolare non
+  // potrebbe rimettere quelli degli altri — e un documento rifiutato ferma
+  // il ripristino a metà. Perderle vuol dire rifare una scelta.
+  'profili_staff',
   // Il registro tecnico della stampante, per capire un guasto: non sono
   // dati del locale.
   'diagnostica_stampante',
@@ -150,14 +156,17 @@ export function totaleRighe(backup) {
 
 // Un file va bene? Meglio dirlo prima di scrivere sul database.
 export function validaBackup(backup) {
-  if (!backup || typeof backup !== 'object') return 'Il file non contiene un backup.'
+  if (!backup || typeof backup !== 'object') return tr('Il file non contiene un backup.')
   if (!backup.collezioni || typeof backup.collezioni !== 'object') {
-    return 'Manca l’elenco delle collezioni: non è un backup di questa app.'
+    return tr('Manca l’elenco delle collezioni: non è un backup di questa app.')
   }
   if (backup.formato && backup.formato > FORMATO) {
-    return `Il file è in formato ${backup.formato}, questa versione arriva a ${FORMATO}: aggiorna l’app.`
+    return tr('Il file è in formato {formato}, questa versione arriva a {massimo}: aggiorna l’app.', {
+      formato: backup.formato,
+      massimo: FORMATO,
+    })
   }
-  if (!totaleRighe(backup)) return 'Il backup è vuoto.'
+  if (!totaleRighe(backup)) return tr('Il backup è vuoto.')
   return null
 }
 

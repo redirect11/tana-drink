@@ -36,6 +36,24 @@ personale) e **amministrare** (account dello staff, numerazione dei conti).
 Le dipendenze (`db`, `fetch`, `isConfigured`, `serverTimestamp`…) sono
 iniettate in `index.js` e sostituite da mock nei test.
 
+## Il tetto alla spesa (REQ-DEV-026)
+
+- **Istanze:** `setGlobalOptions` in `index.js` mette il tetto a 10 per
+  tutte le Functions, comprese quelle che arriveranno. Le quattro
+  chiamabili che il cliente usa senza account (`createPaymentCheckout`,
+  `getPaymentStatus`, `createGroupCheckout`, `getGroupPaymentStatus`)
+  usano `OPTS_PUBBLICO`, con tetto 3.
+- **Niente sotto 10 sui trigger e sul webhook:** un evento che trova le
+  istanze piene può perdersi (seconda generazione, senza nuovi tentativi),
+  e un webhook respinto può far perdere un pagamento confermato.
+- **Prima di SumUp, Firestore:** il webhook del lettore interroga SumUp
+  solo se un conto o un pagamento di gruppo ha quel
+  `client_transaction_id`.
+- **Numeri doppi:** `risolviNumeroDuplicato` chiede prima i conti con lo
+  stesso numero e legge tutta la cassa solo se il conto nuovo ha perso la
+  disputa. Se la domanda stretta fallisce, torna alla lettura completa
+  (BUG-161).
+
 ## Configurazione
 
 | Variabile | Tipo | Default | Descrizione |
@@ -101,7 +119,21 @@ stato **si rilegge sempre dall'API**: quello che dice il browser non basta.
 Riceve gli esiti (checkout online e `return_url` del lettore) e smista per
 forma del payload. L'esito viene **sempre ri-verificato via API SumUp**,
 quindi un payload malformato è innocuo — ed è per questo che non serve una
-firma. Risponde sempre `200`: un errore farebbe ritentare SumUp per un'ora.
+firma. Risponde sempre `200`: SumUp tratta come non riuscita ogni risposta
+che non sia `2xx`, e anche una risposta troppo lenta, e ritenta dopo 1
+minuto, 5 minuti, 20 minuti e 2 ore (documentazione dei webhook di SumUp,
+https://developer.sumup.com/online-payments/webhooks/, letta dalla regia il
+16/11/2026; scritta per il checkout online, per il lettore non è detto).
+
+Quindi **lo stesso esito può arrivare più volte**, anche ore dopo, e il
+webhook lo deve reggere:
+- checkout online: `verifyCheckoutStatus` scrive solo se lo stato cambia, e
+  non tocca un conto già pagato. Resta un buco: un rifiuto online rimandato
+  quando il conto è passato al lettore lo segna «fallito» (BUG-163, da fare);
+- lettore: `esitoLettoreDaApplicare` (in `payment-core.js`) applica un
+  «fallito» solo a un conto che aspetta ancora il lettore, e un «pagato» solo
+  se quella transazione non è già fra gli incassi (BUG-162);
+- gruppi: `settleGroupPayment` non tocca un pagamento già saldato.
 
 ### `autoAdvancePaid` — trigger su `orders/{orderId}`
 
@@ -124,18 +156,29 @@ stessi tre gesti quando a pagare è un gruppo di conti insieme.
 - `notifyOrderUpdate` — trigger su `orders/{orderId}`: avvisa il **cliente**
   quando il drink è pronto o l'ordine è annullato.
 - `notifyNewOrder` — trigger su `orders/{orderId}`: avvisa il **personale** di
-  un ordine appena arrivato.
+  un ordine appena arrivato. Un conto battuto al POS nasce `in_creazione` e
+  non avvisa: lo annuncia `notifyOrderUpdate` quando il segno si toglie,
+  cioè quando chi lo batte esce dal conto (BUG-159).
 - `notifyStaffCall` — trigger su `staff_calls/{callId}`: la chiamata al tavolo.
 
-## Il menù dei clienti — voci non disponibili (REQ-MENU-017)
+## Il menù dei clienti — voci non disponibili (REQ-MENU-017, REQ-MENU-045)
 
 Il cliente non legge il magazzino: il segno `non_disponibile_cliente` sul
 prodotto della cassa lo scrivono tre trigger, con la logica in
-`lib/disponibilita.js`, solo per i prodotti con «Il menù dei clienti segue
-le giacenze» e solo dove il segno cambia:
+`lib/disponibilita.js`, solo dove il segno cambia. Una voce non è
+disponibile se:
+
+- segue le giacenze («Il menù dei clienti segue le giacenze», sulla voce) e
+  le manca un ingrediente, tolti quelli di servizio; **oppure**
+- le manca un ingrediente con «Oscura automaticamente» (sul prodotto di
+  magazzino, `oscura_automaticamente`), anche di servizio.
+
+«Manca» vuol dire sotto la soglia delle Impostazioni, per tutte e due.
 
 - `disponibilitaDalMagazzino` — `inventory_items/{itemId}`: quando la
-  giacenza attraversa la soglia (non a ogni vendita);
+  giacenza attraversa la soglia (non a ogni vendita), o quando la spunta
+  «Oscura automaticamente» cambia. Con la spunta legge tutte le voci;
+  senza, solo quelle che seguono le giacenze (`vociDaRicalcolare`);
 - `disponibilitaDalProdotto` — `drinks/{drinkId}`: quando cambiano opzione o
   ricetta (la sua stessa scrittura non lo rimette in moto);
 - `disponibilitaDalleImpostazioni` — `settings/bar`: quando cambia la soglia

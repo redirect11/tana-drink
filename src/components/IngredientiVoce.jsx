@@ -12,6 +12,7 @@ import {
   righeSostituite,
   chiaveEtichetta as chiave,
 } from '../lib/etichetteIngredienti.js'
+import { tr, trSegnato } from '../lib/lingua.js'
 
 const testo = (v) => (typeof v === 'string' ? v.trim() : '')
 const NOME_GRUPPO = Object.fromEntries(GRUPPI_SUGGERIMENTO.map((g) => [g.id, g.nome]))
@@ -60,12 +61,18 @@ export default function IngredientiVoce({ voce, drink, items = [], categorieMaga
       : cambiaScelta(e, alternativeDi(e, items).map((a) => ({ ...a, supplemento: supplementoPredefinito })))
   const conScelta = attuali.filter((e) => e.scelta)
 
-  const origine = proprie ? 'solo in questa voce' : testo(voce.ingredienti) ? 'testo della voce' : base ? 'dalla scheda prodotto' : ''
+  const origine = proprie
+    ? tr('solo in questa voce')
+    : testo(voce.ingredienti)
+      ? tr('testo della voce')
+      : base
+        ? tr('dalla scheda prodotto')
+        : ''
 
   return (
     <div className="wys-campo ingredienti-voce">
       <div className="wys-etichetta">
-        <label htmlFor={id}>Ingredienti</label>
+        <label htmlFor={id}>{tr('Ingredienti')}</label>
         {origine && <span className={`wys-origine${proprie ? ' proprio' : ''}`}>{origine}</span>}
       </div>
 
@@ -77,14 +84,14 @@ export default function IngredientiVoce({ voce, drink, items = [], categorieMaga
               <button
                 type="button"
                 aria-pressed={Boolean(e.scelta)}
-                aria-label={`Il cliente sceglie: ${e.nome}`}
-                title="Il cliente sceglie"
+                aria-label={tr('Il cliente sceglie: {nome}', { nome: e.nome })}
+                title={tr('Il cliente sceglie')}
                 onClick={() => alternaScelta(e)}
               >
                 ⇄
               </button>
             )}
-            <button type="button" aria-label={`Togli ${e.nome}`} onClick={() => togli(e)}>
+            <button type="button" aria-label={tr('Togli {nome}', { nome: e.nome })} onClick={() => togli(e)}>
               ×
             </button>
           </span>
@@ -93,7 +100,7 @@ export default function IngredientiVoce({ voce, drink, items = [], categorieMaga
           id={id}
           className="wys etichette-campo"
           value={scritto}
-          placeholder={attuali.length ? 'Aggiungi' : 'Scrivi un ingrediente'}
+          placeholder={attuali.length ? tr('Aggiungi') : tr('Scrivi un ingrediente')}
           onChange={(e) => setScritto(e.target.value)}
           onKeyDown={(e) => {
             if (e.key !== 'Enter') return
@@ -101,22 +108,22 @@ export default function IngredientiVoce({ voce, drink, items = [], categorieMaga
             if (!scritto.trim()) return
             aggiungi(lista[0] ?? etichettaLibera(scritto))
           }}
-          aria-label="Aggiungi un ingrediente"
+          aria-label={tr('Aggiungi un ingrediente')}
         />
       </div>
 
       {scritto.trim() && (
-        <ul className="etichette-suggerimenti" role="listbox" aria-label="Suggerimenti">
+        <ul className="etichette-suggerimenti" role="listbox" aria-label={tr('Suggerimenti')}>
           {lista.map((s) => (
             <li key={chiave(s)}>
               <button type="button" className={`suggerimento gruppo-${s.gruppo}`} onClick={() => aggiungi(s)}>
-                {s.nome} <span className="muted small">{NOME_GRUPPO[s.gruppo]}</span>
+                {s.nome} <span className="muted small">{trSegnato(NOME_GRUPPO[s.gruppo])}</span>
               </button>
             </li>
           ))}
           <li>
             <button type="button" className="suggerimento gruppo-testo" onClick={() => aggiungi(etichettaLibera(scritto))}>
-              «{scritto.trim()}» <span className="muted small">testo libero</span>
+              «{scritto.trim()}» <span className="muted small">{tr('testo libero')}</span>
             </button>
           </li>
         </ul>
@@ -127,20 +134,21 @@ export default function IngredientiVoce({ voce, drink, items = [], categorieMaga
         const offerti = new Map(e.scelta.offerti.map((o) => [o.id, o]))
         const aggiorna = (lista) => cambiaScelta(e, lista)
         return (
-          <div key={chiave(e)} className="scelta-cliente" role="group" aria-label={`Il cliente sceglie: ${e.nome}`}>
+          <div key={chiave(e)} className="scelta-cliente" role="group" aria-label={tr('Il cliente sceglie: {nome}', { nome: e.nome })}>
             <p className="small" style={{ margin: '0 0 4px' }}>
-              <strong>Il cliente sceglie: {e.nome}</strong> · chi non sceglie ha il prodotto della ricetta
+              <strong>{tr('Il cliente sceglie: {nome}', { nome: e.nome })}</strong> · {tr('chi non sceglie ha il prodotto della ricetta')}
             </p>
             {!righeSostituite(e, drink, items).length && (
               <p className="muted small" style={{ margin: '0 0 4px' }}>
-                Nessuna riga della ricetta del prodotto collegato corrisponde a «{e.nome}»: la scelta arriva al banco
-                nella nota della riga e lo scarico segue la ricetta invariata.
+                {tr(
+                  'Nessuna riga della ricetta del prodotto collegato corrisponde a «{nome}»: la scelta arriva al banco nella nota della riga e lo scarico segue la ricetta invariata.',
+                  { nome: e.nome }
+                )}
               </p>
             )}
             {possibili.length === 0 ? (
               <p className="muted small" style={{ margin: 0 }}>
-                Nessun prodotto di questa categoria ha «Il cliente può sceglierlo dal menù» (scheda del prodotto di
-                magazzino).
+                {tr('Nessun prodotto di questa categoria ha «Il cliente può sceglierlo dal menù» (scheda del prodotto di magazzino).')}
               </p>
             ) : (
               possibili.map((a) => {
@@ -169,7 +177,7 @@ export default function IngredientiVoce({ voce, drink, items = [], categorieMaga
                         min="0"
                         defaultValue={o.supplemento || ''}
                         placeholder="+ € 0"
-                        aria-label={`Supplemento per ${a.nome}`}
+                        aria-label={tr('Supplemento per {nome}', { nome: a.nome })}
                         onBlur={(ev) =>
                           aggiorna(e.scelta.offerti.map((x) => (x.id === a.id ? { ...x, supplemento: ev.target.value } : x)))
                         }
@@ -185,7 +193,7 @@ export default function IngredientiVoce({ voce, drink, items = [], categorieMaga
 
       {daProporre.length > 0 && (
         <div className="etichette-proposte">
-          <span className="muted small">Dalla ricetta:</span>
+          <span className="muted small">{tr('Dalla ricetta:')}</span>
           {daProporre.map((e) => (
             <button key={chiave(e)} type="button" className="etichetta proposta" onClick={() => aggiungi(e)}>
               + {e.nome}
@@ -197,7 +205,7 @@ export default function IngredientiVoce({ voce, drink, items = [], categorieMaga
       <div className="row" style={{ gap: 12, flexWrap: 'wrap', marginTop: 4 }}>
         {proposta.length > 0 && (
           <button type="button" className="btn ghost small" onClick={() => salva(proposta)}>
-            ↺ come la ricetta
+            ↺ {tr('come la ricetta')}
           </button>
         )}
         <label className="row small" style={{ gap: 6, alignItems: 'center' }}>
@@ -206,7 +214,7 @@ export default function IngredientiVoce({ voce, drink, items = [], categorieMaga
             checked={nascosti}
             onChange={(e) => aggiornaVoceCarta(voce.id, { ingredienti_nascosti: e.target.checked })}
           />
-          Nascondi gli ingredienti al cliente
+          {tr('Nascondi gli ingredienti al cliente')}
         </label>
       </div>
     </div>

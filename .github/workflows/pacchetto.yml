@@ -1,0 +1,182 @@
+name: Pacchetto per i locali
+
+# IL PACCHETTO PER VERSIONE (REQ-FLOTTA-035, interfaccia 16 del contratto con
+# la regia). A ogni tag di versione si compilano due pacchetti — `locali`, il
+# sito uguale per tutti, e `demo` — e si allegano alla Release di GitHub di
+# quel tag. La regia li scarica da lì per attivare e aggiornare i locali
+# senza ricompilare. Daniele, 18/11/2026: «tana drink compila il pacchetto,
+# provisiona istanza e aggiorna istanza aggiornano con il pacchetto di
+# release di tana-drink».
+#
+# LA REGOLA 2 DI docs/flotta.md RESTA: questo workflow scrive solo nella
+# Release di QUESTO repository, col token che GitHub gli dà per il giro.
+# Nessun segreto, nessuna credenziale verso la regia o i suoi progetti: la
+# regia scarica, noi non carichiamo da nessuna parte. Un test lo legge
+# (tests/unit/flottaCi.test.js).
+#
+# Le regole, concordate con la regia il 18/11/2026:
+#   - un pacchetto NON beta esce solo se il commit del tag sta in `main`,
+#     e dopo che lint e test su quel commit sono passati (qui sotto: fra
+#     due workflow non si può aspettare l'esito dell'altro senza legarli);
+#   - un file allegato non si sostituisce mai: una versione corretta è una
+#     versione nuova. Nessuna sovrascrittura, e la Release si pubblica solo
+#     quando ha tutti i file (nasce in bozza): con le «release immutabili»
+#     di GitHub, dopo non si potrebbe più aggiungere niente;
+#   - un tag che non è `v` + la versione di package.json non fa pacchetti
+#     (l'app, la versione, la legge da lì); su `main` è un errore, perché
+#     lì sarebbe un rilascio senza pacchetto.
+#
+# SE «Allega alla Release» SI FERMA A METÀ la Release resta in bozza, che
+# la regia non vede, e un secondo giro si ferma sul primo file già
+# presente: si cancella la bozza a mano (il tag resta) e si rilancia tutto.
+# Ripulirla da qui vorrebbe dire dare al workflow il gesto di cancellare
+# file da una Release, che è proprio quello che non deve saper fare.
+#
+# Il deploy della Tana resta in firebase-hosting.yml, che non cambia: i due
+# workflow partono dallo stesso tag e non dipendono l'uno dall'altro.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pacchetto-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  # SI PUÒ PUBBLICARE? Lo dice il commit, non il nome del tag: un `vX.Y.Z`
+  # può stare anche su develop, e lì non è ancora una versione per i locali.
+  controllo:
+    name: Si può pubblicare
+    runs-on: ubuntu-latest
+    outputs:
+      pubblica: ${{ steps.esito.outputs.pubblica }}
+      beta: ${{ steps.esito.outputs.beta }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: esito
+        run: |
+          VERSIONE=$(node -p "require('./package.json').version")
+          # `main` non arriva col checkout di un tag: va chiesto a parte.
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          SU_MAIN=false
+          if git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then SU_MAIN=true; fi
+          if [ "$GITHUB_REF_NAME" != "v$VERSIONE" ]; then
+            # Su main è un rilascio, e un rilascio senza pacchetto non deve
+            # passare in silenzio (il vecchio `vX.Y.Z-prod` di docs/gitflow.md).
+            if [ "$SU_MAIN" = true ]; then
+              echo "::error::Il tag $GITHUB_REF_NAME è su main ma non è v$VERSIONE (package.json): nessun pacchetto per i locali. Il tag di un rilascio è v + la versione."
+              exit 1
+            fi
+            echo "::warning::Il tag $GITHUB_REF_NAME non è v$VERSIONE (package.json): nessun pacchetto."
+            echo "pubblica=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          case "$VERSIONE" in
+            *-beta*) BETA=true ;;
+            *) BETA=false ;;
+          esac
+          if [ "$BETA" = false ] && [ "$SU_MAIN" != true ]; then
+            echo "::warning::$GITHUB_REF_NAME non è una beta e il suo commit non è in main: nessun pacchetto per i locali."
+            echo "pubblica=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "pubblica=true" >> "$GITHUB_OUTPUT"
+          echo "beta=$BETA" >> "$GITHUB_OUTPUT"
+
+  test:
+    name: Lint e test
+    # Dopo il controllo, che costa un checkout: un tag che non pubblica
+    # niente non paga la suite (sullo stesso commit la fa già girare
+    # firebase-hosting.yml).
+    needs: controllo
+    if: needs.controllo.outputs.pubblica == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Test
+        run: npm test
+
+  compila:
+    name: Compila (${{ matrix.tipo }})
+    needs: [controllo, test]
+    if: needs.controllo.outputs.pubblica == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        tipo: [locali, demo]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Il pacchetto
+        run: node scripts/crea-pacchetto.mjs --tipo "${{ matrix.tipo }}" --tag "$GITHUB_REF_NAME" --uscita pacchetti
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pacchetto-${{ matrix.tipo }}
+          path: |
+            pacchetti/*.tgz
+            pacchetti/*.tgz.sha256
+          if-no-files-found: error
+          retention-days: 7
+
+  pubblica:
+    name: Allega alla Release
+    needs: [controllo, compila]
+    runs-on: ubuntu-latest
+    # L'unico permesso di scrittura del workflow, e solo qui: la Release di
+    # questo repository.
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TAG: ${{ github.ref_name }}
+      BETA: ${{ needs.controllo.outputs.beta }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: pacchetto-*
+          path: pacchetti
+          merge-multiple: true
+      - name: Allega i pacchetti
+        run: |
+          set -euo pipefail
+          ls -l pacchetti
+          (cd pacchetti && sha256sum -c ./*.sha256)
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            # Una bozza rimasta da un giro interrotto si pubblica alla fine;
+            # una Release già pubblicata (scritta a mano) resta com'è.
+            NUOVA=$(gh release view "$TAG" --json isDraft -q .isDraft)
+          else
+            # In bozza finché non ha tutti i file: la regia non la vede a
+            # metà, e una Release immutabile non accetterebbe file dopo.
+            PROVA=""
+            if [ "$BETA" = true ]; then PROVA="--prerelease"; fi
+            gh release create "$TAG" --verify-tag --draft $PROVA --title "$TAG" \
+              --notes "Pacchetti per versione di $TAG: pacchetto-locali (il sito uguale per tutti i locali) e pacchetto-demo, ognuno con la sua impronta sha256 (REQ-FLOTTA-035)."
+            NUOVA=true
+          fi
+          # Prima gli archivi, poi le impronte: per la regia un'impronta
+          # vuol dire che il suo archivio è completo. Un file che c'è già
+          # ferma tutto: upload non sovrascrive, e non si sostituisce.
+          for f in pacchetti/*.tgz; do gh release upload "$TAG" "$f"; done
+          for f in pacchetti/*.tgz.sha256; do gh release upload "$TAG" "$f"; done
+          if [ "$NUOVA" = true ]; then gh release edit "$TAG" --draft=false; fi

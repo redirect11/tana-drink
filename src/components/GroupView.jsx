@@ -37,6 +37,7 @@ import { IconGruppo, IconPersona } from './Icons.jsx'
 import { sumupAttivo } from '../lib/licenza.js'
 import Icona from './Icona.jsx'
 import { servizioAttivo } from '../lib/limiti.js'
+import { tr } from '../lib/lingua.js'
 
 // Vista di un gruppo (modale) con drill-down ricorsivo: per un contenitore
 // mostra "composto da" + ordini aggregati; cliccando un sottogruppo si
@@ -89,8 +90,8 @@ export default function GroupView({ groupId, onClose }) {
     return (
       <div className="overlay confirm-overlay" onClick={onClose}>
         <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
-          <p className="muted">Gruppo non trovato.</p>
-          <button className="btn ghost block" onClick={onClose}>Chiudi</button>
+          <p className="muted">{tr('Gruppo non trovato.')}</p>
+          <button className="btn ghost block" onClick={onClose}>{tr('Chiudi')}</button>
         </div>
       </div>
     )
@@ -125,7 +126,7 @@ export default function GroupView({ groupId, onClose }) {
     }
   }
   async function doRename() {
-    const n = prompt('Nuovo nome del gruppo:', node.group.name)
+    const n = prompt(tr('Nuovo nome del gruppo:'), node.group.name)
     if (n == null || !n.trim()) return
     await renameGroup(node.group.id, n.trim()).catch((e) => setError(e.message))
   }
@@ -184,7 +185,7 @@ export default function GroupView({ groupId, onClose }) {
       const pid = await createPending('online')
       const res = await createGroupCheckout(pid)
       if (res.unavailable) {
-        setSumupMsg('Pagamento online non disponibile (SumUp non configurato su questo ambiente).')
+        setSumupMsg(tr('Pagamento online non disponibile (SumUp non configurato su questo ambiente).'))
         return
       }
       if (res.alreadyPaid) return
@@ -219,10 +220,10 @@ export default function GroupView({ groupId, onClose }) {
       const pid = await createPending('lettore')
       const res = await groupReaderCheckout(pid)
       if (res.unavailable) {
-        setSumupMsg('Lettore non disponibile su questo ambiente.')
+        setSumupMsg(tr('Lettore non disponibile su questo ambiente.'))
         return
       }
-      setSumupMsg('In corso sul lettore: carta del cliente sul Solo.')
+      setSumupMsg(tr('In corso sul lettore: carta del cliente sul Solo.'))
     } catch (e) {
       setError(e.message)
     } finally {
@@ -237,21 +238,22 @@ export default function GroupView({ groupId, onClose }) {
           <div style={{ minWidth: 0 }}>
             {currentId !== groupId && (
               <button className="btn ghost small" style={{ marginBottom: 6 }} onClick={() => setCurrentId(groupId)}>
-                ← Gruppo principale
+                ← {tr('Gruppo principale')}
               </button>
             )}
             <h2 style={{ margin: 0 }}>
               {node.group.kind === 'customer' ? <IconPersona /> : <IconGruppo />} {node.group.name}
             </h2>
             <p className="muted small" style={{ margin: '4px 0 0' }}>
-              {t.orderCount} ordini · {formatPrice(t.total)}
+              {t.orderCount === 1 ? tr('1 ordine') : tr('{n} ordini', { n: t.orderCount })} ·{' '}
+              {formatPrice(t.total)}
               {' · '}
               <span className={`pill ${s.settled ? 'chiuso' : 'aperto'}`}>
-                {s.settled ? 'Pagato' : `da pagare ${formatPrice(s.remaining)}`}
+                {s.settled ? tr('Pagato') : tr('da pagare {importo}', { importo: formatPrice(s.remaining) })}
               </span>
             </p>
           </div>
-          <button className="btn ghost small" onClick={onClose}>✕</button>
+          <button className="btn ghost small" onClick={onClose} aria-label={tr('Chiudi')}>✕</button>
         </div>
 
         {error && <div className="banner" style={{ marginTop: 10 }}>{error}</div>}
@@ -259,7 +261,7 @@ export default function GroupView({ groupId, onClose }) {
         {/* Composizione del contenitore: sottogruppi cliccabili */}
         {isContainer && (
           <div style={{ marginTop: 12 }}>
-            <div className="muted small">Composto da:</div>
+            <div className="muted small">{tr('Composto da:')}</div>
             <div className="chips-row" style={{ marginTop: 4 }}>
               {node.childGroups.map((c) => {
                 const ct = groupTotal(c)
@@ -278,9 +280,9 @@ export default function GroupView({ groupId, onClose }) {
         {/* Ordini (aggregati per il contenitore, diretti per la foglia) */}
         <div style={{ marginTop: 12 }}>
           <div className="muted small" style={{ marginBottom: 4 }}>
-            {isContainer ? 'Tutti gli ordini del gruppo' : 'Ordini'}
+            {isContainer ? tr('Tutti gli ordini del gruppo') : tr('Ordini')}
           </div>
-          {aggregated.length === 0 && <div className="muted small">Nessun ordine.</div>}
+          {aggregated.length === 0 && <div className="muted small">{tr('Nessun ordine.')}</div>}
           {aggregated.map((o) => (
             <div className="row between" key={o.id} style={{ padding: '4px 0' }}>
               <span>
@@ -302,26 +304,26 @@ export default function GroupView({ groupId, onClose }) {
           const ids = unpaid.map((o) => o.id)
           const defaultN = node.childGroups.length > 1 ? node.childGroups.length : Math.max(2, unpaid.length)
           return (
-            <div className="card" style={{ marginTop: 14, background: 'rgba(245,185,74,0.06)' }}>
+            <div className="card" style={{ marginTop: 14, background: 'color-mix(in srgb, var(--btn) 6%, transparent)' }}>
               <div className="row between">
-                <strong>Conto: {formatPrice(s.remaining)}</strong>
-                <span className="muted small">{ids.length} da pagare</span>
+                <strong>{tr('Conto: {importo}', { importo: formatPrice(s.remaining) })}</strong>
+                <span className="muted small">{tr('{n} da pagare', { n: ids.length })}</span>
               </div>
               <div className="grid-2" style={{ marginTop: 10 }}>
                 <button className="btn" disabled={paying} onClick={() => pay(ids, null, 'banco')}>
-                  <Icona nome="contanti" gruppo="tasti" /> Contanti
+                  <Icona nome="contanti" gruppo="tasti" /> {tr('Contanti')}
                 </button>
                 {/* Carta col POS esterno: si registra qui, altrimenti finiva
                     nei contanti e la chiusura di cassa non tornava. */}
                 <button className="btn" disabled={paying} onClick={() => pay(ids, null, 'carta')}>
-                  <Icona nome="carta" gruppo="tasti" /> Carta
+                  <Icona nome="carta" gruppo="tasti" /> {tr('Carta')}
                 </button>
                 <button
                   className="btn secondary"
                   disabled={paying}
                   onClick={() => { setSplitN(defaultN); setShowSplit((v) => !v); setPerOrder(false) }}
                 >
-                  <Icona nome="dividi_in_parti" gruppo="tasti" /> Dividi
+                  <Icona nome="dividi_in_parti" gruppo="tasti" /> {tr('Dividi')}
                 </button>
                 {/* SOLO CON SUMUP (BUG-133): c'erano con qualsiasi
                     licenza, e su un piano senza il modulo chiamavano le
@@ -329,10 +331,10 @@ export default function GroupView({ groupId, onClose }) {
                 {sumupAttivo(impostazioni) && (
                   <>
                     <button className="btn secondary" disabled={paying} onClick={payOnline}>
-                      <Icona nome="carta" gruppo="tasti" /> Online
+                      <Icona nome="carta" gruppo="tasti" /> {tr('Online')}
                     </button>
                     <button className="btn secondary" disabled={paying} onClick={payReader}>
-                      <Icona nome="lettore" gruppo="tasti" /> Lettore
+                      <Icona nome="lettore" gruppo="tasti" /> {tr('Lettore')}
                     </button>
                   </>
                 )}
@@ -348,14 +350,14 @@ export default function GroupView({ groupId, onClose }) {
                   disabled={paying}
                   onClick={() => { setPerOrder((v) => !v); setShowSplit(false) }}
                 >
-                  Paga per singolo ordine
+                  {tr('Paga per singolo ordine')}
                 </button>
               )}
 
               {showSplit && (
                 <div style={{ marginTop: 10 }}>
                   <div className="row between" style={{ alignItems: 'center' }}>
-                    <span className="muted small">Dividi per</span>
+                    <span className="muted small">{tr('Dividi per')}</span>
                     <span className="persons-counter">
                       <button onClick={() => setSplitN((n) => Math.max(2, n - 1))}>−</button>
                       <strong>{splitN}</strong>
@@ -363,8 +365,11 @@ export default function GroupView({ groupId, onClose }) {
                     </span>
                   </div>
                   <p className="muted small" style={{ margin: '6px 0' }}>
-                    {splitN} quote da {formatPrice(splitAmounts(s.remaining, splitN)[0])}
-                    {' '}(l’ultima {formatPrice(splitAmounts(s.remaining, splitN).at(-1))})
+                    {tr('{n} quote da {importo} (l’ultima {ultima})', {
+                      n: splitN,
+                      importo: formatPrice(splitAmounts(s.remaining, splitN)[0]),
+                      ultima: formatPrice(splitAmounts(s.remaining, splitN).at(-1)),
+                    })}
                   </p>
                   <div className="grid-2">
                     <button
@@ -372,14 +377,14 @@ export default function GroupView({ groupId, onClose }) {
                       disabled={paying}
                       onClick={() => pay(ids, { count: splitN }, 'banco')}
                     >
-                      <Icona nome="contanti" gruppo="tasti" />{' '}{splitN} quote
+                      <Icona nome="contanti" gruppo="tasti" />{' '}{tr('{n} quote', { n: splitN })}
                     </button>
                     <button
                       className="btn"
                       disabled={paying}
                       onClick={() => pay(ids, { count: splitN }, 'carta')}
                     >
-                      <Icona nome="carta" gruppo="tasti" />{' '}{splitN} quote
+                      <Icona nome="carta" gruppo="tasti" />{' '}{tr('{n} quote', { n: splitN })}
                     </button>
                   </div>
                 </div>
@@ -395,8 +400,8 @@ export default function GroupView({ groupId, onClose }) {
                           className="btn ghost small"
                           disabled={paying}
                           onClick={() => pay([o.id], null, 'banco')}
-                          aria-label={`Incassa #${o.daily_number ?? ''} in contanti`}
-                          title="Contanti"
+                          aria-label={tr('Incassa #{n} in contanti', { n: o.daily_number ?? '' })}
+                          title={tr('Contanti')}
                         >
                           <Icona nome="contanti" gruppo="tasti" />
                         </button>
@@ -404,8 +409,8 @@ export default function GroupView({ groupId, onClose }) {
                           className="btn ghost small"
                           disabled={paying}
                           onClick={() => pay([o.id], null, 'carta')}
-                          aria-label={`Incassa #${o.daily_number ?? ''} con carta`}
-                          title="Carta"
+                          aria-label={tr('Incassa #{n} con carta', { n: o.daily_number ?? '' })}
+                          title={tr('Carta')}
                         >
                           <Icona nome="carta" gruppo="tasti" />
                         </button>
@@ -425,15 +430,15 @@ export default function GroupView({ groupId, onClose }) {
               <button
                 className="btn secondary small"
                 disabled={aggregated.length > 0 && !isContainer}
-                title={aggregated.length > 0 && !isContainer ? 'Il gruppo ha ordini diretti: non può diventare contenitore' : ''}
+                title={aggregated.length > 0 && !isContainer ? tr('Il gruppo ha ordini diretti: non può diventare contenitore') : ''}
                 onClick={() => setPicking(true)}
               >
-                <Icona nome="aggiungi" gruppo="tasti" /> Aggiungi un gruppo
+                <Icona nome="aggiungi" gruppo="tasti" /> {tr('Aggiungi un gruppo')}
               </button>
             ) : (
               <div>
-                <div className="muted small" style={{ marginBottom: 4 }}>Aggiungi al gruppo:</div>
-                {candidates.length === 0 && <div className="muted small">Nessun gruppo disponibile.</div>}
+                <div className="muted small" style={{ marginBottom: 4 }}>{tr('Aggiungi al gruppo:')}</div>
+                {candidates.length === 0 && <div className="muted small">{tr('Nessun gruppo disponibile.')}</div>}
                 <div className="chips-row">
                   {candidates.map((g) => (
                     <button key={g.id} className="chip" onClick={() => doNest(g.id)}>
@@ -442,7 +447,7 @@ export default function GroupView({ groupId, onClose }) {
                   ))}
                 </div>
                 <button className="btn ghost small" style={{ marginTop: 6 }} onClick={() => setPicking(false)}>
-                  Annulla
+                  {tr('Annulla')}
                 </button>
               </div>
             )}
@@ -452,15 +457,15 @@ export default function GroupView({ groupId, onClose }) {
         {/* Sgancia il sottogruppo corrente dal padre */}
         {node.group.parent_group_id && (
           <button className="btn ghost small block" style={{ marginTop: 10 }} onClick={() => doUnnest(node.group.id)}>
-            Sgancia dal gruppo padre
+            {tr('Sgancia dal gruppo padre')}
           </button>
         )}
 
         <div className="grid-2" style={{ marginTop: 14 }}>
-          <button className="btn ghost" onClick={doRename}><Icona nome="modifica" gruppo="tasti" /> Rinomina</button>
+          <button className="btn ghost" onClick={doRename}><Icona nome="modifica" gruppo="tasti" /> {tr('Rinomina')}</button>
           {!isContainer && (
             <button className="btn" onClick={() => navigate(`/pos?group=${node.group.id}`)}>
-              <Icona nome="nuovo-ordine" gruppo="tasti" /> Nuovo ordine
+              <Icona nome="nuovo-ordine" gruppo="tasti" /> {tr('Nuovo ordine')}
             </button>
           )}
         </div>
@@ -468,10 +473,10 @@ export default function GroupView({ groupId, onClose }) {
         {/* Chiusura/eliminazione del gruppo */}
         <div className="grid-2" style={{ marginTop: 8 }}>
           <button className="btn ghost small" onClick={() => setConfirm('close')}>
-            <Icona nome="cartella" gruppo="tasti" /> Chiudi gruppo
+            <Icona nome="cartella" gruppo="tasti" /> {tr('Chiudi gruppo')}
           </button>
           <button className="btn ghost small" onClick={() => setConfirm('delete')}>
-            <Icona nome="elimina" gruppo="tasti" /> Elimina gruppo
+            <Icona nome="elimina" gruppo="tasti" /> {tr('Elimina gruppo')}
           </button>
         </div>
       </div>
@@ -479,11 +484,17 @@ export default function GroupView({ groupId, onClose }) {
       {confirm === 'close' && (
         <ConfirmDialog
           icona="cartella"
-          title="Chiudere il gruppo?"
-          message={`“${node.group.name}” verrà archiviato e sparirà dai gruppi aperti.${
-            s.remaining > 0 ? ` Attenzione: restano ${formatPrice(s.remaining)} da incassare.` : ''
-          } Gli ordini restano dove sono.`}
-          confirmLabel="Chiudi gruppo"
+          title={tr('Chiudere il gruppo?')}
+          message={[
+            tr('“{nome}” verrà archiviato e sparirà dai gruppi aperti.', { nome: node.group.name }),
+            s.remaining > 0
+              ? tr('Attenzione: restano {importo} da incassare.', { importo: formatPrice(s.remaining) })
+              : null,
+            tr('Gli ordini restano dove sono.'),
+          ]
+            .filter(Boolean)
+            .join(' ')}
+          confirmLabel={tr('Chiudi gruppo')}
           onCancel={() => setConfirm(null)}
           onConfirm={() => {
             setConfirm(null)
@@ -495,13 +506,17 @@ export default function GroupView({ groupId, onClose }) {
       {confirm === 'delete' && (
         <ConfirmDialog
           icona="elimina"
-          title="Eliminare il gruppo?"
-          message={`“${node.group.name}” verrà eliminato. Gli ordini${
-            aggregated.length ? ` (${aggregated.length})` : ''
-          } restano ma senza etichetta di gruppo${
-            node.childGroups.length ? '; i sottogruppi tornano indipendenti' : ''
-          }.`}
-          confirmLabel="Elimina gruppo"
+          title={tr('Eliminare il gruppo?')}
+          message={[
+            tr('“{nome}” verrà eliminato.', { nome: node.group.name }),
+            aggregated.length
+              ? tr('Gli ordini ({n}) restano ma senza etichetta di gruppo.', { n: aggregated.length })
+              : tr('Gli ordini restano ma senza etichetta di gruppo.'),
+            node.childGroups.length ? tr('I sottogruppi tornano indipendenti.') : null,
+          ]
+            .filter(Boolean)
+            .join(' ')}
+          confirmLabel={tr('Elimina gruppo')}
           danger
           onCancel={() => setConfirm(null)}
           onConfirm={() => {

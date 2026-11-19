@@ -8,6 +8,7 @@ import { MESSAGGI_PIANO } from '../lib/limiti.js'
 import AiutoCampo from './AiutoCampo.jsx'
 import RitaglioFoto from './RitaglioFoto.jsx'
 import DescrizioneAI from './DescrizioneAI.jsx'
+import { tr, trSegnato } from '../lib/lingua.js'
 
 // Scheda prodotto del MENÙ: nome, foto, categoria, prezzo, descrizione,
 // ricetta/ingredienti e disponibilità. Estratta da MenuManager perché la usa
@@ -159,8 +160,8 @@ export default function DrinkForm({
     // vorrebbe dire un prodotto senza ricetta.
     const senzaDose = form.recipe_rows.find((r) => r.inventory_item_id && !(Number(String(r.qty ?? '').replace(',', '.')) > 0))
     if (senzaDose) {
-      const nome = itemsById[senzaDose.inventory_item_id]?.name || senzaDose.name || 'un ingrediente'
-      setSaveError(`Manca la quantità di «${nome}» nella ricetta: è la dose che si scala a ogni vendita.`)
+      const nome = itemsById[senzaDose.inventory_item_id]?.name || senzaDose.name || tr('un ingrediente')
+      setSaveError(tr('Manca la quantità di «{nome}» nella ricetta: è la dose che si scala a ogni vendita.', { nome }))
       return
     }
     setSaving(true)
@@ -177,22 +178,22 @@ export default function DrinkForm({
   return (
     <form className="card" onSubmit={submit}>
       <h3 style={{ marginTop: 0 }}>
-        {initial && initial.id ? 'Modifica prodotto' : 'Nuovo prodotto'}
+        {initial && initial.id ? tr('Modifica prodotto') : tr('Nuovo prodotto')}
       </h3>
 
-      <label htmlFor="name">Nome *</label>
+      <label htmlFor="name">{tr('Nome *')}</label>
       <input id="name" value={form.name} onChange={set('name')} required />
 
-      <label htmlFor="photo">Foto</label>
+      <label htmlFor="photo">{tr('Foto')}</label>
       {preview && (
         <div style={{ marginBottom: 8 }}>
-          <img className="drink-preview" src={preview} alt="Anteprima drink" />
+          <img className="drink-preview" src={preview} alt={tr('Anteprima drink')} />
           <button type="button" className="btn ghost small" onClick={removePhoto}>
-            Rimuovi foto
+            {tr('Rimuovi foto')}
           </button>
           {originale && form._file && (
             <button type="button" className="btn ghost small" onClick={() => setDaRitagliare(originale)}>
-              Ritaglia di nuovo
+              {tr('Ritaglia di nuovo')}
             </button>
           )}
         </div>
@@ -204,13 +205,13 @@ export default function DrinkForm({
         <p className="muted small" style={{ margin: '0 0 8px' }}>{MESSAGGI_PIANO.foto}</p>
       )}
 
-      <label htmlFor="category">Categoria</label>
+      <label htmlFor="category">{tr('Categoria')}</label>
       {addingCat ? (
         <div className="row" style={{ gap: 8 }}>
           <input
             value={newCat}
             onChange={(e) => setNewCat(e.target.value)}
-            placeholder="Nome nuova categoria"
+            placeholder={tr('Nome nuova categoria')}
             autoFocus
           />
           <button type="button" className="btn small" onClick={confirmNewCat}>OK</button>
@@ -218,17 +219,17 @@ export default function DrinkForm({
         </div>
       ) : (
         <select id="category" value={form.category_id || ''} onChange={onCategoryChange}>
-          <option value="">— Nessuna —</option>
+          <option value="">{tr('— Nessuna —')}</option>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>{c.name}</option>
           ))}
-          <option value="__new__">+ Nuova categoria…</option>
+          <option value="__new__">{tr('+ Nuova categoria…')}</option>
         </select>
       )}
 
       <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
         <div style={{ flex: 1 }}>
-          <label htmlFor="price">Prezzo (€)</label>
+          <label htmlFor="price">{tr('Prezzo (€)')}</label>
           <input
             id="price"
             type="number"
@@ -245,7 +246,7 @@ export default function DrinkForm({
             un drink servito al banco: mettere tutto al 10% gonfia il netto,
             e dal netto scendono margine, incidenze e conto di fine mese. */}
         <div style={{ width: 130 }}>
-          <label htmlFor="salevat">IVA vendita %</label>
+          <label htmlFor="salevat">{tr('IVA vendita %')}</label>
           <input
             id="salevat"
             type="number"
@@ -254,14 +255,14 @@ export default function DrinkForm({
             max="22"
             value={form.sale_vat ?? ''}
             onChange={set('sale_vat')}
-            placeholder={saleVatLocale != null ? String(saleVatLocale) : 'del locale'}
+            placeholder={saleVatLocale != null ? String(saleVatLocale) : tr('del locale')}
           />
         </div>
       </div>
       <AiutoCampo>
-        Se vuota si applica l’IVA del locale
-        {saleVatLocale != null ? ` (${saleVatLocale}%)` : ''}. Va indicata solo
-        per le eccezioni, come le bottiglie vendute intere.
+        {saleVatLocale != null
+          ? tr('Se vuota si applica l’IVA del locale ({iva}%). Va indicata solo per le eccezioni, come le bottiglie vendute intere.', { iva: saleVatLocale })
+          : tr('Se vuota si applica l’IVA del locale. Va indicata solo per le eccezioni, come le bottiglie vendute intere.')}
       </AiutoCampo>
 
       {/* Costo reale della ricetta, prezzo consigliato e guadagno: si
@@ -277,7 +278,7 @@ export default function DrinkForm({
           come servono al banco — il gin tonic col solo nome del gin, le
           voci-prezzo «SOUR 7» —, il cliente legge questo. L'ordine porta
           comunque il nome del banco. */}
-      <label htmlFor="nome_cliente">Nome nel menù dei clienti</label>
+      <label htmlFor="nome_cliente">{tr('Nome nel menù dei clienti')}</label>
       <input
         id="nome_cliente"
         value={form.nome_cliente || ''}
@@ -285,13 +286,12 @@ export default function DrinkForm({
         placeholder={form.name || ''}
       />
       <AiutoCampo>
-        Nome della voce nel menù dei clienti. Se vuoto si usa il nome della
-        voce; comande e scontrini riportano sempre il nome della voce.
+        {tr('Nome della voce nel menù dei clienti. Se vuoto si usa il nome della voce; comande e scontrini riportano sempre il nome della voce.')}
       </AiutoCampo>
 
-      <label htmlFor="description">Descrizione</label>
+      <label htmlFor="description">{tr('Descrizione')}</label>
       <input id="description" value={form.description} onChange={set('description')} />
-      <AiutoCampo>Testo mostrato al cliente nel menù.</AiutoCampo>
+      <AiutoCampo>{tr('Testo mostrato al cliente nel menù.')}</AiutoCampo>
       <DescrizioneAI
         subito={Boolean(initial.da_magazzino)}
         nome={form.name || ''}
@@ -311,24 +311,24 @@ export default function DrinkForm({
           checked={form.segue_giacenze === true}
           onChange={(e) => setForm((f) => ({ ...f, segue_giacenze: e.target.checked }))}
         />
-        <span>Il menù dei clienti segue le giacenze</span>
+        <span>{tr('Il menù dei clienti segue le giacenze')}</span>
       </label>
       <AiutoCampo style={{ margin: '2px 0 8px' }}>
-        Quando un ingrediente della ricetta è esaurito (o in esaurimento, secondo
-        Impostazioni → Menù clienti) la voce non è disponibile per il cliente.
-        Al banco resta sempre.
+        {tr('Quando un ingrediente della ricetta è esaurito (o in esaurimento, secondo Impostazioni → Menù clienti) la voce non è disponibile per il cliente. Al banco resta sempre.')}
       </AiutoCampo>
 
-      <label htmlFor="ingredienti">Ingredienti in carta</label>
+      <label htmlFor="ingredienti">{tr('Ingredienti in carta')}</label>
       <input
         id="ingredienti"
         value={form.ingredienti || ''}
         onChange={set('ingredienti')}
+        // L'esempio resta italiano: l'elenco lo legge il cliente, in italiano
+        // (lo traduce il suo browser), e va scritto in italiano.
+        lang="it"
         placeholder="Gin, basilico, lime, zucchero"
       />
       <AiutoCampo>
-        Elenco mostrato al cliente nel menù, separato da virgole. Se vuoto si
-        ricava dalla ricetta, esclusi ghiaccio, lavorazioni e confezioni.
+        {tr('Elenco mostrato al cliente nel menù, separato da virgole. Se vuoto si ricava dalla ricetta, esclusi ghiaccio, lavorazioni e confezioni.')}
       </AiutoCampo>
 
       {/* COME SI PREPARA, a parole. La ricetta strutturata qui sotto dice
@@ -337,24 +337,23 @@ export default function DrinkForm({
           entra a dare una mano il sabato quel gesto non ce l'ha in testa, e
           finora se lo doveva far dire ogni volta. */}
       <label htmlFor="recipe" style={{ marginTop: 12 }}>
-        Come si prepara
+        {tr('Come si prepara')}
       </label>
       <textarea
         id="recipe"
         rows={4}
         value={form.recipe || ''}
         onChange={set('recipe')}
-        placeholder="Es. Shakerare con ghiaccio, filtrare in coppetta, scorza di limone."
+        placeholder={tr('Es. Shakerare con ghiaccio, filtrare in coppetta, scorza di limone.')}
       />
-      <AiutoCampo>Consultabile al banco dal tasto ⓘ della scheda del prodotto.</AiutoCampo>
+      <AiutoCampo>{tr('Consultabile al banco dal tasto ⓘ della scheda del prodotto.')}</AiutoCampo>
 
       {/* Ricetta strutturata: ingredienti collegati all'inventario (usata per
           lo scarico automatico e per mostrare gli ingredienti nel menù). */}
-      <label style={{ marginTop: 12 }}>Ricetta / ingredienti</label>
+      <label style={{ marginTop: 12 }}>{tr('Ricetta / ingredienti')}</label>
       {inventory.length === 0 && (
         <div className="muted" style={{ fontSize: '0.85rem' }}>
-          Nessun prodotto in magazzino: aggiungili nella tab “Magazzino” per
-          comporre la ricetta.
+          {tr('Nessun prodotto in magazzino: aggiungili nella tab “Magazzino” per comporre la ricetta.')}
         </div>
       )}
       {form.recipe_rows.map((r, idx) => {
@@ -367,7 +366,7 @@ export default function DrinkForm({
               onChange={(e) => onItemChange(idx, e.target.value)}
               style={{ flex: 2 }}
             >
-              <option value="">— Ingrediente —</option>
+              <option value="">{tr('— Ingrediente —')}</option>
               {inventory.map((i) => (
                 <option key={i.id} value={i.id}>{i.name}</option>
               ))}
@@ -378,7 +377,7 @@ export default function DrinkForm({
               min="0"
               value={r.qty}
               onChange={(e) => setRow(idx, { qty: e.target.value })}
-              placeholder="Qta"
+              placeholder={tr('Qta')}
               style={{ flex: 1 }}
             />
             <select
@@ -402,7 +401,7 @@ export default function DrinkForm({
         onClick={addRow}
         disabled={inventory.length === 0}
       >
-        + Ingrediente
+        + {tr('ricetta|Ingrediente')}
       </button>
 
       <label className="row" style={{ marginTop: 12 }}>
@@ -412,7 +411,7 @@ export default function DrinkForm({
           checked={!!form.available}
           onChange={set('available')}
         />
-        <span>Disponibile nel menù</span>
+        <span>{tr('Disponibile nel menù')}</span>
       </label>
 
       {/* GLI SPECIAL DELLA CASA (REQ-MENU-018): la voce resta nella sua
@@ -424,43 +423,42 @@ export default function DrinkForm({
           checked={!!form.speciale}
           onChange={set('speciale')}
         />
-        <span>Drink speciale</span>
+        <span>{tr('Drink speciale')}</span>
       </label>
       <AiutoCampo>
-        Compare nel menù Special e nel carosello in cima al menù del cliente,
-        oltre che nella sua categoria.
+        {tr('Compare nel menù Special e nel carosello in cima al menù del cliente, oltre che nella sua categoria.')}
       </AiutoCampo>
       {/* IL DISEGNO DEL DRINK (REQ-MENU-018): bicchiere, colore e
           decorazione, nel segno delle incisioni del libro. L'anteprima è
           quella che vedrà il cliente. */}
       {form.speciale && disegniConsentiti && (
-        <div className="illustrazioni" role="group" aria-label="Disegno del drink">
-          <span className="muted small">Disegno del drink, usato quando manca la foto</span>
+        <div className="illustrazioni" role="group" aria-label={tr('Disegno del drink')}>
+          <span className="muted small">{tr('Disegno del drink, usato quando manca la foto')}</span>
           {!disegno ? (
             <button type="button" className="btn ghost small block" style={{ marginTop: 4 }} onClick={() => scegliDisegno({})}>
-              Componi un disegno
+              {tr('Componi un disegno')}
             </button>
           ) : (
             <>
-              <img className="illustrazione-anteprima" src={urlDrink(disegno, { chiaro: fondoChiaro })} alt="Anteprima del disegno" />
-              <span className="muted small">Bicchiere</span>
-              <div className="illustrazioni-griglia" role="group" aria-label="Bicchiere">
+              <img className="illustrazione-anteprima" src={urlDrink(disegno, { chiaro: fondoChiaro })} alt={tr('Anteprima del disegno')} />
+              <span className="muted small">{tr('Bicchiere')}</span>
+              <div className="illustrazioni-griglia" role="group" aria-label={tr('Bicchiere')}>
                 {BICCHIERI.map((b) => (
                   <button
                     key={b.id}
                     type="button"
                     className={`illustrazione-voce${disegno.bicchiere === b.id ? ' scelta' : ''}`}
                     aria-pressed={disegno.bicchiere === b.id}
-                    aria-label={b.nome}
-                    title={b.nome}
+                    aria-label={trSegnato(b.nome)}
+                    title={trSegnato(b.nome)}
                     onClick={() => scegliDisegno({ bicchiere: b.id })}
                   >
                     <img src={urlDrink({ ...disegno, bicchiere: b.id, decorazione: 'nessuna' }, { chiaro: fondoChiaro })} alt="" />
                   </button>
                 ))}
               </div>
-              <span className="muted small">Colore</span>
-              <div className="colori-drink" role="group" aria-label="Colore">
+              <span className="muted small">{tr('Colore')}</span>
+              <div className="colori-drink" role="group" aria-label={tr('Colore')}>
                 {COLORI.map((c) => (
                   <button
                     key={c.id}
@@ -468,22 +466,22 @@ export default function DrinkForm({
                     className={`colore-drink${disegno.colore === c.id ? ' scelta' : ''}`}
                     style={{ background: c.hex }}
                     aria-pressed={disegno.colore === c.id}
-                    aria-label={c.nome}
-                    title={c.nome}
+                    aria-label={trSegnato(c.nome)}
+                    title={trSegnato(c.nome)}
                     onClick={() => scegliDisegno({ colore: c.id })}
                   />
                 ))}
               </div>
-              <span className="muted small">Decorazione</span>
-              <div className="illustrazioni-griglia" role="group" aria-label="Decorazione">
+              <span className="muted small">{tr('Decorazione')}</span>
+              <div className="illustrazioni-griglia" role="group" aria-label={tr('Decorazione')}>
                 {DECORAZIONI.map((x) => (
                   <button
                     key={x.id}
                     type="button"
                     className={`illustrazione-voce${disegno.decorazione === x.id ? ' scelta' : ''}`}
                     aria-pressed={disegno.decorazione === x.id}
-                    aria-label={x.nome}
-                    title={x.nome}
+                    aria-label={trSegnato(x.nome)}
+                    title={trSegnato(x.nome)}
                     onClick={() => scegliDisegno({ decorazione: x.id })}
                   >
                     <img src={urlDrink({ ...disegno, decorazione: x.id }, { chiaro: fondoChiaro })} alt="" />
@@ -496,7 +494,7 @@ export default function DrinkForm({
                 style={{ marginTop: 8 }}
                 onClick={() => setForm((f) => ({ ...f, illustrazione: null }))}
               >
-                Togli il disegno
+                {tr('Togli il disegno')}
               </button>
             </>
           )}
@@ -504,15 +502,15 @@ export default function DrinkForm({
       )}
 
       {saveError && (
-        <div className="banner" style={{ marginTop: 12 }}>Errore: {saveError}</div>
+        <div className="banner" style={{ marginTop: 12 }}>{tr('Errore: {errore}', { errore: saveError })}</div>
       )}
 
       <div className="grid-2" style={{ marginTop: 16 }}>
         <button type="button" className="btn ghost" onClick={onCancel} disabled={saving}>
-          Annulla
+          {tr('Annulla')}
         </button>
         <button type="submit" className="btn" disabled={saving}>
-          {saving ? 'Salvataggio…' : 'Salva'}
+          {saving ? tr('Salvataggio…') : tr('Salva')}
         </button>
       </div>
     </form>

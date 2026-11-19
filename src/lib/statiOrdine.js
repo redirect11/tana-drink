@@ -49,17 +49,18 @@
 // scrive ovunque.
 
 import { livelloDelGruppo } from './listini.js'
+import { daTradurre, tr, trSegnato } from './lingua.js'
 
 // Il ciclo della merce, in ordine. «Chiuso» non è qui: è un gesto a parte,
 // e un ordine chiuso resta consegnato.
 export const STATI_ORDINE = ['bozza', 'richiesto', 'consegnato']
 
 export const ETICHETTA_STATO = {
-  bozza: 'Bozza',
-  richiesto: 'Richiesto',
-  consegnato: 'Consegnato',
-  chiuso: 'Chiuso',
-  pagato: 'Pagato',
+  bozza: daTradurre('Bozza'),
+  richiesto: daTradurre('Richiesto'),
+  consegnato: daTradurre('Consegnato'),
+  chiuso: daTradurre('Chiuso'),
+  pagato: daTradurre('Pagato'),
 }
 
 // ── COME LO STATO STA SCRITTO SUL DOCUMENTO ──────────────────────────
@@ -100,13 +101,13 @@ export const ordinePagato = (order, fattura) => !!fattura?.paid
 // Una voce sola accesa per volta, come i chip della coda: sono domande
 // diverse fatte a assi diversi, e sommarle non vorrebbe dire niente.
 export const FILTRI_ORDINE = [
-  { id: 'tutti', label: 'Tutti' },
-  { id: 'bozza', label: 'Bozze' },
-  { id: 'richiesto', label: 'Richiesti' },
-  { id: 'consegnato', label: 'Consegnati' },
-  { id: 'da_pagare', label: 'Da pagare' },
-  { id: 'pagato', label: 'Pagati' },
-  { id: 'chiuso', label: 'Chiusi' },
+  { id: 'tutti', label: daTradurre('Tutti') },
+  { id: 'bozza', label: daTradurre('Bozze') },
+  { id: 'richiesto', label: daTradurre('Richiesti') },
+  { id: 'consegnato', label: daTradurre('Consegnati') },
+  { id: 'da_pagare', label: daTradurre('Da pagare') },
+  { id: 'pagato', label: daTradurre('Pagati') },
+  { id: 'chiuso', label: daTradurre('Chiusi') },
 ]
 
 // «DA PAGARE» ESCLUDE LE BOZZE, e non è una sottigliezza: una bozza non è
@@ -204,36 +205,61 @@ export function conMovimento(order, voce) {
 
 const euro = (v) => `${(Number(v) || 0).toFixed(2).replace('.', ',')} €`
 
+// Il nome con cui `cambiFattura` (fatture.js) scrive nella storia il campo
+// `doc_type`: è salvato in italiano, quindi è stabile, e riconosce la
+// correzione del tipo di documento anche nelle storie già scritte.
+const CAMPO_TIPO_DOCUMENTO = 'Tipo'
+
 // Come si legge un movimento. Frase piana, al passato, senza gergo: chi
 // guarda uno storico vuole sapere cosa è successo, non come si chiama il
 // campo.
-export function descriviMovimento(v) {
+// `etichettaTipo` è il nome a schermo di un tipo di documento
+// (`etichettaTipoDocumento` di fatture.js): lo passa chi mostra la storia,
+// perché importare fatture.js da qui chiuderebbe un anello di import.
+export function descriviMovimento(v, { etichettaTipo = (tipo) => tipo } = {}) {
   const d = v?.dettaglio || {}
+  const nome = d.nome || tr('Un prodotto')
+  // Il numero di righe: in italiano «1 righe» è com'è sempre stato scritto
+  // (e le prove lo leggono così); l'inglese vuole il singolare, che sta
+  // sotto il contesto «una riga».
+  const n = d.righe
   switch (v?.tipo) {
     case 'creato':
-      return `Ordine creato${d.righe ? ` · ${d.righe} righe` : ''}`
+      if (!n) return tr('Ordine creato')
+      return n === 1 ? tr('una riga|Ordine creato · {n} righe', { n }) : tr('Ordine creato · {n} righe', { n })
     case 'bozza':
-      return `Salvato come bozza${d.righe ? ` · ${d.righe} righe` : ''}`
+      if (!n) return tr('Salvato come bozza')
+      return n === 1
+        ? tr('una riga|Salvato come bozza · {n} righe', { n })
+        : tr('Salvato come bozza · {n} righe', { n })
     case 'confermato':
-      return 'Ordine mandato al fornitore'
+      return tr('Ordine mandato al fornitore')
     case 'consegnato':
-      return `Merce ricevuta${d.righe ? ` · ${d.righe} righe caricate` : ''}`
+      if (!n) return tr('Merce ricevuta')
+      return n === 1
+        ? tr('una riga|Merce ricevuta · {n} righe caricate', { n })
+        : tr('Merce ricevuta · {n} righe caricate', { n })
     case 'riga_tolta':
-      return `Tolto dall’ordine: ${d.nome || 'un prodotto'}`
+      return tr('Tolto dall’ordine: {nome}', { nome: d.nome || tr('un prodotto') })
     case 'quantita':
-      return `${d.nome || 'Un prodotto'}: ricevuti ${d.a} invece di ${d.da}`
+      return tr('{nome}: ricevuti {a} invece di {da}', { nome, a: d.a, da: d.da })
     case 'prezzo':
-      return `${d.nome || 'Un prodotto'}: prezzo da ${euro(d.da)} a ${euro(d.a)}`
+      return tr('{nome}: prezzo da {da} a {a}', { nome, da: euro(d.da), a: euro(d.a) })
     case 'fattura_collegata':
-      return `Documento collegato${d.numero ? ` · n. ${d.numero}` : ''}`
+      return d.numero ? tr('Documento collegato · n. {numero}', { numero: d.numero }) : tr('Documento collegato')
     case 'fattura_scollegata':
-      return 'Documento scollegato'
+      return tr('Documento scollegato')
     case 'fattura_generata':
-      return `Documento generato dall’ordine${d.importo != null ? ` · ${euro(d.importo)}` : ''}`
+      return d.importo != null
+        ? tr('Documento generato dall’ordine · {importo}', { importo: euro(d.importo) })
+        : tr('Documento generato dall’ordine')
     case 'prezzi_allineati':
-      return `Listino allineato al documento${d.righe ? ` · ${d.righe} prezzi` : ''}`
+      if (!n) return tr('Listino allineato al documento')
+      return n === 1
+        ? tr('un prezzo|Listino allineato al documento · {n} prezzi', { n })
+        : tr('Listino allineato al documento · {n} prezzi', { n })
     case 'chiuso':
-      return 'Ordine chiuso: ordinato, ricevuto e fatturato tornano'
+      return tr('Ordine chiuso: ordinato, ricevuto e fatturato tornano')
     // LE FRASI ARRIVANO GIÀ SCRITTE (`cambiFattura` in fatture.js), e non è
     // pigrizia: una correzione si rilegge mesi dopo, e l'importo formattato
     // nel momento in cui è successo resta leggibile anche se il formato
@@ -242,12 +268,24 @@ export function descriviMovimento(v) {
     // devono modificare il prezzo di una fattura magari già pagata» — ed è
     // anche l'unico in cui la correzione va guardata due volte, perché
     // quei soldi sono già usciti.
+    // IN INGLESE (REQ-UI-039) si traducono le parole di legame e il nome del
+    // campo, che è un'etichetta di ETICHETTA_CAMPO segnata con daTradurre; i
+    // valori restano come sono stati scritti nel momento della correzione,
+    // tranne il TIPO di documento: «Fattura» e «Nota di credito» sono parole
+    // della tabella dei tipi, non importi né nomi, e si mostrano tradotte
+    // («Type from Invoice to Credit note», non «from Fattura to Nota di credito»).
     case 'documento_corretto': {
       const cambi = Array.isArray(d.cambi) ? d.cambi : []
-      const cosa = cambi.map((c) => `${c.campo} da ${c.da} a ${c.a}`).join(' · ')
-      return `Documento corretto${d.pagato ? ' (già pagato)' : ''}${cosa ? ` · ${cosa}` : ''}`
+      const cosa = cambi
+        .map((c) => {
+          const valore = (x) => (c.campo === CAMPO_TIPO_DOCUMENTO ? etichettaTipo(x) : x)
+          return tr('{campo} da {da} a {a}', { campo: trSegnato(c.campo), da: valore(c.da), a: valore(c.a) })
+        })
+        .join(' · ')
+      const testa = d.pagato ? tr('Documento corretto (già pagato)') : tr('Documento corretto')
+      return cosa ? `${testa} · ${cosa}` : testa
     }
     default:
-      return 'Modifica'
+      return tr('movimento|Modifica')
   }
 }

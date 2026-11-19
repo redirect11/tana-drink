@@ -90,3 +90,7 @@ ds-bundle/
 firebase-export-*/
 dist-e2e
 rapporto-e2e
+
+# I pacchetti per versione (scripts/crea-pacchetto.mjs): si allegano alla
+# Release del tag, non si committano.
+pacchetti/

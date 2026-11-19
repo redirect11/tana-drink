@@ -101,11 +101,15 @@ export default function MyOrdersPage() {
             <div>
               <strong>#{o.daily_number ?? '—'}</strong>{' '}
               <span className="muted">
-                · {(o.order_items || []).reduce((s, i) => s + i.qty, 0)} drink
+                {`· ${(o.order_items || []).reduce((s, i) => s + i.qty, 0)} drink`}
               </span>
             </div>
+            {/* La scritta è l'unico figlio del suo elemento: col traduttore
+                del browser, accostata all'icona e aggiornata sul posto,
+                restava ferma al passo di prima (REQ-CLI-010,
+                lib/traduttoreBrowser.js). */}
             <span className={`pill ${o.workflow_status}`}>
-              {STATUS_EMOJI[o.workflow_status]} {STATUS_LABELS[o.workflow_status]}
+              {STATUS_EMOJI[o.workflow_status]} <span>{STATUS_LABELS[o.workflow_status]}</span>
             </span>
           </div>
           <span className="price">{formatPrice(o.total)}</span>

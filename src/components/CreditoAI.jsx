@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { leggiCreditoAI, messaggioAI, costoAI } from '../lib/aiApi.js'
+import { tr, daTradurre, trSegnato } from '../lib/lingua.js'
 
 const euro = (v) => (v == null ? '—' : costoAI(v))
 
 // Perché le funzioni AI sono ferme, quando la regia dice `attivo: false`.
 const FERMO = {
-  credito: 'Credito esaurito: le funzioni AI restano ferme fino alla ricarica, dal sito, nell’area del locale.',
-  tetto: 'Tetto di spesa del mese raggiunto: le funzioni AI riprendono il mese prossimo.',
+  credito: daTradurre('Credito esaurito: le funzioni AI restano ferme fino alla ricarica, dal sito, nell’area del locale.'),
+  tetto: daTradurre('Tetto di spesa del mese raggiunto: le funzioni AI riprendono il mese prossimo.'),
 }
 
 // ── IL CREDITO AI DEL LOCALE (REQ-AI-003) ─────────────────────────────
@@ -31,28 +32,32 @@ export default function CreditoAI() {
 
   return (
     <div className="card settings-section">
-      <h3>Credito AI</h3>
+      <h3>{tr('Credito AI')}</h3>
       <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-        Il credito con cui lavorano le funzioni AI del gestionale. Non scade; si ricarica dal sito, nell’area del
-        locale.
+        {tr(
+          'Il credito con cui lavorano le funzioni AI del gestionale. Non scade; si ricarica dal sito, nell’area del locale.'
+        )}
       </p>
-      {stato.fase === 'attesa' && <p className="muted small">Lettura del credito…</p>}
+      {stato.fase === 'attesa' && <p className="muted small">{tr('Lettura del credito…')}</p>}
       {stato.fase === 'errore' && (
         <p className="small" role="status">
-          {stato.messaggio}
+          {trSegnato(stato.messaggio)}
         </p>
       )}
       {stato.fase === 'letto' && (
         <>
           <p style={{ margin: '0 0 4px' }}>
-            Disponibile <strong>{euro(stato.credito_eur)}</strong>
+            {tr('Disponibile')} <strong>{euro(stato.credito_eur)}</strong>
           </p>
           <p className="muted small" style={{ margin: 0 }}>
-            Speso nel mese {euro(stato.speso_mese_eur)} su un tetto di {euro(stato.tetto_mensile_eur)}
+            {tr('Speso nel mese {speso} su un tetto di {tetto}', {
+              speso: euro(stato.speso_mese_eur),
+              tetto: euro(stato.tetto_mensile_eur),
+            })}
           </p>
           {!stato.attivo && (
             <p className="small" role="status" style={{ margin: '8px 0 0' }}>
-              {FERMO[stato.motivo] || 'Le funzioni AI sono ferme in questo momento.'}
+              {trSegnato(FERMO[stato.motivo]) || tr('Le funzioni AI sono ferme in questo momento.')}
             </p>
           )}
         </>

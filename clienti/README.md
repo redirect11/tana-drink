@@ -11,7 +11,17 @@ clienti/<slug>/
                   logo.png, icon-192.png, icon-512.png,
                   icon-maskable-512.png, apple-touch-icon.png, favicon.svg,
                   cocktail-hero.jpg
+  pagine/         (facoltativa) l'informativa privacy e cookie sua, al
+                  posto dei modelli comuni: oggi solo la demo
+
+clienti/pagine/   i modelli dell'informativa privacy e cookie, coi
+                  segnaposto %VENUE_*% riempiti dai dati del locale
+                  (REQ-SIC-017): ragione sociale, sede, partita IVA, email
 ```
+
+`PACCHETTO=1 npm run build` compila il sito uguale per tutti i locali,
+senza nessuna cartella: il locale lo scrive la regia al deploy con
+`scripts/personalizza.mjs` (REQ-FLOTTA-034, docs/flotta.md).
 
 Le chiavi di `venue.json` sono le stesse `venue_*` di `settings/bar`: quello
 che il locale scrive in Impostazioni vince su quello che sta qui.

@@ -26,6 +26,7 @@ import ConfirmDialog from './ConfirmDialog.jsx'
 import StaffBadgePanel from './StaffBadgePanel.jsx'
 import { Sottosezioni } from '../lib/sottosezioni.js'
 import Icona from './Icona.jsx'
+import { tr, daTradurre, trSegnato, formatoAttivo, useLingua, conEtichetteTradotte } from '../lib/lingua.js'
 
 // RAPP ORE + BADGE VIRTUALE: registro ore dello staff con vista calendario
 // giornaliera, settimanale e mensile. Distingue le ore EFFETTIVE (badge:
@@ -33,14 +34,25 @@ import Icona from './Icona.jsx'
 // ore PROGRAMMATE (turni pianificati), e mostra il confronto.
 
 const oggi = () => new Date().toISOString().slice(0, 10)
-const DOW = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom']
+// I giorni in testa al calendario: segnati qui, tradotti dove si mostrano
+// (un `tr` al caricamento del modulo fisserebbe la lingua). Il contesto
+// serve perché «Mar» e «Dom» da sole sono anche altre parole.
+const DOW = [
+  daTradurre('giorno|Lun'),
+  daTradurre('giorno|Mar'),
+  daTradurre('giorno|Mer'),
+  daTradurre('giorno|Gio'),
+  daTradurre('giorno|Ven'),
+  daTradurre('giorno|Sab'),
+  daTradurre('giorno|Dom'),
+]
 
 const mesLabel = (dateStr) => {
   const [y, m] = dateStr.split('-').map(Number)
-  return new Date(y, m - 1, 1).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })
+  return new Date(y, m - 1, 1).toLocaleDateString(formatoAttivo(), { month: 'long', year: 'numeric' })
 }
 const giornoLabel = (dateStr) =>
-  new Date(`${dateStr}T00:00:00`).toLocaleDateString('it-IT', {
+  new Date(`${dateStr}T00:00:00`).toLocaleDateString(formatoAttivo(), {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -63,17 +75,18 @@ const localInputToIso = (s) => {
 // dove ci si va per i soldi — e per timbrare l'ingresso bisognava passare
 // dal flusso di cassa, che con le ore non c'entra niente.
 const SEZIONI_STAFF = [
-  { id: 'calendario', icona: 'calendario', label: 'Calendario' },
+  { id: 'calendario', icona: 'calendario', label: daTradurre('Calendario') },
   // LE TIMBRATURE HANNO LA LORO VOCE. Sono la cosa che si tocca all'inizio
   // e alla fine del turno — «chi c'è adesso» — e stavano in cima al
   // calendario: per battere l'ingresso di chi arriva bisognava passare
   // dalla schermata dei turni, che con quel gesto non c'entra.
-  { id: 'timbrature', icona: 'tempo', label: 'Timbrature' },
-  { id: 'turno', icona: 'aggiungi', label: 'Nuovo turno' },
-  { id: 'paghe', icona: 'paghe', label: 'Paghe orarie' },
+  { id: 'timbrature', icona: 'tempo', label: daTradurre('Timbrature') },
+  { id: 'turno', icona: 'aggiungi', label: daTradurre('Nuovo turno') },
+  { id: 'paghe', icona: 'paghe', label: daTradurre('Paghe orarie') },
 ]
 
 export default function StaffHoursTab({ embedded = false, sezioneIniziale = 'calendario' }) {
+  useLingua()
   // Tre sezioni come nelle altre pagine: il calendario è quella che si apre,
   // perché è il motivo per cui si viene qui.
   const [sezione, setSezione] = useState(sezioneIniziale)
@@ -164,12 +177,12 @@ export default function StaffHoursTab({ embedded = false, sezioneIniziale = 'cal
         <>
           {/* Il titolo sta nella barra in alto (vedi lib/sezioni.js). */}
           <p className="muted small" style={{ margin: '-6px 0 10px' }}>
-            Turni, ore lavorate e paghe. Account e ruoli stanno in “Utenti e ruoli”.
+            {tr('Turni, ore lavorate e paghe. Account e ruoli stanno in “Utenti e ruoli”.')}
           </p>
         </>
       )}
-      {!embedded && <Sottosezioni voci={SEZIONI_STAFF} attiva={sezione} scegli={setSezione} />}
-      {error && <div className="banner">Errore: {error}</div>}
+      {!embedded && <Sottosezioni voci={conEtichetteTradotte(SEZIONI_STAFF)} attiva={sezione} scegli={setSezione} />}
+      {error && <div className="banner">{tr('Errore: {messaggio}', { messaggio: error })}</div>}
 
       {/* CHI TIMBRA ADESSO, in una sezione sua. Prima stava in fondo alla
           pagina della cassa — dove ci si va per i soldi — poi in cima al
@@ -196,9 +209,9 @@ export default function StaffHoursTab({ embedded = false, sezioneIniziale = 'cal
       {/* Vista: giorno / settimana / mese */}
       <div className="chips-row" style={{ marginBottom: 8 }}>
         {[
-          ['giorno', 'Giorno'],
-          ['settimana', 'Settimana'],
-          ['mese', 'Mese'],
+          ['giorno', tr('vista|Giorno')],
+          ['settimana', tr('Settimana')],
+          ['mese', tr('Mese')],
         ].map(([k, label]) => (
           <button key={k} className={`chip ${mode === k ? 'active' : ''}`} onClick={() => setMode(k)}>
             {label}
@@ -208,9 +221,9 @@ export default function StaffHoursTab({ embedded = false, sezioneIniziale = 'cal
 
       {/* Navigazione periodo */}
       <div className="row between" style={{ alignItems: 'center', marginBottom: 8 }}>
-        <button className="btn ghost small" onClick={() => nav(-1)}>←</button>
+        <button className="btn ghost small" aria-label={tr('Periodo precedente')} onClick={() => nav(-1)}>←</button>
         <strong style={{ textTransform: 'capitalize', textAlign: 'center' }}>{periodo}</strong>
-        <button className="btn ghost small" onClick={() => nav(1)}>→</button>
+        <button className="btn ghost small" aria-label={tr('Periodo successivo')} onClick={() => nav(1)}>→</button>
       </div>
 
       {mode === 'mese' && <MonthCalendar cursor={cursor} days={days} onPick={setDayDetail} />}
@@ -223,7 +236,7 @@ export default function StaffHoursTab({ embedded = false, sezioneIniziale = 'cal
           <DayView date={cursor} data={days.get(cursor)} {...rowActions} />
           {membri.length > 0 && (
             <div className="card" style={{ marginTop: 8 }}>
-              <strong className="small"><Icona nome="aggiungi" gruppo="tasti" /> Assegna a questo giorno</strong>
+              <strong className="small"><Icona nome="aggiungi" gruppo="tasti" /> {tr('Assegna a questo giorno')}</strong>
               <ShiftForm membri={membri} fixedDate={cursor} onAdd={addTurno} />
             </div>
           )}
@@ -233,19 +246,19 @@ export default function StaffHoursTab({ embedded = false, sezioneIniziale = 'cal
       {/* Totali del periodo: effettivo vs programmato */}
       <div className="card" style={{ marginTop: 10 }}>
         <div className="row between">
-          <strong>Totale periodo</strong>
+          <strong>{tr('Totale periodo')}</strong>
           <span className="row" style={{ gap: 10 }}>
-            <span title="Ore effettive (timbrature + correzioni)">
+            <span title={tr('Ore effettive (timbrature + correzioni)')}>
               <Icona nome="fatto" gruppo="segnali" />{' '}<strong>{totals.effettivo} h</strong>
             </span>
-            <span className="muted" title="Ore programmate (turni pianificati)">
+            <span className="muted" title={tr('Ore programmate (turni pianificati)')}>
               <Icona nome="calendario" gruppo="tasti" />{' '}{totals.programmato} h
             </span>
           </span>
         </div>
         {totals.programmato > 0 && (
           <div className="row between" style={{ marginTop: 4 }}>
-            <span className="muted small">Scarto effettivo − programmato</span>
+            <span className="muted small">{tr('Scarto effettivo − programmato')}</span>
             <strong className={totals.scarto < 0 ? 'neg' : ''}>
               {totals.scarto > 0 ? '+' : ''}
               {totals.scarto} h
@@ -253,30 +266,31 @@ export default function StaffHoursTab({ embedded = false, sezioneIniziale = 'cal
           </div>
         )}
         <div className="row between" style={{ marginTop: 6, borderTop: '1px dashed var(--line)', paddingTop: 6 }}>
-          <span className="muted small">Costo del personale (ore effettive)</span>
+          <span className="muted small">{tr('Costo del personale (ore effettive)')}</span>
           <strong>{formatPrice(payroll.totale)}</strong>
         </div>
         {payroll.parziale && (
           <div className="muted small">
-            <Icona nome="avviso" gruppo="segnali" />{' '}Parziale: manca la tariffa oraria di {payroll.senzaTariffa.join(', ')}.
+            <Icona nome="avviso" gruppo="segnali" />{' '}{tr('Parziale: manca la tariffa oraria di {nomi}.', { nomi: payroll.senzaTariffa.join(', ') })}
           </div>
         )}
         {perPerson.length === 0 && (
-          <p className="muted small" style={{ margin: '6px 0 0' }}>Nessun turno nel periodo.</p>
+          <p className="muted small" style={{ margin: '6px 0 0' }}>{tr('Nessun turno nel periodo.')}</p>
         )}
         {perPerson.map((p) => (
           <div className="row between" key={p.name} style={{ marginTop: 4 }}>
             <span>
-              {p.name} <span className="muted small">· {p.turni} turni</span>
+              {p.name}{' '}
+              <span className="muted small">· {p.turni === 1 ? tr('1 turno') : tr('{n} turni', { n: p.turni })}</span>
             </span>
             <span>
               <strong>{p.effettivo} h</strong>
-              {p.programmato > 0 && <span className="muted small"> / {p.programmato} h prog.</span>}
+              {p.programmato > 0 && <span className="muted small"> / {tr('{n} h prog.', { n: p.programmato })}</span>}
               {(() => {
                 const q = payroll.persone.find((x) => x.name === p.name)
                 if (!q) return null
                 return q.mancante ? (
-                  <span className="muted small" title="Manca la tariffa oraria"> · costo ?</span>
+                  <span className="muted small" title={tr('Manca la tariffa oraria')}> · {tr('costo ?')}</span>
                 ) : (
                   <span className="muted small"> · {formatPrice(q.cost)}</span>
                 )
@@ -295,14 +309,14 @@ export default function StaffHoursTab({ embedded = false, sezioneIniziale = 'cal
           <div className="confirm-box" style={{ width: 'min(460px, 94vw)', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
             <div className="row between" style={{ alignItems: 'center' }}>
               <h3 style={{ margin: 0, textTransform: 'capitalize' }}>{giornoLabel(dayDetail)}</h3>
-              <button className="btn ghost small" onClick={() => setDayDetail(null)}>✕</button>
+              <button className="btn ghost small" aria-label={tr('Chiudi')} onClick={() => setDayDetail(null)}>✕</button>
             </div>
             <DayPeople entries={days.get(dayDetail)?.entries} />
             <DayView date={dayDetail} data={days.get(dayDetail)} {...rowActions} />
             <div style={{ marginTop: 10, borderTop: '1px solid var(--line)', paddingTop: 10 }}>
-              <strong className="small"><Icona nome="aggiungi" gruppo="tasti" /> Assegna a questo giorno</strong>
+              <strong className="small"><Icona nome="aggiungi" gruppo="tasti" /> {tr('Assegna a questo giorno')}</strong>
               {membri.length === 0 ? (
-                <p className="muted small" style={{ margin: '4px 0 0' }}>Nessun membro dello staff: aggiungilo nella scheda “Membri”.</p>
+                <p className="muted small" style={{ margin: '4px 0 0' }}>{tr('Nessun membro dello staff: aggiungilo nella scheda “Membri”.')}</p>
               ) : (
                 <ShiftForm membri={membri} fixedDate={dayDetail} onAdd={addTurno} />
               )}
@@ -326,9 +340,9 @@ export default function StaffHoursTab({ embedded = false, sezioneIniziale = 'cal
       {confirmDel && (
         <ConfirmDialog
           icona="elimina"
-          title="Eliminare la voce?"
+          title={tr('Eliminare la voce?')}
           message={`${confirmDel.staff_name} · ${confirmDel.date} · ${confirmDel.hours} h`}
-          confirmLabel="Elimina"
+          confirmLabel={tr('Elimina')}
           danger
           onCancel={() => setConfirmDel(null)}
           onConfirm={() => {
@@ -369,7 +383,7 @@ function MonthCalendar({ cursor, days, onPick }) {
   return (
     <div className="ore-cal">
       {DOW.map((d) => (
-        <div key={d} className="ore-cal-dow">{d}</div>
+        <div key={d} className="ore-cal-dow">{trSegnato(d)}</div>
       ))}
       {grid.map((cell) => {
         const info = days.get(cell.date)
@@ -414,10 +428,10 @@ function DayPeople({ entries }) {
         <div key={p.key} className="day-person">
           <strong>{p.name}</strong>
           <span className="day-person-cols">
-            <span title="Programmato">
+            <span title={tr('Programmato')}>
               <Icona nome="calendario" gruppo="tasti" />{' '}{p.programmato.ranges.join(', ') || (p.programmato.hours ? `${p.programmato.hours} h` : '—')}
             </span>
-            <span title="Effettivo" className={p.effettivo.hours ? '' : 'muted'}>
+            <span title={tr('Effettivo')} className={p.effettivo.hours ? '' : 'muted'}>
               <Icona nome="fatto" gruppo="segnali" />{' '}{p.effettivo.ranges.join(', ') || (p.effettivo.hours ? `${p.effettivo.hours} h` : '—')}
             </span>
           </span>
@@ -439,7 +453,7 @@ function WeekView({ dates, days, onPick, onDelete, onEditShift }) {
           <div key={d} className="card" style={{ padding: 10 }}>
             <button className="week-day-head row between" onClick={() => onPick(d)}>
               <strong style={{ textTransform: 'capitalize' }}>
-                {new Date(`${d}T00:00:00`).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric' })}
+                {new Date(`${d}T00:00:00`).toLocaleDateString(formatoAttivo(), { weekday: 'short', day: 'numeric' })}
               </strong>
               {t ? (
                 <strong>
@@ -447,7 +461,7 @@ function WeekView({ dates, days, onPick, onDelete, onEditShift }) {
                   {t.programmato > 0 && <span className="muted small"> / {t.programmato}</span>}
                 </strong>
               ) : (
-                <span className="muted small">＋ assegna</span>
+                <span className="muted small">＋ {tr('assegna')}</span>
               )}
             </button>
             {(info?.entries || []).map((e) => (
@@ -501,8 +515,8 @@ function ShiftForm({ membri, fixedDate = null, onAdd }) {
     <form onSubmit={submit} style={{ marginTop: 8 }}>
       <div className="chips-row" style={{ margin: '0 0 2px' }}>
         {[
-          ['programmato', 'calendario', 'Programmato'],
-          ['effettivo', 'fatto', 'Effettivo'],
+          ['programmato', 'calendario', tr('Programmato')],
+          ['effettivo', 'fatto', tr('Effettivo')],
         ].map(([k, icona, label]) => (
           <button type="button" key={k} className={`chip ${kind === k ? 'active' : ''}`} onClick={() => setKind(k)}>
             <Icona nome={icona} gruppo="tasti" /> {label}
@@ -511,14 +525,14 @@ function ShiftForm({ membri, fixedDate = null, onAdd }) {
       </div>
       <p className="muted small" style={{ margin: '0 0 6px' }}>
         {kind === 'effettivo'
-          ? 'Ore realmente lavorate (es. correzione se dimenticano di timbrare).'
-          : 'Turno pianificato, da confrontare con le ore effettive.'}
+          ? tr('Ore realmente lavorate (es. correzione se dimenticano di timbrare).')
+          : tr('Turno pianificato, da confrontare con le ore effettive.')}
       </p>
       <div className={fixedDate ? '' : 'grid-2'}>
         <div>
-          <label htmlFor={`sf-nome-${fixedDate || 'gen'}`}>Chi *</label>
+          <label htmlFor={`sf-nome-${fixedDate || 'gen'}`}>{tr('Chi *')}</label>
           <select id={`sf-nome-${fixedDate || 'gen'}`} value={personUid} onChange={(e) => setPersonUid(e.target.value)} required>
-            <option value="">— Scegli —</option>
+            <option value="">{tr('— Scegli —')}</option>
             {membri.map((m) => (
               <option key={m.uid} value={m.uid}>{m.label}</option>
             ))}
@@ -526,30 +540,31 @@ function ShiftForm({ membri, fixedDate = null, onAdd }) {
         </div>
         {!fixedDate && (
           <div>
-            <label htmlFor="sf-data-gen">Giorno</label>
+            <label htmlFor="sf-data-gen">{tr('Giorno')}</label>
             <input id="sf-data-gen" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </div>
         )}
       </div>
       <div className="row" style={{ gap: 8, marginTop: 6 }}>
         <div className="grow">
-          <label htmlFor={`sf-in-${fixedDate || 'gen'}`}>Entrata *</label>
+          <label htmlFor={`sf-in-${fixedDate || 'gen'}`}>{tr('Entrata *')}</label>
           <input id={`sf-in-${fixedDate || 'gen'}`} type="time" value={start} onChange={(e) => setStart(e.target.value)} required />
         </div>
         <div className="grow">
-          <label htmlFor={`sf-out-${fixedDate || 'gen'}`}>Uscita *</label>
+          <label htmlFor={`sf-out-${fixedDate || 'gen'}`}>{tr('Uscita *')}</label>
           <input id={`sf-out-${fixedDate || 'gen'}`} type="time" value={end} onChange={(e) => setEnd(e.target.value)} required />
         </div>
         <div style={{ width: 90 }}>
-          <label htmlFor={`sf-pausa-${fixedDate || 'gen'}`}>Pausa (min)</label>
+          <label htmlFor={`sf-pausa-${fixedDate || 'gen'}`}>{tr('Pausa (min)')}</label>
           <input id={`sf-pausa-${fixedDate || 'gen'}`} type="number" min="0" step="5" value={breakMin} onChange={(e) => setBreakMin(e.target.value)} />
         </div>
       </div>
-      <label htmlFor={`sf-note-${fixedDate || 'gen'}`} style={{ marginTop: 6, display: 'block' }}>Note</label>
-      <input id={`sf-note-${fixedDate || 'gen'}`} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Es. serata evento" />
+      <label htmlFor={`sf-note-${fixedDate || 'gen'}`} style={{ marginTop: 6, display: 'block' }}>{tr('Note')}</label>
+      <input id={`sf-note-${fixedDate || 'gen'}`} value={note} onChange={(e) => setNote(e.target.value)} placeholder={tr('Es. serata evento')} />
       <button className="btn block" type="submit" style={{ marginTop: 10 }} disabled={!personUid || hours == null}>
-        Aggiungi{hours != null ? ` · ${hours} h` : ''}
-        {start && end && end < start ? ' (oltre mezzanotte)' : ''}
+        {tr('Aggiungi')}
+        {hours != null ? ` · ${hours} h` : ''}
+        {start && end && end < start ? ` ${tr('(oltre mezzanotte)')}` : ''}
       </button>
     </form>
   )
@@ -557,15 +572,15 @@ function ShiftForm({ membri, fixedDate = null, onAdd }) {
 
 // ── Vista giorno: elenco turni ──
 function DayView({ data, onDelete, onEditShift }) {
-  if (!data) return <p className="muted small" style={{ marginTop: 8 }}>Nessun turno in questo giorno.</p>
+  if (!data) return <p className="muted small" style={{ marginTop: 8 }}>{tr('Nessun turno in questo giorno.')}</p>
   const t = effVsPlanned(data.entries)
   return (
     <div className="card" style={{ marginTop: 8 }}>
       <div className="row between">
-        <strong>{data.entries.length} voci</strong>
+        <strong>{data.entries.length === 1 ? tr('registro|1 voce') : tr('registro|{n} voci', { n: data.entries.length })}</strong>
         <strong>
           {t.effettivo} h
-          {t.programmato > 0 && <span className="muted small"> / {t.programmato} h prog.</span>}
+          {t.programmato > 0 && <span className="muted small"> / {tr('{n} h prog.', { n: t.programmato })}</span>}
         </strong>
       </div>
       {data.entries.map((e) => (
@@ -581,9 +596,9 @@ function ShiftRow({ e, onDelete, onEditShift }) {
     <div className="row between" style={{ alignItems: 'center', marginTop: 6 }}>
       <span className="grow" style={{ fontSize: '0.9rem' }}>
         <strong>{e.staff_name}</strong>{' '}
-        {e.kind === 'programmato' && <span className="pill small"><Icona nome="calendario" gruppo="tasti" /> prog.</span>}
+        {e.kind === 'programmato' && <span className="pill small"><Icona nome="calendario" gruppo="tasti" /> {tr('prog.')}</span>}
         {isShift && !e.open && <span className="pill small"><Icona nome="orario" gruppo="tasti" /> badge</span>}
-        {e.open && <span className="pill small live"><Icona nome="verde" gruppo="tasti" /> in corso</span>}{' '}
+        {e.open && <span className="pill small live"><Icona nome="verde" gruppo="tasti" /> {tr('in corso')}</span>}{' '}
         <span className="muted small">
           {e.label}
           {e.note && e.note !== 'timbratura' ? ` · ${e.note}` : ''}
@@ -592,9 +607,9 @@ function ShiftRow({ e, onDelete, onEditShift }) {
       <span className="row" style={{ gap: 6, alignItems: 'center' }}>
         <strong>{e.open ? '—' : `${e.hours} h`}</strong>
         {isShift && (
-          <button className="btn ghost small" aria-label={`Correggi timbratura ${e.staff_name}`} onClick={() => onEditShift(e)}><Icona nome="modifica" gruppo="tasti" /></button>
+          <button className="btn ghost small" aria-label={tr('Correggi timbratura {nome}', { nome: e.staff_name })} onClick={() => onEditShift(e)}><Icona nome="modifica" gruppo="tasti" /></button>
         )}
-        <button className="btn ghost small" aria-label={`Elimina voce ${e.staff_name}`} onClick={() => onDelete(e)}><Icona nome="elimina" gruppo="tasti" /></button>
+        <button className="btn ghost small" aria-label={tr('Elimina voce {nome}', { nome: e.staff_name })} onClick={() => onDelete(e)}><Icona nome="elimina" gruppo="tasti" /></button>
       </span>
     </div>
   )
@@ -612,16 +627,16 @@ function ShiftEditDialog({ shift, onClose, onSave }) {
     <div className="overlay confirm-overlay" onClick={onClose}>
       <div className="confirm-box" style={{ width: 'min(420px, 94vw)' }} onClick={(e) => e.stopPropagation()}>
         <div className="row between" style={{ alignItems: 'center' }}>
-          <h3 style={{ margin: 0 }}><Icona nome="modifica" gruppo="tasti" /> Correggi timbratura</h3>
-          <button className="btn ghost small" onClick={onClose}>✕</button>
+          <h3 style={{ margin: 0 }}><Icona nome="modifica" gruppo="tasti" /> {tr('Correggi timbratura')}</h3>
+          <button className="btn ghost small" aria-label={tr('Chiudi')} onClick={onClose}>✕</button>
         </div>
         <p className="muted small" style={{ marginTop: 4 }}>{shift.staff_name}</p>
-        <label htmlFor="sh-in" style={{ display: 'block', marginTop: 6 }}>Entrata</label>
+        <label htmlFor="sh-in" style={{ display: 'block', marginTop: 6 }}>{tr('Entrata')}</label>
         <input id="sh-in" type="datetime-local" value={inVal} onChange={(e) => setInVal(e.target.value)} />
-        <label htmlFor="sh-out" style={{ display: 'block', marginTop: 6 }}>Uscita</label>
+        <label htmlFor="sh-out" style={{ display: 'block', marginTop: 6 }}>{tr('Uscita')}</label>
         <input id="sh-out" type="datetime-local" value={outVal} onChange={(e) => setOutVal(e.target.value)} />
         {shift.open && !outVal && (
-          <p className="muted small" style={{ marginTop: 6 }}>Turno ancora aperto: imposta l’uscita per chiuderlo.</p>
+          <p className="muted small" style={{ marginTop: 6 }}>{tr('Turno ancora aperto: imposta l’uscita per chiuderlo.')}</p>
         )}
         <button
           className="btn block"
@@ -629,7 +644,7 @@ function ShiftEditDialog({ shift, onClose, onSave }) {
           disabled={!valid}
           onClick={() => onSave({ clock_in: inIso, clock_out: outIso })}
         >
-          Salva
+          {tr('Salva')}
         </button>
       </div>
     </div>
@@ -662,35 +677,33 @@ function PagheManager({ membri, rates, onSave }) {
 
   return (
     <div className="card" style={{ marginTop: 8 }}>
-      <strong><Icona nome="contanti" gruppo="tasti" /> Paghe orarie</strong>
+      <strong><Icona nome="contanti" gruppo="tasti" /> {tr('Paghe orarie')}</strong>
       <p className="muted small" style={{ margin: '4px 0 8px' }}>
-        La tariffa vale <strong>dalla data indicata in poi</strong>. Un aumento
-        non cambia i turni già lavorati: restano pagati alla tariffa di allora.
+        {tr('La tariffa vale dalla data indicata in poi. Un aumento non cambia i turni già lavorati: restano pagati alla tariffa di allora.')}
       </p>
 
       {membri.length === 0 ? (
         <p className="muted small">
-          Nessun membro dello staff: aggiungili nella scheda “Staff”, poi qui
-          imposti la loro paga.
+          {tr('Nessun membro dello staff: aggiungili nella scheda “Staff”, poi qui imposti la loro paga.')}
         </p>
       ) : (
         <form onSubmit={aggiungi}>
           <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
             <div className="grow">
-              <label htmlFor="pg-chi">Chi</label>
+              <label htmlFor="pg-chi">{tr('Chi')}</label>
               <select id="pg-chi" value={uid} onChange={(e) => setUid(e.target.value)}>
-                <option value="">— Scegli —</option>
+                <option value="">{tr('— Scegli —')}</option>
                 {membri.map((m) => (
                   <option key={m.uid} value={m.uid}>{m.label}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label htmlFor="pg-da">Da</label>
+              <label htmlFor="pg-da">{tr('data|Da')}</label>
               <input id="pg-da" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
             </div>
             <div style={{ width: 100 }}>
-              <label htmlFor="pg-eur">€/ora</label>
+              <label htmlFor="pg-eur">{tr('€/ora')}</label>
               <input
                 id="pg-eur"
                 type="number"
@@ -702,7 +715,7 @@ function PagheManager({ membri, rates, onSave }) {
             </div>
           </div>
           <button className="btn block" type="submit" style={{ marginTop: 8 }} disabled={!uid || rate === ''}>
-            Salva tariffa
+            {tr('Salva tariffa')}
           </button>
         </form>
       )}
@@ -712,20 +725,19 @@ function PagheManager({ membri, rates, onSave }) {
           <div className="row between">
             <strong style={{ fontSize: '0.92rem' }}>{m.label}</strong>
             <span className="muted small">
-              oggi{' '}
               {rateAt(m.rates, oggi()) != null
-                ? `${formatPrice(rateAt(m.rates, oggi()))}/h`
-                : '— nessuna tariffa'}
+                ? tr('oggi {importo}/h', { importo: formatPrice(rateAt(m.rates, oggi())) })
+                : tr('oggi — nessuna tariffa')}
             </span>
           </div>
           {m.rates.map((r) => (
             <div className="row between" key={r.from} style={{ alignItems: 'center', marginTop: 4 }}>
-              <span className="muted small">dal {r.from}</span>
+              <span className="muted small">{tr('dal {data}', { data: r.from })}</span>
               <span className="row" style={{ gap: 6, alignItems: 'center' }}>
                 <span>{formatPrice(r.rate)}/h</span>
                 <button
                   className="btn ghost small"
-                  aria-label={`Rimuovi tariffa ${m.label} dal ${r.from}`}
+                  aria-label={tr('Rimuovi tariffa {nome} dal {data}', { nome: m.label, data: r.from })}
                   onClick={() => onSave({ uid: m.uid, name: m.label }, removeRate(m.rates, r.from))}
                 >
                   <Icona nome="elimina" gruppo="tasti" />
@@ -738,7 +750,7 @@ function PagheManager({ membri, rates, onSave }) {
 
       {orfane.length > 0 && (
         <p className="muted small" style={{ marginTop: 10 }}>
-          <Icona nome="avviso" gruppo="segnali" />{' '}Tariffe di account non più presenti: {orfane.map((r) => r.name || r.id).join(', ')}.
+          <Icona nome="avviso" gruppo="segnali" />{' '}{tr('Tariffe di account non più presenti: {nomi}.', { nomi: orfane.map((r) => r.name || r.id).join(', ') })}
         </p>
       )}
     </div>

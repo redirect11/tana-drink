@@ -29,6 +29,7 @@ import {
 } from '../porte/dati.js'
 import { auth } from './firebaseClient.js'
 import { VENUE_VUOTO } from './venue.js'
+import { TEMA_DI_PARTENZA } from './themes.js'
 import { ORDER_STATUSES } from './orderStatus.js'
 import {
   COLLEZIONE as DIAGNOSTICA_STAMPANTE,
@@ -97,6 +98,7 @@ import {
   itemsTotal as sumItems,
 } from './comande.js'
 import { attesaDopoLaModifica, rispostaAccettata, inAttesa, ANNULLO_RIFIUTO, MESSAGGIO_ATTESA } from './attesaCliente.js'
+import { trSegnato } from './lingua.js'
 import {
   discountAmount,
   discountAfterChange,
@@ -271,6 +273,10 @@ function mapItem(snap) {
     // IL CLIENTE PUÒ SCEGLIERLO DAL MENÙ (REQ-MAG-055): è fra le alternative
     // delle voci che offrono la scelta (REQ-MENU-042). Spento se non scritto.
     scelta_cliente: i.scelta_cliente === true,
+    // OSCURA AUTOMATICAMENTE (REQ-MENU-045): a giacenza sotto la soglia delle
+    // Impostazioni, le voci che lo usano escono dal menù dei clienti. Il
+    // segno sulle voci lo scrive la Function. Spento se non scritto.
+    oscura_automaticamente: i.oscura_automaticamente === true,
     cost: i.cost != null ? Number(i.cost) : null,
     vat: i.vat != null ? Number(i.vat) : 22,
     // Chi non lo dichiara è semplicemente in assortimento: "in linea" è una
@@ -3051,6 +3057,9 @@ export function subscribeActiveOrders(
   // APERTURA. Si agisce su un conto e quello svanisce, senza sapere se
   // l'operazione è andata a buon fine.
   let docsChiusi = []
+  // Ha già risposto almeno un ascolto? Da lì la lettura dalla cache non
+  // serve più (vedi dallaCache).
+  let ascoltoArrivato = false
 
   // ── LA MEMORIA VALE PER LA LISTA COME PER IL SINGOLO CONTO ───────────
   //
@@ -3162,7 +3171,18 @@ export function subscribeActiveOrders(
         getDocsFromCache(query(ordersCol, where('status', 'in', STATI_APERTI))),
         getDocsFromCache(query(ordersCol, where('created_at', '>=', copertura))),
       ])
-      if (docsAperti.length === 0 && docsRecenti.length === 0) {
+      // SOLO SE NESSUN ASCOLTO HA RISPOSTO, e non «se le liste sono vuote»:
+      // vuoto può essere la risposta. Svuotato un conto e tornati alla coda,
+      // l'uscita lo annulla e l'ascolto degli aperti non ne ha più nessuno;
+      // questa lettura, partita un attimo prima, lo aveva ancora aperto e lo
+      // rimetteva a schermo — ricompariva con «Conto ripristinato» e spariva
+      // all'ascolto dopo (BUG-169).
+      // Vale per qualunque ascolto, «chiusi» compreso, e per le due liste
+      // insieme: anche la sola lista di oggi letta dalla cache ha il conto
+      // com'era un attimo fa, e da sola lo rimetterebbe aperto. Se un
+      // ascolto ha risposto, quelli che mancano arrivano dalla cache dell'SDK
+      // per conto loro.
+      if (!ascoltoArrivato) {
         docsAperti = a.docs
         docsRecenti = r.docs
         emit(true)
@@ -3178,6 +3198,7 @@ export function subscribeActiveOrders(
   const unsubAperti = onSnapshot(
     query(ordersCol, where('status', 'in', STATI_APERTI)),
     (snap) => {
+      ascoltoArrivato = true
       docsAperti = snap.docs
       emit()
     },
@@ -3188,6 +3209,7 @@ export function subscribeActiveOrders(
   const unsubRecenti = onSnapshot(
     query(ordersCol, where('created_at', '>=', copertura)),
     (snap) => {
+      ascoltoArrivato = true
       docsRecenti = snap.docs
       emit()
     },
@@ -3200,6 +3222,7 @@ export function subscribeActiveOrders(
     ? onSnapshot(
         query(ordersCol, where('closed_in_session', '==', cashSessionId)),
         (snap) => {
+          ascoltoArrivato = true
           docsChiusi = snap.docs
           emit()
         },
@@ -5025,7 +5048,7 @@ async function advanceComandaOra(orderId, comandaId, newStatus) {
   // strada: coda, conto, comanda, trascinamento, tasto dello staff. Qui e
   // non in ogni schermata, che così non se ne dimentica nessuna. Annullare
   // resta possibile.
-  if (newStatus !== ORDER_STATUSES.ANNULLATO && inAttesa({ ...raw, status: norm.status })) throw new Error(MESSAGGIO_ATTESA)
+  if (newStatus !== ORDER_STATUSES.ANNULLATO && inAttesa({ ...raw, status: norm.status })) throw new Error(trSegnato(MESSAGGIO_ATTESA))
 
   // IL MAGAZZINO SI SCALA A «PRONTO»: lì il drink è fatto, e a segnarlo è
   // chi l'ha fatto. Prima e dopo gli ingredienti sono IMPEGNATI, e si
@@ -5435,7 +5458,7 @@ export const preparazioneParziale = perConto(async function preparazioneParziale
   if (norm.status !== ORDER_OPEN) throw new Error('Conto chiuso: non più modificabile')
   // Dividere fa avanzare la parte scelta: non col cliente che deve ancora
   // accettare le modifiche (REQ-CLI-009).
-  if (inAttesa({ ...cur, status: norm.status })) throw new Error(MESSAGGIO_ATTESA)
+  if (inAttesa({ ...cur, status: norm.status })) throw new Error(trSegnato(MESSAGGIO_ATTESA))
   const comande = norm.comande.map((c) => ({ ...c }))
   const comanda = comande.find((c) => c.id === comandaId)
   if (!comanda) throw new Error('Comanda non trovata')
@@ -6204,6 +6227,40 @@ export async function updateStaffShift(id, patch) {
   await updateDoc(doc(staffShiftsCol, id), p)
 }
 
+// ── IL PROFILO DI CHI LAVORA (REQ-UI-039) ─────────────────────────────
+//
+// Le scelte che seguono la persona su ogni dispositivo: per ora la lingua
+// del gestionale. Daniele, 17/11/2026: «la lingua è legata al profilo».
+// Ognuno legge e scrive solo il suo (firestore.rules, profili_staff).
+const profiloStaffRef = (uid) => doc(db, 'profili_staff', uid)
+
+// Si scrive in sottofondo: la scelta vale subito sul dispositivo
+// (impostaLingua), l'account la riceve quando c'è rete.
+export function salvaLinguaDelProfilo(uid, lingua) {
+  if (!uid) return
+  bgWrite(
+    () => setDoc(profiloStaffRef(uid), { lingua, aggiornato: serverTimestamp() }, { merge: true }),
+    'lingua del profilo'
+  )
+}
+
+// La lingua dell'account. Nessuno la aspetta: l'app parte con la copia del
+// dispositivo e cambia lingua quando questa arriva. Dal server e non dalla
+// cache, perché potrebbe averla cambiata un altro dispositivo; senza rete
+// risponde la cache.
+// CHI NON HA MAI SCELTO HA L'ITALIANO, non la lingua di chi ha usato il
+// tablet prima di lui: la lingua è del profilo (dalla revisione del 17/11).
+// Solo se la lettura non riesce si risponde null, e resta quella che c'è.
+export async function leggiLinguaDelProfilo(uid) {
+  if (!uid) return null
+  try {
+    const snap = await getDoc(profiloStaffRef(uid))
+    return (snap.exists() && snap.data().lingua) || 'it'
+  } catch {
+    return null
+  }
+}
+
 export async function deleteStaffShift(id) {
   await deleteDoc(doc(staffShiftsCol, id))
 }
@@ -6660,7 +6717,7 @@ export const DEFAULT_SETTINGS = {
   groups_in_queue: true,
   // Temi: preset + eventuali override colore, separati per gestionale
   // (staff/bartender) e vista cliente. Vedi src/lib/themes.js.
-  theme_staff: { preset: 'tana-scuro', custom: null },
+  theme_staff: { preset: TEMA_DI_PARTENZA, custom: null },
   // Le icone del gestionale (REQ-UI-031), un tema per gruppo (lib/icone.js):
   // «silhouette», monocrome, di partenza per tutti (decisione dell'utente,
   // 07/11/2026); «emoji» rimette quelle di prima. Le pagine del cliente non
@@ -6668,7 +6725,7 @@ export const DEFAULT_SETTINGS = {
   tema_icone_navigazione: 'silhouette',
   tema_icone_tasti: 'silhouette',
   tema_icone_segnali: 'silhouette',
-  theme_client: { preset: 'tana-scuro', custom: null },
+  theme_client: { preset: TEMA_DI_PARTENZA, custom: null },
 }
 
 // IMPOSTAZIONI IN CACHE. Le scritture sugli ordini devono sapere che sconto

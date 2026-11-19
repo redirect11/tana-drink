@@ -23,6 +23,8 @@
 // piena dimensione e non si aprirebbe più. Meglio dirlo nell'istante in cui
 // lo si sceglie. (In pratica quasi non capita: quando si carica dalla
 // libreria foto, iOS consegna già un JPEG.)
+import { tr } from './lingua.js'
+
 export const FORMATI_IMMAGINE = ['image/jpeg', 'image/png', 'image/webp']
 export const FORMATO_PDF = 'application/pdf'
 
@@ -73,18 +75,24 @@ export function tipoAllegato(contentType) {
 // oppure `null` quando si può procedere. Le frasi dicono cosa fare: chi è in
 // magazzino non deve indovinare quale sia il problema.
 export function problemaDelFile(file) {
-  if (!file) return 'Non è stato scelto nessun file.'
+  if (!file) return tr('Non è stato scelto nessun file.')
   const tipo = tipoAllegato(file.type)
   if (!tipo) {
-    return 'Questo tipo di file non si può allegare. Vanno bene una foto JPG, PNG o WebP, oppure un PDF.'
+    return tr('Questo tipo di file non si può allegare. Vanno bene una foto JPG, PNG o WebP, oppure un PDF.')
   }
   // Il PDF non si tocca — non c'è niente da ricomprimere che non rovini il
   // testo — quindi per lui il limite è subito quello finale.
   if (tipo === 'pdf' && file.size > PESO_MASSIMO) {
-    return `Questo PDF pesa ${pesoLeggibile(file.size)}: il limite è ${pesoLeggibile(PESO_MASSIMO)}. Allega solo le pagine che servono, oppure fotografa il documento.`
+    return tr(
+      'Questo PDF pesa {peso}: il limite è {max}. Allega solo le pagine che servono, oppure fotografa il documento.',
+      { peso: pesoLeggibile(file.size), max: pesoLeggibile(PESO_MASSIMO) }
+    )
   }
   if (tipo === 'immagine' && file.size > PESO_MASSIMO_SCATTO) {
-    return `Questa immagine pesa ${pesoLeggibile(file.size)} ed è troppo grande da lavorare. Rifai la foto con la fotocamera del telefono.`
+    return tr(
+      'Questa immagine pesa {peso} ed è troppo grande da lavorare. Rifai la foto con la fotocamera del telefono.',
+      { peso: pesoLeggibile(file.size) }
+    )
   }
   return null
 }
@@ -96,7 +104,10 @@ export function problemaDelFile(file) {
 // errore che non spiega niente a nessuno.
 export function problemaDelCaricato(peso) {
   if ((Number(peso) || 0) <= PESO_MASSIMO) return null
-  return `Il file resta troppo pesante (${pesoLeggibile(peso)}, il limite è ${pesoLeggibile(PESO_MASSIMO)}). Prova a fotografare il documento invece di allegare il file originale.`
+  return tr(
+    'Il file resta troppo pesante ({peso}, il limite è {max}). Prova a fotografare il documento invece di allegare il file originale.',
+    { peso: pesoLeggibile(peso), max: pesoLeggibile(PESO_MASSIMO) }
+  )
 }
 
 // L'estensione con cui il file va salvato. Si guarda il tipo e non il nome:

@@ -166,7 +166,8 @@ requirements:
       Togliendo tutte le righe di un conto appena aperto, il conto viene annullato
       e si torna alla coda: un conto vuoto in lista è solo un ingombro. Non
       succede se qualcosa è già stato incassato — lì il conto esiste davvero e va
-      chiuso a mano.
+      chiuso a mano. Chi preferisce restare sul conto svuotato lo sceglie nel
+      suo profilo, e allora l'annullo avviene all'uscita (REQ-ORD-025).
     status: implemented
     generate_issue: false
     labels: [ordini, pos]
@@ -5746,6 +5747,9 @@ requirements:
       in docs/sicurezza-demo.md. La regia ha già messo la sua difesa (PR
       #69): configurazione finta, niente indirizzo della regia, CSP con
       connect-src 'self', Storage chiuso.
+      Il 18/11/2026 i punti 4 (l'informativa della Tana in ogni build) e 6
+      (i link dei social) sono passati a REQ-SIC-017, col sito uguale per
+      tutti: qui restano gli altri.
     status: todo
     generate_issue: true
     labels: [sicurezza, privacy, demo]
@@ -6745,6 +6749,7 @@ requirements:
     labels: [menu, magazzino]
     test_cases:
       - tests/component/costoRigheRicetta.test.jsx
+      - tests/unit/lavorazioneInU.test.js
 
   - id: REQ-MENU-023
     title: "Il marketplace dei temi, una pagina sua: un tema è una tavolozza più uno stile, si sfoglia, si prova, si installa e si usa"
@@ -7367,6 +7372,15 @@ requirements:
       minimale già pubblicato, che può essere un modulo a parte. Il
       concetto, con le domande aperte e il primo passo proposto, è in
       docs/tema-del-sito.md.
+      DANIELE, 17/11/2026, decide e scende nei requisiti: le sezioni del
+      sito (Chi siamo, Contatti, Menù, altre da decidere) sempre
+      raggiungibili dal menu laterale della vista cliente (REQ-SITO-001);
+      il tema del menù si propaga alle pagine del sito, e per la Tana
+      «Carte» veste Chi siamo e Contatti (REQ-SITO-002); la foto del banner
+      della Home si sceglie (REQ-SITO-003); la home è un modulo a parte,
+      e senza il modulo l'indirizzo del locale apre il menù o una pagina
+      di cortesia (REQ-SITO-004); l'editor della home mostra o nasconde le
+      sezioni fisse (REQ-SITO-005). Niente pagine libere.
     status: todo
     generate_issue: true
     labels: [menu, temi, cliente]
@@ -8183,6 +8197,44 @@ requirements:
     priority: P2
     test_cases:
       - tests/unit/usePresentazione.test.jsx
+
+  - id: REQ-FLOTTA-032
+    title: "Il giro e2e dice alla regia quando le prove iniziano e finiscono"
+    area: "scripts/lib-istanza-di-prova.js, scripts/istanza-di-prova.mjs, package.json (google-auth-library), .github/workflows/e2e.yml"
+    description: >
+      Daniele, 15/11/2026: nel backoffice della regia `drinkpos-prova-e2e`
+      deve risultare «Disattivata» quando gli e2e non girano. La regia ha
+      aperto l'interfaccia 15 (drink-regia REQ-FLOTTA-114, contratto
+      paragrafo 15, sul test dalla regia 0.5.0-beta.5): POST
+      `istanzaDiProva` sulla regia di test, corpo { attiva: true }
+      all'inizio del giro e { attiva: false } alla fine, anche se le prove
+      falliscono. È solo uno stato della regia: spenta non cambia licenza
+      né presentazione, e le prove funzionano uguale anche se la chiamata
+      fallisce (finché il progetto non è segnato di prova risponde 403).
+      CHI CHIAMA: l'account di deploy del progetto di prova
+      (E2E_SERVICE_ACCOUNT, deploy@drinkpos-prova-e2e), con un gettone
+      d'identità di Google, destinatario `regia-prova:drink-regia-test`,
+      con email ed email_verified. Non un utente del locale: Daniele ha
+      deciso che nessun utente di un locale può cambiare qualcosa nella
+      regia (contratto, «La sicurezza delle interfacce», regia
+      REQ-FLOTTA-115). La prima stesura coniava un utente `e2e-regia` e ne
+      scambiava l'ID token con Identity Toolkit: scartata lo stesso giorno.
+      COME È FATTO: il gettone lo dà google-auth-library
+      (getIdTokenClient, fetchIdToken) dalla chiave che il giro ha già, ed
+      è chiesto di nuovo a ogni chiamata, perché dura un'ora. Il passo di
+      fine giro sta in `if: always()` PRIMA dello smontaggio. Lo script
+      esce sempre con 0: un errore è un avviso nel log, mai un giro fermo.
+      I due passi in e2e.yml col via libera di Daniele, lo stesso giorno
+      («ok cambialo»): «La regia sa che le prove iniziano» dopo la chiave e
+      prima del deploy, «… sono finite» in always() prima dello smontaggio
+      e di «Via la chiave». La prova vera del gettone è il primo giro e2e,
+      perché la chiave dell'account di deploy sta solo nei segreti.
+    status: implemented
+    generate_issue: false
+    labels: [flotta, regia, ci]
+    priority: P3
+    test_cases:
+      - tests/unit/istanzaDiProva.test.js
 
   - id: REQ-FLOTTA-021
     title: "Le porte e gli adattatori: l'app parla con interfacce nostre, Firebase è un adattatore"
@@ -10638,6 +10690,40 @@ requirements:
     test_cases:
       - tests/unit/rigaDiAltri.test.js
       - tests/sistema/piuSoloSulleProprie.spec.js
+
+  - id: REQ-ORD-025
+    title: "Il conto svuotato si chiude da solo o resta aperto: lo sceglie chi lavora, sul suo dispositivo"
+    area: "src/lib/impostazioniLocali.js (contoVuotoSiChiude), src/components/OrderPosDetail.jsx, src/pages/StaffProfilePage.jsx"
+    description: >
+      Daniele, 15/11/2026: togliendo l'ultima riga il conto si annulla dopo
+      400 ms e si torna alla coda (REQ-ORD-004); a chi sostituisce un drink
+      con calma la schermata si chiudeva in mano. «Facciamolo così ma
+      opzionale. Per utente, a Flavio piace a Vittorio no. Quindi mettiamolo
+      configurabile per chi sta usando il terminale».
+      La scelta sta nel profilo («Il mio profilo», `/profilo-staff`), come
+      gli avvisi: vale per l'account e per il dispositivo, e due persone che
+      si passano lo stesso tablet non se la cambiano a vicenda. Accesa di
+      partenza, che è il comportamento di sempre. Spenta, il conto svuotato
+      resta aperto a schermo e si può continuare a battere; se all'uscita è
+      ancora vuoto si annulla allora, con le stesse regole: niente annullo
+      se qualcosa è già stato incassato, e il conto annullato esce subito
+      dalla coda. Annullare all'uscita chiude anche la composizione nella
+      stessa scrittura (BUG-071): l'uscita non toglie `in_creazione` per
+      conto suo, e del conto vuoto non esce carta né notifica.
+      Uscire da un conto vuoto prima dei 400 ms lo annulla comunque, con la
+      scelta accesa o spenta: prima restava aperto e vuoto in coda. Uscendo
+      da un conto vuoto non si chiede il nome: sta per essere annullato. La
+      scelta si legge allo scadere dei 400 ms, non all'apertura: aprendo un
+      conto già vuoto l'accesso può non aver ancora risposto.
+    status: implemented
+    generate_issue: false
+    labels: [ordini, pos, staff]
+    test_cases:
+      - tests/unit/impostazioniLocali.test.js
+      - tests/component/OrderPosDetail.test.jsx
+      - tests/component/StaffProfilePage.test.jsx
+      - tests/unit/giroInLocale.test.js
+      - tests/sistema/contoSvuotato.spec.js
 
   - id: REQ-STAMPA-011
     title: "Il logo sugli scontrini si sceglie: quale, e su quali stampe"
@@ -15738,6 +15824,272 @@ requirements:
       - tests/component/MenuManager.test.jsx
       - tests/sistema/aiutiCampi.spec.js
 
+  - id: REQ-UI-033
+    title: "Il tema «Lime», scuro e chiaro, di Lime - SmartOrders, ed è quello di partenza dei locali nuovi"
+    area: "src/lib/themes.js (FORME.lime, lime-scuro, lime-chiaro, temaDiPartenza), src/lib/api.js (DEFAULT_SETTINGS), src/components/ThemeSettings.jsx, src/index.css, src/lib/cookieConsent.js, src/components/GroupView.jsx, index.html, src/lib/venue.js, clienti/demo/venue.json, clienti/pluginCliente.js, scripts/genera-cliente.mjs, DESIGN.md"
+    description: >
+      Daniele, 15/11/2026: «dobbiamo fare il tema lime di Lime
+      SmartOrders». Scelte sue, lo stesso giorno: tavolozza e forme (un
+      tema vero dell'app, non solo colori), in due varianti, scura e
+      chiara, e di partenza per la demo e per i locali che genera la
+      regia, al posto di «Tana scuro». La Tana resta col suo.
+      La demo che si mostra a un locale nuovo aveva i colori della Tana:
+      rosa, oro e la notte del locale (UR-014).
+      CRITERIO: i preset `lime-scuro` e `lime-chiaro` con la famiglia di
+      forme `lime` reggono le soglie di contrasto di DESIGN.md; una build
+      senza cliente o col cliente `tana` parte da `tana-scuro`, una con un
+      altro cliente parte da `lime-scuro`; i temi del catalogo che
+      descrivono i colori della Tana restano sui colori della Tana.
+      COME È FATTO (15/11/2026): FORME.lime (tasti piatti, 14/10px, ombra
+      tenue, titoli in Playfair, il pallino sulle card) e i preset
+      lime-scuro/lime-chiaro in src/lib/themes.js, con i COLORI DELLA REGIA
+      (drink-regia src/index.css, «LA PALETTE LIME», 11/11/2026; Daniele,
+      15/11: «il sito dovrebbe già averli e anche il backoffice in parte»):
+      lime #b4ec2b pieno, #c6f25a per il testo, #16210a sopra il lime (il
+      preset dichiara --btn-ink e --accent-ink); sul chiaro il lime resta
+      un riempimento e il testo in colore è #2f6b0f.
+      `temaDiPartenza(cliente)` sceglie dal cliente della build, e lo usano
+      DEFAULT_SETTINGS (theme_staff, theme_client), resolveThemeVars senza
+      preset e il selettore in Aspetto. DEFAULT_THEME resta tana-scuro: è
+      il tema di casa del catalogo. Il colore della barra del browser della
+      demo e dei locali generati (venue_theme_color) è il fondo di Lime
+      scuro. Tocca il vocabolario dei temi condiviso con la regia
+      (REQ-DEV-025): due id nuovi, da comunicarle.
+      Daniele, lo stesso giorno: «sia per vista cliente sia per il
+      gestionale». Le velature dorate scritte a mano nel foglio (24 punti:
+      tab, voce attiva, ricerca del menù, attesa del cliente, totale del
+      riepilogo) e il banner dei cookie prendono i token del tema; restano
+      fissi solo gli stati (pagato, sincronizzazione) e il riquadro Ceres.
+      Il theme-color della pagina d'ingresso viene da venue_theme_color.
+    status: implemented
+    generate_issue: false
+    labels: [ui, flotta]
+    priority: P2
+    test_cases:
+      - tests/unit/temaLime.test.js
+
+  - id: REQ-FLOTTA-033
+    title: "Il locale della demo ha un nome credibile: «Bancone 21»"
+    area: "clienti/demo/venue.json"
+    description: >
+      Daniele, 15/11/2026, sulle schermate della demo da mettere nella
+      prima pagina della regia: «servirebbe un nome più credibile», e poi
+      «usa bancone 21 per ora». «Bar Demo» si legge come un segnaposto,
+      e nelle foto del prodotto fa sembrare finta l'app intera. Il nome
+      resta inventato: non è un locale vero, e la demo continua a dire
+      nella sua fascia che i dati sono di prova (REQ-FLOTTA-019).
+      CRITERIO: la build della demo si chiama «Bancone 21» nel titolo
+      della pagina e nel manifest (nome corto «Bancone 21»), e le frasi
+      che nominano il locale dicono «al Bancone 21».
+      COME È FATTO (17/11/2026): clienti/demo/venue.json (nome, nome corto,
+      «al Bancone 21», la descrizione del manifest).
+      IL LOGO (Daniele, 17/11/2026: «c'è già il logo di Lime SmartOrders per
+      questa cosa. Al posto del bicchiere»): il bicchiere neutro lascia il
+      posto alla fetta di lime della regia (drink-regia public/favicon.svg).
+      favicon.svg è quel disegno; logo.png, icon-192/512 trasparenti;
+      apple-touch-icon e icon-maskable-512 sul fondo di Lime scuro
+      (#0c0f0a), la maskable col logo al 60% per il margine di Android.
+      Se il logo della regia cambia, questi file si rifanno da lì.
+      LA TESTATA DEL MENÙ (Daniele, 17/11/2026, «Ok» a dare alla demo una
+      testata sua): dietro il nome del locale restava il bicchiere grigio
+      di clienti/demo/public/cocktail-hero.jpg. Ora è il fondo scuro di
+      Lime con fette di lime attenuate ai lati, il centro libero per logo
+      e nome. Tocca solo la demo: ogni cliente della build ha la sua
+      testata. Anche questa si rifà se il logo della regia cambia.
+    status: implemented
+    generate_issue: true
+    labels: [flotta]
+    priority: P2
+    test_cases:
+      - tests/unit/clienteBuild.test.js
+
+  - id: REQ-FLOTTA-034
+    title: "Un sito uguale per tutti i locali: il locale lo dice la configurazione, scritta nella pagina al momento della pubblicazione"
+    area: "src/porte/configurazione.js, src/porte/configurazioneLocale.mjs, src/lib/venue.js, src/lib/themes.js, src/lib/limiti.js, src/lib/funzioniRegia.js, src/lib/passaggioRegia.js, src/lib/aggiornamenti.js, src/main.jsx, src/App.jsx, clienti/pluginCliente.js, clienti/personalizzazione.mjs, scripts/personalizza.mjs, docs/flotta.md"
+    description: >
+      Fase 1 del pacchetto per versione (interfaccia 16 di
+      docs/contratto-regia-app.md della regia, REQ-FLOTTA-137 della regia;
+      Daniele, 18/11/2026: «si fallo entrare e procedi»). La regia compila il
+      sito una volta per versione dal nostro tag e lo personalizza per ogni
+      locale al deploy; la Tana continua a pubblicarsi da GitHub con la sua
+      build, che non cambia (la regola 2 di docs/flotta.md resta, Daniele
+      18/11/2026).
+      COSA SI CHIEDE. (1) La build in modalità pacchetto: nessun locale
+      dentro (`__CLIENTE__` neutro, `__DEMO__` falso), i segnaposto
+      `%VENUE_*%` lasciati in index.html, nel manifest e nelle pagine
+      dell'informativa, il set neutro al posto dei file della Tana, e
+      nessuna `VITE_FIREBASE_*` ammessa nella build. (2) La configurazione
+      porta anche il locale: `venue` (solo le chiavi `venue_*` dell'app,
+      solo testi, i link dei social solo http, https, mailto e tel),
+      `profilo` (completo o leggero) e `regia` (solo i due progetti della
+      regia); un valore fuori elenco vuol dire «vale la build». (3) La
+      configurazione viaggia anche dentro index.html, come blocco
+      `<script id="configurazione" type="application/json">`: arriva con
+      la pagina, anche dalla cache del service worker e al primo avvio. Si
+      legge in quest'ordine: il file ricordato nel dispositivo, il blocco
+      nella pagina, la build. (4) Chi oggi legge la build al caricamento
+      dei moduli (il locale, il tema di partenza, il profilo leggero, la
+      regia) legge la configurazione, che resta sincrona. (5) Senza
+      backend: si ricarica sempre appena il file arriva, non solo nei primi
+      10 secondi, perché nessuno può avere un conto in mano; si riprova
+      quando torna la rete e a intervalli crescenti; al posto dell'app e
+      del banner per lo sviluppatore una schermata a parole comuni, in
+      italiano e inglese, e nessuna scrittura. (6) `scripts/personalizza.mjs`
+      (nel pacchetto `personalizza.mjs`): dato il `dist/` neutro e la
+      configurazione di un locale riempie i segnaposto, scrive il
+      manifest, mette i file del locale sopra il set neutro, scrive
+      `configurazione.json` e il blocco nella pagina; rifiuta un `dist/`
+      già personalizzato e una configurazione che l'app non seguirebbe, ed
+      esce con errore se resta un segnaposto.
+      IL RISCHIO CHE SI CHIUDE (R3 nell'analisi del 18/11/2026): i tablet
+      già installati hanno il locale nella build e nessuna configurazione
+      ricordata; alla prima apertura del sito uguale per tutti, con la
+      pagina arrivata e il file no, partirebbero su un progetto finto e
+      vedrebbero la coda vuota. Col blocco nella pagina il locale arriva
+      insieme alla pagina.
+      CRITERIO: un `dist/` compilato in modalità pacchetto non contiene
+      nomi né file della Tana e non ha backend; personalizzato, si apre col
+      locale della configurazione; un dispositivo con la configurazione
+      nella pagina parte senza rete col progetto giusto; un sito senza
+      backend mostra la schermata e non scrive.
+      COME È FATTO (18/11/2026, ramo feature/pacchetto). La regola su cosa
+      ammette una configurazione sta in src/porte/configurazioneLocale.mjs,
+      un modulo senza dipendenze usato dall'app (che lascia cadere) e da
+      personalizza.mjs (che rifiuta). La porta (src/porte/configurazione.js)
+      legge il blocco della pagina, completa profilo e regia con quelli della
+      build, ricarica sempre senza backend e riprova (seguiConfigurazione:
+      all'evento online e dopo 5 s, 15 s, 30 s, 1, 2 e 5 minuti). venue.js,
+      themes.js, limiti.js, funzioniRegia.js e passaggioRegia.js leggono la
+      configurazione; PROGETTI_REGIA sta nel modulo comune. main.jsx, senza
+      backend e fuori dallo sviluppo, disegna NonCollegata al posto
+      dell'app e non avvia progressivi né banner dei cookie. La build in
+      modalità pacchetto è `PACCHETTO=1 npm run build` (clienti/pluginCliente.js),
+      e si ferma se trova una VITE_FIREBASE_*, VITE_PROFILO,
+      VITE_REGIA_PROGETTO o gli emulatori. Le funzioni che scrivono il
+      locale nei file stanno in clienti/personalizzazione.mjs, comuni alla
+      build e a scripts/personalizza.mjs. Il modulo è caricabile anche da
+      Node (le costanti della build lette con typeof): i test di sistema e
+      il seme arrivano fin lì da lib/limiti.js.
+      Dalla revisione: i sostituti di replace sono funzioni (un «$'» nei
+      testi del locale copiava pezzi di pagina nel blocco), e personalizza
+      rilegge il blocco scritto; un file rovinato non fa dimenticare quello
+      buono (prima, con una rete che alternava un JSON rotto e il file,
+      l'app si ricaricava a ogni giro); senza backend il codice della regia
+      resta nell'indirizzo, perché la ricarica lo perdeva; il pacchetto
+      rifiuta anche VITE_APP_ENV diverso da production. tests/unit/avvioApp.test.jsx
+      prova che senza backend non partono progressivi né cookie.
+    status: implemented
+    generate_issue: true
+    labels: [flotta]
+    priority: P1
+    test_cases:
+      - tests/unit/configurazioneLocale.test.js
+      - tests/unit/personalizza.test.js
+      - tests/component/NonCollegata.test.jsx
+      - tests/sistema/sitoPerTutti.spec.js
+
+  - id: REQ-FLOTTA-035
+    title: "Il pacchetto per versione si compila al tag e si pubblica nella Release di GitHub di tana-drink"
+    area: "scripts/crea-pacchetto.mjs, .github/workflows/pacchetto.yml, docs/flotta.md, docs/gitflow.md"
+    description: >
+      Daniele, 18/11/2026 (nel messaggio della regia msg-tana-pacchetto-6):
+      «tana drink compila il pacchetto, provisiona istanza e aggiorna
+      istanza aggiornano con il pacchetto di release di tana-drink», e «si
+      puo mettere nella parte dei rilasci di github e appare in releases».
+      È la seconda fase di REQ-FLOTTA-034, interfaccia 16 del contratto con
+      la regia (docs/contratto-regia-app.md in drink-regia, REQ-FLOTTA-137 e
+      REQ-FLOTTA-140 della regia).
+
+      COSA: `node scripts/crea-pacchetto.mjs --tipo locali|demo` compila il
+      sito (locali: `PACCHETTO=1`; demo: `CLIENTE=demo`, come la compila la
+      regia oggi), lo mette insieme a functions/ con le sole dipendenze di
+      produzione (solo locali), firebase.json, le regole, gli indici e
+      `personalizza.mjs` in un file solo (solo locali), scrive
+      `pacchetto.json` nel formato 1 (versione, tag, beta, commit,
+      strumenti, personalizzabili, `campiVenue` sempre presente e mai vuoto,
+      l'impronta di ogni file) e ne fa `pacchetto-<tipo>-vX.Y.Z.tgz` con
+      accanto il `.sha256`. Il workflow `pacchetto.yml`, a ogni tag `v*`,
+      fa girare lint e test, compila i due pacchetti e li allega alla
+      Release del tag.
+
+      LE REGOLE DEL RILASCIO (dalla regia, 18/11/2026):
+      - un pacchetto non beta esce solo se il commit del tag sta in `main`
+        e lint e test su quel commit sono passati;
+      - un file allegato non si sostituisce mai: una versione corretta è
+        una versione nuova;
+      - la regola 2 di docs/flotta.md resta: il workflow scrive solo nella
+        Release di tana-drink, nessuna credenziale verso la regia;
+      - `scripts/genera-cliente.mjs` resta, come ripiego della regia
+        (interfaccia 12).
+
+      COME È FATTO (18/11/2026): il comando rifiuta un `.env` nella radice
+      (la build lo leggerebbe), i file tracciati modificati (il manifesto
+      dice un commit) e un tag diverso da `v` + package.json; controlla la
+      build come la controllava la regia (nei locali i segni della demo di
+      controlla-build-senza-demo.mjs e i segnaposto, nella demo la demo e
+      niente `drinkpos-demo`); le dipendenze delle Functions con
+      `npm ci --omit=dev --no-bin-links` (un collegamento in node_modules
+      è un percorso che esce dal pacchetto, e la regia lo rifiuta);
+      personalizza.mjs unito da Vite in modalità server, senza public/.
+      Il workflow crea la Release in bozza e la pubblica dopo l'ultimo
+      file, perché con le «release immutabili» di GitHub dopo non si
+      aggiunge più niente; prima gli archivi e poi le impronte. Il test
+      che legge il workflow sta in tests/unit/flottaCi.test.js (che è di
+      REQ-FLOTTA-001). Provato in locale con le regole della regia
+      (scripts/lib-pacchetto.js di drink-regia): il pacchetto dei locali
+      passa i controlli prima e dopo personalizza.mjs lanciato dalla
+      radice del pacchetto con un ambiente vuoto, quello della demo
+      passa i suoi.
+
+      Dalla revisione (18/11/2026): docs/gitflow.md e CLAUDE.md dicevano di
+      taggare `vX.Y.Z` su develop e `vX.Y.Z-prod` su main, e con quella
+      regola un pacchetto non beta non sarebbe uscito mai, in silenzio.
+      Riallineati alla pratica dei rilasci dalla 1.10.43 (il tag pieno
+      solo sul commit di main), e un tag su main che non è v + package.json
+      ferma il workflow in rosso. problemiDelManifesto ora copia tutti i
+      controlli di lib-pacchetto.js della regia (beta, impronte, percorsi,
+      strumenti, profili), da tenere allineati a mano; APP_VERSION fuori
+      dalla build; --uscita dentro dist/ rifiutata. Restano aperte le
+      «release immutabili» di GitHub (impostazione del repository, la
+      decide Daniele) e la ripresa di un giro interrotto, che oggi è a
+      mano (docs/flotta.md).
+    status: implemented
+    generate_issue: true
+    labels: [flotta]
+    priority: P1
+    test_cases:
+      - tests/unit/creaPacchetto.test.js
+  - id: REQ-FLOTTA-036
+    title: "Le Functions di un locale della flotta girano con un account dedicato, coi soli permessi che usano"
+    area: "functions/index.js (setGlobalOptions), functions/.env.<progetto>, docs/flotta.md"
+    description: >
+      Daniele, 19/11/2026: «sì» all'account dedicato proposto alla regia il
+      17/11 (REQ-FLOTTA-132 della regia, togliere Editor dall'account
+      predefinito di Compute; risposta-regia-ruolo-editor). Oggi le
+      Functions di ogni locale girano con l'account predefinito di Compute,
+      che sui progetti nuovi ha Editor: molto più di quello che usano.
+      COSA: le Functions di un locale della flotta girano come un account
+      dedicato (`functions@<progetto>`) coi ruoli dell'analisi del 17/11:
+      datastore.user, firebaseauth.admin, firebasecloudmessaging.admin,
+      secretmanager.secretAccessor sul solo SUMUP_API_KEY, logging.logWriter,
+      e per i trigger eventarc.eventReceiver e run.invoker. `richiestaAI`
+      resta su `ai-locale@`. La Tana di produzione e il suo test restano
+      come sono.
+      COME SI ACCENDE, per non rompere un deploy: solo dove la regia ha già
+      creato l'account e dato all'account del deploy il permesso di «agire
+      come» lui (roles/iam.serviceAccountUser): senza, il deploy di tutte le
+      Functions si ferma con iam.serviceaccounts.actAs. Quindi lo accende
+      una variabile che la regia scrive in functions/.env.<progetto> quando
+      l'account c'è, non la sola presenza di REGIA_PROGETTO. La forma va
+      concordata con la regia.
+      PROVA: insieme alla regia su un locale di prova: il deploy, un ordine
+      dal menù con la sua notifica, il pagamento col lettore simulato,
+      un'utenza creata da staffAdmin, i trigger del magazzino.
+    status: todo
+    generate_issue: true
+    labels: [flotta, sicurezza]
+    priority: P2
+    test_cases: []
   - id: REQ-PAG-013
     title: "Lo sconto cade sui prodotti che si stanno riscuotendo, e gli sconti si accumulano"
     area: "src/lib/pagamento.js, src/components/PaymentScreen.jsx, src/lib/api.js, src/lib/printer.js, functions/lib/payment-core.js"
@@ -15984,9 +16336,21 @@ requirements:
       - tests/unit/css.test.js
 
   - id: REQ-MENU-015
-    title: "Il ghiaccio nelle ricette: 1,6 volte la dose scritta in origine"
+    title: "Il ghiaccio nelle ricette: la dose si porta a un multiplo di quella scritta in origine (in produzione ×1,5)"
     area: "scripts/ghiaccio-nelle-ricette.js, scripts/lib-ghiaccio.js"
     description: >
+      IN PRODUZIONE ×0,75 DELLE DOSI DI ALLORA, IL 16/11/2026. Daniele:
+      «moltiplicare il ghiaccio in tutte le ricette dove è presente x0,75 in
+      produzione. Quindi prima backup poi moltiplichiamo». Il ×0,8 del
+      29/10 in produzione non era mai passato: il segno sull'articolo
+      diceva ×2 (200 dove l'originale diceva 100). Backup completo
+      (backup/tana-drink-2026-11-16-15-33-39.json, 18.563 documenti),
+      anteprima, poi `--a 1.5`: 110 ricette, 110 righe, 200 → 150, 400 →
+      300, segno a ×1,5; riletto dopo, le dosi sono quelle. Sul test il
+      segno è ancora ×2 (il catalogo è quello copiato dalla produzione il
+      10/11). Da qui lo script non ha più un obiettivo di partenza: senza
+      `--a` dice solo dove stanno le dosi, perché con 1,6 di partenza
+      avrebbe riportato la produzione a ×1,6 in silenzio.
       RIPENSATO ANCORA IL 29/10/2026: ×0,8 DELLE DOSI ATTUALI, CIOE' ×1,6
       DELL'ORIGINALE. Nella lista di Flavio: «moltiplicare per 0,8 tutte
       le quantita' di Ghiaccio Hoshizaki nelle ricette degli ITEMS di
@@ -17152,7 +17516,7 @@ requirements:
 
   - id: REQ-DEV-025
     title: "I valori che stanno anche nella regia restano uguali nei due repository"
-    area: "src/lib/licenzaInVigore.js (LIMITI_FREE), src/lib/licenza.js (MODULI_PREMIUM), src/lib/themes.js, src/lib/stileMenu.js, src/lib/stiliRicetta.js, src/lib/marketplaceTemi.js, scripts/lib-titolare.js, l'ora del taglio"
+    area: "src/lib/licenzaInVigore.js (LIMITI_FREE), src/lib/licenza.js (MODULI_PREMIUM), src/lib/themes.js, src/lib/stileMenu.js, src/lib/stiliRicetta.js, src/lib/marketplaceTemi.js, scripts/lib-titolare.js, l'ora del taglio, src/components/MarchioLime.jsx e clienti/demo/public/favicon.svg (il logo), src/lib/prodotto.js (NOME_PRODOTTO, QUALIFICA_PRODOTTO)"
     description: >
       Dalla regia, contratto delle interfacce del 14/11/2026: alcuni valori
       stanno in tutti e due i repository e vanno tenuti allineati a mano —
@@ -17167,3 +17531,834 @@ requirements:
     generate_issue: true
     labels: [metodo, regia]
     test_cases: []
+
+  - id: REQ-DEV-026
+    title: "La spesa dei servizi Google ha un tetto: istanze limitate e indirizzi pubblici che non lavorano a vuoto"
+    area: "functions/index.js (setGlobalOptions, OPTS_PUBBLICO), functions/lib/payment-service.js (handleReaderWebhook)"
+    description: >
+      Daniele, 15/11/2026: «non voglio trovarmi a pagare migliaia di euro».
+      I progetti dei locali nascono sull'account di fatturazione di Stonebit:
+      quello che consumano Functions, Firestore e Storage lo paga Stonebit.
+      Controllo dei costi chiesto dalla regia il 15/11 (messaggio «un
+      controllo dei costi delle vostre Functions»), risposto il 16/11 con
+      otto punti; questa voce copre i primi.
+      PRIMA nessuna delle venti Functions aveva `maxInstances`: Google ne
+      accende fino a 100 per Function, e un indirizzo pubblico bombardato
+      apposta moltiplica la spesa senza un tetto. ADESSO il tetto è 10 per
+      tutte, impostato una volta in `setGlobalOptions` così vale anche per
+      le Functions che arriveranno; 3 per le quattro chiamabili che il
+      cliente usa senza account (checkout online e verifica, singolo e di
+      gruppo), dove l'id del conto fa da lasciapassare e ogni chiamata
+      legge Firestore prima di qualunque controllo.
+      IL WEBHOOK DEI PAGAMENTI RESTA A 10, non a 3 (regia, 16/11/2026):
+      finché non si sa se SumUp ritenta una notifica rifiutata con 429, un
+      tetto basso può far perdere un pagamento confermato. E SUI TRIGGER
+      NIENTE SOTTO 10: per la seconda generazione Google non scrive cosa
+      succede a un evento che trova le istanze piene, e senza nuovi
+      tentativi (il predefinito) può perdersi; 10 un bar non li riempie.
+      La prova la fa la regia sul suo progetto di test.
+      IL WEBHOOK DEL LETTORE chiedeva l'esito a SumUp prima di sapere se la
+      transazione era di un conto del locale: un POST con un id inventato
+      costava due query e una chiamata a SumUp. Ora si chiama SumUp solo se
+      un conto o un pagamento di gruppo con quell'id esiste.
+      NON QUI: App Check imposto sulle chiamabili (oggi non c'è nei
+      progetti dei locali, ed è una decisione di Daniele, REQ-SIC-002); la
+      coda pagata due volte e il riassunto per le pagine del cliente (punti
+      5 e 6 del controllo), che toccano la coda e vanno provati senza rete.
+      CRITERIO: il tetto globale e quello delle chiamabili del cliente
+      (tests/bdd/tetti-functions.test.js, che legge functions/index.js come
+      testo); il webhook del lettore che non chiama SumUp per un id che non
+      è del locale (tests/bdd/payment-reader.test.js); le foto del menù
+      (BUG-160, tests/regole/storage.test.js); i numeri doppi (BUG-161,
+      tests/bdd/numerazione.test.js).
+    status: implemented
+    generate_issue: false
+    labels: [dev, functions, costi]
+    priority: P1
+    test_cases:
+      - tests/bdd/tetti-functions.test.js
+      - tests/bdd/payment-reader.test.js
+      - tests/bdd/numerazione.test.js
+      - tests/regole/storage.test.js
+
+  - id: REQ-TAVOLI-003
+    title: "La sala in pianta: una schermata coi tavoli al loro posto, i loro conti e i loro ordini, e un editor per disporli"
+    area: "src/pages/BartenderPage.jsx (coda ordini), anagrafica dei tavoli (REQ-TAVOLI-001)"
+    description: >
+      Daniele, 16/11/2026, per l'uso nei ristoranti: «posizionamento
+      grafico tavoli su CODA ORDINI in modalità vista dall'alto/occhio di
+      falco». Nella coda, oltre all'elenco dei conti, una vista con la
+      pianta della sala: ogni tavolo al suo posto, e su ciascuno quello che
+      serve a chi lavora (il conto aperto, cosa aspetta, cosa è pronto). La
+      pianta la disegna il gestore, mettendo i tavoli dell'anagrafica dove
+      stanno.
+      DECISO (Daniele, 16/11/2026): «I tavoli sarebbero gli ordini quindi
+      fa esattamente quello che fa adesso. Al massimo si gestisce lo stato
+      di libero/occupato per ora». Il tavolo in pianta è il conto: si legge
+      e si tocca come la card della coda di oggi; in più, ogni tavolo dice
+      se è libero o occupato. Una sala sola, per ora; forme e misure dei
+      tavoli no, solo la posizione.
+      PRECISATO LO STESSO GIORNO (Daniele, 16/11/2026): non dentro la coda,
+      ma UNA SCHERMATA APPOSTA, «magari affianco a quella degli ordini
+      (delivery/asporto)»: la Sala, dove si vedono i tavoli occupati, i
+      loro conti, e gli ordini e i conti di quegli ordini; gli ordini senza
+      tavolo (delivery, asporto) restano nella schermata degli ordini. E
+      «un editor della sala dove posizionare i tavoli», una schermata sua.
+      È un'opzione della versione per i ristoranti: sta nel modulo
+      «ristorante» (REQ-LIC-019).
+      Richiede l'anagrafica dei tavoli (REQ-TAVOLI-001, ancora da fare).
+      Lavora in locale come la coda: la pianta si aggiorna all'istante.
+    status: todo
+    generate_issue: true
+    labels: [tavoli, coda, ristorante]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-MAG-057
+    title: "Nella scheda del prodotto: scadenza, apertura e decadimento"
+    area: "scheda del prodotto di magazzino (InventoryManager), src/lib/inventory.js"
+    description: >
+      Daniele, 16/11/2026, per l'uso nei ristoranti: «in PRODOTTI inserire
+      in ogni prodotto le caselle: SCADENZA - APERTURA - DECADIMENTO».
+      Lettura proposta: SCADENZA è la data di scadenza della confezione;
+      APERTURA la data in cui la confezione è stata aperta; DECADIMENTO
+      per quanti giorni il prodotto resta buono dopo l'apertura. Da
+      apertura e decadimento si ricava il «da consumare entro».
+      DECISO (Daniele, 16/11/2026): a una scadenza vicina o passata, «un
+      avviso e un elenco» nel gestionale. Il prodotto NON esce dal menù da
+      solo: «se il prodotto esce dal menu dovrebbe sempre deciderlo il
+      gestore».
+      DA CONFERMARE (proposta, senza risposta il 16/11): il decadimento è un
+      dato del prodotto, scadenza e apertura sono della confezione in uso;
+      l'apertura si registra dal gestionale.
+    status: todo
+    generate_issue: true
+    labels: [magazzino, ristorante]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-MENU-045
+    title: "«Oscura automaticamente» si sceglie sul prodotto di magazzino: a giacenza zero o sotto, le voci che lo usano escono dal menù dei clienti"
+    area: "scheda del prodotto di magazzino (InventoryManager), functions/lib/disponibilita.js, functions/index.js (disponibilitaDalMagazzino)"
+    description: >
+      Daniele, 16/11/2026, per Flavio: «all'interno della scheda Prodotto
+      inserire casella da selezionare per abilitare funzione OSCURA
+      AUTOMATICAMENTE (questa funzione oscura nel MENU CLIENTI tutte le
+      voci che contengono questo prodotto nel ricettario quando arriva a 0
+      o negativo) … Adesso flavio lo vuole per prodotto».
+      È la domanda lasciata aperta da REQ-MENU-017 («se l'opzione vale per
+      la voce o per il prodotto di magazzino»), ora decisa: per il
+      PRODOTTO DI MAGAZZINO. Oggi l'opzione sta sul prodotto della cassa
+      (`segue_giacenze`) e guarda tutti i suoi ingredienti; Flavio vuole
+      dire, ingrediente per ingrediente, quali contano — il gin sì, il
+      lime e il ghiaccio no.
+      Valgono le regole di REQ-MENU-017: al cliente non si dice mai cosa
+      manca; il segno lo scrive la Cloud Function solo quando la giacenza
+      attraversa lo zero; al banco la voce resta.
+      DECISO (Daniele, 16/11/2026): vale la soglia delle Impostazioni
+      («anche la soglia nelle impostazioni»): esaurito, oppure già in
+      esaurimento, come per l'opzione sul prodotto della cassa.
+      L'OPZIONE SUL PRODOTTO DELLA CASSA RESTA, e le due si sommano: la
+      domanda non ha avuto risposta, ed è la scelta che non cambia niente a
+      chi l'ha già accesa e non chiede un travaso. Una voce esce dal menù se
+      segue le giacenze e un suo ingrediente (non di servizio) manca,
+      OPPURE se manca un ingrediente con «Oscura automaticamente» — anche di
+      servizio: la spunta sul prodotto è una scelta esplicita.
+      FATTO (1.10.52-beta): `oscura_automaticamente` sul prodotto di
+      magazzino, casella «Oscura automaticamente» nella scheda;
+      `nonDisponibile` e `vociDaRicalcolare` in functions/lib/disponibilita.js;
+      `disponibilitaDalMagazzino` rilegge tutte le voci quando il prodotto
+      ha la spunta (o la spunta cambia), `disponibilitaDalleImpostazioni`
+      tutte le voci quando cambia la soglia.
+    status: implemented
+    generate_issue: true
+    labels: [menu, magazzino, vista-cliente]
+    priority: P1
+    test_cases:
+      - tests/bdd/disponibilita.test.js
+      - tests/component/InventoryManagerCard.test.jsx
+
+  - id: REQ-LIC-019
+    title: "Il modulo «ristorante»: le personalizzazioni per i ristoranti, vendute insieme quando nella regia si sceglie «ristorante»"
+    area: "src/lib/licenza.js (MODULI_PREMIUM), firestore.rules (modulo()), la regia (piani.json, elenco dei moduli)"
+    description: >
+      Daniele, 16/11/2026: «la vista dei tavoli è un'opzione per la
+      versione per ristoranti. Le customizzazioni per il ristorante sono un
+      modulo a parte ma entrambi si vendono come uno se dalla regia
+      selezionano ristorante e alla regia dopo va detto». Un modulo nuovo,
+      `ristorante`, come gli altri di MODULI_PREMIUM: dentro, per ora, la
+      Sala e l'editor della sala (REQ-TAVOLI-003). Quando nella regia il
+      locale è un ristorante, il modulo viaggia insieme a quelli che
+      servono, come un pacchetto solo.
+      INTERFACCIA CON LA REGIA: l'elenco dei moduli è una copia tenuta
+      allineata a mano (REQ-DEV-025). Va detto alla regia prima di
+      rilasciarlo: id del modulo, la scelta «ristorante» che lo porta con
+      sé, e da quali moduli dipende (la Sala richiede l'anagrafica dei
+      tavoli, quindi probabilmente `menu_tavoli`). Da decidere con la regia
+      se «ristorante» è un piano, un tipo di locale o un pacchetto di
+      moduli.
+      I TIPI DI LOCALE (Daniele, 17/11/2026, alla domanda della regia):
+      contano come ristorante sia «ristorante» sia «pizzeria». Il modulo
+      `ristorante` si vende ai locali registrati con uno dei due tipi; la
+      regia passa il tipo vero scelto alla registrazione (fino a oggi
+      mandava `bar` a tutti).
+    status: todo
+    generate_issue: true
+    labels: [licenza, ristorante, regia]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-SITO-001
+    title: "Le sezioni del sito del locale, sempre raggiungibili dal menu laterale della vista cliente"
+    area: "src/components/ClientDrawer.jsx, src/pages/LandingPage.jsx, pagine nuove (Chi siamo, Contatti), src/App.jsx (rotte)"
+    description: >
+      Daniele, 17/11/2026: «Nella vista cliente, nel menu laterale ci
+      devono essere le sezioni del sito raggiungibili sempre (Chi siamo,
+      contatti, menu e altre sezioni da decidere). Il gestionale vede
+      queste pagine solo nella vista cliente».
+      Oggi «chi siamo» e i contatti stanno dentro la pagina iniziale, e il
+      menu laterale del cliente ha solo Menù e I miei ordini. Diventano
+      sezioni con un indirizzo ciascuna, e il menu laterale del cliente
+      elenca sempre quelle mostrate (REQ-SITO-005): Home, Chi siamo,
+      Contatti, Menù (quando è visibile ai clienti). Il personale le vede
+      passando alla vista cliente, non dal menu del gestionale. I dati
+      vengono da Identità del locale (`venue_*`, REQ-VENUE-002). Altre
+      sezioni (orari, eventi) da decidere: docs/tema-del-sito.md.
+    status: todo
+    generate_issue: true
+    labels: [sito, cliente, navigazione]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-SITO-002
+    title: "Il tema del menù veste anche le pagine del sito: la Tana ha «Carte» anche in Chi siamo e Contatti"
+    area: "src/lib/stileMenu.js (pagine, vestePagine), src/lib/testiStile.js, src/pages/LandingPage.jsx, pagine del sito, src/index.css"
+    description: >
+      Daniele, 17/11/2026: «Dobbiamo iniziare a propagare il tema del menu
+      cliente anche alle altre pagine della home del locale … Nel caso
+      della tana, io estenderei il tema carte anche alle pagine chi siamo e
+      contatti». È il primo passo di REQ-MENU-044: il tema del menù veste
+      Home, Chi siamo e Contatti nei colori, nei caratteri e nelle frasi;
+      «Carte» in più nella forma (i contenuti scritti su una carta), come
+      «Meraviglie» fa già con `pagine: true`. Un tema che non porta le
+      pagine del sito le lascia al disegno di base. Il tema del sito come
+      scelta separata dal tema del menù resta per dopo
+      (docs/tema-del-sito.md, punto 2).
+    status: todo
+    generate_issue: true
+    labels: [sito, temi, cliente]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-SITO-003
+    title: "La foto del banner della pagina iniziale la sceglie il locale"
+    area: "src/pages/LandingPage.jsx, src/components/IdentitaLocale.jsx, src/lib/storage.js, storage.rules"
+    description: >
+      Daniele, 17/11/2026: «Anche la foto nel banner del tema attuale della
+      home del locale dovrebbe poter essere customizzata». Oggi la foto in
+      apertura della pagina iniziale è quella del tema. Il gestore ne
+      carica una sua da Identità del locale; senza, resta quella del tema.
+      Va su Storage (sul profilo leggero resta quella del tema) e la carica
+      chi gestisce il locale, come le foto dei prodotti (BUG-160).
+    status: todo
+    generate_issue: true
+    labels: [sito, cliente, temi]
+    priority: P3
+    test_cases: []
+
+  - id: REQ-SITO-004
+    title: "La home del locale è un modulo: senza, l'indirizzo del locale apre il menù o una pagina di cortesia"
+    area: "src/lib/licenza.js (MODULI_PREMIUM), src/App.jsx (la rotta /), pagina di cortesia nuova, la regia (piani.json, elenco dei moduli)"
+    description: >
+      Daniele, 17/11/2026: «la home del locale è un modulo a parte … Disabilitando
+      il modulo home la home diventa il menu se il locale sceglie così,
+      altrimenti una pagina di cortesia con il nome e le info base del
+      canale. In pratica se non c'è home allora menu altrimenti pagina di
+      cortesia».
+      CON IL MODULO: la home con le sue sezioni (REQ-SITO-001, REQ-SITO-005).
+      SENZA: all'indirizzo del locale si apre il menù dei clienti, se il
+      locale lo sceglie e il menù è visibile; altrimenti una pagina di
+      cortesia col nome del locale e le informazioni di base (indirizzo,
+      telefono, orari), vestita dal tema.
+      INTERFACCIA CON LA REGIA: un modulo nuovo cambia l'elenco dei moduli
+      tenuto allineato a mano (REQ-DEV-025): va detto alla regia prima di
+      rilasciarlo, con l'id (proposta: `home`), cosa resta senza modulo e
+      in quale piano sta. Da decidere con Daniele: il piano, e se la Tana
+      lo ha (oggi la home ce l'ha: senza modulo nella licenza la
+      perderebbe).
+    status: todo
+    generate_issue: true
+    labels: [sito, licenza, regia]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-SITO-005
+    title: "L'editor della home: le sezioni fisse si mostrano o si nascondono"
+    area: "Impostazioni (sito del locale), settings/bar (sezioni del sito), src/pages/LandingPage.jsx, src/components/ClientDrawer.jsx"
+    description: >
+      Daniele, 17/11/2026: «l'editor della home abbiamo detto consente di
+      cambiare invece le sezioni visualizzate. Avremo delle sezioni fisse
+      che possono essere mostrate o meno». Le sezioni le diamo noi (Chi
+      siamo, Contatti, Menù, poi quelle da decidere); il gestore sceglie
+      quali mostrare. Una sezione nascosta sparisce dalla home e dal menu
+      laterale, e il suo indirizzo rimanda alla home. Niente pagine libere.
+      La scelta sta in `settings/bar`, come proposto in
+      docs/tema-del-sito.md (punto 1).
+    status: todo
+    generate_issue: true
+    labels: [sito, cliente, impostazioni]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-UI-034
+    title: "Gli avvisi del menù dei clienti si vedono, e vestono il tema"
+    area: "src/pages/MenuPage.jsx (avvisi: sola consultazione, posizione, errori), src/index.css, src/lib/stileMenu.js"
+    description: >
+      Daniele, 17/11/2026: «Gli avvisi che escono nel menu dovrebbero
+      essere più visibili e più integrati con il tema». Sono le strisce del
+      menù dei clienti — «Solo consultazione», «Verifico che sei al
+      locale», «Devi essere al locale per ordinare», gli errori — che oggi
+      usano il `.banner` generico, uguale in ogni tema e poco visibile sul
+      fondo del menù. Diventano un avviso del menù: colori e caratteri del
+      tema, un contrasto che si legge su ogni fondo, e in «Carte» la forma
+      del tema. Il testo non cambia.
+      FATTO (1.10.53-beta): `.avviso-menu` in index.css (fondo del tema
+      tinto d'accento, filo d'accento, testo del tema; in «Carte» la carta
+      del mazzo); le strisce del menù lo usano, con `role="status"` (e
+      `role="alert"` per gli errori), che le fa annunciare ai lettori di
+      schermo (REQ-UI-036).
+    status: implemented
+    generate_issue: true
+    labels: [menu, temi, cliente]
+    priority: P2
+    test_cases:
+      - tests/component/MenuPage.test.jsx
+
+  - id: REQ-UI-035
+    title: "Il marchio «LIME - SmartOrders» col suo logo: in cima al menu laterale del gestionale, e in alto solo per demo e Free"
+    area: "src/components/MarchioLime.jsx, src/components/StaffDrawer.jsx (testata del menu), src/App.jsx (topbar), src/lib/limiti.js (marchioDelProdottoInAlto), src/lib/sezioni.js (nelGestionale), src/index.css"
+    description: >
+      Daniele, 17/11/2026: nel gestionale il titolo in alto diventa il logo
+      LIME - SmartOrders, «lo trovi nella regia». Il logo è quello della
+      regia (drink-regia, src/components/Logo.jsx e public/favicon.svg: una
+      fetta di lime che sembra un grafico a torta, decisione del
+      09/11/2026), copiato com'è: è un'altra copia tenuta allineata a mano
+      con la regia (REQ-DEV-025). Solo nel gestionale: le pagine dei
+      clienti restano col logo e il nome del locale.
+      FATTO (1.10.53-beta): `MarchioLime.jsx` (logo, «Lime» e la qualifica
+      «SmartOrders» piccola in maiuscolo, come nella barra della regia);
+      il gestionale è /bar, /pos e /profilo-staff (`nelGestionale` in
+      lib/prodotto.js). Il menu laterale tiene il nome del locale.
+      CORRETTO IL 17/11/2026, sulla 1.10.53-beta (Daniele): «deve apparire
+      solo nel menu, non nelle pagine. Dove sta scritto Gestionale in alto
+      nel menu. Nelle pagine logo e nome locale. Solo demo avrà quelle
+      scritte e il free al posto del nome del locale e del logo del
+      locale». Quindi: il marchio LIME sta nella testata del menu laterale
+      del gestionale, al posto di «Gestionale»; nella barra in alto delle
+      pagine tornano logo e nome del locale; solo la demo e i locali Free
+      (`pianoFree`) mostrano lì il marchio LIME al posto del locale.
+      Sul Free anche nelle pagine dei clienti, home e menù compresi
+      (Daniele, 17/11/2026, alla domanda del revisore).
+    status: implemented
+    generate_issue: true
+    labels: [ui, marchio, gestionale]
+    priority: P2
+    test_cases:
+      - tests/component/MarchioLime.test.jsx
+      - tests/component/AppHeader.test.jsx
+
+  - id: REQ-SIC-006
+    title: "Lo Storage segue la licenza: le foto dove il piano le comprende, gli allegati delle fatture col loro modulo"
+    area: "storage.rules, tests/regole/storage.test.js, .github/workflows/test.yml (job delle regole), IAM dei progetti (service agent dello Storage)"
+    description: >
+      Daniele, 17/11/2026, alla domanda della regia «Le regole di Storage
+      leggono la licenza?»: sì. Col Free col profilo completo
+      (REQ-FLOTTA-122 della regia) lo Storage c'è anche dove il piano non
+      lo comprende: l'app nasconde le foto sul Free (limiti.js,
+      `fotoConsentite`), ma le regole di Storage non leggevano la licenza,
+      e un admin di un Free poteva caricare foto chiamando lo Storage a
+      mano, a spese di Stonebit.
+      ORA le regole di Storage leggono `licenza/attuale` da Firestore, con
+      la stessa domanda delle regole di Firestore (licenza valida, scaduta,
+      al Free, moduli): le foto dei prodotti si caricano solo con una
+      licenza valida e non Free; gli allegati delle fatture solo col modulo
+      `scadenzario` o `magazzino`, come la loro collezione. Cancellare e
+      leggere non chiedono la licenza: un locale fermo deve poter fare
+      pulizia e vedere i suoi documenti.
+      IL PREZZO, INFRASTRUTTURA: le regole che leggono Firestore dallo
+      Storage vogliono il ruolo `roles/firebaserules.firestoreServiceAgent`
+      al service agent dello Storage del progetto
+      (service-<numero>@gcp-sa-firebasestorage.iam.gserviceaccount.com).
+      Senza, la lettura fallisce e nessuno carica più foto. Va dato prima
+      del deploy su tana-drink-test, tana-drink (col via libera di Daniele)
+      e nei locali della flotta (il Terraform della regia).
+      FATTO SULLA TANA (17/11/2026, comando lanciato su richiesta di
+      Daniele): il ruolo c'è su tana-drink-test e su tana-drink, riletto
+      dalla policy. Per la flotta lo fa la regia.
+      UN CARICAMENTO RIFIUTATO SI DICE IN CHIARO (la regia, 17/11/2026: il
+      ruolo appena dato impiega qualche minuto a valere): lib/storage.js
+      traduce `storage/unauthorized` in una frase che dice di riprovare, e
+      la scheda resta aperta.
+      L'ORDINE DEI RILASCI (dal revisore, 17/11/2026): il deploy non
+      interattivo di firebase-tools salta la concessione del ruolo senza
+      dirlo, e la regia lo dà nel Terraform (REQ-FLOTTA-124) solo su
+      develop. Un tag di produzione con queste regole non deve arrivare a
+      un locale della flotta prima che la REQ-FLOTTA-124 sia su main della
+      regia e applicata ai locali esistenti. scripts/setup-firebase-env.sh
+      lo concede agli ambienti nuovi. Le funzioni sulla licenza delle due
+      regole sono le stesse, e una prova lo controlla.
+      LE PROVE IN CI (17/11/2026, su richiesta di Daniele): il job delle
+      regole accende anche lo Storage (`--only firestore,storage` in
+      .github/workflows/test.yml), e le prove di storage.rules girano.
+      FATTO (1.10.53-beta): storage.rules legge la licenza
+      (licenzaValida, alFree, modulo, fotoConsentite);
+      tests/regole/storage.test.js la prova con gli emulatori di Storage e
+      Firestore insieme, nel progetto degli emulatori.
+    status: implemented
+    generate_issue: true
+    labels: [sicurezza, licenza, costi]
+    priority: P1
+    test_cases:
+      - tests/regole/storage.test.js
+      - tests/unit/regoleStorageLicenza.test.js
+      - tests/unit/allegatoInArchivio.test.js
+
+  - id: REQ-MAG-058
+    title: "Il modulo «Product Tracking»: il prodotto entra in magazzino dal telefono, scansionando etichetta o codice a barre"
+    area: "magazzino (carico, scheda prodotto), src/lib/licenza.js (MODULI_PREMIUM), la regia (elenco dei moduli)"
+    description: >
+      Daniele, 17/11/2026: «altro modulo da aggiungere è Product Tracking
+      che in pratica ti consente di aggiungere all'inventario da
+      smartphone direttamente scansionando l'etichetta del prodotto o il
+      codice a barre per recuperare informazioni sulla scadenza, fornitore
+      etc. Cerca KitchenTracker, dobbiamo fare quello che fa questa app».
+      Un'app con quel nome esatto non si trova; la più vicina è
+      KitchenTrace, HACCP per cucine professionali: si inquadra
+      l'etichetta, l'app legge codice a barre e testo stampato (prodotto,
+      fornitore, lotto, scadenza, allergeni) e chiede conferma dei valori
+      incerti; i lotti si legano alle preparazioni, così un lotto richiamato
+      si ritrova in pochi secondi.
+      PER NOI: dal telefono, nel carico del magazzino, si inquadra
+      l'etichetta o il codice a barre; l'app riconosce il prodotto già a
+      listino (dal codice) o propone di crearlo, e compila quantità,
+      fornitore, lotto e scadenza da confermare. Si appoggia alle scadenze
+      di REQ-MAG-057 (avviso ed elenco). È un modulo a parte: va concordato
+      con la regia (REQ-DEV-025).
+      DA DECIDERE con Daniele: il nome del modulo (proposta
+      `tracciabilita`); se legge anche il testo dell'etichetta (con l'AI,
+      che costa credito, o sul telefono) o solo il codice a barre; da dove
+      vengono i dati di un codice sconosciuto (anagrafiche pubbliche come
+      Open Food Facts, o niente); se tiene i lotti legati alle preparazioni
+      e ai drink venduti (tracciabilità HACCP e richiami) o solo il carico;
+      il prezzo; per chi (ristoranti, o anche i bar).
+    status: todo
+    generate_issue: true
+    labels: [magazzino, modulo, ristorante]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-UI-036
+    title: "L'app è accessibile: WCAG 2.1 AA su menù, home e gestionale, provata con axe nel collaudo, con la pagina «Accessibilità»"
+    area: "tests/sistema/accessibilita.spec.js (axe-core), index.html (viewport), src/index.css (contrasto), componenti con comandi su div, src/App.jsx (piè di pagina)"
+    description: >
+      Daniele, 17/11/2026, portata dalla regia: «sia per il menu che per la
+      home … dobbiamo aggiungere la dichiarazione di accessibilità e mettere
+      in atto quello che richiede la legge per l'accessibilità di tutto».
+      Regola di Stonebit per ogni prodotto. Lo standard è WCAG 2.1 AA (EN
+      301 549) sul menù del cliente e gli ordini dal tavolo, sulla home del
+      locale e la pagina di cortesia, sul gestionale.
+      LA PRIMA MISURA (17/11/2026, prima di correggere): axe-core su 17
+      pagine dell'app compilata. Tre regole violate: lo zoom bloccato
+      (`meta-viewport`, tutte le pagine, index.html), il contrasto
+      (tastierino del pagamento, categoria «Tutti» del conto, fatture,
+      accessi), un menu a tendina senza nome nelle impostazioni. Oltre axe,
+      circa 70 comandi fatti con `div` cliccabili, le finestre di dialogo,
+      i temi uno per uno. Stima mandata alla regia: 10-14 giorni.
+      L'ORDINE (regia e Daniele, 17/11/2026): prima la conformità piena,
+      la pagina «Accessibilità» per ultima.
+      FATTO (17/11/2026): le violazioni di axe corrette (BUG-167); la prova
+      è un CANCELLO, con la serie della regia (@axe-core/playwright
+      4.14.0, axe-core 4.14.0: la 4.14.1 era uscita il giorno prima), il
+      tag `wcag22aa` e la vista a 320 px oltre a quella a 1280: 34 misure,
+      nessuna violazione, e una violazione nuova fa fallire i test di
+      sistema, obbligatori sulle PR verso develop.
+      DA FARE: la prova sul sito di test vero (dopo il prossimo tag); i
+      comandi su `div` cliccabili; il fuoco nelle finestre di dialogo; gli
+      avvisi letti; i temi uno per uno (anche `--muted` a 4,5, con la
+      regia); la prova a mano a ogni versione maggiore (tastiera, NVDA,
+      zoom 200%); infine la pagina «Accessibilità» collegata dal piè di
+      pagina comune (src/App.jsx, accanto a Privacy), col testo approvato
+      da Daniele.
+    status: todo
+    generate_issue: true
+    labels: [accessibilita, ui, cliente, gestionale]
+    priority: P2
+    test_cases:
+      - tests/sistema/accessibilita.spec.js
+      - tests/unit/contrastoAccento.test.js
+
+  - id: REQ-UI-037
+    title: "Le descrizioni delle impostazioni dicono cosa fa l'opzione, in una frase"
+    area: "src/components/SettingsTab.jsx e i pannelli delle impostazioni (ThemeSettings, StampaAutomatica, CampiStampa, PrinterSetup, BackupPanel, InfoTab, src/lib/campiStampa.js)"
+    description: >
+      Daniele, 17/11/2026, dopo «La vista del banco» (BUG-168): «nelle
+      opzioni delle impostazioni, puoi semplicemente spiegare che cosa fa
+      un'opzione invece di scrivere cose inutili», e poi «sì, ripassale
+      tutte». Ogni descrizione dice cosa fa l'opzione e, se serve, cosa
+      succede accesa e spenta, in una frase piana nel registro del
+      gestionale (CLAUDE.md, DESIGN.md guardrail 3). Niente storie del
+      perché, niente aneddoti, niente «adesso non c'è perché…»: il perché
+      sta nei commenti del codice. Una scelta con una voce sola non è una
+      scelta e non si mostra.
+      ORA ripassate tutte, in SettingsTab e nei pannelli (stampa
+      automatica, campi delle stampe e logo, stampante, backup,
+      informazioni, aspetto): una frase su cosa fa l'opzione, impersonale.
+      Una prova legge i sorgenti dei pannelli senza i commenti e boccia le
+      forme del tu e del voi.
+    status: implemented
+    generate_issue: true
+    labels: [ui, impostazioni, testi]
+    priority: P2
+    test_cases:
+      - tests/unit/testiImpostazioni.test.js
+
+  - id: REQ-UI-038
+    title: "I testi a schermo hanno l'italiano e l'inglese, e una prova boccia quelli senza traduzione"
+    area: "src/lib (testi in due lingue), tutti i componenti con testi a schermo"
+    description: >
+      Daniele, 17/11/2026: «da oggi tutte le funzioni dovranno avere testi
+      in italiano ed inglese». Il meccanismo su cui poggia tutto il resto
+      (UR-022): un testo si scrive in italiano, che resta la lingua di
+      partenza, e accanto ha la sua traduzione inglese; la lingua attiva
+      decide quale si mostra. Una prova legge i testi passati dal
+      meccanismo e fallisce se ne manca la traduzione inglese. Da oggi ogni
+      funzione nuova o toccata porta i suoi testi in tutte e due le lingue,
+      nello stesso commit. L'attributo lang della pagina segue la lingua
+      attiva. Codice, commenti, commit e PR restano in italiano.
+      ORA in src/lib/lingua.js: `tr('testo italiano', { valori })` e il
+      dizionario inglese src/lib/testi/en/, un file per area (conflitti di
+      merge, e chi cerca i testi della cassa li cerca lì), con l'italiano
+      esatto come chiave — il codice si legge come prima e i test che
+      cercano l'italiano restano validi. Niente libreria esterna. Le
+      regole: segnaposti coi nomi senza accenti; un CONTESTO per le parole
+      ambigue (`tr('ordinamento|Ordine')`, in italiano si legge «Ordine»);
+      i plurali scritti tutti e due; le tabelle di etichette segnano i testi
+      con `daTradurre('…')` e li traducono dove li mostrano con
+      `trSegnato`, perché un `tr` al caricamento del modulo fisserebbe la
+      lingua. La lingua si ricorda sul dispositivo (chi la sceglie e dove è
+      REQ-UI-039); l'attributo lang della pagina la segue solo nel
+      gestionale — le pagine dei clienti restano «it», o il traduttore del
+      browser non si proporrebbe (REQ-CLI-010) —, e al cambio di lingua
+      l'app si ridisegna da capo (chiave sulla radice in App.jsx), così
+      nessun componente resta nella lingua di prima. La prova legge i
+      sorgenti e boccia: `tr`/`daTradurre` senza traduzione, con un testo
+      calcolato o attaccato con un +, importati con un altro nome; le
+      traduzioni inutilizzate, i doppioni fra aree, i segnaposti che non
+      combaciano o con gli accenti. Dalla revisione (17/11): un testo JSX
+      scritto senza `tr` la prova non lo vede — la regola di CLAUDE.md la
+      fa rispettare chi scrive e chi rivede.
+    status: implemented
+    generate_issue: true
+    labels: [ui, lingue]
+    priority: P1
+    test_cases:
+      - tests/unit/lingua.test.js
+
+  - id: REQ-CLI-010
+    title: "Le pagine dei clienti funzionano tradotte dal browser"
+    area: "src/pages/MenuPage.jsx, OrderStatusPage.jsx, MyOrdersPage.jsx, AccountPages.jsx, LandingPage.jsx e i loro componenti"
+    description: >
+      Daniele, 17/11/2026: «le pagine dei clienti potrebbero essere
+      tradotte dal browser direttamente». Chrome propone da sé la
+      traduzione a chi ha il telefono in un'altra lingua (la pagina è
+      lang="it" e non la vieta), Safari dal menu «aA». Il traduttore però
+      sostituisce i nodi di testo della pagina, e React, aggiornandoli,
+      può trovarli spariti: la pagina si blocca, oppure un importo o un
+      contatore restano fermi al valore di prima. Il menù, il carrello e lo
+      stato dell'ordine reggono la traduzione: niente blocchi, importi e
+      quantità sempre aggiornati. Il bottone «Traduci con Google» non si
+      mette: il widget non è più disponibile per i siti nuovi, carica uno
+      script di terzi nella pagina dei clienti (consenso GDPR) e riscrive
+      la pagina allo stesso modo.
+      ORA (17/11/2026) la prova di sistema imita il traduttore di Chrome
+      (ogni testo con delle parole sostituito da un <font>, anche quelli
+      che compaiono dopo; i soli numeri restano). La ricognizione ha
+      trovato: nessun blocco; carrello, quantità e totali giusti (i numeri
+      sono nodi a sé); MA la scritta dello stato dell'ordine restava
+      «Ordine ricevuto» mentre il banco lo portava a pronto, perché era un
+      testo aggiornato sul posto accanto all'icona. LA REGOLA: un testo che
+      cambia davanti al cliente è l'UNICO FIGLIO del suo elemento, scritto
+      tutto intero; React allora ne riscrive tutto il contenuto, traduzione
+      compresa, e il traduttore ritraduce il testo nuovo
+      (lib/traduttoreBrowser.js). Applicata a: stato dell'ordine
+      (OrderStatusPage, MyOrdersPage), conto alla rovescia della modifica da
+      confermare, stime dei tempi (menù, riepilogo, stato), tabellone dei
+      numeri, distanza dal locale, prezzo della scelta degli ingredienti,
+      tasto ed errore del pagamento, riga di nome/tavolo/consegna, righe e
+      coperto dello stato. In più lib/traduttoreBrowser.js, chiamata da
+      main.jsx prima del primo disegno: se React vuole togliere un testo, o
+      inserire accanto a un testo, che il traduttore ha spostato, la
+      rimozione si salta e l'inserimento va in fondo all'elemento invece di
+      far cadere la pagina (facebook/react#11538); il prezzo, solo a pagina
+      tradotta, è un testo che resta o un elemento fuori posto, e in
+      sviluppo ogni salto lo dice in console. FUORI DALLA PORTATA del
+      traduttore: le notifiche (push del «pronto», avvisi della pagina
+      dell'ordine) arrivano sempre in italiano.
+    status: implemented
+    generate_issue: true
+    labels: [clienti, menu, lingue]
+    priority: P1
+    test_cases:
+      - tests/sistema/menuTradotto.spec.js
+      - tests/unit/traduttoreBrowser.test.jsx
+      - tests/component/testiTradottiDalBrowser.test.jsx
+
+  - id: REQ-MENU-046
+    title: "Le lingue del menù le sceglie il gestore, e titoli e descrizioni si scrivono in ognuna"
+    area: "Impostazioni (Menù clienti), schede di voci, categorie e Special, src/pages/MenuPage.jsx"
+    description: >
+      Daniele, 17/11/2026: «più lingue per titoli e descrizioni non è male
+      ma deve essere il gestore a poter decidere e definire quali lingue in
+      front page». Nelle impostazioni il gestore sceglie le lingue del
+      menù oltre all'italiano; nelle schede di voci, categorie e Special
+      compare un campo per ogni lingua scelta, per il titolo e per la
+      descrizione. Il cliente vede la lingua del suo telefono se il testo
+      c'è, altrimenti l'italiano. Un testo scritto dal gestore in un'altra
+      lingua è segnato con la sua lingua, così il traduttore del browser
+      non lo ritraduce.
+    status: todo
+    generate_issue: true
+    labels: [menu, clienti, lingue]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-UI-039
+    title: "Il gestionale in inglese"
+    area: "src/pages/BartenderPage.jsx, src/components (gestionale), Il mio profilo (src/pages/StaffProfilePage.jsx), src/lib/lingua.js, firestore.rules (profili_staff)"
+    description: >
+      Daniele, 17/11/2026: dopo le pagine dei clienti, il gestionale va
+      tradotto. Tutti i testi del banco, della cassa, delle impostazioni,
+      del magazzino e delle altre sezioni passano dal meccanismo dei testi
+      in due lingue (REQ-UI-038), una sezione alla volta: prima banco e
+      cassa, poi il resto.
+      CHI SCEGLIE (Daniele, 17/11/2026): «Chiunque può scegliere la lingua
+      nel gestionale, qualsiasi ruolo. La lingua è legata al profilo».
+      Quindi in «Il mio profilo» ogni persona — admin, bartender, sala —
+      sceglie italiano o inglese, e la scelta sta sul suo account
+      (profili_staff/{uid}, che legge e scrive solo lei): la segue su ogni
+      tablet e telefono. Sul dispositivo ne resta una copia, perché l'app
+      parta subito nella lingua giusta anche senza rete; all'accesso vince
+      quella dell'account. Niente lingua di partenza del locale: si parte
+      in italiano. Si lavora su un ramo feature/, e il selettore arriva
+      insieme alle prime sezioni tradotte (banco e cassa): una scelta che
+      non cambia niente non si mostra. Da decidere quando si comincia (dalla revisione di REQ-UI-038,
+      17/11/2026): date e importi seguono la lingua (formatPrice e le date
+      oggi sono fissi su it-IT, serve un punto unico); i testi
+      personalizzabili dal gestore (testo('chiave', 'predefinito') di
+      lib/testiStile.js) e le loro versioni inglesi, insieme a REQ-MENU-046;
+      il dizionario inglese caricato solo quando serve, se pesa sul pacchetto.
+      Lavorato sul ramo feature/gestionale-inglese. FATTO: la lingua sul
+      profilo — profili_staff/{uid} (regole: ognuno solo il suo, solo
+      `lingua` fra it/en; fuori dal backup, perché il titolare non potrebbe
+      rimettere i profili degli altri), salvaLinguaDelProfilo e
+      leggiLinguaDelProfilo in api.js, la lettura al login senza farsi
+      aspettare (App.jsx), il riquadro «Lingua» in Il mio profilo coi nomi
+      delle lingue nella loro lingua; «Il mio profilo» tradotto (area
+      testi/en/profilo.js). Banco e cassa tradotti (17/11): coda, accesso, menu laterale, barra in alto, conto, griglia dei prodotti, pagamento, apertura e chiusura cassa, scheda Cassa (aree testi/en/coda, conto, cassa; le etichette di src/lib in comune). Anche le tabelle di src/lib che il banco mostra (coda.js, sezioni.js, ruoli.js, comande.js, storiaOrdine.js, statoStampante.js, erroriAccesso.js, pendingOrders.js): dove erano costruite al caricamento del modulo ora sono funzioni (filtriStato, etichettaRuolo, servizioEtichetta, etichettaAnnullo). LE PAGINE DEI CLIENTI RESTANO ITALIANE anche su un tablet dello staff in inglese (dalla revisione del 17/11): App.jsx dice a lib/lingua.js se la schermata è del cliente (non personale, «Vista cliente», «Mostra al cliente» ?cliente=1) e lì tr risponde in italiano, con lang=it. CHI NON HA MAI SCELTO ha l'italiano: leggiLinguaDelProfilo risponde it per un profilo senza lingua, e un collega non eredita la lingua di chi ha usato il tablet prima. Lo scontrino resta italiano (prova cartaInItaliano). Secondo giro (17/11): impostazioni (SettingsTab e pannelli), magazzino e comanda al banco, gestione del menù (aree impostazioni, magazzino, menu). Terzo giro (17/11): fornitori e acquisti, statistiche e bilancio, ore e paghe, utenti e buoni, marketplace, assistente AI, avvisi e novità (aree fornitori, statistiche, staff, altro), con le tabelle di src/lib che mostrano (stati e movimenti degli ordini ai fornitori, periodi e mesi, scadenze dei buoni, temi del marketplace). Date e giorni seguono la lingua (formatoAttivo); gli importi restano all'italiana («7,00 €»). RESTANO ITALIANI apposta: la carta stampata, le pagine dei clienti, il messaggio e la mail d'ordine al fornitore, le fatture ai clienti, le esportazioni, i dati (nomi, note, risposte dell'AI) e DevTools, che si vede solo in sviluppo. FUORI da qui: le lingue del menù scelte dal gestore (REQ-MENU-046).
+    status: implemented
+    generate_issue: true
+    labels: [ui, lingue]
+    priority: P2
+    test_cases:
+      - tests/regole/profiliStaff.test.js
+      - tests/component/CodaInInglese.test.jsx
+      - tests/component/ContoInInglese.test.jsx
+      - tests/component/CassaInInglese.test.jsx
+      - tests/unit/cartaInItaliano.test.js
+      - tests/component/ImpostazioniInInglese.test.jsx
+      - tests/component/MagazzinoInInglese.test.jsx
+      - tests/component/MenuInInglese.test.jsx
+      - tests/component/FornitoriInInglese.test.jsx
+      - tests/component/StatisticheInInglese.test.jsx
+      - tests/component/StaffInInglese.test.jsx
+
+  - id: REQ-SIC-007
+    title: "Un elenco unico, nel codice, dei dati personali che l'app tiene"
+    area: "src/lib (elenco dei dati personali), firestore.rules, functions/"
+    description: >
+      Per ogni dato di una persona: dove sta (raccolta e campo di Firestore,
+      Storage, log, FCM, SumUp, l'AI), perché, la base giuridica, per quanto
+      tempo, a chi va, e se è DELICATO (pagamenti e riferimenti SumUp,
+      telefono, indirizzo, posizione, testi o file mandati all'AI con dati di
+      terzi, tracce di accesso, IP). Dallo stesso elenco nascono l'informativa
+      (REQ-SIC-012) e il file scaricato (REQ-SIC-008): l'informativa non dice
+      meno di quello che si tiene, il file non dà meno di quello che
+      l'informativa dice. Una prova fallisce se una raccolta con dati di
+      persone di firestore.rules, o un campo scritto dalle Functions, non è
+      nell'elenco. È la prima misura, prima di ogni altro codice: la regia la
+      chiede come risposta.
+    status: todo
+    generate_issue: true
+    labels: [sicurezza, privacy]
+    priority: P1
+    test_cases: []
+
+  - id: REQ-SIC-008
+    title: "«Scarica i miei dati» per ogni persona, dal suo profilo"
+    area: "Il mio profilo (staff, admin), il profilo del cliente registrato"
+    description: >
+      Cliente registrato, staff e admin scaricano dal proprio profilo un file
+      JSON con TUTTO quello che l'app tiene su di loro (account, ruoli, ordini
+      e conti in cui compaiono, presenze e turni, chiamate allo staff,
+      preferenze, token delle notifiche, consensi, contatti, e ogni altro
+      dato dell'elenco REQ-SIC-007), e mai dati di altri: in un conto con più
+      persone ognuno vede le sue righe. GDPR artt. 15 e 20.
+    status: todo
+    generate_issue: true
+    labels: [sicurezza, privacy]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-SIC-009
+    title: "L'admin esporta i dati di una persona del locale, e resta registrato"
+    area: "Impostazioni (Utenti e ruoli, Clienti), una Function"
+    description: >
+      Per rispondere a una richiesta che arriva al locale, l'admin — solo lui
+      — esporta i dati di una persona del locale, cliente o staff, nello
+      stesso formato di REQ-SIC-008. Ogni esportazione resta registrata: chi,
+      di chi, quando.
+    status: todo
+    generate_issue: true
+    labels: [sicurezza, privacy]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-SIC-010
+    title: "Il download dei dati chiede un accesso recente, e lo si dice alla persona"
+    area: "REQ-SIC-008, REQ-SIC-009"
+    description: >
+      Si scarica solo con un accesso recente, altrimenti si rientra; ogni
+      download — fatto dalla persona o dall'admin — lo si dice alla persona
+      interessata, con un avviso nell'app.
+    status: todo
+    generate_issue: true
+    labels: [sicurezza, privacy]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-SIC-011
+    title: "Le categorie particolari di dati (art. 9): se l'app ne tratta, dichiarate e protette"
+    area: "note dei clienti, preferenze, note delle righe e dei conti"
+    description: >
+      La regia chiede se l'app tratta dati di categorie particolari (salute,
+      opinioni, biometria…): per esempio allergie nelle preferenze o nelle
+      note dei clienti, note libere sulle righe di un conto. Se sì vanno
+      dichiarate nell'elenco (REQ-SIC-007), protette e chieste col consenso
+      esplicito; se no, va detto perché.
+    status: todo
+    generate_issue: true
+    labels: [sicurezza, privacy]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-SIC-012
+    title: "Un'informativa tipo per il locale, generata dall'elenco dei dati personali"
+    area: "docs/ (bozza), la pagina «Privacy» del locale"
+    description: >
+      Dall'elenco di REQ-SIC-007 nasce un'informativa tipo che il locale
+      mostra ai suoi clienti e al suo staff, coi suoi dati di titolare.
+      Non omette niente, soprattutto i dati sensibili. Il testo è una bozza
+      che approva Daniele.
+    status: todo
+    generate_issue: true
+    labels: [sicurezza, privacy]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-SIC-013
+    title: "La cancellazione dell'account fatta da sé, con 30 giorni per ripensarci"
+    area: "Il mio profilo, il profilo del cliente, una Function"
+    description: >
+      Daniele, 17/11/2026 (messaggio della regia, punto 7): «ok» ai 30 giorni e alla cancellazione fatta da sé, come nella regia (REQ-FLOTTA-134). La schermata propone prima «Scarica i miei dati» (REQ-SIC-008); l'account resta disattivato per 30 giorni, in cui si può annullare e scaricare ancora; poi si cancella da solo. Restano solo i dati che il locale deve tenere per legge (fiscali: ordini, incassi, chiusure), dichiarati nell'informativa. Per lo staff vanno chiariti i vincoli (presenze e turni che il locale deve tenere).
+    status: todo
+    generate_issue: true
+    labels: [sicurezza, privacy]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-SIC-014
+    title: "Il titolare esporta tutti i dati del locale in ogni momento"
+    area: "Backup e ripristino (src/components/BackupPanel.jsx, src/lib/backup.js)"
+    description: >
+      Messaggio della regia, punto 8: il locale è titolare dei dati dei suoi clienti e del suo personale e deve poterli avere tutti, durante il contratto e alla fine come restituzione (alla chiusura c'è già l'archivio della regia, 180 giorni). In parte esiste già: «Esporta tutto» del backup. Da verificare che comprenda tutti i dati personali dell'elenco REQ-SIC-007 (oggi alcune raccolte sono fuori dal backup apposta: presenze, profili_staff…) e che il formato sia leggibile da una macchina.
+    status: todo
+    generate_issue: true
+    labels: [sicurezza, privacy]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-SIC-015
+    title: "I dati da cui può derivare un controllo a distanza del personale, dichiarati allo staff"
+    area: "informativa per lo staff (REQ-SIC-012), presenze, chi ha battuto/incassato, tempi di preparazione"
+    description: >
+      Messaggio della regia, punto 9: lo Statuto dei lavoratori (art. 4) chiede, per gli strumenti da cui può derivare un controllo a distanza, un accordo o un'autorizzazione, o almeno un'informativa chiara al dipendente [da verificare col legale]. L'elenco di questi dati (presenza ogni 3 minuti, chi ha battuto/incassato/annullato cosa e quando, tempi di preparazione, iniziali sulle righe, storia del conto, ore e turni) entra nell'informativa per lo staff. La valutazione legale la fa Daniele col legale.
+    status: todo
+    generate_issue: true
+    labels: [sicurezza, privacy]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-SIC-016
+    title: "L'elenco dei servizi esterni a cui l'app manda dati di persone"
+    area: "REQ-SIC-007, l'accordo di trattamento della regia (REQ-FLOTTA-135)"
+    description: >
+      Messaggio della regia: per l'accordo di trattamento fra Stonebit e il locale, che elenca i sub-responsabili, serve l'elenco dei servizi esterni a cui l'app manda dati di persone (Google/Firebase e i suoi servizi, FCM, SumUp, la regia e il fornitore dell'AI, altri), verificato nel codice e tenuto insieme all'elenco dei dati personali.
+    status: todo
+    generate_issue: true
+    labels: [sicurezza, privacy]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-SIC-017
+    title: "L'informativa privacy e cookie è quella del locale, e i suoi link sono solo link"
+    area: "clienti/pagine/privacy-policy.html, clienti/pagine/cookie-policy.html, clienti/demo/pagine/, clienti/personalizzazione.mjs, clienti/pluginCliente.js, scripts/personalizza.mjs, src/lib/venue.js, src/App.jsx"
+    description: >
+      Da REQ-SIC-005, punti 4 e 6 di docs/sicurezza-demo.md, portati qui il
+      18/11/2026 col pacchetto per versione (Daniele: «si fallo entrare»,
+      sulla proposta della regia di metterli nella fase 1: un secondo
+      locale non può partire con l'informativa della Tana).
+      `public/privacy-policy.html` e `public/cookie-policy.html` finivano
+      in ogni build così com'erano: sulla demo e sui locali della flotta il
+      titolare del trattamento era EFFEVI («La Tana del Coniglio»), con la
+      sua email. Ora sono modelli con i segnaposto del locale (nome,
+      ragione sociale, sede, partita IVA, email), riempiti dalla build per
+      il suo cliente e, nel sito uguale per tutti, da personalizza.mjs al
+      deploy. La demo ha una pagina sua: nessun dato raccolto, tutto resta
+      nel browser. I link dei social del locale passano solo se sono http,
+      https, mailto o tel, sia quando si salvano sia quando si disegnano:
+      un `javascript:` scritto in Impostazioni (che il bartender può
+      scrivere) diventava un link nel piede del menù di ogni cliente.
+      Il testo legale resta da far rivedere da un legale: qui cambia solo
+      di chi è.
+      CRITERIO: la build della Tana ha l'informativa con i dati della Tana;
+      la build di un altro locale, la demo e il sito personalizzato non
+      contengono «EFFEVI» né «latanadelconiglio»; un link social
+      `javascript:` non diventa mai un link.
+      COME È FATTO (18/11/2026). I modelli stanno in clienti/pagine/, con
+      %VENUE_NAME%, %VENUE_TITOLARE% e %VENUE_EMAIL_LINK%; la demo ha i suoi
+      in clienti/demo/pagine/. Il titolare si compone da venue_legal_name,
+      venue_legal_address (o indirizzo e città), partita IVA e codice
+      fiscale; quello che manca si legge «da inserire», come la partita IVA
+      della Tana prima, invece di un dato inventato. Per la Tana la ragione
+      sociale e la sede ora vengono da clienti/tana/venue.json, come sullo
+      scontrino («EFFEVI - SRLS», «80035 Nola - Italy»). I link: linkSicuro
+      in src/porte/configurazioneLocale.mjs, usato da socialDaTesto (al
+      salvataggio; un indirizzo senza schema diventa https) e da
+      socialDelLocale (al disegno).
+    status: implemented
+    generate_issue: true
+    labels: [sicurezza, privacy, flotta]
+    priority: P1
+    test_cases:
+      - tests/unit/informativaDelLocale.test.js
+      - tests/unit/linkDelLocale.test.js

@@ -235,6 +235,48 @@ Il file, servito accanto all'app (`<base>/configurazione.json`):
   (il progetto scritto nel file) e Impostazioni → Informazioni. Gli
   emulatori restano decisi dalla build.
 
+### Il sito uguale per tutti i locali (REQ-FLOTTA-034, 18/11/2026)
+
+La regia compila il sito **una volta per versione** (`PACCHETTO=1 npm run
+build`, senza `.env`) e al deploy lo personalizza per ogni locale con
+`scripts/personalizza.mjs` (vedi [flotta.md](flotta.md)). Per questo il
+contratto si allarga:
+
+- **Campi nuovi**, tutti facoltativi per l'app:
+  - `venue`: i dati del locale, solo le chiavi `venue_*` dell'app e solo
+    testi; i link dei social solo `http`, `https`, `mailto` e `tel`.
+    Prende il posto del locale della build, non ci si mescola;
+  - `profilo`: `completo` o `leggero`;
+  - `regia`: `drink-regia` o `drink-regia-test`.
+
+  Un valore fuori elenco vuol dire «vale la build». Le regole stanno in
+  `src/porte/configurazioneLocale.mjs`, l'unico posto: lo stesso modulo lo
+  usa `personalizza.mjs`, che invece **rifiuta** quello che l'app lascerebbe
+  cadere.
+- **La configurazione anche dentro la pagina.** `personalizza.mjs` scrive lo
+  stesso contenuto del file come blocco
+  `<script id="configurazione" type="application/json">` in fondo a
+  `<head>`. L'app lo legge in modo sincrono. L'ordine diventa: **file
+  ricordato nel dispositivo → blocco nella pagina → build**. Il blocco
+  arriva con la pagina, anche dalla cache del service worker e senza rete:
+  è quello che salva un tablet che aveva il locale nella build e passa al
+  sito uguale per tutti senza aver mai letto il file (R3 nell'analisi del
+  18/11/2026).
+- **Senza backend** (il sito non ancora personalizzato, o un dispositivo che
+  non ha ancora la configurazione):
+  - appena il file arriva l'app si ricarica, a qualunque ora: nessuno ha un
+    conto in mano;
+  - se non arriva si riprova, all'evento `online` e dopo 5 s, 15 s, 30 s,
+    1, 2 e poi ogni 5 minuti (`seguiConfigurazione`);
+  - fuori dallo sviluppo, al posto dell'app c'è una schermata a parole
+    comuni (`NonCollegata`), in italiano e inglese; non partono né i
+    progressivi né il banner dei cookie, e niente scrive su un progetto
+    finto.
+- **Fissi per un locale**: `apiKey`, `appId` e `projectId`. La sessione di
+  Auth è salvata sotto la chiave, la cache di App Check sotto `appId`, la
+  cache di Firestore sotto il progetto: cambiarne uno fa uscire tutti i
+  dispositivi o li fa ripartire da una cache vuota.
+
 ## Il server: funzioni normali e due ospiti
 
 Ogni Function diventa una funzione normale che riceve quello che le serve:

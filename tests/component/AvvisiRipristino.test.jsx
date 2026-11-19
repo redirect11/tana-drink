@@ -259,3 +259,60 @@ describe('un ordine mai visto resta un ordine nuovo', () => {
     expect(avvisi()).toEqual(['🆕 Nuovo ordine | Ordine #7 ricevuto.'])
   })
 })
+
+// ── IL CONTO CHE SI STA ANCORA BATTENDO (BUG-159) ────────────────────
+// Daniele, 15/11/2026: «io l'ordine ricevuto, la notifica la vedo»,
+// battendo un drink e togliendolo subito. Al POS il conto nasce al primo
+// tocco e resta `in_creazione` finché chi lo batte non esce: la coda
+// suonava al primo drink, e poi — da quando la push del server aspetta
+// l'uscita — sarebbe suonata una seconda volta, a conto composto.
+describe('un conto in composizione su un altro terminale', () => {
+  const riga = [{ drink_id: 'gin', name: 'Gin Tonic', qty: 1, unit_price: 8 }]
+  const battuto = (patch = {}) =>
+    conto({
+      id: 'o9',
+      daily_number: 9,
+      workflow_status: 'in_preparazione',
+      in_creazione: true,
+      comande: [{ id: 'c-o9', seq: 1, status: 'in_preparazione', created_at: ORA, items: riga }],
+      ...patch,
+    })
+
+  it('al primo drink non suona: si sta ancora battendo', async () => {
+    await coda()
+    await act(async () => mandaOrdini([battuto()]))
+    expect(avvisi()).toEqual([])
+  })
+
+  it('suona una volta sola, quando chi lo batte esce', async () => {
+    await coda()
+    await act(async () => mandaOrdini([battuto()]))
+    await act(async () => mandaOrdini([battuto()]))
+    await act(async () => mandaOrdini([battuto({ in_creazione: false })]))
+    await act(async () => mandaOrdini([battuto({ in_creazione: false })]))
+    expect(avvisi()).toEqual(['🆕 Nuovo ordine | Ordine #9 ricevuto.'])
+  })
+
+  it('battuto, tolto e annullato: non suona mai', async () => {
+    await coda()
+    await act(async () => mandaOrdini([battuto()]))
+    const annullato = battuto({
+      in_creazione: false,
+      workflow_status: 'annullato',
+      status: 'annullato',
+      cancelled_device: ALTRO,
+      comande: [{ id: 'c-o9', seq: 1, status: 'annullato', created_at: ORA, items: [] }],
+    })
+    await act(async () => mandaOrdini([annullato]))
+    expect(avvisi().filter((a) => a.startsWith('🆕'))).toEqual([])
+  })
+
+  // Dalla revisione: il banco prende in mano un conto che la sala sta
+  // ancora battendo, e così il segno cade. Il banco quel conto lo conosce.
+  it('preso in mano da qui mentre lo si batte: qui non suona', async () => {
+    await coda()
+    await act(async () => mandaOrdini([battuto()]))
+    await act(async () => mandaOrdini([battuto({ in_creazione: false, avanzamento_device: idDispositivo() })]))
+    expect(avvisi().filter((a) => a.startsWith('🆕'))).toEqual([])
+  })
+})
