@@ -613,5 +613,6 @@ bisogni:
     requisiti:
       - REQ-FLOTTA-034
       - REQ-FLOTTA-035
+      - REQ-FLOTTA-036
       - REQ-SIC-017
     test_cases: []

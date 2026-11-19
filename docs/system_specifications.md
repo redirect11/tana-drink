@@ -25,13 +25,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 | ✅ | 317 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 9 | fatto a metà |
-| ⬜ | 48 | da fare |
+| ⬜ | 49 | da fare |
 | 🗑 | 8 | non più valido |
 
-**397 voci** in tutto. **341** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **48** sono lavori
+**398 voci** in tutto. **341** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **49** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
-cosa che l'app fa; **18** difetti noti sono ancora aperti.
+cosa che l'app fa; **22** difetti noti sono ancora aperti.
 
 Le voci ⚠️ sono la parte scomoda: funzionano, ma **nessun test le tiene**.
 Sono quelle che si rompono senza che nessuno se ne accorga, e vanno lette
@@ -64,7 +64,7 @@ come «vero oggi», non come «garantito».
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 15 | 4 |  |
 | [VENUE](#venue) | 6 | — |  |
-| [FLOTTA](#flotta) | 13 | — |  |
+| [FLOTTA](#flotta) | 13 | 1 |  |
 | [SITO](#sito) | — | 5 |  |
 
 ### Le prove, livello per livello
@@ -80,7 +80,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Unità | il progetto di dettaglio: un modulo da solo | 197 |
 
 **24** bisogni del locale, **0** con un test di accettazione.
-**149** requisiti su 389 sono collegati a un bisogno;
+**150** requisiti su 390 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -280,7 +280,7 @@ Daniele, 17/11/2026, sul pacchetto per versione della regia (REQ-FLOTTA-137 dell
 
 **Come si accetta**: Un sito compilato una volta e personalizzato per un locale di prova si apre col nome, i colori, il logo e l'informativa di quel locale, senza nessuna parola della Tana. Un tablet che aveva la versione compilata per il locale passa a quella uguale per tutti e, anche senza rete, si riapre sul suo locale con la coda e i conti di prima. Un sito che non sa a che locale appartiene non lascia lavorare nessuno, lo dice a parole comuni, e si collega da solo appena può.
 
-**Chi**: Gestore · **Lo realizzano**: [REQ-FLOTTA-034](#req-flotta-034--un-sito-uguale-per-tutti-i-locali-il-locale-lo-dice-la-configurazione-scritta-nella-pagina-al-momento-della-pubblicazione), [REQ-FLOTTA-035](#req-flotta-035--il-pacchetto-per-versione-si-compila-al-tag-e-si-pubblica-nella-release-di-github-di-tana-drink), [REQ-SIC-017](#req-sic-017--linformativa-privacy-e-cookie-è-quella-del-locale-e-i-suoi-link-sono-solo-link) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Gestore · **Lo realizzano**: [REQ-FLOTTA-034](#req-flotta-034--un-sito-uguale-per-tutti-i-locali-il-locale-lo-dice-la-configurazione-scritta-nella-pagina-al-momento-della-pubblicazione), [REQ-FLOTTA-035](#req-flotta-035--il-pacchetto-per-versione-si-compila-al-tag-e-si-pubblica-nella-release-di-github-di-tana-drink), [REQ-FLOTTA-036](#req-flotta-036--le-functions-di-un-locale-della-flotta-girano-con-un-account-dedicato-coi-soli-permessi-che-usano), [REQ-SIC-017](#req-sic-017--linformativa-privacy-e-cookie-è-quella-del-locale-e-i-suoi-link-sono-solo-link) · ⚠️ **Nessun test di accettazione, ancora.**
 
 ## Cosa fa il sistema
 
@@ -5140,6 +5140,18 @@ INTERFACCIA CON LA REGIA: l'elenco dei moduli è una copia tenuta allineata a ma
 
 **Dove**: `src/lib/licenza.js (MODULI_PREMIUM), firestore.rules (modulo()), la regia (piani.json, elenco dei moduli)` · **Serve**: [UR-020](#ur-020--un-ristorante-lavora-coi-suoi-tavoli-e-coi-suoi-prodotti-freschi)
 
+### FLOTTA
+
+#### REQ-FLOTTA-036 — Le Functions di un locale della flotta girano con un account dedicato, coi soli permessi che usano
+
+Daniele, 19/11/2026: «sì» all'account dedicato proposto alla regia il 17/11 (REQ-FLOTTA-132 della regia, togliere Editor dall'account predefinito di Compute; risposta-regia-ruolo-editor). Oggi le Functions di ogni locale girano con l'account predefinito di Compute, che sui progetti nuovi ha Editor: molto più di quello che usano. COSA: le Functions di un locale della flotta girano come un account dedicato (`functions@<progetto>`) coi ruoli dell'analisi del 17/11: datastore.user, firebaseauth.admin, firebasecloudmessaging.admin, secretmanager.secretAccessor sul solo SUMUP_API_KEY, logging.logWriter, e per i trigger eventarc.eventReceiver e run.invoker. `richiestaAI` resta su `ai-locale@`. La Tana di produzione e il suo test restano come sono.
+
+COME SI ACCENDE, per non rompere un deploy: solo dove la regia ha già creato l'account e dato all'account del deploy il permesso di «agire come» lui (roles/iam.serviceAccountUser): senza, il deploy di tutte le Functions si ferma con iam.serviceaccounts.actAs. Quindi lo accende una variabile che la regia scrive in functions/.env.<progetto> quando l'account c'è, non la sola presenza di REGIA_PROGETTO. La forma va concordata con la regia.
+
+PROVA: insieme alla regia su un locale di prova: il deploy, un ordine dal menù con la sua notifica, il pagamento col lettore simulato, un'utenza creata da staffAdmin, i trigger del magazzino.
+
+**Dove**: `functions/index.js (setGlobalOptions), functions/.env.<progetto>, docs/flotta.md` · **Serve**: [UR-024](#ur-024--un-locale-nuovo-si-accende-con-la-versione-di-tutti-e-i-suoi-tablet-restano-collegati-al-locale)
+
 ### SITO
 
 #### REQ-SITO-001 — Le sezioni del sito del locale, sempre raggiungibili dal menu laterale della vista cliente
@@ -5272,6 +5284,10 @@ della correzione è il test citato nel requisito della sua area.
 | 🔴 | [BUG-158](#bug-158--genera-clientemjs-non-conosce-il-tipo-di-locale-che-il-workflow-della-regia-gli-passa) — genera-cliente.mjs non conosce il tipo di locale che il workflow della regia gli passa | bassa | P3 |
 | 🔴 | [BUG-163](#bug-163--un-rifiuto-del-pagamento-online-che-sumup-rimanda-in-ritardo-segna-fallito-un-conto-passato-nel-frattempo-al-lettore) — Un rifiuto del pagamento online che SumUp rimanda in ritardo segna «fallito» un conto passato nel frattempo al lettore | media | P2 |
 | · | [BUG-172](#bug-172--il-test-di-sistema-del-mazzo-agganciato-fallisce-una-volta-su-tre-scorrendo-il-mazzo-non-risulta-incollato) — Il test di sistema del mazzo agganciato fallisce una volta su tre: scorrendo, il mazzo non risulta «incollato» | lieve | P2 |
+| 🔴 | [BUG-173](#bug-173--la-nota-dellordine-del-cliente-suggerisce-di-scrivere-le-allergie-un-dato-sulla-salute) — La nota dell'ordine del cliente suggerisce di scrivere le allergie, un dato sulla salute | media | P2 |
+| 🔴 | [BUG-174](#bug-174--i-conti-in-lavorazione-si-leggono-senza-accesso-interi-con-lemail-di-chi-li-ha-battuti-il-token-delle-notifiche-e-le-note-terzo-passo-di-bug-093) — I conti in lavorazione si leggono senza accesso interi, con l'email di chi li ha battuti, il token delle notifiche e le note (terzo passo di BUG-093) | media | P2 |
+| 🔴 | [BUG-175](#bug-175--le-paghe-dello-staff-le-legge-ogni-bartender-non-solo-ladmin) — Le paghe dello staff le legge ogni bartender, non solo l'admin | media | P2 |
+| 🔴 | [BUG-176](#bug-176--esporta-tutto-lo-può-fare-anche-il-bartender-e-non-resta-traccia-di-chi-ha-esportato) — «Esporta tutto» lo può fare anche il bartender, e non resta traccia di chi ha esportato | media | P2 |
 
 🔴 succede **in produzione**, cioè al banco. `·` no. `?` non si sa ancora.
 
@@ -5442,6 +5458,38 @@ PESA SUL CANCELLO: «Sistema (Playwright)» è obbligatorio per il merge in deve
 DA CAPIRE se è il test o il menù [ipotesi, non provate]: la classe la decide useIncollata con un IntersectionObserver, e la linea a cui il mazzo si ferma si misura una volta, quando si comincia a osservare (`fondoDellaBarra`): se in quell'istante la barra in alto non ha ancora la sua altezza, la linea è sbagliata e il salto in fondo alla pagina può non far scattare il cambio. Se è così il difetto è del menù, e al banco si vedrebbe come il mazzo agganciato senza il suo fondo pieno; non è stato segnalato da nessuno.
 
 **Dove**: `tests/sistema/carteAgganciate.spec.js:41, src/lib/useIncollata.js, src/components/MenuCarte.jsx` · **Tradisce**: [REQ-MENU-029](#req-menu-029--lo-stile-carte-lidea-di-flavio-il-menù-come-un-mazzo-di-carte-francesi-un-seme-per-macro-categoria-e-la-carta-scelta-si-alza-e-si-apre)
+
+#### BUG-173 — La nota dell'ordine del cliente suggerisce di scrivere le allergie, un dato sulla salute
+
+Dall'analisi dei dati personali per la regia (17/11/2026, punto 5 «categorie particolari»), registrato su via libera di Daniele il 19/11/2026. Il segnaposto della nota dell'ordine dal telefono dice «Note per il bancone (facoltative): allergie, ghiaccio, varianti…»: un'allergia è un dato sulla salute (art. 9 GDPR), e l'app la chiede senza consenso esplicito. Quella nota si legge col `get` aperto a chi ha l'id del conto, col `list` anonimo del tabellone finché il conto è in lavorazione (BUG-174), si stampa sulla comanda e resta per sempre.
+
+LA PROPOSTA [da verificare col legale]: togliere «allergie» dal segnaposto, oppure chiedere il consenso esplicito; dire nell'informativa che i campi liberi non vanno usati per dati sulla salute. Il testo a schermo segue il registro di chi ordina.
+
+**Dove**: `src/components/OrderSummary.jsx:376, firestore.rules (orders), la comanda stampata` · **Tradisce**: [REQ-CLI-001](#req-cli-001--il-cliente-ordina-dal-telefono-e-segue-il-suo-ordine)
+
+#### BUG-174 — I conti in lavorazione si leggono senza accesso interi, con l'email di chi li ha battuti, il token delle notifiche e le note (terzo passo di BUG-093)
+
+Il «terzo passo» lasciato fuori da BUG-093 (fixed), registrato a parte su via libera di Daniele il 19/11/2026. Il tabellone dei clienti legge senza accesso (`list` anonimo) i conti con `comande_statuses` in lavorazione, e le regole non sanno proiettare i campi: i documenti tornano INTERI, con `placed_by` (l'email di chi ha battuto il conto), `push_token`, `customer_uid`, il nome e le note. Il recinto è stretto (solo i conti in lavorazione, non l'archivio), ma quei campi si leggono da chiunque.
+
+LA CORREZIONE: spostare `placed_by`, `push_token`, `customer_uid` e le note in un sottodocumento a lettura ristretta; `placed_by` è letto in mezza app, quindi tocca coda, conto e stampa (test di sistema obbligatorio, local-first). Insieme va imposto App Check (BUG-092). Stima dell'analisi del 17/11: 3-5 giorni insieme a BUG-092.
+
+**Dove**: `firestore.rules (orders: list anonimo del tabellone), src/lib/api.js, coda.js, printer.js, storiaOrdine, cassa.js` · **Tradisce**: [REQ-SIC-001](#req-sic-001--le-regole-del-database-seguono-i-ruoli)
+
+#### BUG-175 — Le paghe dello staff le legge ogni bartender, non solo l'admin
+
+Dall'analisi dei dati personali per la regia (17/11/2026), registrato su via libera di Daniele il 19/11/2026. `staff_rates` (nome e tariffa oraria storicizzata di ogni persona) ha `allow read: if isBartender()`, e `isBartender` comprende tutti i bartender, non solo chi gestisce le paghe: ogni bartender può leggere quanto prende ogni collega. È un dato sulla retribuzione. La stessa lettura passa anche da «Esporta tutto» (BUG-176).
+
+LA CORREZIONE: lettura all'admin (e a ciascuno la propria riga, se serve a «Le mie ore»), con i test delle regole che lo provano.
+
+**Dove**: `firestore.rules:669-672 (staff_rates), src/lib/api.js` · **Tradisce**: [REQ-STAFF-006](#req-staff-006--turni-ore-lavorate-e-paghe), [REQ-SIC-001](#req-sic-001--le-regole-del-database-seguono-i-ruoli)
+
+#### BUG-176 — «Esporta tutto» lo può fare anche il bartender, e non resta traccia di chi ha esportato
+
+Dall'analisi dei dati personali per la regia (17/11/2026, punto 8), registrato su via libera di Daniele il 19/11/2026. «Esporta tutto», in Impostazioni → Backup e ripristino, scarica 33 raccolte (conti, clienti, ore, paghe, buoni, pagamenti…). La voce Impostazioni non è riservata all'admin e il pannello riserva all'admin solo il ripristino: l'esportazione la fa anche il bartender, e non resta nessuna traccia di chi l'ha fatta e quando.
+
+LA CORREZIONE: esportazione all'admin, con una riga di registro (chi, quando) che l'admin vede. È il pezzo che REQ-SIC-014 (l'esportazione completa del titolare) dà per scontato.
+
+**Dove**: `src/components/BackupPanel.jsx, src/lib/backup.js, src/lib/sezioni.js:65` · **Tradisce**: [REQ-DATI-001](#req-dati-001--backup-ed-esportazione-di-tutto-il-database), [REQ-SIC-014](#req-sic-014--il-titolare-esporta-tutti-i-dati-del-locale-in-ogni-momento)
 
 ## Non più valido
 

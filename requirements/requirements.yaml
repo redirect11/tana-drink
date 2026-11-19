@@ -16059,6 +16059,37 @@ requirements:
     priority: P1
     test_cases:
       - tests/unit/creaPacchetto.test.js
+  - id: REQ-FLOTTA-036
+    title: "Le Functions di un locale della flotta girano con un account dedicato, coi soli permessi che usano"
+    area: "functions/index.js (setGlobalOptions), functions/.env.<progetto>, docs/flotta.md"
+    description: >
+      Daniele, 19/11/2026: «sì» all'account dedicato proposto alla regia il
+      17/11 (REQ-FLOTTA-132 della regia, togliere Editor dall'account
+      predefinito di Compute; risposta-regia-ruolo-editor). Oggi le
+      Functions di ogni locale girano con l'account predefinito di Compute,
+      che sui progetti nuovi ha Editor: molto più di quello che usano.
+      COSA: le Functions di un locale della flotta girano come un account
+      dedicato (`functions@<progetto>`) coi ruoli dell'analisi del 17/11:
+      datastore.user, firebaseauth.admin, firebasecloudmessaging.admin,
+      secretmanager.secretAccessor sul solo SUMUP_API_KEY, logging.logWriter,
+      e per i trigger eventarc.eventReceiver e run.invoker. `richiestaAI`
+      resta su `ai-locale@`. La Tana di produzione e il suo test restano
+      come sono.
+      COME SI ACCENDE, per non rompere un deploy: solo dove la regia ha già
+      creato l'account e dato all'account del deploy il permesso di «agire
+      come» lui (roles/iam.serviceAccountUser): senza, il deploy di tutte le
+      Functions si ferma con iam.serviceaccounts.actAs. Quindi lo accende
+      una variabile che la regia scrive in functions/.env.<progetto> quando
+      l'account c'è, non la sola presenza di REGIA_PROGETTO. La forma va
+      concordata con la regia.
+      PROVA: insieme alla regia su un locale di prova: il deploy, un ordine
+      dal menù con la sua notifica, il pagamento col lettore simulato,
+      un'utenza creata da staffAdmin, i trigger del magazzino.
+    status: todo
+    generate_issue: true
+    labels: [flotta, sicurezza]
+    priority: P2
+    test_cases: []
   - id: REQ-PAG-013
     title: "Lo sconto cade sui prodotti che si stanno riscuotendo, e gli sconti si accumulano"
     area: "src/lib/pagamento.js, src/components/PaymentScreen.jsx, src/lib/api.js, src/lib/printer.js, functions/lib/payment-core.js"

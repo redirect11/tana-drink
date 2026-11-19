@@ -6833,3 +6833,95 @@ bugs:
     priority: P2
     requisiti: [REQ-MENU-029]
     test_cases: []
+  - id: BUG-173
+    title: "La nota dell'ordine del cliente suggerisce di scrivere le allergie, un dato sulla salute"
+    area: "src/components/OrderSummary.jsx:376, firestore.rules (orders), la comanda stampata"
+    description: >
+      Dall'analisi dei dati personali per la regia (17/11/2026, punto 5
+      «categorie particolari»), registrato su via libera di Daniele il
+      19/11/2026. Il segnaposto della nota dell'ordine dal telefono dice
+      «Note per il bancone (facoltative): allergie, ghiaccio, varianti…»:
+      un'allergia è un dato sulla salute (art. 9 GDPR), e l'app la chiede
+      senza consenso esplicito. Quella nota si legge col `get` aperto a chi
+      ha l'id del conto, col `list` anonimo del tabellone finché il conto è
+      in lavorazione (BUG-174), si stampa sulla comanda e resta per sempre.
+      LA PROPOSTA [da verificare col legale]: togliere «allergie» dal
+      segnaposto, oppure chiedere il consenso esplicito; dire
+      nell'informativa che i campi liberi non vanno usati per dati sulla
+      salute. Il testo a schermo segue il registro di chi ordina.
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, sicurezza, clienti]
+    severity: media
+    priority: P2
+    requisiti: [REQ-CLI-001]
+    test_cases: []
+  - id: BUG-174
+    title: "I conti in lavorazione si leggono senza accesso interi, con l'email di chi li ha battuti, il token delle notifiche e le note (terzo passo di BUG-093)"
+    area: "firestore.rules (orders: list anonimo del tabellone), src/lib/api.js, coda.js, printer.js, storiaOrdine, cassa.js"
+    description: >
+      Il «terzo passo» lasciato fuori da BUG-093 (fixed), registrato a parte
+      su via libera di Daniele il 19/11/2026. Il tabellone dei clienti legge
+      senza accesso (`list` anonimo) i conti con `comande_statuses` in
+      lavorazione, e le regole non sanno proiettare i campi: i documenti
+      tornano INTERI, con `placed_by` (l'email di chi ha battuto il conto),
+      `push_token`, `customer_uid`, il nome e le note. Il recinto è stretto
+      (solo i conti in lavorazione, non l'archivio), ma quei campi si
+      leggono da chiunque.
+      LA CORREZIONE: spostare `placed_by`, `push_token`, `customer_uid` e le
+      note in un sottodocumento a lettura ristretta; `placed_by` è letto in
+      mezza app, quindi tocca coda, conto e stampa (test di sistema
+      obbligatorio, local-first). Insieme va imposto App Check (BUG-092).
+      Stima dell'analisi del 17/11: 3-5 giorni insieme a BUG-092.
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, sicurezza]
+    severity: media
+    priority: P2
+    requisiti: [REQ-SIC-001]
+    test_cases: []
+  - id: BUG-175
+    title: "Le paghe dello staff le legge ogni bartender, non solo l'admin"
+    area: "firestore.rules:669-672 (staff_rates), src/lib/api.js"
+    description: >
+      Dall'analisi dei dati personali per la regia (17/11/2026), registrato
+      su via libera di Daniele il 19/11/2026. `staff_rates` (nome e tariffa
+      oraria storicizzata di ogni persona) ha `allow read: if isBartender()`,
+      e `isBartender` comprende tutti i bartender, non solo chi gestisce le
+      paghe: ogni bartender può leggere quanto prende ogni collega. È un dato
+      sulla retribuzione. La stessa lettura passa anche da «Esporta tutto»
+      (BUG-176).
+      LA CORREZIONE: lettura all'admin (e a ciascuno la propria riga, se
+      serve a «Le mie ore»), con i test delle regole che lo provano.
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, sicurezza]
+    severity: media
+    priority: P2
+    requisiti: [REQ-STAFF-006, REQ-SIC-001]
+    test_cases: []
+  - id: BUG-176
+    title: "«Esporta tutto» lo può fare anche il bartender, e non resta traccia di chi ha esportato"
+    area: "src/components/BackupPanel.jsx, src/lib/backup.js, src/lib/sezioni.js:65"
+    description: >
+      Dall'analisi dei dati personali per la regia (17/11/2026, punto 8),
+      registrato su via libera di Daniele il 19/11/2026. «Esporta tutto», in
+      Impostazioni → Backup e ripristino, scarica 33 raccolte (conti,
+      clienti, ore, paghe, buoni, pagamenti…). La voce Impostazioni non è
+      riservata all'admin e il pannello riserva all'admin solo il
+      ripristino: l'esportazione la fa anche il bartender, e non resta
+      nessuna traccia di chi l'ha fatta e quando.
+      LA CORREZIONE: esportazione all'admin, con una riga di registro (chi,
+      quando) che l'admin vede. È il pezzo che REQ-SIC-014 (l'esportazione
+      completa del titolare) dà per scontato.
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, sicurezza]
+    severity: media
+    priority: P2
+    requisiti: [REQ-DATI-001, REQ-SIC-014]
+    test_cases: []
