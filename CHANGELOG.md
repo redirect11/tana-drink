@@ -1,6 +1,61 @@
 # Cosa è cambiato
 
-## 1.10.57-beta — in lavorazione
+## 1.10.56 — 19 novembre 2026 (produzione)
+
+Provata sul test come 1.10.52-beta … 1.10.56-beta. Porta in produzione
+anche la 1.10.51, il cui deploy non era stato approvato.
+
+### Il gestionale in inglese
+
+- In «Il mio profilo» ciascuno sceglie Italiano o English, e la scelta lo
+  segue su ogni dispositivo. Restano in italiano gli scontrini e tutto ciò
+  che si stampa, le esportazioni e le pagine dei clienti, che traduce il
+  loro browser (REQ-UI-039, REQ-CLI-010).
+
+### Il conto e la coda
+
+- **Conto svuotato: si chiude da solo o resta aperto**, a scelta di chi
+  lavora, in «Il mio profilo» → «Conto vuoto» (REQ-ORD-025).
+- **«Nuovo ordine» arriva quando il conto è composto**, non al primo drink
+  (BUG-159).
+- Svuotato un conto, la sua card non ricompare più in coda per un attimo
+  (BUG-169).
+- Un esito del lettore SumUp rimandato in ritardo non cambia più un conto
+  che non lo aspetta (BUG-162).
+
+### Il menù dei clienti
+
+- **«Oscura automaticamente»** nella scheda del prodotto di magazzino: con
+  la giacenza a zero le voci che lo usano risultano non disponibili
+  (REQ-MENU-045).
+- Gli avvisi del menù prendono i colori del tema (REQ-UI-034).
+
+### Aspetto e accessibilità
+
+- Il tema «Lime» in Impostazioni → Aspetto; la Tana resta col suo
+  (REQ-UI-033). Il marchio LIME - SmartOrders nel menu laterale del
+  gestionale (REQ-UI-035).
+- La pagina si può ingrandire col pizzico, e i testi sopra il colore del
+  tema si leggono meglio (BUG-167).
+- Le descrizioni delle impostazioni dicono cosa fa ogni opzione, in una
+  frase (REQ-UI-037).
+
+### Privacy e sicurezza
+
+- L'informativa privacy e cookie prende titolare e sede dai dati del locale
+  (REQ-SIC-017); i link social accettano solo indirizzi web, email e
+  telefono.
+- Foto dei prodotti e allegati delle fatture si caricano solo se la licenza
+  li comprende, e solo da banco e admin (REQ-SIC-006, BUG-160).
+- Le Functions hanno un tetto di istanze (REQ-DEV-026); il controllo dei
+  numeri doppi legge solo i conti con lo stesso numero (BUG-161); le
+  utenze dello staff rispettano il piano anche dal server (BUG-165).
+
+### Flotta
+
+- Il sito uguale per tutti i locali e il pacchetto per versione nella
+  Release di GitHub (REQ-FLOTTA-034, REQ-FLOTTA-035). Per la Tana non
+  cambia il modo di pubblicare.
 
 ## 1.10.56-beta — 18/11/2026 (test)
 
