@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 18 novembre 2026.
+> Generato il 19 novembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -31,7 +31,7 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 **397 voci** in tutto. **341** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **48** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
-cosa che l'app fa; **17** difetti noti sono ancora aperti.
+cosa che l'app fa; **18** difetti noti sono ancora aperti.
 
 Le voci ⚠️ sono la parte scomoda: funzionano, ma **nessun test le tiene**.
 Sono quelle che si rompono senza che nessuno se ne accorga, e vanno lette
@@ -5271,6 +5271,7 @@ della correzione è il test citato nel requisito della sua area.
 | 🔴 | [BUG-157](#bug-157--la-licenza-della-tana-scritta-dal-deploy-è-più-povera-di-quella-che-scrive-la-regia) — La licenza della Tana scritta dal deploy è più povera di quella che scrive la regia | bassa | P3 |
 | 🔴 | [BUG-158](#bug-158--genera-clientemjs-non-conosce-il-tipo-di-locale-che-il-workflow-della-regia-gli-passa) — genera-cliente.mjs non conosce il tipo di locale che il workflow della regia gli passa | bassa | P3 |
 | 🔴 | [BUG-163](#bug-163--un-rifiuto-del-pagamento-online-che-sumup-rimanda-in-ritardo-segna-fallito-un-conto-passato-nel-frattempo-al-lettore) — Un rifiuto del pagamento online che SumUp rimanda in ritardo segna «fallito» un conto passato nel frattempo al lettore | media | P2 |
+| · | [BUG-172](#bug-172--il-test-di-sistema-del-mazzo-agganciato-fallisce-una-volta-su-tre-scorrendo-il-mazzo-non-risulta-incollato) — Il test di sistema del mazzo agganciato fallisce una volta su tre: scorrendo, il mazzo non risulta «incollato» | lieve | P2 |
 
 🔴 succede **in produzione**, cioè al banco. `·` no. `?` non si sa ancora.
 
@@ -5431,6 +5432,16 @@ Dalla regia, contratto del 14/11/2026: lo script della 1.10.x non conosce `--sa 
 Trovato dal revisore il 16/11/2026, correggendo BUG-162: è lo stesso difetto, sul checkout online. Il cliente paga online e la carta viene rifiutata; il conto passa al lettore del banco (`in_attesa`, metodo `lettore`). Se SumUp rimanda il rifiuto online (ritenta dopo 1, 5, 20 minuti e 2 ore), `verifyCheckoutStatus` vede uno stato diverso da quello del conto, scrive «fallito» e azzera l'importo in volo del lettore: il pagamento al banco, se poi riesce, arriva su un conto che non lo aspetta più. Da correggere come BUG-162: l'esito online si applica solo a un conto che aspetta ancora quel checkout.
 
 **Dove**: `functions/lib/payment-service.js (verifyCheckoutStatus, handleOnlineWebhook)` · **Tradisce**: [REQ-PAG-005](#req-pag-005--pagamento-online-con-link-o-qr), [REQ-DEV-026](#req-dev-026--la-spesa-dei-servizi-google-ha-un-tetto-istanze-limitate-e-indirizzi-pubblici-che-non-lavorano-a-vuoto)
+
+#### BUG-172 — Il test di sistema del mazzo agganciato fallisce una volta su tre: scorrendo, il mazzo non risulta «incollato»
+
+Visto il 18/11/2026 nel cancello della 1.10.56-beta verso develop. Il test «scorrendo, il mazzo resta sotto la barra; il tasto per tornarci non c'è» (REQ-MENU-029) porta la pagina in fondo con `window.scrollTo` e si aspetta il mazzo con la classe `incollata`: una volta su tre il mazzo resta `k-mazzo` per tutta l'attesa (`toHaveClass(/incollata/)`, «Received string: "k-mazzo"»). Rilanciato con `--repeat-each=3`: 1 rosso e 8 verdi, uguale su release/1.10.x senza le modifiche del giro di /simplify, quindi c'era già.
+
+PESA SUL CANCELLO: «Sistema (Playwright)» è obbligatorio per il merge in develop, e un rosso che non c'entra ferma una pull request finché non si rilancia.
+
+DA CAPIRE se è il test o il menù [ipotesi, non provate]: la classe la decide useIncollata con un IntersectionObserver, e la linea a cui il mazzo si ferma si misura una volta, quando si comincia a osservare (`fondoDellaBarra`): se in quell'istante la barra in alto non ha ancora la sua altezza, la linea è sbagliata e il salto in fondo alla pagina può non far scattare il cambio. Se è così il difetto è del menù, e al banco si vedrebbe come il mazzo agganciato senza il suo fondo pieno; non è stato segnalato da nessuno.
+
+**Dove**: `tests/sistema/carteAgganciate.spec.js:41, src/lib/useIncollata.js, src/components/MenuCarte.jsx` · **Tradisce**: [REQ-MENU-029](#req-menu-029--lo-stile-carte-lidea-di-flavio-il-menù-come-un-mazzo-di-carte-francesi-un-seme-per-macro-categoria-e-la-carta-scelta-si-alza-e-si-apre)
 
 ## Non più valido
 

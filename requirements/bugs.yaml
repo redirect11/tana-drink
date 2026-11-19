@@ -6802,3 +6802,34 @@ bugs:
     priority: P3
     requisiti: [REQ-STAFF-017]
     test_cases: [tests/component/AppHeader.test.jsx]
+  - id: BUG-172
+    title: "Il test di sistema del mazzo agganciato fallisce una volta su tre: scorrendo, il mazzo non risulta «incollato»"
+    area: "tests/sistema/carteAgganciate.spec.js:41, src/lib/useIncollata.js, src/components/MenuCarte.jsx"
+    description: >
+      Visto il 18/11/2026 nel cancello della 1.10.56-beta verso develop.
+      Il test «scorrendo, il mazzo resta sotto la barra; il tasto per
+      tornarci non c'è» (REQ-MENU-029) porta la pagina in fondo con
+      `window.scrollTo` e si aspetta il mazzo con la classe `incollata`:
+      una volta su tre il mazzo resta `k-mazzo` per tutta l'attesa
+      (`toHaveClass(/incollata/)`, «Received string: "k-mazzo"»). Rilanciato
+      con `--repeat-each=3`: 1 rosso e 8 verdi, uguale su release/1.10.x
+      senza le modifiche del giro di /simplify, quindi c'era già.
+      PESA SUL CANCELLO: «Sistema (Playwright)» è obbligatorio per il merge
+      in develop, e un rosso che non c'entra ferma una pull request finché
+      non si rilancia.
+      DA CAPIRE se è il test o il menù [ipotesi, non provate]: la classe la
+      decide useIncollata con un IntersectionObserver, e la linea a cui il
+      mazzo si ferma si misura una volta, quando si comincia a osservare
+      (`fondoDellaBarra`): se in quell'istante la barra in alto non ha
+      ancora la sua altezza, la linea è sbagliata e il salto in fondo alla
+      pagina può non far scattare il cambio. Se è così il difetto è del menù,
+      e al banco si vedrebbe come il mazzo agganciato senza il suo fondo
+      pieno; non è stato segnalato da nessuno.
+    in_produzione: false
+    status: todo
+    generate_issue: true
+    labels: [bug, test, menu]
+    severity: lieve
+    priority: P2
+    requisiti: [REQ-MENU-029]
+    test_cases: []
